@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>MAYDAY — морские спасатели</title>
+<meta name="description" content="Атмосферная игра про вертолёт морской спасательной службы: шторм, смерчи, волны-убийцы и люди в океане. Вид сверху, three.js.">
+<meta name="theme-color" content="#0b1a24">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./src/ui/hud.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.min.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud"></div>
+<div id="boot">
+  <div class="boot-title">MAYDAY</div>
+  <div class="boot-sub">морская спасательная служба</div>
+  <div class="boot-bar"><i></i></div>
+</div>
+<div id="fatal" hidden></div>
+<noscript>Для игры нужен JavaScript и браузер с поддержкой WebGL2.</noscript>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

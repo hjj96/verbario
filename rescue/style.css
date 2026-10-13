@@ -1,0 +1,96 @@
+/* Base page styles. HUD/menus live in src/ui/hud.css (owned by the HUD system). */
+:root {
+  color-scheme: dark;
+  --ui-font: 'Oswald', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
+  --mono-font: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --text-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg: #0b1a24;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: #e8eef2;
+  font-family: var(--text-font);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+#game, #game canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: radial-gradient(ellipse at 50% 40%, #12303f 0%, #0b1a24 55%, #060d12 100%);
+  transition: opacity 0.9s ease, visibility 0.9s;
+}
+body.ready #boot { opacity: 0; visibility: hidden; }
+.boot-title {
+  font-family: var(--ui-font);
+  font-weight: 700;
+  font-size: clamp(48px, 9vw, 112px);
+  letter-spacing: 0.18em;
+  color: #f4f1ea;
+}
+.boot-sub {
+  font-family: var(--mono-font);
+  font-size: 13px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: #ff6a3d;
+}
+.boot-bar {
+  width: 180px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  margin-top: 18px;
+}
+.boot-bar i {
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: #ff6a3d;
+  animation: boot-bar 1.2s ease-in-out infinite;
+}
+@keyframes boot-bar {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(260%); }
+}
+
+#fatal {
+  position: fixed;
+  inset: auto 16px 16px 16px;
+  z-index: 200;
+  padding: 14px 18px;
+  background: #3a0d0d;
+  border: 1px solid #ff6a3d;
+  font-family: var(--mono-font);
+  font-size: 13px;
+}
