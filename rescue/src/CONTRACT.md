@@ -146,6 +146,9 @@ weather.setPreset(name, transitionSeconds = 0)
 weather.forecast() → [{ in: seconds, preset }]  // for HUD/radio
 weather.strikeLightning(x, z, { cloudOnly })   // forced strike (hazards may call)
 weather.setGreenTint(v)                         // 0..1 target, eased
+weather.spawnGust({ strength, dir /*Vector2|undefined*/, eta = 6, harmless })  // scripted gust front (onboarding)
+weather.runEndless()                            // «Смена» escalation (DESIGN §3.13), called by mission in endless mode
+weather.detectBase() → { base, altBonus }       // DESIGN §3.10 table for the current blend (survivors use it)
 weather.runScript(def.weather)                  // done automatically on mission:setup
 ```
 Weather schedules lightning (frequency per preset): 70% in-cloud (`cloudOnly`), the rest hit the sea
@@ -170,14 +173,17 @@ ocean.heightAt(x, z, tOffset = 0)          // tOffset: look-ahead seconds (HUD w
 ocean.setDownwash(x, z, radius, strength)   // rotor downwash disc this frame (0 strength = off)
 ocean.setSearchlight(pos /*Vector3*/, dir /*Vector3*/, cosOuter, intensity)  // heli calls every frame (intensity 0 = off)
 ocean.searchlightAt(x, z) → 0..1            // CPU: how lit a point is (survivors' reflective tape, detection)
-ocean.setGlints(list)                       // ≤ 8 [{x, z, radius, intensity, color}] light reflections (strobes, nav lights)
+ocean.addGlint(x, z, radius, intensity, color)  // call EVERY frame per light reflection (strobes, nav lights, raft lamps);
+                                            // ocean keeps the 8 most intense, uploads them next update, then clears
 ocean.stamp(kind, x, z, opts)               // optional water-memory stamps: 'foam','dye','scar','oil','disturb'
 ocean.addWake(x, z, strength)               // foam trail points (boats, survivors swimming)
 ocean.setFeature(id, f) / ocean.removeFeature(id)   // large-scale surface features rendered IN the water
     // f = { type: 'rogue', origin: Vector2, dir: Vector2, speed, height, length /*crest length*/, width /*front-to-back*/ }
     //   | { type: 'whirlpool', x, z, radius, strength /*0..1*/ }
     //   | { type: 'vortex', x, z, radius, strength }     // waterspout base: spray ring + swirl
-    // Max 4 features at once. heightAt() includes them. Hazards own the gameplay; ocean owns the look.
+    // Max 4 features at once. heightAt() INCLUDES them (never add hazards.waveLiftAt on top).
+    // Hazards own the gameplay; ocean owns the look.
+ocean.setShoals(list)                       // ≤ 8 [{x, z, radius}] rocks/shallows: depth ramp, damped waves, surf band (world calls)
 ocean.mesh
 ```
 The sea surface **must** receive the helicopter's shadow and be lit by the scene's lights (heli
@@ -193,7 +199,10 @@ world.pads = [{ id, name, type /*'ship'|'rig'|'lighthouse'|'coast'*/, position /
                 radius, refuel: true, heading, object3d }]
 world.padAt(x, z) → pad | null        // pad whose landing circle contains (x,z)
 world.nearestPad(x, z) → pad
-world.obstacles = [{ x, z, radius, top }]  // tall things the heli can hit (rig derrick, lighthouse)
+world.obstacles = [{ x, z, radius, top }]  // tall things the heli can hit (rig derrick, lighthouse, masts, fog rocks)
+// pad extra fields: height (deck height), tilt (current deck tilt rad), velocity (Vector3), services
+// { fuel /*%/s*/, repair /*%/s*/, resupply /*bool*/ }, lee (bool, rig: lee turbulence wedge)
+// world emits 'world:foghorn' {x, z} (lighthouse in fog, every 30 s) and 'world:horn' {x, z} (Arktur, heli < 300 m)
 ```
 
 ### hazards (`systems/hazards.js`, class `Hazards`)
@@ -205,7 +214,8 @@ hazards.spawn(type, opts) → hazard
 hazards.clear()
 hazards.forceAt(x, z, altitude, out /*Vector3*/) → out   // acceleration m/s² applied to the heli
 hazards.surfaceFlowAt(x, z, out /*Vector2*/) → out       // horizontal drift m/s for floating things
-hazards.waveLiftAt(x, z) → metres                        // extra sea height from rogue waves (heli/ocean/survivors use)
+hazards.waveLiftAt(x, z) → metres                        // rogue-wave part of the sea height — INFO ONLY, already inside ocean.heightAt
+hazards.imminent → { type, position, eta } | null        // the most urgent upcoming hazard (camera reveal, music riser)
 hazards.dangerAt(x, z, altitude) → 0..1                  // for HUD warnings
 ```
 Events: `hazard:warning {type, position, eta, text}`, `hazard:spawn {hazard}`, `hazard:hit {type, damage}`, `hazard:end {hazard}`,
@@ -245,6 +255,8 @@ heli.reset(spawn)                 // {x, z, heading, pad?}
 heli.applyImpulse(v /*Vector3*/)  // instant velocity change
 heli.damage(amount, source)       // 0..1 hull
 heli.addFuel(amount)
+heli.autoTakeoff(altitude = 40)  // onboarding: take off by itself
+heli.onPad                       // pad currently landed on (alias of landed)
 ```
 Events: `heli:damage {amount, source, hull}`, `heli:crash {reason}`, `heli:winch {state}`,
 `heli:pickup {survivor}`, `heli:land {pad}`, `heli:takeoff {pad}`, `heli:unload {pad, count, people}`,

@@ -41,6 +41,9 @@ export class Weather {
   setPreset(name) { this.state.preset = name; }
   setGreenTint() {}
   runScript() {}
+  spawnGust() {}
+  runEndless() {}
+  detectBase() { return { base: 260, altBonus: 1 }; }
   forecast() { return []; }
   strikeLightning() {}
   update() {}
@@ -58,7 +61,8 @@ export class Ocean {
   heightAt() { return 0; }
   setSearchlight() {}
   searchlightAt() { return 0; }
-  setGlints() {}
+  addGlint() {}
+  setShoals() {}
   setFeature() {}
   removeFeature() {}
   stamp() {}
@@ -102,6 +106,7 @@ export class Hazards {
   forceAt(x, z, alt, out) { return out.set(0, 0, 0); }
   surfaceFlowAt(x, z, out) { return out.set(0, 0); }
   waveLiftAt() { return 0; }
+  get imminent() { return null; }
   dangerAt() { return 0; }
   update() {}
 }
@@ -138,6 +143,7 @@ export class Helicopter {
   applyImpulse(v) { this.velocity.add(v); }
   damage(a) { this.hull = Math.max(0, this.hull - a); }
   addFuel(a) { this.fuel = Math.min(1, this.fuel + a); }
+  autoTakeoff() {}
   update(dt) {
     if (this.ctx.mode !== 'play') return;
     const m = this.ctx.input.move();
