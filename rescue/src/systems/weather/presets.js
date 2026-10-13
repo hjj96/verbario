@@ -1,0 +1,206 @@
+// Weather preset table — the numbers of DESIGN.md §2.3 (palette), §2.6.3 (sea state), §2.8 (post),
+// §3.10 (detection) and §3.13 (wind, gusts, turbulence, hazard frequencies) in one place.
+// Hex colours are sRGB (THREE.Color converts them to the linear working space on parse).
+//
+// Keys beyond the contract (documented in the weather report): shadowRadius, fog, cloudShadow,
+// glitter, glitterExp, sss, scud, beam,
+// sea.roughnessRain, sea.clearing (1 = clearing signature: long swell, residual lace, short waves ×0.25),
+// sea.cloudReflect (cloud reflection strength, §2.6.5 layer 5).
+
+export const PRESET_NAMES = ['calm', 'overcast', 'squall', 'storm', 'nightStorm', 'fog', 'clearing', 'nightCalm'];
+
+// Severity for «Смена» escalation (DESIGN §3.13).
+export const SEVERITY = { calm: 0, nightCalm: 0, overcast: 1, fog: 1, clearing: 1, squall: 2, storm: 3, nightStorm: 4 };
+
+// Titles: `label` = card / briefing name, `short` = HUD/forecast word.
+export const LABELS = {
+  calm: { label: 'Утро. Штиль', short: 'ШТИЛЬ' },
+  overcast: { label: 'Ветер крепчает', short: 'ПАСМУРНО' },
+  squall: { label: 'Шквал', short: 'ШКВАЛ' },
+  storm: { label: 'Шторм', short: 'ШТОРМ' },
+  nightStorm: { label: 'Ночной шторм', short: 'НОЧНОЙ ШТОРМ' },
+  fog: { label: 'Туман', short: 'ТУМАН' },
+  clearing: { label: 'После шторма. Закат', short: 'ПРОЯСНЕНИЕ' },
+  nightCalm: { label: 'Лунная ночь', short: 'ЛУННАЯ НОЧЬ' },
+};
+
+// Beaufort lower bounds for forces 1..12 (m/s) and Douglas sea-state lower bounds (Hs, m).
+export const BEAUFORT = [0.3, 1.6, 3.4, 5.5, 8, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7];
+export const DOUGLAS = [0.1, 0.5, 1.25, 2.5, 4, 6, 9, 14];
+
+export const PRESETS = {
+  calm: {
+    sky: '#8FB3C9', fogColor: '#D9CDBB', deep: '#0B3B4E', body: '#17586A', crest: '#4FB3AC', shallow: '#3FA79E',
+    foam: '#F1F4EE', sun: '#FFD9A8', ambient: '#A9C3D3', ambientGround: '#0A2A36', spec: '#FFE9C6', accent: '#FF6A1A',
+    shadowTint: '#12313D',
+    sunIntensity: 2.4, ambientIntensity: 0.6, shadowIntensity: 0.75, shadowRadius: 2,
+    sunElev: 14, sunAz: 65, shadowElev: 42,
+    fogNear: 260, fogFar: 950, exposure: 1.0, envIntensity: 1.0,
+    night: 0, visibility: 20000, fog: 0.05, cloudShadow: 0.6, glitter: 1, glitterExp: 600, sss: 0.5,
+    scud: 0, beam: 0.02,
+    wind: 3, gustStrength: 0, gustRate: 0, turbulence: 0.3, lightningPerMin: 0, spoutsPerMin: 0, roguesPerMin: 0,
+    intensity: 0, rain: 0, lightning: 0,
+    detect: { base: 260, altBonus: 1 },
+    sea: { Hs: 0.4, swellAdd: 0.4, Q: 0.25, detail: 0.25, whitecaps: 0, streaks: 0, foamLines: 0, roughness: 0.04, roughnessRain: 0, clearing: 0, cloudReflect: 0.35 },
+    post: {
+      bloomStrength: 0.3, bloomRadius: 0.45, bloomThreshold: 1.1, saturation: 1.05, contrast: 1.05,
+      slope: [1.04, 1, 0.95], offset: [0, 0.005, 0.01], power: 1.0,
+      splitShadow: '#0F3640', splitHighlight: '#FFE2BC', splitStrength: 0.15,
+      vignette: 0.22, vignetteColor: '#000000', grain: 0.025, ca: 0.4, drops: 0,
+    },
+  },
+  overcast: {
+    sky: '#7E8A91', fogColor: '#9AA4A8', deep: '#0C2830', body: '#1A3F47', crest: '#4E7F7E', shallow: '#3A6E6A',
+    foam: '#D9E0DE', sun: '#D3DADB', ambient: '#A3AEB3', ambientGround: '#142328', spec: '#E6ECEC', accent: '#FF5A14',
+    shadowTint: '#1D2B30',
+    sunIntensity: 1.1, ambientIntensity: 0.9, shadowIntensity: 0.3, shadowRadius: 6,
+    sunElev: 40, sunAz: 330, shadowElev: 50,
+    fogNear: 200, fogFar: 650, exposure: 0.95, envIntensity: 0.8,
+    night: 0.1, visibility: 8000, fog: 0.2, cloudShadow: 0.7, glitter: 0, glitterExp: 300, sss: 0.6,
+    scud: 0.3, beam: 0.06,
+    wind: 9, gustStrength: 5, gustRate: 1 / 25, turbulence: 1.2, lightningPerMin: 0, spoutsPerMin: 0, roguesPerMin: 0,
+    intensity: 0.3, rain: 0.1, lightning: 0,
+    detect: { base: 220, altBonus: 1 },
+    sea: { Hs: 1.8, swellAdd: 0.5, Q: 0.45, detail: 0.55, whitecaps: 0.05, streaks: 0.1, foamLines: 0.35, roughness: 0.1, roughnessRain: 0, clearing: 0, cloudReflect: 0 },
+    post: {
+      bloomStrength: 0.2, bloomRadius: 0.5, bloomThreshold: 1.25, saturation: 0.8, contrast: 1.0,
+      slope: [0.98, 1, 1.02], offset: [0.01, 0.015, 0.018], power: 1.02,
+      splitShadow: '#1B2C33', splitHighlight: '#D9E0E0', splitStrength: 0.12,
+      vignette: 0.3, vignetteColor: '#000000', grain: 0.035, ca: 0.6, drops: 0.1,
+    },
+  },
+  squall: {
+    sky: '#4F5A60', fogColor: '#66737A', deep: '#081A1F', body: '#133038', crest: '#3A6265', shallow: '#2C524F',
+    foam: '#C8D2D1', sun: '#A8B6BC', ambient: '#7D8C93', ambientGround: '#0B171B', spec: '#C9D4D8', accent: '#FF7B2E',
+    shadowTint: '#16262B',
+    sunIntensity: 0.7, ambientIntensity: 0.8, shadowIntensity: 0.15, shadowRadius: 5,
+    sunElev: 45, sunAz: 300, shadowElev: 55,
+    fogNear: 120, fogFar: 400, exposure: 0.9, envIntensity: 0.6,
+    night: 0.3, visibility: 1500, fog: 0.45, cloudShadow: 0.5, glitter: 0, glitterExp: 300, sss: 0.7,
+    scud: 0.8, beam: 0.18,
+    wind: 16, gustStrength: 9, gustRate: 1 / 12, turbulence: 2.5, lightningPerMin: 2, spoutsPerMin: 0.3, roguesPerMin: 0,
+    intensity: 0.6, rain: 0.9, lightning: 0.15,
+    detect: { base: 140, altBonus: 0.3 },
+    sea: { Hs: 3.5, swellAdd: 0.5, Q: 0.6, detail: 0.8, whitecaps: 0.18, streaks: 0.5, foamLines: 0.6, roughness: 0.18, roughnessRain: 0.3, clearing: 0, cloudReflect: 0 },
+    post: {
+      bloomStrength: 0.35, bloomRadius: 0.6, bloomThreshold: 1.0, saturation: 0.7, contrast: 1.1,
+      slope: [0.96, 1, 1.03], offset: [0.006, 0.012, 0.016], power: 1.05,
+      splitShadow: '#0E2228', splitHighlight: '#C9D6D9', splitStrength: 0.15,
+      vignette: 0.38, vignetteColor: '#01080A', grain: 0.045, ca: 0.9, drops: 0.8,
+    },
+  },
+  storm: {
+    sky: '#30393D', fogColor: '#3E494D', deep: '#041013', body: '#0C2226', crest: '#3F7A70', shallow: '#1F4440',
+    foam: '#E4EBE7', sun: '#8C9AA0', ambient: '#5D6B71', ambientGround: '#061012', spec: '#BFCBD0', accent: '#FF4A1C',
+    shadowTint: '#0A171A',
+    sunIntensity: 0.55, ambientIntensity: 0.7, shadowIntensity: 0.1, shadowRadius: 5,
+    sunElev: 50, sunAz: 290, shadowElev: 60,
+    fogNear: 110, fogFar: 360, exposure: 0.85, envIntensity: 0.5,
+    night: 0.35, visibility: 2000, fog: 0.45, cloudShadow: 0.35, glitter: 0, glitterExp: 300, sss: 0.8,
+    scud: 1, beam: 0.25,
+    wind: 24, gustStrength: 12, gustRate: 1 / 9, turbulence: 4.0, lightningPerMin: 5, spoutsPerMin: 0.4, roguesPerMin: 0.5,
+    intensity: 0.9, rain: 0.8, lightning: 0.8,
+    detect: { base: 150, altBonus: 0.3 },
+    sea: { Hs: 7.5, swellAdd: 0.8, Q: 0.85, detail: 1.0, whitecaps: 0.55, streaks: 1.0, foamLines: 0.3, roughness: 0.22, roughnessRain: 0, clearing: 0, cloudReflect: 0 },
+    post: {
+      bloomStrength: 0.5, bloomRadius: 0.65, bloomThreshold: 0.9, saturation: 0.62, contrast: 1.22,
+      slope: [0.95, 1, 1.04], offset: [0.002, 0.006, 0.008], power: 1.1,
+      splitShadow: '#04161A', splitHighlight: '#DDE6E6', splitStrength: 0.18,
+      vignette: 0.45, vignetteColor: '#01080A', grain: 0.055, ca: 1.2, drops: 1.0,
+    },
+  },
+  nightStorm: {
+    sky: '#070C10', fogColor: '#0A1216', deep: '#010507', body: '#041014', crest: '#0F2C2D', shallow: '#0B2423',
+    foam: '#3D4B4F', sun: '#5A6E8C', ambient: '#1A2633', ambientGround: '#010304', spec: '#FFF1DA', accent: '#FF5A00',
+    shadowTint: '#02070A',
+    sunIntensity: 0.08, ambientIntensity: 0.25, shadowIntensity: 0, shadowRadius: 3,
+    sunElev: 30, sunAz: 315, shadowElev: 55,
+    fogNear: 90, fogFar: 300, exposure: 1.2, envIntensity: 0.15,
+    night: 1, visibility: 1000, fog: 0.55, cloudShadow: 0, glitter: 0, glitterExp: 300, sss: 0.8,
+    scud: 1, beam: 0.25,
+    wind: 21, gustStrength: 11, gustRate: 1 / 10, turbulence: 3.5, lightningPerMin: 6, spoutsPerMin: 0.3, roguesPerMin: 0.4,
+    intensity: 1, rain: 0.85, lightning: 1,
+    detect: { base: 60, altBonus: 0 },
+    sea: { Hs: 6.5, swellAdd: 0.8, Q: 0.8, detail: 0.95, whitecaps: 0.45, streaks: 0.9, foamLines: 0.3, roughness: 0.22, roughnessRain: 0, clearing: 0, cloudReflect: 0 },
+    post: {
+      bloomStrength: 0.9, bloomRadius: 0.75, bloomThreshold: 0.6, saturation: 0.75, contrast: 1.15,
+      slope: [0.98, 1, 1.06], offset: [0.004, 0.008, 0.014], power: 1.15,
+      splitShadow: '#02090D', splitHighlight: '#FFE9CC', splitStrength: 0.22,
+      vignette: 0.55, vignetteColor: '#000000', grain: 0.07, ca: 1.4, drops: 1.0,
+    },
+  },
+  fog: {
+    sky: '#B4BCBC', fogColor: '#AEB6B4', deep: '#22373A', body: '#2F4A4B', crest: '#557A77', shallow: '#4F7470',
+    foam: '#E0E6E2', sun: '#E6E3D8', ambient: '#C0C8C6', ambientGround: '#2A3A3B', spec: '#F2F0EA', accent: '#FF7B2E',
+    shadowTint: '#3E4E50',
+    sunIntensity: 0.6, ambientIntensity: 1.1, shadowIntensity: 0.05, shadowRadius: 6,
+    sunElev: 35, sunAz: 30, shadowElev: 50,
+    fogNear: 35, fogFar: 170, exposure: 1.05, envIntensity: 0.9,
+    night: 0.1, visibility: 200, fog: 1, cloudShadow: 0, glitter: 0, glitterExp: 300, sss: 0.5,
+    scud: 0, beam: 0.35,
+    wind: 3, gustStrength: 0, gustRate: 0, turbulence: 0.4, lightningPerMin: 0, spoutsPerMin: 0, roguesPerMin: 0,
+    intensity: 0.1, rain: 0.05, lightning: 0,
+    detect: { base: 45, altBonus: 0 },
+    sea: { Hs: 0.6, swellAdd: 0.7, Q: 0.3, detail: 0.3, whitecaps: 0, streaks: 0, foamLines: 0, roughness: 0.06, roughnessRain: 0, clearing: 0, cloudReflect: 0 },
+    post: {
+      bloomStrength: 0.7, bloomRadius: 0.9, bloomThreshold: 0.7, saturation: 0.6, contrast: 0.85,
+      slope: [1, 1, 0.99], offset: [0.05, 0.052, 0.05], power: 0.92,
+      splitShadow: '#5A6A6B', splitHighlight: '#F2EEE6', splitStrength: 0.1,
+      vignette: 0.25, vignetteColor: '#9AA4A4', grain: 0.04, ca: 0.5, drops: 0.15,
+    },
+  },
+  clearing: {
+    sky: '#4A4F7A', fogColor: '#E89A63', deep: '#142238', body: '#23345A', crest: '#E0985A', shallow: '#2F6A72',
+    foam: '#FFE3C7', sun: '#FF9A50', ambient: '#8F7FA8', ambientGround: '#1A1426', spec: '#FFD08A', accent: '#FFD27A',
+    shadowTint: '#2B2350',
+    sunIntensity: 2.6, ambientIntensity: 0.6, shadowIntensity: 0.85, shadowRadius: 2.5,
+    sunElev: 5, sunAz: 292, shadowElev: 38,
+    fogNear: 280, fogFar: 950, exposure: 1.05, envIntensity: 1.3,
+    night: 0.2, visibility: 15000, fog: 0.05, cloudShadow: -1, glitter: 1, glitterExp: 120, sss: 0.6,
+    scud: 0, beam: 0.02,
+    wind: 6, gustStrength: 3, gustRate: 1 / 30, turbulence: 0.8, lightningPerMin: 0, spoutsPerMin: 0, roguesPerMin: 0,
+    intensity: 0.15, rain: 0, lightning: 0,
+    detect: { base: 280, altBonus: 1 },
+    sea: { Hs: 2.5, swellAdd: 1.4, Q: 0.35, detail: 0.35, whitecaps: 0.02, streaks: 0, foamLines: 0.2, roughness: 0.07, roughnessRain: 0, clearing: 1, cloudReflect: 0.1 },
+    post: {
+      bloomStrength: 0.55, bloomRadius: 0.55, bloomThreshold: 0.95, saturation: 1.15, contrast: 1.1,
+      slope: [1.08, 0.98, 0.9], offset: [0.02, 0.01, 0.03], power: 0.98,
+      splitShadow: '#2B2350', splitHighlight: '#FFC98A', splitStrength: 0.25,
+      vignette: 0.35, vignetteColor: '#1A0F24', grain: 0.03, ca: 0.6, drops: 0,
+    },
+  },
+  nightCalm: {
+    sky: '#0B1220', fogColor: '#14203A', deep: '#02080D', body: '#071827', crest: '#173B52', shallow: '#0E2A33',
+    foam: '#8FA6B8', sun: '#9FB4D9', ambient: '#1E2C4A', ambientGround: '#050A12', spec: '#DCE6FF', accent: '#FFB547',
+    shadowTint: '#0B1626',
+    sunIntensity: 0.35, ambientIntensity: 0.45, shadowIntensity: 0.35, shadowRadius: 3,
+    sunElev: 40, sunAz: 340, shadowElev: 50,
+    fogNear: 140, fogFar: 500, exposure: 1.15, envIntensity: 0.2,
+    night: 1, visibility: 10000, fog: 0.2, cloudShadow: 0, glitter: 0, glitterExp: 300, sss: 0.5,
+    scud: 0, beam: 0.04,
+    wind: 2, gustStrength: 0, gustRate: 0, turbulence: 0.3, lightningPerMin: 0, spoutsPerMin: 0, roguesPerMin: 0,
+    intensity: 0, rain: 0, lightning: 0,
+    detect: { base: 80, altBonus: 0.5 },
+    sea: { Hs: 0.5, swellAdd: 0.4, Q: 0.25, detail: 0.25, whitecaps: 0, streaks: 0, foamLines: 0, roughness: 0.05, roughnessRain: 0, clearing: 0, cloudReflect: 0 },
+    post: {
+      bloomStrength: 0.7, bloomRadius: 0.7, bloomThreshold: 0.65, saturation: 0.8, contrast: 1.08,
+      slope: [0.96, 1, 1.06], offset: [0.003, 0.006, 0.014], power: 1.1,
+      splitShadow: '#08142A', splitHighlight: '#BFD3FF', splitStrength: 0.18,
+      vignette: 0.5, vignetteColor: '#000000', grain: 0.06, ca: 0.8, drops: 0,
+    },
+  },
+};
+
+// «Зелёное небо» overlay column (hazards drive weather.setGreenTint). Colours are pulled towards these
+// targets; the *Mul entries multiply the blended value at greenTint = 1.
+export const GREEN_TINT = {
+  colors: {
+    sky: '#4E6656', fogColor: '#5A7262', deep: '#0F2A24', body: '#1A3C33', crest: '#2F5F4E', shallow: '#2A4F42',
+    foam: '#C9D6C6', sun: '#B4C7A8', ambient: '#62806A', ambientGround: '#0E1A14', accent: '#FF4A2E',
+  },
+  mul: { sunIntensity: 0.8, fogNear: 0.8, fogFar: 0.8, exposure: 0.95 },
+};
+
+// Lightning flash colours (DESIGN §2.4): halo by day / by night.
+export const FLASH_DAY = '#DCE6FF';
+export const FLASH_NIGHT = '#C7D6FF';

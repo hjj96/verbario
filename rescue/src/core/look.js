@@ -198,7 +198,7 @@ function dataTex(data, size) {
   t.minFilter = THREE.LinearMipmapLinearFilter;
   t.generateMipmaps = true;
   t.colorSpace = THREE.NoColorSpace;
-  t.anisotropy = 4;
+  t.anisotropy = 2; // the ocean samples these many times per pixel; keep filtering cheap
   t.needsUpdate = true;
   return t;
 }
