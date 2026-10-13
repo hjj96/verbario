@@ -7,7 +7,17 @@ const DEFAULTS = {
   musicVolume: 0.6,
   sfxVolume: 0.9,
   radioVolume: 0.9,
-  reduceFlashes: false, // accessibility: dims lightning flashes and strobes
+  envVolume: 0.9, // weather & sea
+  uiVolume: 0.8,
+  alarms: true, // audible warnings
+  reduceFlashes: false, // accessibility: dims lightning flashes and strobes (DESIGN §2.8, §7.8)
+  reduceMotion: false, // no radar sweep, toast slide-in, glitch text, lens drops
+  textScale: 1, // 1 | 1.25 | 1.5
+  hudScale: 1, // 0.8 .. 1.3
+  vibration: 1, // gamepad rumble 0..1
+  assist: 'standard', // 'full' | 'standard' | 'off' — flight stabilisation (DESIGN §3.3)
+  difficulty: 'pilot', // 'cadet' | 'pilot' | 'ace' (DESIGN §3.17)
+  seenFlashWarning: false,
   screenShake: 1, // 0..1
   colorblindMarkers: false, // adds shapes to colour-coded markers
   subtitles: true,
@@ -25,6 +35,11 @@ export class Settings {
     } catch {
       /* storage unavailable — defaults are fine */
     }
+    if (!localStorageHas(KEY) && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      this.values.reduceFlashes = true;
+      this.values.reduceMotion = true;
+    }
+    if (!localStorageHas(KEY) && matchMedia?.('(pointer: coarse)').matches) this.values.quality = 'low';
     const q = new URLSearchParams(location.search).get('quality');
     if (q && ['low', 'medium', 'high'].includes(q)) this.values.quality = q;
   }
@@ -56,6 +71,14 @@ export class Settings {
   // Convenience: multiplier for particle counts / shader detail.
   detail() {
     return { low: 0.35, medium: 0.65, high: 1 }[this.values.quality] || 1;
+  }
+}
+
+function localStorageHas(key) {
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch {
+    return false;
   }
 }
 

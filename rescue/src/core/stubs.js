@@ -15,9 +15,22 @@ export class Weather {
         sky: new THREE.Color('#9fb8c4'), fogColor: new THREE.Color('#9fb8c4'), deep: new THREE.Color('#0d3b4f'),
         shallow: new THREE.Color('#2a7f8f'), foam: new THREE.Color('#eef4f2'), sun: new THREE.Color('#fff1d6'),
         ambient: new THREE.Color('#8fa7b3'), accent: new THREE.Color('#ff6a3d'),
-        sunIntensity: 2.2, ambientIntensity: 0.9, exposure: 1,
+        body: new THREE.Color('#17586A'), crest: new THREE.Color('#4FB3AC'), ambientGround: new THREE.Color('#0A2A36'),
+        spec: new THREE.Color('#FFE9C6'), shadowTint: new THREE.Color('#12313D'),
+        sunIntensity: 2.2, ambientIntensity: 0.9, shadowIntensity: 0.75, fogNear: 260, fogFar: 950, exposure: 1, envIntensity: 1,
+        sea: { Hs: 0.6, swellAdd: 0.4, Q: 0.25, detail: 0.25, whitecaps: 0, streaks: 0, foamLines: 0, roughness: 0.05 },
+        post: {
+          bloomStrength: 0.3, bloomRadius: 0.45, bloomThreshold: 1.1, saturation: 1.05, contrast: 1.05,
+          slope: new THREE.Vector3(1, 1, 1), offset: new THREE.Vector3(), power: 1, splitShadow: new THREE.Color('#0F3640'),
+          splitHighlight: new THREE.Color('#FFE2BC'), splitStrength: 0.15, vignette: 0.22, vignetteColor: new THREE.Color('#000'),
+          grain: 0.025, ca: 0.4, drops: 0,
+        },
       },
+      sunDirVisual: new THREE.Vector3(0.4, 0.3, -0.8).normalize(),
+      front: { origin: new THREE.Vector2(), dir: new THREE.Vector2(1, 0), speed: 20, width: 120, active: false, t: 0 },
+      greenTint: 0, stElmo: 0, pressure: 1016, gustFronts: [], turbulence: 0.3, beaufort: 2, seaState: 1,
     };
+    this.state.palettePrev = this.state.palette;
     this.sun = new THREE.DirectionalLight(0xffffff, 2.2);
     this.sun.position.set(100, 200, 80);
     this.hemi = new THREE.HemisphereLight(0xbfd6e0, 0x0d3b4f, 0.9);
@@ -26,6 +39,8 @@ export class Weather {
   }
   windAt(x, z, out) { return out.copy(this.state.windDir).multiplyScalar(this.state.windSpeed); }
   setPreset(name) { this.state.preset = name; }
+  setGreenTint() {}
+  runScript() {}
   forecast() { return []; }
   strikeLightning() {}
   update() {}
@@ -41,6 +56,12 @@ export class Ocean {
     ctx.scene.add(this.mesh);
   }
   heightAt() { return 0; }
+  setSearchlight() {}
+  searchlightAt() { return 0; }
+  setGlints() {}
+  setFeature() {}
+  removeFeature() {}
+  stamp() {}
   normalAt(x, z, out) { return out.set(0, 1, 0); }
   velocityAt(x, z, out) { return out.set(0, 0); }
   splash() {}
@@ -99,7 +120,17 @@ export class Helicopter {
     this.landed = null;
     this.alive = true;
     this.searchlight = false;
-    this.winch = { state: 'stowed', length: 0, basket: new THREE.Vector3(), steadiness: 1, load: null };
+    this.winch = { state: 'stowed', length: 0, basket: new THREE.Vector3(), steadiness: 1, load: null, speed: 0, swing: 0, target: null, capture: 0 };
+    this.rotorRPM = 1;
+    this.load = 0.3;
+    this.bank = 0;
+    this.boost = false;
+    this.engineTemp = 0;
+    this.flares = 4;
+    this.rafts = 2;
+    this.emp = 0;
+    this.aim = new THREE.Vector3();
+    this.altTarget = 40;
     this.group = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 10), new THREE.MeshStandardMaterial({ color: 0xff5a2a }));
     ctx.scene.add(this.group);
   }
@@ -120,7 +151,7 @@ export class Helicopter {
 }
 
 export class Survivors {
-  constructor(ctx) { this.ctx = ctx; this.list = []; }
+  constructor(ctx) { this.ctx = ctx; this.list = []; this.datums = []; }
   spawn() { return null; }
   clear() { this.list.length = 0; }
   nearestFor() { return null; }
@@ -149,7 +180,14 @@ export class CameraRig {
     this.ctx = ctx;
     this.mode = 'follow';
     this.zoom = 1;
+    this.letterbox = 0;
     this._v = new THREE.Vector3();
+    this._ray = new THREE.Raycaster();
+    this._plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  }
+  screenToWater(ndcX, ndcY, out = new THREE.Vector3()) {
+    this._ray.setFromCamera({ x: ndcX, y: ndcY }, this.ctx.camera);
+    return this._ray.ray.intersectPlane(this._plane, out) || out.set(0, 0, 0);
   }
   shake() {}
   punch() {}
@@ -173,8 +211,12 @@ export class CameraRig {
 export class Radio {
   constructor(ctx) { this.ctx = ctx; }
   say(speaker, text, opts = {}) {
-    this.ctx.events.emit('radio:line', { speaker, text, duration: opts.duration || 4, priority: opts.priority || 1 });
+    this.ctx.events.emit('radio:line', {
+      speaker, text, name: opts.name || speaker, channel: opts.channel || 'ics', id: opts.id || null,
+      duration: opts.duration || 4, priority: opts.priority || 1,
+    });
   }
+  line() {}
   update() {}
 }
 

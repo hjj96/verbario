@@ -5,6 +5,7 @@ import { EventBus } from './core/events.js';
 import { Input } from './core/input.js';
 import { createRng, createNoise2D } from './core/math.js';
 import { Settings } from './core/settings.js';
+import { Look } from './core/look.js';
 import * as Stubs from './core/stubs.js';
 
 // Update order matters: producers of state run before consumers.
@@ -43,8 +44,9 @@ async function boot() {
   const container = document.getElementById('game');
   const settings = new Settings();
 
+  // MSAA lives on the composer's render target (post), so the canvas itself is not antialiased.
   const renderer = new THREE.WebGLRenderer({
-    antialias: settings.get('quality') !== 'low',
+    antialias: false,
     powerPreference: 'high-performance',
     stencil: false,
   });
@@ -53,17 +55,21 @@ async function boot() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.enabled = settings.get('quality') !== 'low';
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoft is deprecated in r185
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 1, 4000);
+  const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 2, 1200);
   camera.position.set(0, 220, 60);
   camera.lookAt(0, 0, 0);
 
+  // Shared noise atlas, uniforms, fog patch (must exist before any material compiles).
+  const look = new Look(7);
+
   const ctx = {
     THREE,
+    look,
     renderer,
     scene,
     camera,
@@ -87,9 +93,21 @@ async function boot() {
     },
   };
   window.__game = ctx; // handy for debugging and automated tests
+  {
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    look.setResolution(size.x, size.y);
+  }
 
   // Construct all systems (constructors must not depend on other systems).
-  const classes = await Promise.all(SYSTEMS.map(([, path, name]) => loadSystem(path, name)));
+  // Test isolation: ?stub=hud,audio forces stubs for those systems; ?only=ocean,weather forces stubs for
+  // every system except the listed ones (lets a module be tested while neighbours are unfinished).
+  const csv = (k) => (ctx.params.get(k) || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const forceStub = new Set(csv('stub'));
+  const only = csv('only');
+  if (only.length) for (const [key] of SYSTEMS) if (!only.includes(key)) forceStub.add(key);
+  const classes = await Promise.all(
+    SYSTEMS.map(([key, path, name]) => (forceStub.has(key) ? Stubs[name] : loadSystem(path, name))),
+  );
   const order = [];
   SYSTEMS.forEach(([key], i) => {
     try {
@@ -117,6 +135,8 @@ async function boot() {
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    look.setResolution(size.x, size.y);
     for (const key of order) ctx[key].resize?.(w, h);
   };
   window.addEventListener('resize', onResize);
@@ -138,6 +158,7 @@ async function boot() {
     ctx.time.dt = dt;
     ctx.time.t += dt;
     ctx.time.frame++;
+    look.setTime(ctx.time.t);
 
     ctx.input.poll();
     for (const key of order) {
