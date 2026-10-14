@@ -277,16 +277,18 @@ void main() {
   float cyc = floor(tt / life);
   float a01 = age / life;
   float base = fract(sp.x * 7.13 + cyc * 0.6180339) * 6.2831853;
-  float rr = V.z * mix(0.6, 1.6, fract(sp.z * 3.7 + cyc * 0.37)) * (1.0 + 0.6 * a01);
+  // an annulus (the core stays clearer), widening as the mist is flung out
+  float rr = V.z * mix(0.85, 1.7, fract(sp.z * 3.7 + cyc * 0.37)) * (1.0 + 0.8 * a01);
   float om = 25.0 * sqrt(scale) / max(rr, 1.0); // 25 m/s orbit
   float ang = base + V2.x * om * age;
   // a low, wide mist skirt, skewed downwind — not a column of cotton balls
   float y = 0.3 * uShadowY + V2.z * age * (0.25 + 0.35 * sp.y);
   vec3 p = vec3(V.x + cos(ang) * rr, min(y, 4.0 + 6.0 * sp.y), V.y + sin(ang) * rr);
-  p.xz += uWind * (0.35 + 0.35 * sp.z) * age;
+  p.xz += uWind * (0.45 + 0.5 * sp.z) * age;
   float sr = fract(sp.y * 5.3 + cyc * 0.71);
-  float size = mix(2.0, 9.0, pow(a01, 0.6)) * mix(0.45, 1.5, sr * sr) * sqrt(scale);
-  float alpha = 0.11 * V.w * smoothstep(0.0, 0.14, a01) * (1.0 - smoothstep(0.5, 1.0, a01));
+  // fewer hard puffs, more haze: big, faint, overlapping sprites read as one torn misty skirt
+  float size = mix(3.0, 12.0, pow(a01, 0.6)) * mix(0.45, 1.5, sr * sr) * sqrt(scale);
+  float alpha = 0.1 * V.w * smoothstep(0.0, 0.18, a01) * (1.0 - smoothstep(0.45, 1.0, a01));
   vec4 mv = viewMatrix * vec4(p, 1.0);
   mv.xyz += normalize(-mv.xyz) * size * 0.6; // soft-particle push: do not slice the waves
   float rot = sp.x * 40.0 + age * 0.8;
@@ -295,7 +297,7 @@ void main() {
   mv.xy += vec2(cs * c.x - sn * c.y, sn * c.x + cs * c.y) * size;
   gl_Position = projectionMatrix * mv;
   vUv = c;
-  vec3 light = hzAirLight(p, 0.7) + uAirFlash * 1.8;
+  vec3 light = hzAirLight(p, 0.7) * 0.85 + uAirFlash * 1.8;
   vCol = vec4(uSprayCol * light, alpha);
   vSeed = fract(sp.x * 13.7 + cyc * 0.31);
   vFog = hzFog(p);

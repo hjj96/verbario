@@ -62,7 +62,7 @@ export class Collars {
     const k = Math.min(1, (sp - 0.15) / 1.2);
     const len = 1.6 + 2.6 * k;
     const ux = vx / sp, uz = vz / sp;
-    const off = R * (0.6 + len * 0.7);
+    const off = R * (0.4 + len * 0.95); // the froth starts at the object's downstream edge
     // local +z of the instance → downstream (yaw about +Y maps +z to (sin yaw, cos yaw))
     this.push(x + ux * off, y - 0.01, z + uz * off, 0, 1, 0, R * 0.85, foam * (0.45 + 0.55 * k), -1, 0, phase + 0.5, Math.atan2(ux, uz), len);
   }

@@ -456,8 +456,10 @@ export class Signals {
             r.trailAcc -= 1;
             const u = Math.random();
             const s0 = 0.7 + 0.5 * Math.random();
+            // born when the motor passed that point (one shared birth time per frame grew the puffs
+            // in lock-step and beaded the trail)
             fx.pools.smoke.emit(
-              t, r.x + (r.px - r.x) * u, r.y + (r.py - r.y) * u, r.z + (r.pz - r.z) * u,
+              t - dt * u, r.x + (r.px - r.x) * u, r.y + (r.py - r.y) * u, r.z + (r.pz - r.z) * u,
               (Math.random() - 0.5) * 0.5, -0.4, (Math.random() - 0.5) * 0.5,
               1.8 + Math.random() * 1.6, s0, 2 + 1.8 * Math.random(), this.cTrail, 0.1 + 0.08 * Math.random(), this.cSmokeEnd, P_TRAIL,
             );
@@ -490,7 +492,7 @@ export class Signals {
             const u = Math.random();
             const s0 = 0.5 + 0.6 * Math.random();
             fx.pools.smoke.emit(
-              t, r.x + sx + (r.px - r.x - sx) * u, r.y - 0.6 + (r.py - r.y) * u, r.z + sz + (r.pz - r.z - sz) * u, 0, -0.3, 0,
+              t - dt * u, r.x + sx + (r.px - r.x - sx) * u, r.y - 0.6 + (r.py - r.y) * u, r.z + sz + (r.pz - r.z - sz) * u, 0, -0.3, 0,
               3.5 + Math.random() * 2, s0, 3 + 2.5 * Math.random(), this.cTrail, 0.1 + 0.06 * Math.random(), this.cSmokeEnd, P_TRAIL,
             );
           }

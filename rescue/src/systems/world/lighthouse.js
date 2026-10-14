@@ -38,7 +38,7 @@ const C = {
   door: '#3E4C47',
   concrete: '#8E8E87',
   concreteDark: '#6E706B',
-  jetty: '#84857F',
+  jetty: '#76776F', // sea-weathered concrete (darker than the rock it leaves)
   deckEdge: '#5A5F5C',
   net: '#2A2F2E',
   glass: '#FFF1CF',

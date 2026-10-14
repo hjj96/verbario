@@ -393,6 +393,24 @@ export class World {
     }
   }
 
+  // Trailing wake streaks (contact.js pushWake) from motion RELATIVE to the water only: the current
+  // running past a moored buoy. A free floater drifts with the current and its 3 % leeway makes no
+  // visible wake, so it gets none (a flat streak sheet beside a container read as a pane of glass).
+  _wakes(env) {
+    const items = this.floaters.items;
+    if (!items || !items.length) return;
+    const cur = env.current, f = env.focus;
+    if (cur.x * cur.x + cur.y * cur.y < 0.0225) return;
+    const foam = 0.8 * smoothstep(3, 1.2, env.Hs || 0); // a flat streak would cut into big swells
+    if (foam <= 0) return;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (!it.moored || !(it.R > 0) || !Number.isFinite(it.h)) continue;
+      if (Math.abs(it.x - f.x) + Math.abs(it.z - f.y) > 360) continue;
+      this.collars.pushWake(it.x, it.h, it.z, it.R, cur.x, cur.y, foam, it.phase || 0);
+    }
+  }
+
   // Lamp / emissive channels: rhythms and day/night levels (DESIGN §2.4, §2.8 photosensitivity).
   _channels(dt) {
     const c = this.channels;
@@ -447,6 +465,7 @@ export class World {
     for (const pl of this.places) pl.update(dt, env);
     for (const b of this.boats) b.update(dt, env);
     this.floaters.update(dt, env);
+    this._wakes(env);
     updateLandforms(env);
 
     // ship pads: live tilt / heading

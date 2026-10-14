@@ -156,7 +156,11 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop', 
     // shared weathering first (its block lands right after <roughnessmap_fragment>); our own
     // roughness / per-part wear decode is inserted after the same token below, i.e. BEFORE it.
     mat.userData.weathering = patchWeathering(sh, look, wxOpts);
-    sh.fragmentShader = sh.fragmentShader.replace(/uWx([AB])\./g, 'wx$1.').replace(/uWxStreak \*/g, 'wxStreak *');
+    sh.fragmentShader = sh.fragmentShader
+      .replace(/uWx([AB])\./g, 'wx$1.')
+      .replace(/uWxStreak \*/g, 'wxStreak *')
+      // deck stains from low-frequency fbm, not worley cells (cells read as leopard spots on a deck)
+      .replace('smoothstep( 0.35, 0.8, n1.b )', 'smoothstep( 0.45, 0.75, n1.r * 0.7 + n2.r * 0.3 )');
     Object.assign(sh.uniforms, u);
     sh.vertexShader = sh.vertexShader
       .replace(
@@ -522,7 +526,7 @@ export function flameGeometry() {
 
 // ------------------------------------------------------------------------------------------------
 // Water contact (DESIGN §2.7.2 "floating objects"): soft foam collar 0.8R…1.6R (atlas blotches x
-// bubble speckle, exponential falloff from the hull, alpha ≤ .55, lace only as a faint modulation)
+// bubble speckle, uneven waterline froth, exponential falloff from the hull, alpha ≤ .5, lace only as a faint modulation)
 // + dark contact disc 25 %. iData.y < 0 marks a trailing wake instance (Collars.pushWake). Instanced unit disc (radius 1 == 1.6R), per instance
 // iData = (foam, contact darkness, searchlight, phase). Normal blending + fog.
 export function createCollarMaterial(look, shared) {
@@ -575,17 +579,26 @@ export function createCollarMaterial(look, shared) {
         float foam, contact;
         if (vData.y < 0.0) {
           // trailing wake (elongated instance, local +z downstream): streaky froth, no dark disc
-          float st = texture2D(uAtlas, vec2(vP.x * 1.6, vP.y * 0.22) + vec2(vData.w, -uTime * 0.03)).r;
-          float body = exp(-r * r * 3.0) * (1.0 - smoothstep(0.7, 1.0, r));
-          foam = body * (0.3 + 0.9 * smoothstep(0.35, 0.75, st)) * (0.6 + 0.4 * speck) * (0.85 + 0.15 * lace) * vData.x * 0.45;
+          // lumpy, mildly stretched (3:1) froth that thins out downstream — never long speed lines
+          float st = texture2D(uAtlas, vec2(vP.x * 0.9, vP.y * 0.3) + vec2(vData.w, -uTime * 0.03)).r;
+          float body = exp(-r * r * 3.0) * (1.0 - smoothstep(0.7, 1.0, r)) * (1.0 - 0.75 * smoothstep(-0.4, 0.9, vP.y));
+          foam = body * (0.25 + 0.9 * smoothstep(0.4, 0.75, st * 0.7 + blot2 * 0.4)) * (0.6 + 0.4 * speck) * (0.85 + 0.15 * lace) * vData.x * 0.38;
           contact = 0.0;
         } else {
           contact = (1.0 - smoothstep(0.3, 0.58, r)) * vData.y;
-          float d = max(0.0, r - 0.56 + (blot2 - 0.5) * 0.12) / 0.44;
-          float fall = exp(-d * 3.5) * (1.0 - smoothstep(0.82, 1.0, r + (blot - 0.5) * 0.2));
-          float froth = smoothstep(0.5, 0.58, r) * (1.0 - smoothstep(0.6, 0.7 + 0.12 * blot, r)); // waterline froth
-          float body = fall * (0.3 + 0.9 * smoothstep(0.3, 0.72, blot)) * (0.5 + 0.5 * speck) * (0.85 + 0.15 * lace);
-          foam = clamp(max(body, froth * (0.55 + 0.45 * speck)), 0.0, 1.0) * smoothstep(0.46, 0.56, r) * vData.x * 0.55;
+          // froth hugs the waterline (continuous but uneven, soft both sides) and thins outward in
+          // drifting patches. No crisp constant-radius ring: two overlapping circles round a long
+          // hull must never draw a white outline on the sea
+          float d = max(0.0, r - 0.5 + (blot2 - 0.5) * 0.14) / 0.5;
+          float patchy = smoothstep(0.3, 0.75, blot * 0.65 + blot2 * 0.5 - d * 0.3);
+          float fall = exp(-d * 4.0) * (1.0 - smoothstep(0.75, 1.0, r + (blot - 0.5) * 0.25));
+          float body = fall * (0.2 + 0.8 * patchy) * (0.6 + 0.4 * speck);
+          // uneven round the hull too: noise sampled on a circle (no seam), so a small object never
+          // wears a perfect white ring
+          float ang = texture2D(uAtlas, vP / max(r, 1e-3) * 0.35 + vec2(vData.w * 0.37, uTime * 0.01)).r;
+          float froth = exp(-d * 7.0) * (0.3 + 0.7 * smoothstep(0.3, 0.7, ang)) * (0.55 + 0.45 * smoothstep(0.2, 0.7, blot2)) * (0.7 + 0.3 * speck);
+          foam = max(body, froth * 0.8) * (0.85 + 0.15 * lace);
+          foam = min(foam * smoothstep(0.3, 0.56, r) * vData.x * 0.8, 0.5);
         }
         vec3 fc = uFoamCol * (1.0 + 3.5 * vData.z);
         float a = clamp(foam + contact, 0.0, 1.0);

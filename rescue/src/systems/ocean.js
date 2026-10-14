@@ -14,6 +14,7 @@ import { buildOceanGrid, snapQuantum } from './ocean/grid.js';
 import { createOceanUniforms, createOceanMaterial, oceanDefines } from './ocean/material.js';
 import { WaterMemory } from './ocean/memory.js';
 import { oceanSelfTest } from './ocean/selftest.js';
+import { bakeCoast, coastDistance } from './ocean/coast.js';
 
 const MEMORY_EXTENT = 320; // m
 const MAX_SPLASHES = 24;
@@ -193,6 +194,13 @@ export class Ocean {
     this._dwCalled = false;
     // searchlight auto-off if the heli stopped calling (frames, not seconds: robust to hitches)
     if (ctx.time.frame - this._search.lastFrame > 2) this._search.i = 0;
+
+    // terrain may join the scene after the world pushed its shoals: re-check the coast map now and then
+    this._coastT = (this._coastT ?? 0) - dt;
+    if (this._coastT <= 0) {
+      this._coastT = 2;
+      if (this._syncCoast()) this._applyShoals();
+    }
 
     this._packSplashes(t);
     this._updateLook(st, pal, sea, night, intensity, windAngle, windSpeed, clearing, dt);
@@ -578,8 +586,18 @@ export class Ocean {
     this.features.remove(id);
   }
 
-  // ≤ 8 [{x, z, radius}] rocks / shallows (world calls).
+  // ≤ 8 [{x, z, radius}] rocks / shallows (world calls). Terrain coasts are taken over by the
+  // coastline distance map baked from the rendered granite (re-baked when the terrain changes);
+  // a shoal whose centre lies on that land only keeps its slot, circles serve the rest.
   setShoals(list) {
+    this._shoalList = list;
+    this._syncCoast();
+    this._applyShoals();
+  }
+
+  _applyShoals() {
+    const list = this._shoalList;
+    const coast = this.bank.coast;
     const arr = this.uniforms.uShoals.value;
     arr.fill(0);
     const shoals = [];
@@ -587,15 +605,37 @@ export class Ocean {
       if (shoals.length >= 8) break;
       if (!s || !Number.isFinite(s.x) || !Number.isFinite(s.z)) continue;
       const r = Math.max(0.5, s.radius ?? s.r ?? 5);
+      const on = !coast || coastDistance(coast, s.x, s.z) > 0.5;
       const j = shoals.length * 4;
       arr[j] = s.x;
       arr[j + 1] = s.z;
       arr[j + 2] = r;
-      arr[j + 3] = 1;
-      shoals.push({ x: s.x, z: s.z, r });
+      arr[j + 3] = on ? 1 : 0;
+      shoals.push({ x: s.x, z: s.z, r, on });
     }
     this.bank.shoals = shoals;
     this.uniforms.uShoalCount.value = shoals.length;
+  }
+
+  // (Re)bake the coastline map when the set of terrain meshes changed (new mission / world).
+  _syncCoast() {
+    const scene = this.ctx.scene;
+    if (!scene) return false;
+    let key = '';
+    scene.traverse((o) => {
+      if (o.isMesh && !o.isInstancedMesh && o.geometry?.attributes?.aTerr) key += o.geometry.uuid;
+    });
+    if (key === this._coastKey) return false;
+    this._coastKey = key;
+    const u = this.uniforms;
+    this._coastNone ??= u.uCoast.value; // the 1×1 "far" placeholder
+    this.bank.coast?.texture?.dispose();
+    const c = key ? bakeCoast(scene) : null;
+    this.bank.coast = c;
+    u.uCoast.value = c ? c.texture : this._coastNone;
+    if (c) u.uCoastWin.value.set(c.x0, c.z0, 1 / (c.w * c.cell), 1 / (c.h * c.cell));
+    u.uCoastOn.value = c ? 1 : 0;
+    return true;
   }
 
   // Jump wave amplitudes to the current targets (tests, instant preset switches).

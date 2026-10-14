@@ -163,7 +163,7 @@ export const PRESETS = {
     detect: { base: 280, altBonus: 1 },
     sea: { Hs: 2.5, swellAdd: 1.4, Q: 0.35, detail: 0.35, whitecaps: 0.02, streaks: 0, foamLines: 0.2, roughness: 0.07, roughnessRain: 0, clearing: 1, cloudReflect: 0.1 },
     post: {
-      bloomStrength: 0.45, bloomRadius: 0.55, bloomThreshold: 1.0, saturation: 0.95, contrast: 1.08,
+      bloomStrength: 0.45, bloomRadius: 0.55, bloomThreshold: 1.0, saturation: 0.9, contrast: 1.08,
       slope: [1.01, 1.0, 0.98], offset: [0.006, 0.008, 0.012], power: 0.98,
       splitShadow: '#1E2632', splitHighlight: '#FFDDB8', splitStrength: 0.1,
       vignette: 0.32, vignetteColor: '#000000', grain: 0.03, ca: 0.6, drops: 0,

@@ -20,7 +20,10 @@ uniform vec2 uOffset;        // snapped world position of the grid origin
 uniform float uGridStep;     // 2 / N
 uniform float uHsEff;        // effective significant height (colour normalisation)
 uniform int uShoalCount;
-uniform vec4 uShoals[8];     // x, z, radius, 1
+uniform vec4 uShoals[8];     // x, z, radius, on (0 = a terrain coast: the coast map handles it)
+uniform sampler2D uCoast;    // coastline distance map (coast.js): R = distance to the waterline / 48 m
+uniform vec4 uCoastWin;      // x0, z0, 1 / width m, 1 / height m
+uniform float uCoastOn;
 ${FEATURES_GLSL}
 varying vec2 vGrid;          // lagrangian world xz (foam & dye ride the orbits)
 varying vec3 vOWorld;        // displaced world position
@@ -39,9 +42,19 @@ float oceanShoalDamp(vec2 p) {
   for (int i = 0; i < 8; i++) {
     if (i >= uShoalCount) break;
     vec4 s = uShoals[i];
+    if (s.w < 0.5) continue;
     d *= 0.15 + 0.85 * smoothstep(s.z * 0.9, s.z * 2.6, length(p - s.xy));
   }
   return d;
+}
+// Distance (m) from p to the nearest terrain waterline; 48 = far / no map (coast.js coastDistance).
+float oceanCoastD(vec2 p) {
+  if (uCoastOn < 0.5) return 48.0;
+  return textureLod(uCoast, clamp((p - uCoastWin.xy) * uCoastWin.zw, 0.0, 1.0), 0.0).r * 48.0;
+}
+// Waves die down to ≈ 20 % at the waterline, full beyond ≈ 16 m (coast.js coastDamp).
+float oceanCoastDamp(vec2 p) {
+  return 0.2 + 0.8 * smoothstep(1.0, 16.0, oceanCoastD(p));
 }
 `;
 
@@ -52,7 +65,7 @@ ${OCEAN_COMMON}
 void oceanVertex(vec2 gl, out vec3 pos, out vec3 nrm) {
   vec2 p0 = gl + uOffset;
   float cell = oceanCell(gl);
-  float damp = oceanEdge(gl) * oceanShoalDamp(p0);
+  float damp = oceanEdge(gl) * oceanShoalDamp(p0) * oceanCoastDamp(p0);
   vec2 dxz = vec2(0.0);
   float y = 0.0, jxx = 0.0, jzz = 0.0, jxz = 0.0, sx = 0.0, sz = 0.0;
   float nxx = 0.0, nzz = 0.0, nxz = 0.0;
@@ -194,7 +207,9 @@ vec2 oFromFrame(vec2 q, vec2 cs) { return vec2(cs.x * q.x - cs.y * q.y, cs.y * q
 // fringe — no single cell size, no bright net lines.
 float oFoamShape(float f, float tex, float rag) {
   float e = f + 0.3 * (rag - 0.5);
-  float core = smoothstep(0.6, 1.0, e) * (0.5 + 0.38 * tex);
+  // the dense core breaks up isotropically (turbulent boils); the wind-streaky texture shapes only the
+  // translucent fringe and the tails, so whitecaps never read as combed paint smears
+  float core = smoothstep(0.6, 1.0, e) * (0.5 + 0.36 * mix(tex, rag, 0.55));
   float body = smoothstep(0.06, 0.75, e);
   float fringe = body * smoothstep(1.0 - body, 1.35 - 0.6 * body, tex + 0.25) * (0.22 + 0.4 * body);
   return max(core, fringe);
@@ -271,7 +286,9 @@ vec2 oDwD = oXZ - uDownwash.xy;
 float oDwR = length(oDwD);
 vec2 oDwDir = oDwD / max(oDwR, 1e-3);
 float oDwS = uDownwash.w;
-float oDwIn = oDwS * (1.0 - smoothstep(0.8 * uDownwash.z, 1.08 * uDownwash.z, oDwR));
+// no clean outer edge: the roughened disc frays out over the outer half, its radius wandering ±15 %
+float oDwRn = texture2D(uAtlas, oDwDir * 0.33 + vec2(oT * 0.03, 0.31)).r;
+float oDwIn = oDwS * (1.0 - smoothstep(0.5 * uDownwash.z, (1.1 + 0.3 * (oDwRn - 0.5)) * uDownwash.z, oDwR));
 float oLow = (1.0 - smoothstep(8.0, 12.0, uHeliP.z)) * step(0.001, oDwS);
 
 // ---- 11. searchlight pool (CPU mirror: Ocean.searchlightAt)
@@ -325,8 +342,9 @@ float oCatPaw = 0.0;
 if (oDwIn > 0.0) {
   vec2 dq = oToFrame(oDwD, oWd);
   vec2 rip = texture2D(uDetail, oXZ * 0.33 - oDwDir * (oT * 2.4)).rg * 2.0 - 1.0;
-  oCatPaw = smoothstep(0.38, 0.72, texture2D(uAtlas, dq * vec2(0.035, 0.11) - vec2(oT * 0.21, 0.0) + vec2(0.31, 0.77)).r
-                                  + 0.35 * (texture2D(uAtlas, oXZ * 0.21 - oDwDir * oT * 0.6).r - 0.5));
+  oCatPaw = smoothstep(0.4, 0.7, texture2D(uAtlas, dq * vec2(0.035, 0.11) - vec2(oT * 0.21, 0.0) + vec2(0.31, 0.77)).r
+                                + 0.35 * (texture2D(uAtlas, oXZ * 0.21 - oDwDir * oT * 0.6).r - 0.5)
+                                + 0.3 * (texture2D(uAtlas, oDwDir * 1.7 + vec2(0.13, oDwR * 0.05 - oT * 0.35)).r - 0.5));
   oSd += (rip * 0.16 + oDwDir * 0.05 * sin(oDwR * 3.1 - oT * 13.0 + rip.x * 3.0)) * oDwIn * (0.5 + 0.8 * oCatPaw);
 }
 
@@ -384,17 +402,47 @@ float oHc = clamp(0.5 + (oH01 - 0.5) * mix(0.3, 1.2, oGroup) * mix(1.0, 0.6, smo
 vec3 oBodyC = mix(cDeep, cBody, pow(oHc, 1.2));
 oBodyC *= mix(0.78, 1.0, smoothstep(0.0, 0.45, oHc));
 oBodyC *= 1.0 - 0.12 * oGustV * (1.0 - 0.75 * oNight);
-oBodyC *= 1.0 - (0.06 + 0.16 * oCatPaw) * oDwIn;          // roughened, darker cat's paws under the rotor
+oBodyC *= 1.0 - (0.02 + 0.22 * oCatPaw) * oDwIn;          // roughened, darker cat's paws under the rotor
 
 // ---- 4. shallows & surf around rocks
 // Surf is broken, pulses with the sets, is wide on exposed (windward) headlands and missing in
 // sheltered coves; the break zone widens with the sea state and leaves a fading backwash seaward.
+// Terrain coasts read the baked coastline distance map (it follows the real granite waterline);
+// the analytic circles remain for other shoals (rig legs, wrecks).
 float oShallow = 0.0;
 float oSurf = 0.0;
 float oSurfOld = 0.0;
+float oCoastD = oceanCoastD(oXZ);
+if (oCoastD < 40.0) {
+  float sn = texture2D(uAtlas, oXZ * 0.035 + vec2(0.29, 0.61)).r;
+  float sn2 = texture2D(uAtlas, oXZ * 0.11 + vec2(0.83, 0.17)).r;
+  vec2 gd = vec2(oceanCoastD(oXZ + vec2(2.0, 0.0)) - oceanCoastD(oXZ - vec2(2.0, 0.0)),
+                 oceanCoastD(oXZ + vec2(0.0, 2.0)) - oceanCoastD(oXZ - vec2(0.0, 2.0)));
+  vec2 cn = gd / max(length(gd), 1e-3);                                                      // seaward
+  float d = oCoastD + (sn - 0.5) * 2.4 + (sn2 - 0.5) * 1.2;                                  // ragged
+  oShallow = 1.0 - smoothstep(0.0, 9.0 + 1.5 * uHsEff, d + (sn - 0.5) * 6.0);
+  float expo = clamp(0.5 - 0.6 * dot(cn, oWd), 0.0, 1.0);                                    // 1 = windward
+  // sets every 6 s arrive with the swell (phase runs along the wind) and break unevenly along the shore
+  float setT = fract(oT / 6.0 - dot(oXZ, oWd) / 72.0 + 0.4 * sn);
+  float pulse = 1.0 - setT;
+  float cover = smoothstep(0.42, 0.68, sn * 0.5 + sn2 * 0.25 + expo * 0.45 + 0.12 * pulse - 0.06);   // 30–60 % gaps
+  // steep granite has no beach to shoal on: each set bursts white against the rock face, and the white
+  // water spreads seaward a few metres, widening, breaking up and fading as it drains back (no
+  // breaker line standing off the shore); a calm sea only laps the rocks
+  float zone = 1.5 + 1.0 * uHsEff * (0.4 + 0.8 * expo);                                      // spread
+  float bandPos = mix(0.3, zone, setT);
+  float sea = smoothstep(0.25, 2.5, uHsEff);
+  float brkL = smoothstep(0.35, 0.65, sn2 + 0.4 * pulse - 0.15);
+  float band = exp(-pow((d - bandPos) / (0.6 + (0.15 + 0.3 * setT) * uHsEff), 2.0)) * (0.12 + 0.8 * pulse * pulse) * mix(1.0, brkL, setT);
+  float wash = (1.0 - smoothstep(0.0, 1.2 + 0.5 * uHsEff, d)) * (0.3 + 0.45 * pulse) * (0.3 + 0.7 * sea);
+  oSurf = max(band * (0.35 + 0.65 * sea), wash) * cover;
+  // backwash fringe: aged lace seaward of the break, fading over a few metres
+  oSurfOld = exp(-max(d - 0.5, 0.0) / (2.0 + 1.2 * uHsEff)) * smoothstep(0.3, 0.6, sn + 0.3 * expo) * 0.75;
+}
 for (int i = 0; i < 8; i++) {
   if (i >= uShoalCount) break;
   vec4 s = uShoals[i];
+  if (s.w < 0.5) continue;
   vec2 rel = oXZ - s.xy;
   float d = length(rel) - s.z;
   d += (texture2D(uAtlas, oXZ * 0.045 + s.xy * 0.013).r - 0.5) * (0.6 * s.z + 2.0);   // rocks aren't circles
@@ -410,10 +458,10 @@ for (int i = 0; i < 8; i++) {
   float band = exp(-pow((d - bandPos) / (0.8 + 0.35 * uHsEff), 2.0)) * (0.25 + 0.75 * pulse);
   float wash = (1.0 - smoothstep(0.0, 1.5 + 0.5 * uHsEff, d)) * (0.35 + 0.45 * pulse);
   oSurf = max(oSurf, max(band, wash) * cover * step(-1.0, d));
-  // backwash fringe: aged lace seaward of the break, fading over a few metres
   oSurfOld = max(oSurfOld, exp(-max(d - 0.5, 0.0) / (2.5 + 1.2 * uHsEff)) * smoothstep(-1.0, 1.0, d) * smoothstep(0.3, 0.6, shore + 0.3 * expo) * 0.8);
 }
-oBodyC = mix(oBodyC, uShallow, oShallow * 0.85);
+// cold granite seabed: the shallow halo stays close to the body colour (≤ ~25 % lighter)
+oBodyC = mix(oBodyC, uShallow, oShallow * 0.5);
 
 // ---- big features: rogue wave, spout base, whirlpool (shading; heights come from the vertex)
 float oFeatFoam = 0.0;
@@ -448,6 +496,11 @@ for (int i = 0; i < 4; i++) {
     float edgeM = W * 0.06 + (e1 - 0.5) * 0.3 * W + (e2 - 0.5) * 3.0 + (e3 - 0.5) * 1.4 + fsel * flen;
     float lip = (1.0 - smoothstep(edgeM - 1.0 - 0.7 * fsel * flen, edgeM + 0.8 + 0.4 * fsel * flen, xm)) * smoothstep(-1.3 * W, -0.25 * W, xm);
     lip *= 1.0 - 0.45 * fsel * smoothstep(edgeM - fsel * flen, edgeM, xm);     // fingers thin out toward the tips
+    // only the breaking front is solid white; the white water on the back of the crest is already
+    // marbled with darker, thinner foam (turbulent boils ≈ 9 m and 30 m), never a flat painted band
+    float mbL = texture2D(uAtlas, oG * 0.11 + vec2(0.71, 0.33) - age * 0.004).r * 0.3 + texture2D(uAtlas, oG * 0.033 + vec2(0.07, 0.58)).r * 0.45
+              + texture2D(uAtlas, oG * 0.013 + vec2(0.41, 0.19)).r * 0.25;
+    lip *= mix(mix(0.5, 1.06, smoothstep(0.22, 0.78, mbL)), 1.0, smoothstep(edgeM - 0.5 * W, edgeM - 0.1 * W, xm));
     // a thin bright broken line where the lip plunges
     float brk = smoothstep(0.42, 0.62, e3 * 0.4 + texture2D(uAtlas, vec2(fy * 0.14 + 0.21, 0.6 + age * 0.03)).r * 0.6);
     oFeatLine = max(oFeatLine, exp(-pow((xm - (edgeM - fsel * flen) + 1.2) / 0.9, 2.0)) * brk * f.z * hk);
@@ -456,11 +509,18 @@ for (int i = 0; i < 4; i++) {
     float behind = max(-xm, 0.0);
     float travelled = C.y * C.z;
     float ageB = behind / max(C.z, 1.0);
-    float carpet = (0.3 + 0.7 * exp(-behind / 45.0)) * exp(-behind / max(C.z * 30.0, 60.0))
-                 * (1.0 - smoothstep(travelled * 0.8, travelled + 1.0, behind)) * smoothstep(-0.15 * W, -0.9 * W, xm);
     float pn = texture2D(uAtlas, oG * 0.011 + vec2(0.53, 0.07)).r * 0.6 + texture2D(uAtlas, oG * 0.037 + vec2(0.19, 0.91)).r * 0.4;
+    // where the wave began to break is a ragged, soft line (never a straight spawn edge)
+    float began = travelled * (0.62 + 0.38 * pn);
+    float carpet = (0.3 + 0.7 * exp(-behind / 45.0)) * exp(-behind / max(C.z * 30.0, 60.0))
+                 * (1.0 - smoothstep(began - 14.0, began + 2.0, behind)) * smoothstep(-0.15 * W, -0.9 * W, xm);
     float thr = 0.3 + 0.2 * smoothstep(1.0, 10.0, ageB) + 0.1 * (1.0 - C.x);
     carpet *= smoothstep(thr - 0.05, thr + 0.12, pn);
+    // fresh white water is marbled, not a flat fill: turbulent boils (≈ 9 m and 30 m) with thinner,
+    // greyer foam between them, readable from 280 m
+    float mb = texture2D(uAtlas, oG * 0.11 + vec2(0.71, 0.33) - C.y * 0.004).r * 0.3 + texture2D(uAtlas, oG * 0.033 + vec2(0.07, 0.58)).r * 0.45
+             + texture2D(uAtlas, oG * 0.013 + vec2(0.41, 0.19)).r * 0.25;
+    carpet *= mix(0.45, 1.08, smoothstep(0.22, 0.78, mb));
     oFeatFoam = max(oFeatFoam, max(lip * hk, carpet * C.x * (1.0 - smoothstep(2.0, 7.0, ageB))) * f.z);
     oFeatAged = max(oFeatAged, carpet * C.x * smoothstep(1.0, 5.0, ageB) * f.z);
     // the forward face reads as a slope: bottle-green glass only in the top ~20 % where the lip
@@ -543,6 +603,7 @@ float oRag = texture2D(uAtlas, oWp * 0.06 + vec2(0.17, 0.53)).r;
 // 7a whitecaps — Monahan coverage ∝ U^3.41; preset value = mean, local gusts modulate (softened)
 float oCov = clamp(cSea.y * 0.45 * pow(max(oULoc, 0.0) / max(uSeaE.x, 1.0), 2.5), 0.0, 0.6);
 oCov *= 1.0 - oLow * (1.0 - smoothstep(0.7, 1.0, oDwR / max(uDownwash.z, 1.0)));             // "ты низко"
+oCov = min(oCov * (0.45 + 1.1 * oGroup), 0.6);       // breaking comes in wave groups, not an even lattice
 float oWc = 0.0;
 float oWcRaw = 0.0;
 if (oCov > 0.002) {
@@ -680,12 +741,12 @@ oAlb = mix(oAlb, vec3(0.028, 0.807, 0.195), oDye * 0.65 * (1.0 - 0.5 * oFoam));
 diffuseColor.rgb = oAlb;
 
 // ---- roughness
-float oRough = (uSeaB.x + 0.25 * oGustV + 0.08 * oDwIn) * (1.0 - 0.6 * oOil);   // uSeaB.x includes rain
+float oRough = (uSeaB.x + 0.25 * oGustV + (0.02 + 0.12 * oCatPaw) * oDwIn) * (1.0 - 0.6 * oOil);   // uSeaB.x includes rain
 oRough += 0.12 * smoothstep(0.25, 1.5, oFoot);
 oRough = clamp(mix(oRough, 0.9, oFoam), 0.04, 1.0);
 
 // ---- final normal
-oSd *= (1.0 - 0.6 * oDwIn) * (1.0 - 0.5 * oFoam) * (1.0 - 0.7 * oOil);
+oSd *= (1.0 - 0.3 * oDwIn * (1.0 - oCatPaw)) * (1.0 - 0.5 * oFoam) * (1.0 - 0.7 * oOil);
 vec2 oS = oSm + oSd;
 vec3 oN = normalize(vec3(-oS.x, 1.0, -oS.y));
 float oNV = clamp(dot(oN, oV), 0.0, 1.0);
@@ -706,9 +767,10 @@ vec3 oEmis = vec3(0.0);
   float ry = max(R.y, 0.0);
   vec3 sky = mix(uFogCol, uSkyCol * 0.85, smoothstep(0.0, 0.6, ry));
   if (uSeaC.x > 0.001) {
-    vec2 cuv = (oXZ + R.xz / (ry + 0.15) * 350.0 - uWindOffset * 1.5) * 0.0016;
-    float cl = smoothstep(0.42, 0.8, texture2D(uAtlas, cuv + vec2(0.13, 0.71)).r);
-    sky = mix(sky, mix(uFogCol, vec3(1.0), 0.5) * 1.05, cl * uSeaC.x);
+    vec2 cuv = (oXZ + R.xz / (ry + 0.15) * 220.0 - uWindOffset * 1.5) * 0.0016;
+    // broken cloud reflections: soft grey-white patches, not a crisp white crackle net
+    float cl = smoothstep(0.35, 0.95, texture2D(uAtlas, cuv + vec2(0.13, 0.71)).r);
+    sky = mix(sky, mix(uFogCol, vec3(1.0), 0.3), cl * uSeaC.x * 0.8);
   }
   // swell relief: faces tilted away from the camera see more of the bright sky (grazing), faces
   // turned toward it look into the dark water (strongest in a heavy sea, where the veil used to help)
@@ -716,7 +778,11 @@ vec3 oEmis = vec3(0.0);
   float awayV = clamp(-dot(oNm.xz, vxz) * 3.0 + 0.5 * (1.0 - oNV), -1.0, 1.0);
   float relief = smoothstep(1.5, 5.0, uHsEff) * (1.0 - 0.7 * oNight);
   oEmis += sky * (oFres * 2.0 + relief * 0.1 * max(awayV, 0.0)) * (1.0 - oFoam) * (1.0 - 0.5 * uRain);
-  oAlb *= 1.0 - relief * 0.25 * max(-awayV, 0.0) * (1.0 - oFoam);
+  // swell mass from above: the long faces tilted toward the brighter (sun-side) sky lift, the lee faces
+  // and troughs sink — readable crest lines across the wind from 150–230 m, even under overcast
+  vec2 skyL = normalize(uSunDirS.xz + vec2(1e-4, 0.0));
+  float hill = clamp(dot(oNm.xz, skyL) * 4.0, -1.0, 1.0);
+  oAlb *= (1.0 + relief * (0.3 * hill - 0.12 * max(-awayV, 0.0))) * (1.0 - oFoam) + oFoam;
   diffuseColor.rgb = oAlb;
 }
 // 3. crest SSS at night: the searchlight and the flash shine through the crests
@@ -767,16 +833,20 @@ if (uSeaC.w > 0.001) {
   float csz = oFoot * 1.6;                                // ~1.5 px sparkles at any distance
   vec2 sc = floor(oG / csz);
   float tw = floor(oT * 7.0 + hash12(sc) * 7.0);
-  float sp = step(mix(0.93, 0.97, oNight), hash12(sc + tw * 0.173)) * (1.0 - smoothstep(0.15, 0.5, length(fract(oG / csz) - 0.5)));
+  // at night the sparkles crowd into the core of the moon path instead of a sparse starfield
+  float spT = mix(0.93, mix(0.975, 0.9, pow(ndh, uSeaD.x * 0.08)), oNight);
+  float sp = step(spT, hash12(sc + tw * 0.173)) * (1.0 - smoothstep(0.15, 0.5, length(fract(oG / csz) - 0.5)));
   float glit = pow(ndh, uSeaD.x) * sp;
   // at night a broad soft sheen carries the moon path between the sparkles («Лунная дорожка»)
-  glit += oNight * 0.012 * pow(ndh, uSeaD.x * 0.3);
+  // (the broad sheen follows the swell, not the short regular wavelets: no corduroy from 400 m)
+  float ndhM = clamp(dot(normalize(mix(oNm, oN, 0.3)), normalize(Lg + oV)), 0.0, 1.0);
+  glit += oNight * (0.012 * pow(ndh, uSeaD.x * 0.3) + 0.03 * pow(ndhM, uSeaD.x * 0.12) * mix(0.4, 1.0, oGroup));
   oEmis += uSunCol * uSpecCol * (glit * 9.0 * uSeaC.w * (1.0 - min(1.0, oCloud * uSeaC.y * 1.4)) * (1.0 - oFoam));
 }
 // moonlit night: the swell faces toward the moon catch a little more of the bright sky
 if (oNight > 0.5 && uSeaC.w > 0.001) {
   vec2 ml = normalize(uSunDirV.xz + vec2(1e-4, 0.0));
-  float mf = smoothstep(-0.2, 1.0, dot(oN.xz, ml) * 5.0 + 0.4 * dot(-oV.xz, ml));
+  float mf = smoothstep(-0.2, 1.0, dot(mix(oNm.xz, oN.xz, 0.3), ml) * 5.0 + 0.4 * dot(-oV.xz, ml)) * mix(0.35, 1.0, oGroup);
   oEmis += uSkyCol * mf * uSeaC.w * 0.6 * (1.0 - oFoam);         // ≈ +15 % toward the moon
 }
 #endif
@@ -831,18 +901,21 @@ export const OCEAN_FRAGMENT_FINAL = /* glsl */ `
   // 11. searchlight pool, look-driven: "the lamp opens the sea" — inside the beam the water is shown
   // at the DESIGN §2.1 pool luminance (≈0.75–0.85 on screen, foam a touch brighter, never clipping),
   // the warm lamp tint over the lit body colour, shaded by the facets facing the lamp.
-  // The radial profile is shaped in display space (what the eye sees): hot-spot ≈ .85–.9 at the
-  // centre, ≈ .3 at ρ ≈ .85, 0 at the cone edge — a soft penumbra over the outer 40 %, rippled by
-  // the wave facets (oRhoE) and the foam, never an evenly filled disc.
+  // The radial profile is shaped in display space (what the eye sees): hot-spot ≈ .85 at the centre,
+  // ≈ .25–.3 at ρ ≈ .7, fading to 0 at the cone edge — no plateau and no rim, rippled by the wave
+  // facets (oRhoE) and the foam, never an evenly filled disc.
   if (oPoolK > 0.001 && oRhoE < 1.0) {
     vec3 Lp = normalize(uSearchPos - oP);
     float nlp = clamp(dot(oN, Lp), 0.0, 1.0);
     float nhp = clamp(dot(oN, normalize(Lp + oV)), 0.0, 1.0);
-    float facet = 0.7 + 0.6 * pow(nhp, 12.0);                       // wave facets catch the lamp
-    vec3 litWater = vec3(0.6, 0.71, 0.66) * (0.78 + 0.27 * nlp) * (0.86 + 0.28 * oH01) * facet;
-    float pr = pow(1.0 - smoothstep(0.38, 1.0, oRhoE), 0.75);
+    float facet = 0.62 + 0.75 * pow(nhp, 12.0);                     // wave facets catch the lamp
+    vec3 litWater = vec3(0.78, 0.92, 0.86) * (0.66 + 0.42 * nlp) * (0.8 + 0.4 * oH01) * facet;
+    litWater = litWater / (1.0 + 0.25 * max(litWater - 0.6, 0.0));   // soft knee instead of a flat clip
+    // a real beam profile: no plateau — brightest in the middle, falling smoothly all the way out
+    // (≈ .85 → .5 at ρ .5 → ≈ .25 at ρ .7 → .05 at ρ .9 on screen): a penumbra, never a rim
+    float pr = exp(-2.2 * oRhoE * oRhoE) * (1.0 - smoothstep(0.6, 1.1, oRhoE));
     float hot = exp(-pow(oRhoE / 0.3, 2.0));
-    vec3 poolDisp = mix(min(litWater, vec3(0.8)), min(oFoamC * 0.92, vec3(0.84)), oFoam) * vec3(1.0, 0.97, 0.9);
+    vec3 poolDisp = mix(min(litWater, vec3(0.88)), min(oFoamC * 0.92, vec3(0.86)), oFoam) * vec3(1.0, 0.97, 0.9);
     poolDisp *= pr * (0.9 + 0.12 * hot);
     vec3 poolLook = oInvACES(poolDisp) * uLookK.y;
     // by day the pool only lifts the water a little (it never fights the sun): at 0.3 it showed as a

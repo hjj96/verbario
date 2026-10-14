@@ -21,6 +21,12 @@ const col = () => new THREE.Color();
 // Ocean-side samplers over the SAME texel arrays as look.* (so lookGust()/lookCloud() and the CPU
 // mirrors stay identical) but without 4× anisotropy: the camera never looks more than ~46° from
 // nadir, and ~10 lookups per water pixel make anisotropic filtering the dominant cost.
+function coastPlaceholder() {
+  const t = new THREE.DataTexture(new Uint8Array([255]), 1, 1, THREE.RedFormat, THREE.UnsignedByteType);
+  t.needsUpdate = true;
+  return t;
+}
+
 function samplerCopy(src, anisotropy) {
   const img = src.image;
   const t = new THREE.DataTexture(img.data, img.width, img.height, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -49,6 +55,10 @@ export function createOceanUniforms(look, bank, features) {
     uHsEff: { value: 1 },
     uShoalCount: { value: 0 },
     uShoals: { value: new Float32Array(32) },
+    // coastline distance map (coast.js); placeholder = "far from any coast"
+    uCoast: { value: coastPlaceholder() },
+    uCoastWin: { value: v4(0, 0, 1, 1) },
+    uCoastOn: { value: 0 },
     // features + downwash
     uFeatCount: { value: 0 },
     uFeatA: { value: features.uA },
