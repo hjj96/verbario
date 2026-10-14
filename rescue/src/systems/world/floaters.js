@@ -295,7 +295,7 @@ export class Floaters {
       geo.setAttribute('iCraft2', new THREE.InstancedBufferAttribute(ph, 4));
       if (!this._craftMat) {
         const sv = Wd.ctx.survivors;
-        this._craftMat = createCraftMaterial(Wd.look, { roughness: 0.7, rim: sv?.rim, nightAmb: sv?.nightAmb, wear: { ...WEAR.heavy, streaks: 0.6, waterline: 0.55, scale: 1.25 }, key: '-floater' });
+        this._craftMat = createCraftMaterial(Wd.look, { roughness: 0.7, rim: sv?.rim, nightAmb: sv?.nightAmb, skyFill: sv?.skyFill, wear: { ...WEAR.heavy, streaks: 0.6, waterline: 0.55, scale: 1.25 }, key: '-floater' });
       }
       mat = this._craftMat;
     } else {

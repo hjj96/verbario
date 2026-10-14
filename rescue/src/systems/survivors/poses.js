@@ -20,6 +20,9 @@ export const POSE = {
   stretcher: 9, deck: 10, sit: 11, raise: 12, keel: 13, flare: 14, mirror: 15, frozen: 16,
 };
 
+// A stable per-person choice 0..n−1 (from the random phase): pose variants, who waves and who does not.
+export const variant = (p, n) => Math.floor(((p.phase * 3.7) % 1) * n);
+
 // Writes target angles into out[0..3] = θL, ψL, θR, ψR. p = person (phase, waveArm), t = time.
 export function poseTargets(pose, p, t, out, ringN = 4) {
   const ph = p.phase;
@@ -69,9 +72,30 @@ export function poseTargets(pose, p, t, out, ringN = 4) {
     case POSE.stretcher:
       set(out, 0.22, 0.0, 0.22, 0.0);
       break;
-    case POSE.deck:
-      set(out, 0.14 + 0.04 * Math.sin(t * 0.6 + ph), 0.15, 0.14 + 0.04 * Math.sin(t * 0.55 + ph + 2), 0.15);
+    case POSE.deck: {
+      // people on a deck are not pawns: arms round the knees when sitting, a hand on the rail, arms
+      // wrapped round the body against the cold, an arm round a neighbour's back, or just hanging
+      const b = 0.04 * Math.sin(t * 0.6 + ph);
+      const b2 = 0.04 * Math.sin(t * 0.55 + ph + 2);
+      if (p.legFold > 0.5) set(out, 0.95 + b, 1.2, 0.9 + b2, 1.15);
+      else
+        switch (variant(p, 5)) {
+          case 1:
+            if (arm < 0) set(out, 1.3 + b, 0.35, 0.16 + b2, 0.15);
+            else set(out, 0.16 + b, 0.15, 1.3 + b2, 0.35);
+            break;
+          case 2:
+            set(out, 0.78 + b, 1.45, 0.72 + b2, 1.5);
+            break;
+          case 3:
+            if (arm < 0) set(out, 1.6 + b, 0.08, 0.55 + b2, 0.95);
+            else set(out, 0.55 + b, 0.95, 1.6 + b2, 0.08);
+            break;
+          default:
+            set(out, 0.14 + b, 0.15, 0.14 + b2, 0.15);
+        }
       break;
+    }
     case POSE.sit:
       set(out, 0.95, 1.05, 0.95, 1.05);
       break;

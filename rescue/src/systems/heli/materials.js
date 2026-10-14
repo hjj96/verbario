@@ -188,14 +188,20 @@ export function createHullMaterial(look, decalTex) {
 // lightning flash > .5 (or the rotor is slow). St. Elmo's blue crackle on the tips. Geometry r = 1.
 // hull: (half-width of the cabin, half-width of the boom, nose, boom start) in disc units — the
 // blur fades to 40 % over the fuselage so the disc never greys the hull (DESIGN §2.1 pillar 8).
-// light: shared uniform objects { uSunDir, uSunCol, uAmbCol, uSkyCol, uGlow } (heli.js feeds them).
-export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, hull = null, light = null, inner = 0.12 } = {}) {
+// light: shared uniform objects { uSunDir, uSunCol, uAmbCol, uSkyCol, uGlow, uGlowB, uGlowS } (heli.js
+// feeds them): uGlow = broad bounce (searchlight pool, lightning) over the whole veil; uGlowB / uGlowS =
+// beacon / strobes, which light only the part of the veil near the lamp (glowB / glowS: disc-local
+// x, y and falloff radius, disc units) — a strobe flash catches the rear of the disc, never the whole
+// disc as one evenly lit plate.
+export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, hull = null, light = null, inner = 0.12, glowB = [0, 0, 0], glowS = [0, 0, 8] } = {}) {
   const L = light || {
     uSunDir: { value: new THREE.Vector3(0.3, 0.9, 0.2) },
     uSunCol: { value: new THREE.Color(1, 1, 1) },
     uAmbCol: { value: new THREE.Color(0.5, 0.5, 0.5) },
     uSkyCol: { value: new THREE.Color(0.3, 0.35, 0.4) },
     uGlow: { value: new THREE.Color(0, 0, 0) },
+    uGlowB: { value: new THREE.Color(0, 0, 0) },
+    uGlowS: { value: new THREE.Color(0, 0, 0) },
   };
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -215,6 +221,8 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, 
       uArc: { value: 0.45 },
       uTipFade: { value: 1 },
       uInner: { value: inner },
+      uGlowBAt: { value: new THREE.Vector3(...glowB) },
+      uGlowSAt: { value: new THREE.Vector3(...glowS) },
       uDiscColor: { value: new THREE.Color('#585E64') }, // worn blade tops seen in motion blur
       uTipColor: { value: new THREE.Color('#D2AE2A') },
       uElmoColor: { value: new THREE.Color('#7FB8FF') },
@@ -232,7 +240,7 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, 
       }`,
     fragmentShader: /* glsl */ `
       uniform float uTime, uGhost, uBlade, uSharp, uExp, uElmo, uBlades, uBladeW, uOpacity, uLit, uArc, uTipFade, uInner;
-      uniform vec3 uDiscColor, uTipColor, uElmoColor, uSunDir, uSunCol, uAmbCol, uSkyCol, uGlow;
+      uniform vec3 uDiscColor, uTipColor, uElmoColor, uSunDir, uSunCol, uAmbCol, uSkyCol, uGlow, uGlowB, uGlowS, uGlowBAt, uGlowSAt;
       uniform vec4 uHull;
       uniform sampler2D uAtlas;
       varying vec2 vP;
@@ -250,7 +258,11 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, 
         N = dot(N, V) < 0.0 ? -N : N;
         float ndv = clamp(dot(N, V), 0.0, 1.0);
         float ndl = max(dot(N, normalize(uSunDir)), 0.0);
-        vec3 irr = (uSunCol * ndl + uAmbCol) * 0.3183 * uLit + uGlow;
+        vec2 gdB = vP - uGlowBAt.xy;
+        vec2 gdS = vec2(abs(vP.x) - uGlowSAt.x, vP.y - uGlowSAt.y);
+        vec3 irr = (uSunCol * ndl + uAmbCol) * 0.3183 * uLit + uGlow
+                 + uGlowB / (1.0 + dot(gdB, gdB) / max(uGlowBAt.z * uGlowBAt.z, 1e-4))
+                 + uGlowS / (1.0 + dot(gdS, gdS) / max(uGlowSAt.z * uGlowSAt.z, 1e-4));
         vec3 H = normalize(normalize(uSunDir) + V);
         float sheen = pow(max(dot(N, H), 0.0), 6.0);
         float F = 0.1 + 0.9 * pow(1.0 - ndv, 5.0); // semi-gloss, twisted blades: never a perfect mirror angle
@@ -273,7 +285,7 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, 
         float d = abs(mod(th - uBlade + 0.5 * seg, seg) - 0.5 * seg) * r;
         float blade = (1.0 - smoothstep(uBladeW * 0.75, uBladeW * 1.25, d)) * smoothstep(0.07, 0.13, r);
         float a = mix(aG, 0.92 * blade, uSharp);
-        a *= smoothstep(uInner, uInner + 0.06, r) * (1.0 - smoothstep(0.975, 1.0, r));
+        a *= smoothstep(uInner, uInner + 0.06, r) * (1.0 - smoothstep(0.93, 1.0, r) * (1.0 - 0.9 * uSharp));
         vec3 alb = uDiscColor;
         vec3 col = alb * irr + uSkyCol * F * (0.8 + 0.3 * streak) + uSunCol * sheen * 0.012 * (1.0 - uSharp);
         // tip paint: soft band, visible only inside the 5 shutter smears; crisp on frozen blades
@@ -394,27 +406,32 @@ export function createConeMaterial(look) {
         float rd = dot(R, uAxis);
         float cd = dot(CO, uAxis);
         float tA = length(vW - cameraPosition);
-        // exit: the other root of the cone quadric beyond the entry (lower nappe), or the water end
+        // exit: solve the cone quadric from the entry fragment itself (P0 on the wall, s = 0 is the
+        // entry root), not from the camera — small numbers, no float32 cancellation; the far root on
+        // the lower nappe is the side exit, else the beam leaves through the water end.
+        vec3 P0 = vW - uApex;
+        float c0 = dot(P0, uAxis);
         float qa = rd * rd - uCos2;
-        float qb = 2.0 * (rd * cd - uCos2 * dot(R, CO));
-        float qc = cd * cd - uCos2 * dot(CO, CO);
+        float qb = 2.0 * (rd * c0 - uCos2 * dot(R, P0));
+        float qc = c0 * c0 - uCos2 * dot(P0, P0);
         float disc = qb * qb - 4.0 * qa * qc;
-        float tB = 1e6;
+        float sB = 1e6;
         if (disc > 0.0 && abs(qa) > 1e-6) {
           float sq = sqrt(disc);
-          float t1 = (-qb - sq) / (2.0 * qa);
-          float t2 = (-qb + sq) / (2.0 * qa);
-          if (t1 > tA + 0.02 && cd + t1 * rd > 0.0) tB = min(tB, t1);
-          if (t2 > tA + 0.02 && cd + t2 * rd > 0.0) tB = min(tB, t2);
+          float sF = max((-qb - sq) / (2.0 * qa), (-qb + sq) / (2.0 * qa));
+          if (sF > 0.05 && c0 + sF * rd > 0.0) sB = sF;
         }
         if (rd > 1e-4) {
-          float tp = (uLen - cd) / rd;
-          if (tp > tA) tB = min(tB, tp);
+          float sp = (uLen - c0) / rd;
+          if (sp > 0.0) sB = min(sB, sp);
         }
-        if (tB > 1e5) discard;
+        if (sB > 1e5) discard;
+        float tB = tA + sB;
         // equi-asinh sampling of ∫ f(t)/d(t) dt (d = distance to the lamp)
         float t0 = -dot(CO, R);
-        float h = sqrt(max(dot(CO, CO) - t0 * t0, 0.04));
+        // the lamp is a 0.5 m reflector seen through its own glare, not a point: soften 1/d by ~1.6 m so
+        // the first metres of the shaft never go white-hot (that blooms over half the frame from the side)
+        float h = sqrt(max(dot(CO, CO) - t0 * t0, 0.0) + 2.5);
         float ua = asinh_((tA - t0) / h);
         float ub = asinh_((tB - t0) / h);
         float jit = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
@@ -430,7 +447,7 @@ export function createConeMaterial(look) {
           prof *= prof;
           vec3 Pw = uApex + P;
           float n = texture2D(uAtlas, Pw.xz * 0.05 + Pw.y * vec2(0.021, 0.034) - uWindOffset * 0.05 + vec2(0.0, uTime * 0.012)).r;
-          float fade = smoothstep(0.0, 3.5, uLen - along) * smoothstep(0.3, 2.0, along);
+          float fade = smoothstep(0.0, 3.5, uLen - along) * smoothstep(0.4, 3.0, along);
           sum += prof * fade * (0.3 + 1.4 * n * n);
         }
         sum *= (ub - ua) / 6.0;

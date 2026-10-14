@@ -46,7 +46,7 @@ import {
 import { Collars, Glows, Lines } from './survivors/water.js';
 import { Carrier, scatterDebris } from './survivors/carriers.js';
 import { SignalDesk, initSignals, strobeOn } from './survivors/signals.js';
-import { POSE, poseTargets, applyPose } from './survivors/poses.js';
+import { POSE, poseTargets, applyPose, variant } from './survivors/poses.js';
 import { makeFallbackPeople, conditionFor, quoteFor, guessGender } from './survivors/people.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -144,8 +144,9 @@ export class Survivors {
     // Craft wear the shared weathering (core/weathering.js) in their own frame; no ink keylines on craft
     // (art direction: one realistic style — rim light, contact foam and shadows separate them instead).
     const nightAmb = (this.nightAmb = { value: new THREE.Color(0, 0, 0) }); // moonlit hemi floor (ghostUniforms)
-    const base = { rim, nightAmb };
-    const raftMat = createCraftMaterial(look, { ...base, side: THREE.DoubleSide, roughness: 0.72, lampLift: 0.62, wear: { breakup: 0.07, streaks: 0, grime: 0.12, waterline: 0.55, roughBreakup: 0.1, deckWear: 0.1, scale: 1.6 } }); // lamp-lit canopy stays orange
+    const skyFill = (this.skyFill = { value: new THREE.Color(0, 0, 0) }); // overcast sky-dome fill (albedo ×)
+    const base = { rim, nightAmb, skyFill };
+    const raftMat = createCraftMaterial(look, { ...base, glow: this.crowd.material.userData.uniforms.uVestGlow, side: THREE.DoubleSide, roughness: 0.72, lampLift: 0.62, wear: { breakup: 0.07, streaks: 0, grime: 0.12, waterline: 0.55, roughBreakup: 0.1, deckWear: 0.1, scale: 1.6 } }); // lamp-lit canopy stays orange
     const hullMat = createCraftMaterial(look, { ...base, roughness: 0.62, wear: { ...WEAR.heavy, streaks: 0.25, scale: 1.3 }, foul: true });
     const contMat = createCraftMaterial(look, { ...base, roughness: 0.7, wear: { ...WEAR.heavy, streaks: 0.6, waterline: 0.55, scale: 1.25 } });
     const gearMat = createCraftMaterial(look, { ...base, roughness: 0.6, wear: WEAR.clean });
@@ -1181,8 +1182,11 @@ export class Survivors {
     const excited = s.excite > 0;
     const keel = kind === 'hull' && s.carrier?.style !== 'plane';
     if (w < 0.4) return d < SEEN_RANGE || excited ? POSE.limp : onCarrier ? (keel ? POSE.keel : POSE.deck) : POSE.idle;
-    if (d < NEAR_WAVE || excited) return POSE.wave2;
-    if (d < SEEN_RANGE) return s.flower ? POSE.wave1 : POSE.wave1;
+    // a group on a deck reacts unevenly: most wave, the one holding up a neighbour or sitting
+    // exhausted keeps still, a few wave with both arms early
+    const crew = onCarrier && !keel && kind !== 'raft' ? variant(p, 5) : 0;
+    if (d < NEAR_WAVE || excited) return crew === 3 ? POSE.wave1 : POSE.wave2;
+    if (d < SEEN_RANGE) return crew === 3 || (crew === 2 && p.legFold > 0.5) ? POSE.deck : crew === 4 ? POSE.wave2 : POSE.wave1;
     if (s.flower) return POSE.hold;
     if (kind === 'raft') return POSE.sit;
     if (keel) return POSE.keel;
@@ -1811,8 +1815,15 @@ export class Survivors {
     this.nightAmb.value.setRGB(0.009, 0.012, 0.016).multiplyScalar(env.night);
     this.crowd.keylineOn = env.night > 0.45;
     const lightLevel = (pal?.sunIntensity ?? 2) * 0.4 + (pal?.ambientIntensity ?? 0.6) * 0.5;
+    // under a heavy overcast the whole sky dome lights the decks; the hemisphere alone leaves a rusty
+    // barge or a wet steel deck darker than the sea around it (a black brick) — add the missing dome
+    // (the ocean mirrors the sky at full radiance; a Lambert hemisphere gives props only ambient/π)
+    // (storms only: in fog the ferry must melt into the white, not glow out of it)
+    const dome = day * smooth(1.25, 0.5, lightLevel) * clamp01(env.intensity * 1.5) * (1 - 0.8 * env.fog) * (pal?.ambientIntensity ?? 0.6) * 2.0;
+    if (pal?.ambient?.isColor) this.skyFill.value.copy(pal.ambient).multiplyScalar(dome);
+    else this.skyFill.value.setRGB(0.12, 0.14, 0.15).multiplyScalar(dome);
     // ≥ 0.05: the vest keeps its #FF5A00 hue under the warm sunset / storm hemisphere instead of going red
-    this.crowd.material.userData.uniforms.uVestGlow.value = 0.05 + 0.16 * day * clamp01(1 - lightLevel);
+    this.crowd.material.userData.uniforms.uVestGlow.value = 0.05 + day * (0.16 * clamp01(1 - lightLevel) + 0.32 * clamp01(env.intensity || 0)); // fluorescent pigment pops under storm cloud (DESIGN §2.1: vest L ≈ 0.55)
   }
 
   _occupants(c) {
@@ -1869,6 +1880,7 @@ export class Survivors {
         p.y = _v.y;
         p.z = _v.z;
         p.waterY = -50; // people aboard have nothing under the surface (no ghost, no keyline clip)
+        p.legFold = _slot[3]; // seated (poses: arms round the knees)
         // face the heli when it is around, else look along the craft
         const jit = (((i * 2654435761) >>> 0) % 1000) / 1000 - 0.5; // per-seat facing noise (no pawn grid)
         const target = (s.dHeli < 400 ? Math.atan2(env.hx - p.x, env.hz - p.z) + jit * 0.7 : c.yaw + (c.kind === 'hull' ? (i % 2 ? Math.PI / 2 : -Math.PI / 2) : jit * 2.2));

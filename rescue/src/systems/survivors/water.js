@@ -84,16 +84,22 @@ export class Collars {
           float lace = texture2D(uLace, uv * 0.19 + 0.5).r;
           float ang = atan(vL.y, vL.x);
           float lap = 0.5 + 0.5 * sin(ang * 5.0 + uTime * 1.7 + vD.w * 6.0);
-          float edge = 0.5 + 0.035 * lap + 0.06 * (blot2 - 0.5);
+          // small collars (a swimmer, a buoy): world-scale blotches are bigger than the whole ring and
+          // leave a clean drawn circle, so break those in the collar's own frame instead
+          float small = 1.0 - smoothstep(1.5, 5.0, vC.z);
+          float loc = texture2D(uAtlas, vL * 0.42 + vec2(vD.w * 0.173, vD.w * 0.311) + crawl * 0.5).r;
+          float edge = 0.5 + 0.035 * lap + 0.06 * (blot2 - 0.5) + 0.07 * (loc - 0.5) * small;
           float band = exp(-pow((r - edge) / 0.07, 2.0));
           float skirt = exp(-max(0.0, r - edge) / 0.13) * smoothstep(edge - 0.1, edge, r);
           float soft = smoothstep(0.2, 0.8, blot * 0.75 + blot2 * 0.45 - 0.1);
+          soft = mix(soft, smoothstep(0.32, 0.72, loc), small);
+          band *= mix(1.0, 0.45, small); // a person's froth is a few broken bubbles, not a halo
           vec2 wd = normalize(uWind + vec2(1e-3, 0.0));
           vec2 dW = (vW.xz - vC.xy) / max(vC.z, 0.1);
           float along = dot(dW, -wd);
           float lat = dot(dW, vec2(-wd.y, wd.x));
           float wake = smoothstep(0.35, 0.55, along) * (1.0 - smoothstep(0.55, 1.0, along)) * exp(-lat * lat / 0.025) * smoothstep(1.0, 7.0, length(uWind));
-          float froth = band * mix(0.55, 1.0, soft) + skirt * soft * 0.55 + wake * (0.4 + 0.6 * soft) * 0.5;
+          float froth = band * mix(mix(0.55, 0.12, small), 1.0, soft) + skirt * soft * 0.55 + wake * (0.4 + 0.6 * soft) * 0.5;
           froth *= (0.9 + 0.2 * lace) * (0.7 + 0.3 * bubbles);
           froth += bubbles * skirt * 0.12;
           float foam = vD.x * min(0.5, froth * 0.6);

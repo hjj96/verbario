@@ -937,6 +937,8 @@ export function createCraftMaterial(look, opts = {}) {
     uWin: { value: new THREE.Color('#FFC98A') },
     uRim: opts.rim || { value: new THREE.Color(0, 0, 0) }, // shared day rim light (survivors sets it)
     uNightAmb: opts.nightAmb || { value: new THREE.Color(0, 0, 0) }, // moonlit hemi floor (survivors sets it)
+    uSkyFill: opts.skyFill || { value: new THREE.Color(0, 0, 0) }, // overcast sky-dome fill (survivors sets it)
+    uGlow: opts.glow || { value: 0 }, // fluorescent orange fabric's own read (shared with the vests)
   };
   mat.userData.uniforms = u;
   mat.onBeforeCompile = (sh) => {
@@ -984,6 +986,8 @@ export function createCraftMaterial(look, opts = {}) {
         uniform vec3 uWin;
         uniform vec3 uRim;
         uniform vec3 uNightAmb;
+        uniform vec3 uSkyFill;
+        uniform float uGlow;
         varying vec2 vCrMat;
         varying vec4 vCr;
         varying vec4 vCr2;
@@ -1018,8 +1022,12 @@ export function createCraftMaterial(look, opts = {}) {
         totalEmissiveRadiance += uRim * crFr;
         // night: moonlit-hemisphere floor (albedo-weighted, never below the sea's own luminance) + a cool rim
         totalEmissiveRadiance += uNightAmb * (0.35 + diffuseColor.rgb * 1.6) * (0.75 + 0.5 * crFr);
+        // overcast: the sky dome's diffuse light, strongest on what faces up (decks, roofs, hull bottoms)
+        totalEmissiveRadiance += diffuseColor.rgb * uSkyFill * (0.55 + 0.45 * clamp(dot(normal, (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz), 0.0, 1.0));
         ${debris ? '' : `
         int ck = int(vCrMat.x + 0.5);
+        // fluorescent orange (canopy) holds a little light of its own under storm cloud, like the vests
+        if (diffuseColor.r > 0.45 && diffuseColor.g < 0.3 * diffuseColor.r && diffuseColor.b < 0.12 * diffuseColor.r) totalEmissiveRadiance += diffuseColor.rgb * uGlow * 0.8;
         // lamp-lit fabric (DESIGN §2.1 / §2.8 «защита оранжевого»): in the searchlight at night the
         // canopy reads as saturated orange (≈0.8 linear red → sRGB ≈ (230, 105, 25)) instead of a muddy
         // brown under the cone haze; albedo-proportional, so the hue never drifts toward the lamp white
@@ -1030,6 +1038,14 @@ export function createCraftMaterial(look, opts = {}) {
         else if (ck == 4) totalEmissiveRadiance += uChem * (0.4 + 3.5 * vCr2.y);
         else if (ck == 5) totalEmissiveRadiance += diffuseColor.rgb * 5.0 * vCr.w;`}`,
       );
+    // orange protection for the bright fabric (raft canopy, drogue): the same ACES hue fix as the
+    // vests (crowd.js) — without it the canopy turns blood-red under storm cloud and at dusk
+    sh.fragmentShader = sh.fragmentShader.replace(
+      '#include <opaque_fragment>',
+      `if (diffuseColor.r > 0.45 && diffuseColor.g < 0.3 * diffuseColor.r && diffuseColor.b < 0.12 * diffuseColor.r)
+        outgoingLight.g = max(outgoingLight.g, outgoingLight.r * clamp(0.11 - 0.076 * log(max(outgoingLight.r, 1e-4)), 0.0, 0.5));
+      #include <opaque_fragment>`,
+    );
     if (wear) {
       patchWeathering(sh, look, wear);
       // craft frame instead of world space; per-part wear (aWear) scales every amount but the breakup
@@ -1042,7 +1058,7 @@ export function createCraftMaterial(look, opts = {}) {
         .replace('// CRAFT_FOUL (fouled-bottom chunk goes here once the weathering helpers are declared)', foul ? FOUL_GLSL : '');
     }
   };
-  mat.customProgramCacheKey = () => `survivors-craft-${debris ? 'debris' : 'v3'}-${side}-${lampLift}-${wear ? 'wx' : ''}-${foul ? 'foul' : ''}${key}`;
+  mat.customProgramCacheKey = () => `survivors-craft-${debris ? 'debris' : 'v4'}-${side}-${lampLift}-${wear ? 'wx' : ''}-${foul ? 'foul' : ''}${key}`;
   return mat;
 }
 

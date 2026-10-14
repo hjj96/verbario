@@ -425,8 +425,10 @@ export function buildHeliModel(ctx) {
     uAmbCol: { value: new THREE.Color(0.5, 0.5, 0.5) },
     uSkyCol: { value: new THREE.Color(0.3, 0.35, 0.4) },
     uGlow: { value: new THREE.Color(0, 0, 0) },
+    uGlowB: { value: new THREE.Color(0, 0, 0) },
+    uGlowS: { value: new THREE.Color(0, 0, 0) },
   };
-  const rotorMat = createRotorMaterial(look, { blades: 5, bladeHalfWidth: 0.27 / ROTOR_R, hull: [1.5 / ROTOR_R, 0.42 / ROTOR_R, 5.2 / ROTOR_R, -3.2 / ROTOR_R], light: rotorLight, inner: 0.1 });
+  const rotorMat = createRotorMaterial(look, { blades: 5, bladeHalfWidth: 0.27 / ROTOR_R, hull: [1.5 / ROTOR_R, 0.42 / ROTOR_R, 5.2 / ROTOR_R, -3.2 / ROTOR_R], light: rotorLight, inner: 0.1, glowB: [0, -2.1 / ROTOR_R, 1.4 / ROTOR_R], glowS: [1.68 / ROTOR_R, -8.86 / ROTOR_R, 1.6 / ROTOR_R] });
   const rotor = new THREE.Mesh(new THREE.CircleGeometry(1, discSegs), rotorMat);
   rotor.name = 'heli.rotor';
   rotor.scale.setScalar(ROTOR_R);
@@ -434,7 +436,7 @@ export function buildHeliModel(ctx) {
   rotor.renderOrder = 4;
   rotorPivot.add(rotor);
 
-  const tailMat = createRotorMaterial(look, { blades: 4, bladeHalfWidth: 0.11 / TAIL_R, light: rotorLight, inner: 0.08 });
+  const tailMat = createRotorMaterial(look, { blades: 4, bladeHalfWidth: 0.11 / TAIL_R, light: rotorLight, inner: 0.08, glowB: [0, 0, 0], glowS: [2.4 / TAIL_R, 0, 1.6 / TAIL_R] });
   const tail = new THREE.Mesh(new THREE.CircleGeometry(1, 32), tailMat);
   tail.name = 'heli.tailRotor';
   tail.scale.setScalar(TAIL_R);

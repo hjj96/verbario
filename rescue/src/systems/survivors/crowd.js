@@ -25,6 +25,7 @@ export const FEET_Y = -1.33 * S; // standing people: origin = deck height − FE
 export const HAND_LEN = 0.6 * S; // shoulder → hand centre
 
 // part ids (aPart)
+const TAPE_DAY = '#A9AEB1'; // retro-reflective tape albedo (silver-grey; the night flash is emissive)
 const P_FIXED = 0, P_SKIN = 1, P_HOOD = 2, P_JACKET = 3, P_PANTS = 4, P_TAPE = 5, P_STROBE = 6, P_VEST = 7;
 // limb ids (aLimb)
 const L_BODY = 0, L_LEFT = -1, L_RIGHT = 1, L_LEGS = 2;
@@ -38,15 +39,17 @@ export function buildPersonGeometry() {
     parts.push({ geometry, color, attrs: { aPart: part, aLimb: limbId }, ...extra });
 
   // head + open-faced hood (opening towards +Z, the face)
-  add(new THREE.IcosahedronGeometry(0.11, 1), P_SKIN, L_BODY, '#FFFFFF', { position: [0, 0.32, 0.006] });
+  add(new THREE.IcosahedronGeometry(0.114, 1), P_SKIN, L_BODY, '#FFFFFF', { position: [0, 0.33, 0.01] });
   const open = 1.25; // face opening (rad)
   add(new THREE.SphereGeometry(0.124, 10, 7, Math.PI / 2 + open / 2, Math.PI * 2 - open, 0, Math.PI * 0.72), P_HOOD, L_BODY, '#FFFFFF', {
-    position: [0, 0.338, -0.012],
-    scale: [1.02, 1.05, 1.08],
+    position: [0, 0.35, -0.01],
+    scale: [1.08, 1.07, 1.12],
   });
   // inflated collar — a horseshoe behind the neck, open at the chin — + chest lobes: from above the
   // orange reads as a «U» around the head (a full ring would read as a lifebuoy)
-  const gap = 1.15; // opening at the front (rad)
+  // a wide opening (≈100°): from above the collar must read as a «U» behind the head, never as a
+  // lifebuoy «O» with the head in its hole
+  const gap = 1.75; // opening at the front (rad)
   add(new THREE.TorusGeometry(0.2, 0.08, 6, 14, Math.PI * 2 - gap), P_VEST, L_BODY, C.vest, {
     position: [0, 0.165, 0.0],
     rotation: [Math.PI / 2 + 0.22, 0, Math.PI / 2 + gap / 2],
@@ -62,7 +65,8 @@ export function buildPersonGeometry() {
     // the arc starts at +X and runs towards +Y; centre it, then move it along the ring to ±62° from the
     // front (after the collar's lay-flat rotation the ring angle is measured from +X towards +Z)
     band.rotateZ(-0.18);
-    add(band, P_TAPE, L_BODY, C.tape, { position: [0, 0.165, 0], rotation: [Math.PI / 2 + 0.22, 0, Math.PI / 2 - side * 1.08] });
+    // by day SOLAS tape is a dull silver-grey (it only flashes white in the searchlight: uTape below)
+    add(band, P_TAPE, L_BODY, TAPE_DAY, { position: [0, 0.165, 0], rotation: [Math.PI / 2 + 0.22, 0, Math.PI / 2 - side * 1.32] });
   }
   // personal strobe on the left shoulder of the collar
   add(new THREE.CylinderGeometry(0.026, 0.03, 0.06, 8), P_FIXED, L_BODY, '#2A2E30', { position: [-0.16, 0.235, -0.07] });
@@ -242,9 +246,17 @@ export function createPersonMaterial(look) {
         if (abs(vSvPart - 7.0) < 0.5) totalEmissiveRadiance += diffuseColor.rgb * uVestGlow;
         // day rim: the sky catching the silhouette, so people separate from the water
         totalEmissiveRadiance += uRim * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);`,
+      )
+      .replace(
+        '#include <opaque_fragment>',
+        `// hue protection (#FF5A00 stays orange): ACES' toe and output matrix crush the vest's small green
+        // channel below ~1.0 scene-linear and the orange slides to blood-red in storm / dusk light. The
+        // G/R that lands on ≈ 21° after ACES is ≈ 0.095 − 0.076·ln R (fitted for R 0.01…2)
+        if (abs(vSvPart - 7.0) < 0.5) outgoingLight.g = max(outgoingLight.g, outgoingLight.r * clamp(0.115 - 0.076 * log(max(outgoingLight.r, 1e-4)), 0.0, 0.5));
+        #include <opaque_fragment>`,
       );
   };
-  mat.customProgramCacheKey = () => 'survivors-person-v1';
+  mat.customProgramCacheKey = () => 'survivors-person-v2';
   return mat;
 }
 

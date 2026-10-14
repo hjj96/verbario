@@ -28,7 +28,8 @@ export class Searchlight {
     ctx.scene.add(this.spot, this.spot.target);
 
     // Volumetric cone: apex at y = 0, wide end at y = −1 (scaled per frame).
-    const g = new THREE.CylinderGeometry(0.02, 1, 1, 28, 6, true);
+    // radiusTop 0: the proxy (incl. its facet chords) lies inside the analytic cone the shader solves.
+    const g = new THREE.CylinderGeometry(0, 1, 1, 28, 6, true);
     g.translate(0, -0.5, 0);
     this.coneMat = createConeMaterial(ctx.look);
     this.cone = new THREE.Mesh(g, this.coneMat);

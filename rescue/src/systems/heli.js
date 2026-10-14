@@ -583,10 +583,10 @@ export class Helicopter {
     if (st.sunDir) rl.uSunDir.value.copy(st.sunDir);
     const lc = this.lightsCtl;
     const glowK = 0.1 + 1.1 * night; // irradiance-scale: a strobe flash catches the veil at night
-    rl.uGlow.value.setRGB(1, 1, 1).multiplyScalar(lc.strobe * glowK * 1.2 + (this.beam?.intensity || 0) * glowK * 0.2);
-    rl.uGlow.value.r += lc.beacon * glowK * 0.6;
-    rl.uGlow.value.g += lc.beacon * glowK * 0.05;
-    rl.uGlow.value.b += lc.beacon * glowK * 0.04;
+    // broad: the searchlight pool bouncing up; local (falls off from the lamp over the veil): beacon, strobes
+    rl.uGlow.value.setRGB(1, 1, 1).multiplyScalar((this.beam?.intensity || 0) * glowK * 0.12);
+    rl.uGlowB.value.setRGB(1, 0.08, 0.06).multiplyScalar(lc.beacon * glowK * 0.9);
+    rl.uGlowS.value.setRGB(1, 1, 1).multiplyScalar(lc.strobe * glowK * 1.4);
 
     // --- flotation bags pop when ditched ---------------------------------------------------------------
     const fl = ditched && !this.crash.deck ? clamp(this.crash.t / 0.6, 0, 1) : 0;
