@@ -12,6 +12,7 @@
 //   audio/music.js        generative D-minor score in 6 layers driven by intensity
 //   audio/winch.js        winch motor, ratchet, basket hits, Aeolian cable
 //   audio/sfx.js          UI, world and event one-shots
+//   audio/extras.js       small details: cat, gulls, buoy bells, whale, heartbeat, spout stages, engulf, flameout
 //
 // Lifecycle: the AudioContext is created in unlock() on the first pointerdown / keydown / touchend
 // (capture), master fades 0 → 1 with τ 0.8; visibilitychange suspends / resumes (iOS 'interrupted' is
@@ -29,6 +30,7 @@ import { Alarms } from './audio/alarms.js';
 import { Music } from './audio/music.js';
 import { WinchSound } from './audio/winch.js';
 import { Sfx } from './audio/sfx.js';
+import { Extras } from './audio/extras.js';
 
 const CONTROL_HZ = 30;
 const EMITTER_HZ = 20;
@@ -149,6 +151,11 @@ export class AudioEngine {
       gust: () => this.env.gustWhistle(opts.dir, opts.strength ?? 10),
       danger: () => this.alarms.danger(),
       ignition: () => this.rotor.ignite(),
+      meow: () => this.extras.meow(x, z),
+      gulls: () => this.extras.gulls(opts.n || 4),
+      engulf: () => this.extras.engulf(x, z),
+      flameout: () => this.extras.flameout(),
+      spout: () => this.extras.spoutStage({ position: { x, z }, type: opts.type || 'waterspout' }, opts.stage || 'mature'),
     };
     const fn = table[name];
     if (!fn) return false;
@@ -240,6 +247,7 @@ export class AudioEngine {
     this.alarms = new Alarms(this);
     this.music = new Music(this);
     this.winch = new WinchSound(this);
+    this.extras = new Extras(this);
   }
 
   // Shared noise loops (stereo, started at random offsets).
@@ -303,6 +311,7 @@ export class AudioEngine {
       this.env.control(now, cdt, mode);
       this.music.control(now, cdt, mode, this.quality);
       this.winch.control(now, cdt);
+      this.extras.tick(now, cdt, mode);
     }
     this._acc20 += dt;
     if (this._acc20 >= 1 / EMITTER_HZ) {
@@ -343,6 +352,7 @@ export class AudioEngine {
       this._objDone.clear();
       this._lastCabin = 0;
       this._timers.length = 0;
+      this.extras.reset();
       this.alarms.fuelOnce = false;
       this.alarms.fuelLevel = null;
     });
@@ -393,12 +403,20 @@ export class AudioEngine {
     on('hazard:crest', (p) => {
       if (Number.isFinite(p.x)) this.env.crash(p.x, p.z, clamp((p.height || 8) / 15, 0.3, 1), 2);
     });
+    on('hazard:stage', (p) => {
+      if (ctx.mode === 'play' && (p.type === 'waterspout' || p.type === 'tornado')) this.extras.spoutStage(p.hazard, p.name ?? p.stage);
+    });
+    on('hazard:engulf', (p) => {
+      const pos = sPos(p.survivor) || p.hazard?.position;
+      if (pos) this.extras.engulf(pos.x, pos.z);
+    });
 
     // helicopter
     on('heli:searchlight', (p) => this.sfx.relay(!!p.on));
     on('heli:flare-throw', () => this.sfx.flareThrow());
     on('heli:flare', (p) => this.sfx.flareBurn(p.x, p.z, 40));
     on('heli:touchdown', (p) => this.sfx.landing(Math.abs(p.vy || 1)));
+    on('heli:takeoff', () => this.sfx.landing(0.35)); // the skids unload: a soft deck thunk
     on('heli:refuel', (p) => this.sfx.refuel(p.state || 'start'));
     on('heli:unload-person', (p) => this.sfx.unloadChime(p.left ?? 0));
     on('heli:unload', () => (this._lastCabin = 0));
@@ -413,8 +431,11 @@ export class AudioEngine {
     on('heli:crash', (p) => {
       const hp = heliPos();
       this.sfx.crash(p.x ?? hp?.x ?? 0, p.z ?? hp?.z ?? 0, !!p.onDeck);
+      // «под водой» → ~2 s of near silence → the radio static before «Берег» calls (radio: d_crash at 4.2 s)
+      this.later(3.6, () => this.sfx.static());
     });
     on('heli:failing', () => this.alarms.danger());
+    on('heli:autorotation', () => this.extras.flameout());
     on('heli:overheat', () => this.sfx.overheat());
     on('heli:tension', (p) => {
       if (p.phase === 'warn') this.alarms.tension();
@@ -454,7 +475,9 @@ export class AudioEngine {
     });
     on('survivor:pet', (p) => {
       const pos = sPos(p.s);
-      if (pos && p.pet === 'dog' && p.action === 'bark') this.sfx.bark(pos.x, pos.z);
+      if (!pos) return;
+      if (p.pet === 'dog' && p.action === 'bark') this.sfx.bark(pos.x, pos.z);
+      else if (p.pet === 'cat') this.extras.meow(pos.x, pos.z);
     });
     on('survivor:creak', (p) => Number.isFinite(p.x) && this.sfx.creak(p.x, p.z));
     on('survivor:sinking', ({ s }) => {
@@ -465,6 +488,15 @@ export class AudioEngine {
       const pos = sPos(s);
       if (pos) this.env.crash(pos.x, pos.z, 0.35, 2);
     });
+    on('survivor:tip', ({ s }) => {
+      const pos = sPos(s);
+      if (pos) this.env.crash(pos.x, pos.z, 0.15, 1);
+    });
+    on('survivor:raft-boarded', ({ s }) => {
+      const pos = sPos(s);
+      if (pos) this.sfx.splashSmall(pos.x, pos.z, 0.15);
+    });
+    on('fx:gulls', (p) => p.state === 'leave' && ctx.mode === 'play' && this.extras.gulls(6));
     on('survivor:jump', ({ s }) => {
       const pos = sPos(s);
       if (pos) this.env.crash(pos.x, pos.z, 0.12, 1);

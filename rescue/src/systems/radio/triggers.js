@@ -34,7 +34,7 @@ export class RadioTriggers {
   _reset() {
     this.timers.length = 0;
     this.f = {
-      spout: false, whistle: false, damage: false, crit: false, night: 0, nightArmed: false, green: false,
+      spout: false, damage: false, crit: false, night: 0, nightArmed: false, green: false,
       stelmo: false, emp: false, water: false, swing: 0, deckPad: null, outside: false, idleAt: 0,
       lastGust: -1e9, winchState: 'stowed', patterT: -1e9, patterText: '', started: -1e9, bingo: false,
     };
@@ -220,10 +220,8 @@ export class RadioTriggers {
       const dx = x - h.position.x;
       const dz = z - h.position.z;
       if (p.kind === 'rocket') R.line('p_rocket', { clock: clockWords(h.heading, dx, dz) });
-      else if (p.kind === 'whistle' && !this.f.whistle) {
-        this.f.whistle = true;
-        R.line('p_whistle', { dir: toWords(bearingDeg(dx, dz)) });
-      }
+      // «первый свист»: the line's own 600 s cooldown keeps it rare; a stale (dropped) one may come back
+      else if (p.kind === 'whistle') R.line('p_whistle', { dir: toWords(bearingDeg(dx, dz)) });
     });
     on('survivor:shout', (p) => {
       if (playing() && p.reason !== 'loudspeaker') R.line('s_shout', {}, { pos: p.s?.position });

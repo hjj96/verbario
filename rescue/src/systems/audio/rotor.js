@@ -130,6 +130,8 @@ export class RotorSound {
     if (dt > 0 && load - this.prevLoad > 2.4 * dt) this.dip = 0.03;
     this.prevLoad = load;
     this.dip *= Math.exp(-dt / 0.8);
+    // crash: the rotor stops (τ 0.6) — the thumps spread apart as the BPF falls (DESIGN §6.6)
+    this.crashRpm = crashed ? (this.crashRpm ?? 1) * Math.exp(-dt / 0.6) : 1;
     const modeT = mode === 'debrief' ? 0.45 : 1;
     this.modeRpm += (modeT - this.modeRpm) * (1 - Math.exp(-dt / (mode === 'debrief' ? 3 : 1)));
     let fly = 1;
@@ -154,7 +156,7 @@ export class RotorSound {
         }
       } else fly = dB(-14);
     }
-    const rpm = clamp((h.rotorRPM ?? 1) * this.modeRpm * (1 - this.dip) * (mode === 'title' && this.fly.active ? 1.03 - 0.06 * clamp(this.fly.t, 0, 1) : 1), 0, 1.2);
+    const rpm = clamp((h.rotorRPM ?? 1) * this.crashRpm * this.modeRpm * (1 - this.dip) * (mode === 'title' && this.fly.active ? 1.03 - 0.06 * clamp(this.fly.t, 0, 1) : 1), 0, 1.2);
     const bpf = Math.max(0.3, 11.5 * rpm);
     for (const o of this.oscs) ctl(o.frequency, bpf, now, 0.05);
     ctl(this.tail.frequency, bpf * 5.3, now, 0.05);

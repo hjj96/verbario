@@ -45,8 +45,8 @@ export const LINES = {
   d_crash: { s: 'dispatch', p: 3, cd: 30, age: 30, t: 'Чайка ноль-седьмой, Берег, ответьте… Чайка, приём…' },
 
   // ---- второй пилот Гордеев, СПУ --------------------------------------------------------------------
-  p_spot: { s: 'pilot', p: 2, cd: 15, age: 5, t: 'Вижу человека! Оранжевый жилет, на {clock}, метров {dist}!' },
-  p_spot_raft: { s: 'pilot', p: 2, cd: 15, age: 5, t: 'Плот! На {clock}, людей {count}.' },
+  p_spot: { s: 'pilot', p: 2, cd: 15, age: 8, t: 'Вижу человека! Оранжевый жилет, на {clock}, метров {dist}!' },
+  p_spot_raft: { s: 'pilot', p: 2, cd: 15, age: 8, t: 'Плот! На {clock}, людей {count}.' },
   p_rocket: { s: 'pilot', p: 2, cd: 25, age: 4, t: 'Ракета! Красная, на {clock}!' },
   p_whistle: { s: 'pilot', p: 2, cd: 600, age: 6, t: 'Тихо… Слышишь? Свистят. Где-то {dir}.' },
   p_gust: { s: 'pilot', p: 1, cd: 90, age: 2.5, t: 'Порыв! Держи, держи…' },
@@ -60,8 +60,8 @@ export const LINES = {
   p_hull_crit: { s: 'pilot', p: 3, cd: 600, t: 'Машина не вытянет ещё один такой удар.' },
   p_deck: { s: 'pilot', p: 2, cd: 120, age: 10, t: 'Палуба гуляет. Лови момент, когда выровняется.' },
   // variants for the other group types (same moment as p_spot / p_spot_raft)
-  p_spot_hull: { s: 'pilot', p: 2, cd: 15, age: 5, t: 'Лодка вверх дном! На {clock}, на киле {count}.' },
-  p_spot_group: { s: 'pilot', p: 2, cd: 15, age: 5, t: 'Вижу людей! {what}, на {clock}, метров {dist}.' },
+  p_spot_hull: { s: 'pilot', p: 2, cd: 15, age: 8, t: 'Лодка вверх дном! На {clock}, на киле {count}.' },
+  p_spot_group: { s: 'pilot', p: 2, cd: 15, age: 8, t: 'Вижу людей! {what}, на {clock}, метров {dist}.' },
   p_thunder: { s: 'pilot', p: 1, cd: 300, age: 3, t: '{count}… {km} до грозы.' },
 
   // ---- бортоператор Семёныч, СПУ ---------------------------------------------------------------------
