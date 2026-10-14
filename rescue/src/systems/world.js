@@ -59,7 +59,7 @@ export class World {
     this.channels = this.shared.uChan.value;
     this.mats = {
       plain: createPropMaterial(look, this.shared, { name: 'plain' }),
-      floater: createPropMaterial(look, this.shared, { name: 'floater' }),
+      floater: createPropMaterial(look, this.shared, { name: 'floater', wear: 'medium' }),
       beam: createBeamMaterial(look, this.shared, { color: '#FFF4DC' }),
       flood: createBeamMaterial(look, this.shared, { color: '#FFE6B0' }),
       flame: createFlameMaterial(look),
@@ -311,10 +311,12 @@ export class World {
 
   _applyQuality() {
     const q = this.ctx.settings.get('quality');
-    // keylines: high → every floating thing (DESIGN §8.2)
-    this.floaters.setKeylines(q === 'high');
-    // no bloom on low: lamps carry their own halos
-    this.shared.uLampK.value.set(1, q === 'low' ? 0.5 : 0.28, 1);
+    // no toon keylines on floaters (one realistic style): separation comes from the contact disc,
+    // foam collar, rim light and shadows instead (people keep theirs at night — survivors.js)
+    this.floaters.setKeylines(false);
+    // no bloom on low: lamps carry their own halos (scaled by daylight in _channels)
+    this._haloBase = q === 'low' ? 0.5 : 0.28;
+    this.shared.uLampK.value.set(1, this._haloBase, 1);
     this.quality = q;
     landformsQuality(this, q);
   }
@@ -400,7 +402,10 @@ export class World {
     const red = env.reduceFlashes;
     c[CH.ALWAYS] = 1;
     c[CH.WINDOWS] = 0.04 + 0.96 * smoothstep(0.15, 0.7, Math.max(env.night, env.fogK * 0.6, env.intensity * 0.55));
-    c[CH.PERIM] = 0.3 + 0.7 * on;
+    // daylight: deck LEDs barely register in the sun and no lamp shows a halo — halos are light
+    // scattered by dark air, fog and rain; they return as the lights come on
+    c[CH.PERIM] = 0.15 + 0.85 * on;
+    this.shared.uLampK.value.y = (this._haloBase ?? 0.28) * smoothstep(0.05, 0.5, on);
     c[CH.FLOOD] = on;
     c[CH.NAV] = 0.45 + 0.55 * on;
     c[CH.PADLIGHT] = on;

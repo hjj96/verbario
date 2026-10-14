@@ -1,5 +1,5 @@
-// Water contact for everything that floats (DESIGN §2.7.2 [MUST]): a foam collar ring
-// (0.8R…1.6R, noisy lace alpha) and a dark contact disc (25 %) — without them objects look pasted
+// Water contact for everything that floats (DESIGN §2.7.2 [MUST]): a soft foam collar
+// (0.8R…1.6R, blotchy froth with bubble speckle) and a dark contact disc (25 %) — without them objects look pasted
 // onto the sea. One instanced draw call for the whole world; each instance is oriented to the local
 // wave normal at the CPU-mirrored wave height and brightens inside the heli searchlight.
 import * as THREE from 'three';
@@ -51,6 +51,20 @@ export class Collars {
     a[j + 2] = lit;
     a[j + 3] = phase;
     this.n++;
+  }
+
+  // Trailing wake streak for a drifting / towed object: an elongated soft-froth patch (no dark
+  // disc) centred `R·(1 + len/2)` downstream of (x, z) along the drift (vx, vz) in m/s.
+  // Strength grows with speed; nothing below ~0.15 m/s.
+  pushWake(x, y, z, R, vx, vz, foam = 0.8, phase = 0) {
+    const sp = Math.hypot(vx, vz);
+    if (sp < 0.15) return;
+    const k = Math.min(1, (sp - 0.15) / 1.2);
+    const len = 1.6 + 2.6 * k;
+    const ux = vx / sp, uz = vz / sp;
+    const off = R * (0.6 + len * 0.7);
+    // local +z of the instance → downstream (yaw about +Y maps +z to (sin yaw, cos yaw))
+    this.push(x + ux * off, y - 0.01, z + uz * off, 0, 1, 0, R * 0.85, foam * (0.45 + 0.55 * k), -1, 0, phase + 0.5, Math.atan2(ux, uz), len);
   }
 
   end() {

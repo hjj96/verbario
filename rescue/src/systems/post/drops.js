@@ -7,7 +7,8 @@
 //   * after sticking 2–6 s they roll as rivulets along the flow (−heli screen velocity, 30 % wind);
 //   * above 25 m/s airspeed they stretch and are blown off the lens;
 //   * spray() fills 40 % of the cells at once (rotor wash, rogue wave, crest strike);
-//   * with no rain the beads slowly evaporate («сохнут» in clearing).
+//   * with no rain the beads slowly evaporate («сохнут» in clearing); after any other preset change
+//     they clear faster (dryK), and calm / fog lenses hold at most `cap` beads.
 import * as THREE from 'three';
 
 export const GRID_X = 28;
@@ -88,14 +89,16 @@ export class LensDrops {
   }
 
   // dt: seconds (0 while paused). opts: rate (drops/s), speed (airspeed m/s), flowX/flowY (unit,
-  // screen space, y up), rivulets (bool: rolling/merging; false = static beads only).
-  update(dt, rate, speed, flowX, flowY, rivulets) {
+  // screen space, y up), rivulets (bool: rolling/merging; false = static beads only), cap (max beads,
+  // 0 = no cap), dryK (evaporation speed-up without rain: 1 = the slow «сохнут» of clearing).
+  update(dt, rate, speed, flowX, flowY, rivulets, cap = 0, dryK = 1) {
     if (dt <= 0) return;
     this.frame++;
     // spawn
     this.spawnAcc += rate * dt;
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
+      if (cap > 0 && this.count >= cap) continue;
       const i = Math.floor(this.rand() * N);
       const u = this.rand();
       this._place(i, 0.06 + 0.2 * u * u * u, 2 + this.rand() * 4, 8 + this.rand() * 12);
@@ -106,13 +109,17 @@ export class LensDrops {
     const fast = THREE.MathUtils.clamp((speed - 8) / 25, 0, 1.6); // 0 hover … 1 ≈ 33 m/s
     const blown = speed > 25;
     const dry = rate < 0.05 ? 1 : 0.35; // without rain, beads evaporate faster
+    // over the cap (calm / fog after rain) or dry outside clearing: every bead shrinks, not only old ones
+    const over = cap > 0 && this.count > cap ? 4 : 1;
+    const evap = rate < 0.05 ? 0.12 * dryK * over : 0.06 * (1 + dry) * over;
+    const evapAll = over > 1 || (rate < 0.05 && dryK > 1);
     const fx = flowX * this.kx;
     const fy = flowY;
     for (let i = 0; i < N; i++) {
       let r = this.r[i];
       if (r <= 0 || this.stamp[i] === this.frame) continue;
       this.age[i] += dt;
-      if (this.age[i] > this.life[i]) r -= dt * 0.06 * (1 + dry);
+      if (this.age[i] > this.life[i] || evapAll) r -= dt * evap;
       if (!rivulets) {
         if (r < 0.035) this._kill(i);
         else this.r[i] = r;

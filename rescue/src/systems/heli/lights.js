@@ -30,13 +30,17 @@ const COL = {
 const GLINTS = [
   ['navPort', COL.red, CH.navRed, 0.35],
   ['navStbd', COL.green, CH.navGreen, 0.35],
-  ['navTail', COL.white, CH.navWhite, 0.3],
+  ['navTail', COL.white, CH.navWhite, 0.1], // steady white: small, never a white disc between strobes
   ['beacon', COL.beacon, CH.beacon, 0.6],
   ['strobeL', COL.white, CH.strobe, 1.0],
   ['strobeR', COL.white, CH.strobe, 1.0],
   ['door', COL.door, CH.door, 0.5],
-  ['lens', COL.lens, CH.lens, 0.7],
+  ['lens', COL.lens, CH.lens, 0.25],
 ];
+const smooth = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 
 // Light spill painted onto the hull (local glow slots of the hull material):
 // [point, colour, channel, radius m, gain]
@@ -161,7 +165,10 @@ export class HeliLights {
   }
 
   // Reflections on the water: mirror each light through the local sea plane and intersect the
-  // camera→mirror ray with it, so the glint sits where a real reflection would be.
+  // camera→mirror ray with it, so the glint sits where a real reflection would be. Seen from the
+  // cinematic heights a lamp's reflection is a small wave-broken sparkle, not a blob bigger than the
+  // aircraft: radius and gain shrink with camera height, and the steady lamps are capped well below
+  // the strobe (the ocean's specular term breaks what is left up on the wave facets).
   _glints(h, night, C) {
     const ocean = this.ctx.ocean;
     if (!ocean || !ocean.addGlint) return;
@@ -169,6 +176,9 @@ export class HeliLights {
     const body = this.model.body;
     const sea = h.seaY || 0;
     const scale = 0.05 + 0.95 * night * night; // reflections of small lamps only matter after dusk
+    const alt = smooth(90, 360, cam.y - sea);
+    const rK = 1 - 0.62 * alt;
+    const iK = 1 - 0.6 * alt;
     for (let i = 0; i < GLINTS.length; i++) {
       const g = GLINTS[i];
       const name = g[0];
@@ -185,8 +195,10 @@ export class HeliLights {
       const t = (cam.y - sea) / Math.max(0.01, cam.y - my);
       const gx = cam.x + (w.x - cam.x) * t;
       const gz = cam.z + (w.z - cam.z) * t;
-      const r = 1.2 + 0.05 * hgt;
-      ocean.addGlint(gx, gz, r, I * base * scale, col);
+      const r = (0.75 + 0.035 * hgt) * rK;
+      let gi = I * base * scale * iK;
+      if (ch !== CH.strobe) gi = Math.min(gi, 0.3);
+      ocean.addGlint(gx, gz, r, gi, col);
     }
   }
 }

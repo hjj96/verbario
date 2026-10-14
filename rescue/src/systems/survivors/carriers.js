@@ -6,7 +6,7 @@
 //
 // People ride a carrier through `slots`: local positions in the carrier frame (see slotFor()).
 import * as THREE from 'three';
-import { RAFT, CONT } from './craft.js';
+import { RAFT, CONT, PLANE } from './craft.js';
 import { FEET_Y } from './crowd.js';
 import { PERSON_SCALE, TYPES, C, clamp, clamp01, smooth, approach, wrapAngle } from './tables.js';
 
@@ -20,6 +20,8 @@ const _v = new THREE.Vector3();
 const _s = new THREE.Vector3(1, 1, 1);
 
 let NEXT_ID = 1;
+// Ан-2 upper-wing places: [x, z offset from the wing's centre line, legFold (1 sitting, 0 standing)]
+const PLANE_SEATS = [[-1.5, -0.5, 0], [1.3, 0.3, 1], [-3.6, 0.1, 1], [3.4, -0.4, 0], [5.2, 0.2, 1]];
 
 export class Carrier {
   constructor(kind, x, z, opts = {}) {
@@ -80,7 +82,7 @@ export class Carrier {
   get radius() {
     switch (this.kind) {
       case 'raft': return RAFT.R + RAFT.tube;
-      case 'hull': return this.style === 'yacht' ? 5.4 : 4.8;
+      case 'hull': return this.style === 'plane' ? 6.5 : this.style === 'yacht' ? 5.4 : 4.8;
       case 'container': return 3.3;
       case 'barge': return 17;
       case 'wreck': return 26;
@@ -91,7 +93,7 @@ export class Carrier {
   // Collar elongation (length / beam) for elongated hulls.
   get elong() {
     switch (this.kind) {
-      case 'hull': return this.style === 'yacht' ? 3.0 : 2.9;
+      case 'hull': return this.style === 'plane' ? 1.4 : this.style === 'yacht' ? 3.0 : 2.9;
       case 'container': return 2.4;
       case 'barge': return 3.2;
       case 'wreck': return 4.2;
@@ -189,6 +191,11 @@ export class Carrier {
         return set5(out, 0.02 * R, sitY + 0.1, 0.38 * R, 0.6, 0);
       }
       case 'hull': {
+        if (this.style === 'plane') {
+          // on the upper wing: some standing, some sitting with their legs over the leading edge
+          const q = PLANE_SEATS[i % PLANE_SEATS.length];
+          return set5(out, q[0], q[2] ? PLANE.wingTop + 0.5 * S + 0.05 : PLANE.wingTop - FEET_Y, PLANE.wingZ + q[1], q[2], 0);
+        }
         const keelY = this.style === 'yacht' ? 0.55 : 0.68;
         const zs = this.style === 'yacht' ? [1.6, -0.6, 2.9, -1.9] : [-1.2, 0.6, 2.2, -2.7];
         const z = zs[i % zs.length];
@@ -205,13 +212,15 @@ export class Carrier {
       case 'wreck':
       case 'rig': {
         // a loose crowd at the gathering point, two ranks
+        // a loose, uneven huddle: staggered ranks, spacing noise, every fourth one sitting/crouching
         const st = this.stand || [0, this.deckY, 0];
         const cols = 4;
         const r = Math.floor(i / cols);
         const c = i % cols;
-        const jx = (((i * 37) % 11) / 11 - 0.5) * 0.5;
-        const jz = (((i * 53) % 7) / 7 - 0.5) * 0.5;
-        return set5(out, st[0] + (c - (Math.min(n, cols) - 1) / 2) * 1.5 + jx, st[1] - FEET_Y, st[2] + r * 1.6 + jz, 0, 0);
+        const jx = (((i * 37) % 11) / 11 - 0.5) * 0.9;
+        const jz = (((i * 53) % 7) / 7 - 0.5) * 0.8;
+        const sit = i % 4 === 3;
+        return set5(out, st[0] + (c - (Math.min(n, cols) - 1) / 2) * 1.55 + jx + (r % 2) * 0.6, sit ? st[1] + 0.5 * S + 0.05 : st[1] - FEET_Y, st[2] + r * 1.7 + jz, sit ? 1 : 0, 0);
       }
       default:
         return set5(out, 0, 0, 0, 0, 0);
@@ -241,7 +250,7 @@ export class Carrier {
   visibleSeats(raise) {
     switch (this.kind) {
       case 'raft': return raise ? 3 : 2;
-      case 'hull': return 4;
+      case 'hull': return this.style === 'plane' ? 5 : 4;
       case 'container': return 3;
       default: return 12;
     }
@@ -274,11 +283,11 @@ function set5(out, a, b, c, d, e) {
 
 // Debris ring around a capsized hull: rings, floats, cans, planks, a cooler (DESIGN §2.10).
 export function scatterDebris(carrier, rng) {
-  const kinds = ['ring', 'float', 'can', 'plank', 'cooler', 'float', 'can', 'plank', 'ring'];
-  const n = 7 + Math.floor(rng.next() * 3);
+  const kinds = ['ring', 'float', 'can', 'plank', 'tank', 'rope', 'cooler', 'float', 'can', 'plank', 'float', 'tank', 'ring', 'rope'];
+  const n = 11 + Math.floor(rng.next() * 4);
   for (let i = 0; i < n; i++) {
     const a = rng.next() * Math.PI * 2;
-    const r = 6 + rng.next() * 9;
+    const r = 4.5 + Math.pow(rng.next(), 0.8) * 10;
     carrier.debris.push({
       kind: kinds[i % kinds.length],
       dx: Math.cos(a) * r,

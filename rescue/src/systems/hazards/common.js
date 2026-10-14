@@ -92,7 +92,7 @@ export const COLORS = {
   charge: '#7FB8FF', // lightning charge ring (= St. Elmo's fire colour)
   chargeCore: '#DCEBFF',
   rainColumn: '#2A3236',
-  hailColumn: '#CFE3D6',
+  hailColumn: '#C9CFD2', // neutral whitish-grey shaft (the green cast belongs to the cloud light, not the hail)
   wood: '#5B4B3C',
   woodLight: '#7A6A58',
   barrelBlue: '#2C4756',

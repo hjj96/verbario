@@ -134,7 +134,7 @@ export function buildIslandTerrain(quality = 'high') {
   };
   const step = TERRAIN_STEP[quality] || TERRAIN_STEP.high;
   const t0 = performance.now();
-  const T = buildTerrain(def, { ...ISLAND_BOUNDS, step, cover, cut: -1.4 });
+  const T = buildTerrain(def, { ...ISLAND_BOUNDS, step, cover, cut: -1.4, skirt: 9, skirtDepth: -10 });
   T.ms = performance.now() - t0;
   T.def = def;
   T.shoals = fitShoals(T.sampler, 4, { minR: 6, margin: 2 });
@@ -205,7 +205,7 @@ export function buildRockTerrain(rk, seed, quality = 'high') {
   // bird rocks: guano-whitened crowns and ledges on the stacks
   const birdK = 0.85 * D.spire; // only the stacks hold seabird colonies
   const bird = (x, z, h, hmax) => birdK * sstep(0.45, 0.9, h / Math.max(1, hmax));
-  const T = buildTerrain(D.def, { ...D.bounds, step, cover, bird, cut: -1.4, scaleTo: D.H });
+  const T = buildTerrain(D.def, { ...D.bounds, step, cover, bird, cut: -1.4, scaleTo: D.H, skirt: 7, skirtDepth: -10 });
   T.shoals = fitShoals(T.sampler, 1, { minR: 2, margin: 1.5 });
   T.rock = D;
   T.def = D.def;

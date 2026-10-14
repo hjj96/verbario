@@ -308,8 +308,11 @@ export class Ocean {
     const glitExp = pal.glitterExp ?? 600 + (120 - 600) * clearing;
     // the sun's glitter is lifted (+1.2) into the top-down frame (DESIGN layer 13); the moon path
     // keeps close to its real geometry (+0.35) with a tight lobe, so it stays a path, not a starfield
-    const moonK = moonGlit > sunGlit ? 1 : 0;
-    u.uSeaD.value.set(glitExp + (2400 - glitExp) * moonK, 1.2 - 0.85 * moonK, resid, bio);
+    // A night palette that declares its own glitter (nightCalm: .35 @ 250) gets a broad moon path
+    // lifted into the top-down frame (+0.8); otherwise the moon keeps a tight 2400 lobe.
+    const moonK = moonGlit > sunGlit || night > 0.5 ? 1 : 0;
+    const moonExp = (pal.glitter ?? 0) > 0 ? glitExp : 2400;
+    u.uSeaD.value.set(glitExp + (moonExp - glitExp) * moonK, 1.2 - ((pal.glitter ?? 0) > 0 ? 0.4 : 0.85) * moonK, resid, bio);
     // look-driven radiance: share of the sun in the total light, exposure compensation (base
     // exposure only, so the weather's lightning exposure boost still brightens the water)
     const sunPart = sunI * Math.max(u.uSunDirS.value.y, 0.05) * lum(pal.sun);

@@ -525,20 +525,26 @@ export class Helicopter {
     this.ghostAngle += (0.7 + 3.0 * (rpm - 1)) * dt;
     this.tailGhost += (1.3 + 4.0 * (rpm - 1)) * dt;
     const slow = 1 - smooth(0.18, 0.5, rpm);
-    const lit = clamp(0.18 + 0.82 * (1 - night) + 1.5 * flash, 0.15, 1.3);
+    const sharp = Math.max(freeze, slow);
     const ru = mdl.rotorMat.uniforms;
     ru.uBlade.value = this.bladeAngle % (Math.PI * 2);
     ru.uGhost.value = this.ghostAngle % (Math.PI * 2);
-    ru.uSharp.value = Math.max(freeze, slow);
+    ru.uSharp.value = sharp;
     ru.uExp.value = 6 + 34 * (1 - smooth(0.4, 0.95, rpm));
     ru.uElmo.value = st.stElmo || 0;
-    ru.uLit.value = lit;
+    // per-frame blade sweep of a 1/60 s "shutter" (rad), the tip smears' length
+    ru.uArc.value = clamp(rpm * Math.PI * 2 * 4.6 / 60, 0.04, 0.9);
+    // tip smears are a close-range cue only: gone by 180 m of camera distance
+    ru.uTipFade.value = 1 - smooth(90, 180, ctx.camera.position.distanceTo(this.position));
     const tu = mdl.tailMat.uniforms;
     tu.uBlade.value = this.tailBlade % (Math.PI * 2);
     tu.uGhost.value = this.tailGhost % (Math.PI * 2);
-    tu.uSharp.value = Math.max(freeze, slow);
+    tu.uSharp.value = sharp;
     tu.uExp.value = 4 + 20 * (1 - smooth(0.4, 0.95, rpm));
-    tu.uLit.value = lit;
+    tu.uArc.value = clamp(rpm * Math.PI * 2 * 22 / 60, 0.04, 1.2);
+    tu.uTipFade.value = ru.uTipFade.value;
+    // the hub and blade roots turn with what the disc shows (ghost alias, or the frozen blades)
+    mdl.hub.rotation.y = sharp > 0.5 ? this.bladeAngle : this.ghostAngle;
     // shadow blades alias at 0.7–1 rev/s (stroboscopic rotor shadow)
     const aliasRate = rpm > 0.6 ? (0.7 + 0.3 * Math.sin(this.t * 0.37)) * Math.PI * 2 * rpm : rpm * Math.PI * 2 * 4.6;
     if (freeze < 0.5) this.shadowAngle += aliasRate * dt;
@@ -565,7 +571,22 @@ export class Helicopter {
     const cloud = ctx.look?.cloudAt ? ctx.look.cloudAt(this.position.x, this.position.z) : 0;
     hu.uSunScale.value = 1 - 0.2 * cloud * (1 - night);
     hu.uInstr.value.set('#3AE0C8').multiplyScalar(0.4 * (0.04 + 0.96 * night * night) * (this.alive ? 1 : 0.2));
-    hu.uSoot.value = smooth(0.55, 0.12, this.hull);
+    hu.uSoot.value = 0.3 + 0.7 * smooth(0.55, 0.12, this.hull); // engines always leave some soot
+
+    // --- rotor veil light: the hull's light rig (sun · N·L + hemisphere), lightning, own lamps ----------
+    const rl = mdl.rotorLight;
+    if (pal && pal.ambient) {
+      rl.uSunCol.value.copy(pal.sun || pal.ambient).multiplyScalar((pal.sunIntensity ?? 1) * hu.uSunScale.value);
+      rl.uAmbCol.value.copy(pal.ambient).multiplyScalar((pal.ambientIntensity ?? 0.6) * (1 + 3 * flash));
+      rl.uSkyCol.value.copy(pal.sky || pal.ambient).multiplyScalar(0.5 * (pal.ambientIntensity ?? 0.6) * (1 + 3 * flash));
+    }
+    if (st.sunDir) rl.uSunDir.value.copy(st.sunDir);
+    const lc = this.lightsCtl;
+    const glowK = 0.1 + 1.1 * night; // irradiance-scale: a strobe flash catches the veil at night
+    rl.uGlow.value.setRGB(1, 1, 1).multiplyScalar(lc.strobe * glowK * 1.2 + (this.beam?.intensity || 0) * glowK * 0.2);
+    rl.uGlow.value.r += lc.beacon * glowK * 0.6;
+    rl.uGlow.value.g += lc.beacon * glowK * 0.05;
+    rl.uGlow.value.b += lc.beacon * glowK * 0.04;
 
     // --- flotation bags pop when ditched ---------------------------------------------------------------
     const fl = ditched && !this.crash.deck ? clamp(this.crash.t / 0.6, 0, 1) : 0;

@@ -5,10 +5,16 @@
 // of twenty — 300 rubber ducks. Everything bobs on ocean.heightAt / normalAt with lag, drifts with
 // current + leeway, and gets a foam collar + dark contact disc (§2.7.2).
 //
-// One InstancedMesh per shape (only the shapes the mission uses are visible) + keylines on high.
+// One InstancedMesh per shape (only the shapes the mission uses are visible). No ink keylines (one
+// realistic style): contact foam, the dark contact disc, rim light and weathering separate them.
+// Containers share the survivors' container model and craft material (one container in the game).
 import * as THREE from 'three';
-import { bake, p, rng, UNIT, SURF, emit } from './geo.js';
+import { bake, p, member, rng, UNIT, SURF, emit } from './geo.js';
 import { CH } from './materials.js';
+import { containerGeometry, createCraftMaterial, containerPaint, CONT } from '../survivors/craft.js';
+import { WEAR } from '../../core/weathering.js';
+
+const SIDES = [-1, 1];
 
 // --------------------------------------------------------------------------------------------
 // Shapes: geometry parts centred at the waterline (y = 0), long axis along X. `y` = vertical
@@ -16,12 +22,12 @@ import { CH } from './materials.js';
 const W = '#FFFFFF';
 const SHAPES = {
   plank: {
-    k: 1.4,
+    k: 1.1,
     parts: () => [p(UNIT.box, W, [0, 0, 0], [3.0, 0.14, 0.3], null, SURF.wood)],
     y: -0.02, R: 0.9, tint: ['#6B5A45', '#7A6248', '#5A4C3C', '#8C3B2E', '#4E5A52'], leeway: 0.025,
   },
   barrel: {
-    k: 1.6,
+    k: 1.15,
     parts: () => [
       p(UNIT.cyl12, W, [0, 0, 0], [0.31, 0.9, 0.31], [0, 0, Math.PI / 2], SURF.paint),
       p(UNIT.cyl12, '#555555', [-0.3, 0, 0], [0.325, 0.05, 0.325], [0, 0, Math.PI / 2], SURF.steel),
@@ -30,7 +36,7 @@ const SHAPES = {
     y: -0.06, R: 0.6, tint: ['#1F5E8C', '#B3412E', '#2F7D4F', '#6B3A2A', '#C9A227'], leeway: 0.03,
   },
   ring: {
-    k: 1.7,
+    k: 1.15,
     parts: () => {
       const out = [];
       for (let i = 0; i < 8; i++) {
@@ -42,7 +48,7 @@ const SHAPES = {
     y: 0.0, R: 0.55, tint: null, leeway: 0.04,
   },
   canister: {
-    k: 1.7,
+    k: 1.15,
     parts: () => [
       p(UNIT.box, W, [0, 0, 0], [0.48, 0.2, 0.34], null, SURF.paint),
       p(UNIT.box, W, [0.08, 0.13, 0], [0.18, 0.06, 0.08], null, SURF.paint),
@@ -51,17 +57,20 @@ const SHAPES = {
     y: 0.0, R: 0.45, tint: ['#C9A227', '#B3261E', '#2F7D4F', '#E6E6E0'], leeway: 0.04,
   },
   kayak: {
-    k: 1.3,
+    k: 1.05,
     parts: () => [
-      p(UNIT.sphere, W, [0, 0, 0], [2.3, 0.2, 0.32], null, SURF.gloss),
-      p(UNIT.sphereLo, '#1A1C1E', [0.15, 0.12, 0], [0.42, 0.06, 0.2], null, SURF.rubber),
-      p(UNIT.box, '#2A2E33', [1.2, 0.17, 0], [0.9, 0.03, 0.03], null, SURF.rubber),
-      p(UNIT.box, '#2A2E33', [-1.2, 0.17, 0], [0.9, 0.03, 0.03], null, SURF.rubber),
+      { geometry: kayakHull(), color: W, vcol: true, surf: SURF.paint },
+      p(UNIT.torus, '#1A1C1E', [0.2, 0.15, 0], [0.42, 0.24, 0.26], [Math.PI / 2, 0, 0], SURF.rubber), // cockpit coaming
+      p(UNIT.sphereLo, '#0E1012', [0.2, 0.12, 0], [0.4, 0.03, 0.22], null, SURF.rubber),
+      p(UNIT.box, '#2A2E33', [1.25, 0.15, 0], [1.1, 0.012, 0.012], null, SURF.rubber), // deck lines
+      p(UNIT.box, '#2A2E33', [-1.15, 0.15, 0], [1.0, 0.012, 0.012], null, SURF.rubber),
+      p(UNIT.box, '#2A2E33', [1.3, 0.14, 0], [0.012, 0.012, 0.36], null, SURF.rubber),
+      p(UNIT.box, '#2A2E33', [-1.2, 0.14, 0], [0.012, 0.012, 0.36], null, SURF.rubber),
     ],
-    y: -0.02, R: 1.2, tint: ['#FFB000', '#E8452C', '#2C7FB8', '#F4F1EA'], leeway: 0.035,
+    y: -0.03, R: 1.1, tint: ['#C8553C', '#D9A030', '#3A6E94', '#D8D4C8'], leeway: 0.035,
   },
   paddle: {
-    k: 1.5,
+    k: 1.1,
     parts: () => [
       p(UNIT.cyl6, '#1A1C1E', [0, 0, 0], [0.025, 2.2, 0.025], [0, 0, Math.PI / 2], SURF.rubber),
       p(UNIT.box, '#F2C200', [1.15, 0, 0], [0.46, 0.02, 0.17], [0, 0.4, 0], SURF.gloss),
@@ -70,7 +79,7 @@ const SHAPES = {
     y: 0.01, R: 0, tint: null, leeway: 0.03,
   },
   suitcase: {
-    k: 1.7,
+    k: 1.15,
     parts: () => [
       p(UNIT.box, W, [0, 0, 0], [0.7, 0.26, 0.5], null, SURF.paint),
       p(UNIT.box, '#1A1C1E', [0, 0.15, 0.18], [0.24, 0.05, 0.04], null, SURF.rubber),
@@ -79,53 +88,54 @@ const SHAPES = {
     y: -0.02, R: 0.6, tint: ['#2E3338', '#7A1E1E', '#1F5E8C', '#4E5A52', '#C2B79C'], leeway: 0.03,
   },
   fender: {
-    k: 1.6,
+    k: 1.1,
     parts: () => [p(UNIT.cyl12, W, [0, 0, 0], [0.2, 0.75, 0.2], [0, 0, Math.PI / 2], SURF.rubber), p(UNIT.sphereLo, W, [0.37, 0, 0], 0.2, null, SURF.rubber), p(UNIT.sphereLo, W, [-0.37, 0, 0], 0.2, null, SURF.rubber)],
     y: 0.02, R: 0.45, tint: ['#E6E6E0', '#1F5E8C', '#2E3338'], leeway: 0.05,
   },
   fishbox: {
-    k: 1.6,
+    k: 1.1,
     parts: () => [p(UNIT.box, W, [0, 0, 0], [0.8, 0.3, 0.5], null, SURF.paint), p(UNIT.box, '#10161A', [0, 0.151, 0], [0.7, 0.01, 0.4], null, SURF.rubber)],
     y: -0.04, R: 0.6, tint: ['#1F5E8C', '#E8452C', '#E6E6E0'], leeway: 0.035,
   },
   float: {
-    k: 1.7,
+    k: 1.15,
     parts: () => [p(UNIT.sphereLo, W, [0, 0, 0], 0.17, null, SURF.gloss)],
     y: 0.02, R: 0, tint: ['#FF7B2E', '#F2C200', '#E6E6E0'], leeway: 0.02,
   },
   sail: {
     k: 1.0,
     parts: () => {
-      const g = new THREE.PlaneGeometry(4.6, 3.0, 8, 6).rotateX(-Math.PI / 2);
+      // torn dacron draped on the swell: the luff edge floats (stiff tape + bolt rope), the belly and
+      // the torn leech sag under the surface (the sea hides them); seam grid as darker panel lines
+      const g = new THREE.PlaneGeometry(4.6, 3.0, 23, 10).rotateX(-Math.PI / 2).toNonIndexed();
       const pos = g.attributes.position;
+      const col = new Float32Array(pos.count * 3);
       for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i), z = pos.getZ(i);
-        pos.setY(i, 0.12 * Math.sin(x * 2.1 + z * 0.7) + 0.08 * Math.sin(z * 3.3) - 0.05 * Math.abs(x) * 0.3);
+        const u = (x + 2.3) / 4.6;
+        const sink = Math.max(0, u - 0.25) * 0.55 + Math.max(0, Math.sin(z * 1.9 + 0.6)) * 0.12 * u;
+        pos.setY(i, 0.07 * Math.sin(x * 2.1 + z * 0.7) + 0.05 * Math.sin(z * 3.3) - sink - (u > 0.86 ? 0.25 * Math.abs(Math.sin(z * 5.3)) : 0));
+        const seam = Math.abs(((x + 2.3) % 0.92) - 0.46) > 0.42 || Math.abs(((z + 1.5) % 1.0) - 0.5) > 0.47;
+        const v = seam ? 0.8 : 1;
+        col[i * 3] = v;
+        col[i * 3 + 1] = v;
+        col[i * 3 + 2] = v * 0.98;
       }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
       g.computeVertexNormals();
-      return [{ geometry: g, color: '#E8E6DE', surf: SURF.fabric }, p(UNIT.box, '#B3261E', [0.3, 0.1, -1.2], [3.6, 0.02, 0.12], null, SURF.fabric)];
+      return [
+        { geometry: g, color: '#E6E4DC', vcol: true, surf: SURF.fabric },
+        p(UNIT.box, '#C9C6BA', [-2.27, 0.06, 0], [0.12, 0.03, 3.0], null, SURF.fabric),
+        member([-2.33, 0.06, -1.5], [-2.33, 0.06, 1.5], 0.025, '#5E6466', SURF.rubber),
+        p(UNIT.box, '#9A3A2E', [-1.6, 0.04, 1.1], [0.25, 0.025, 0.25], [0, 0.4, 0], SURF.fabric), // sail number patch
+      ];
     },
     y: 0.04, R: 1.9, tint: null, leeway: 0.012,
   },
-  container: {
-    k: 1.0,
-    parts: () => {
-      const out = [p(UNIT.box, W, [0, 0, 0], [6.06, 2.59, 2.44], null, SURF.paint)];
-      for (let i = 0; i < 12; i++) {
-        const x = -2.75 + i * 0.5;
-        out.push(p(UNIT.box, '#C8C8C8', [x, 0, 1.23], [0.18, 2.4, 0.04], null, SURF.paint));
-        out.push(p(UNIT.box, '#C8C8C8', [x, 0, -1.23], [0.18, 2.4, 0.04], null, SURF.paint));
-      }
-      out.push(p(UNIT.box, '#8A8A8A', [0, 1.3, 1.17], [6.06, 0.08, 0.12], null, SURF.steel));
-      out.push(p(UNIT.box, '#8A8A8A', [0, 1.3, -1.17], [6.06, 0.08, 0.12], null, SURF.steel));
-      out.push(p(UNIT.box, '#5A5A5A', [3.04, 0, 0], [0.04, 2.5, 2.3], null, SURF.steel)); // doors
-      out.push(p(UNIT.box, '#E6E6E0', [3.06, 0.6, 0], [0.02, 0.45, 1.4], null, SURF.paint)); // stencil
-      return out;
-    },
-    y: -0.62, R: 2.4, tint: ['#B3412E', '#1F5E8C', '#2F7D4F', '#C9A227'], leeway: 0.06,
-  },
+  // the survivors' container model (survivors/craft.js), awash: per-item extra draft `sink`
+  container: { k: 1.0, craft: true, y: 0, R: 2.4, tint: ['#9E4636', '#2D5876', '#3D6A4C', '#B49440'], leeway: 0.06 },
   duck: {
-    k: 1.9,
+    k: 1.4,
     parts: () => [
       p(UNIT.sphereLo, '#FFD400', [0, 0.04, 0], [0.17, 0.12, 0.13], null, SURF.gloss),
       p(UNIT.sphereLo, '#FFD400', [0.11, 0.15, 0], 0.08, null, SURF.gloss),
@@ -135,34 +145,88 @@ const SHAPES = {
   },
 };
 
-// Buoy shapes per kind (IALA region A colours; vertex coloured, no tint). Light height `top`.
-const Y = '#E8C21A', K = '#1A1C1E', R = '#B3261E';
+// Sea kayak hull (long axis X, 4.4 m): pointed ends, flat-ish deck with a centre ridge, deeper rounded
+// bottom; the bottom is vertex-darkened (scuffed, wet) so a capsized one reads dark, not candy.
+function kayakHull() {
+  const g = new THREE.SphereGeometry(1, 24, 10).toNonIndexed();
+  const pos = g.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const t = Math.max(0, 1 - x * x);
+    const zz = z * 0.3 * Math.pow(t, 0.38);
+    const ridge = y > 0 ? 0.035 * Math.max(0, 1 - Math.abs(zz) / 0.12) * Math.pow(t, 0.5) : 0;
+    pos.setXYZ(i, x * 2.2, y * (y > 0 ? 0.13 : 0.19) * Math.pow(t, 0.15) + ridge, zz);
+    const v = y < -0.15 ? 0.5 : y < 0.05 ? 0.78 : 1;
+    col[i * 3] = v;
+    col[i * 3 + 1] = v;
+    col[i * 3 + 2] = v;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+// Buoy shapes per kind (IALA region A colours, sun-faded; vertex coloured, no tint). Light height
+// 3.6. A real lattice buoy: float, four-legged tubular tower around a painted core (the cardinal
+// colours), radar reflector, lantern in a guard cage, topmarks with guano, mooring eye, chain and a
+// counterweight tail below the water.
+const Y = '#B89A3C', K = '#232526', R = '#9E2E24';
 function buoyParts(kind) {
   const out = [];
   const body = (c1, c2, c3) => {
     out.push(p(UNIT.cyl12, c1, [0, 0.2, 0], [0.95, 1.2, 0.95], null, SURF.paint));
-    out.push(p(UNIT.cyl8, c2, [0, 1.55, 0], [0.42, 1.5, 0.42], null, SURF.paint));
-    out.push(p(UNIT.cyl8, c3, [0, 2.75, 0], [0.32, 0.9, 0.32], null, SURF.paint));
-    out.push(p(UNIT.cyl8, '#3A3E42', [0, 3.35, 0], [0.12, 0.3, 0.12], null, SURF.steel));
+    out.push(p(UNIT.cyl12, '#2A2622', [0, 0.82, 0], [0.97, 0.06, 0.97], null, SURF.rust)); // deck rim
+    out.push(p(UNIT.cyl8, c2, [0, 1.6, 0], [0.3, 1.5, 0.3], null, SURF.paint));
+    out.push(p(UNIT.cyl8, c3, [0, 2.75, 0], [0.26, 0.85, 0.26], null, SURF.paint));
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      out.push(member([ca * 0.62, 0.82, sa * 0.62], [ca * 0.3, 3.2, sa * 0.3], 0.045, c2, SURF.paint));
+      const b = ((i + 1) / 4) * Math.PI * 2 + Math.PI / 4;
+      out.push(member([ca * 0.5, 1.75, sa * 0.5], [Math.cos(b) * 0.5, 1.75, Math.sin(b) * 0.5], 0.03, c2, SURF.paint));
+      out.push(member([ca * 0.62, 0.85, sa * 0.62], [Math.cos(b) * 0.42, 2.45, Math.sin(b) * 0.42], 0.022, c2, SURF.paint));
+    }
+    out.push(p(UNIT.cyl12, '#3A3E42', [0, 3.22, 0], [0.42, 0.05, 0.42], null, SURF.steel)); // lantern platform
+    // radar reflector (three crossed plates) on a short arm
+    for (const r of [null, [0, Math.PI / 2, 0], [Math.PI / 2, 0, 0]]) out.push(p(UNIT.box, '#8E9290', [0.36, 2.95, 0], [0.34, 0.34, 0.012], r, SURF.steel));
+    // lantern in its guard cage
+    out.push(p(UNIT.cyl8, '#2E3236', [0, 3.33, 0], [0.12, 0.2, 0.12], null, SURF.steel));
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      out.push(member([Math.cos(a) * 0.2, 3.24, Math.sin(a) * 0.2], [Math.cos(a) * 0.2, 3.85, Math.sin(a) * 0.2], 0.012, '#2E3236', SURF.steel));
+    }
+    out.push(p(UNIT.torus, '#2E3236', [0, 3.85, 0], [0.2, 0.2, 0.05], [Math.PI / 2, 0, 0], SURF.steel));
+    // mooring eye, chain and the counterweight tail
+    out.push(p(UNIT.torus, '#3A2E26', [0, -0.42, 0], [0.12, 0.12, 0.25], null, SURF.rust));
+    out.push(member([0, -0.5, 0], [0.5, -2.6, 0.3], 0.035, '#2E2620', SURF.rust));
+    out.push(p(UNIT.cyl8, '#2A2622', [0, -1.2, 0], [0.2, 1.6, 0.2], null, SURF.rust));
   };
-  const cone = (y, up) => out.push(p(UNIT.cone8, K, [0, y, 0], [0.32, 0.42, 0.32], up ? null : [Math.PI, 0, 0], SURF.paint));
+  // topmark cone with a guano splash on its upper face
+  const cone = (y, up) => {
+    out.push(p(UNIT.cone8, K, [0, y, 0], [0.32, 0.42, 0.32], up ? null : [Math.PI, 0, 0], SURF.paint));
+    out.push(p(UNIT.sphereLo, '#E4E2D8', [0.07, y + (up ? 0.08 : 0.2), 0.05], [0.16, 0.03, 0.11], [0.3, 0.6, up ? 0.5 : 0], SURF.paint));
+  };
   switch (kind) {
-    case 'north': body(K, K, Y); cone(3.95, true); cone(4.45, true); break;
-    case 'south': body(Y, Y, K); cone(3.95, false); cone(4.45, false); break;
-    case 'east': body(K, Y, K); cone(3.95, false); cone(4.45, true); break;
-    case 'west': body(Y, K, Y); cone(3.95, true); cone(4.45, false); break;
+    case 'north': body(K, K, Y); cone(4.15, true); cone(4.65, true); break;
+    case 'south': body(Y, Y, K); cone(4.15, false); cone(4.65, false); break;
+    case 'east': body(K, Y, K); cone(4.15, false); cone(4.65, true); break;
+    case 'west': body(Y, K, Y); cone(4.15, true); cone(4.65, false); break;
     case 'isolated':
       body(K, R, K);
-      out.push(p(UNIT.sphereLo, K, [0, 3.95, 0], 0.22, null, SURF.paint));
-      out.push(p(UNIT.sphereLo, K, [0, 4.45, 0], 0.22, null, SURF.paint));
+      out.push(p(UNIT.sphereLo, K, [0, 4.05, 0], 0.22, null, SURF.paint));
+      out.push(p(UNIT.sphereLo, K, [0, 4.55, 0], 0.22, null, SURF.paint));
+      out.push(p(UNIT.sphereLo, '#E4E2D8', [0.06, 4.74, 0.04], [0.14, 0.03, 0.1], [0.4, 0.2, 0.3], SURF.paint));
       break;
-    default: // regatta mark: inflatable orange cylinder with a white band
-      out.push(p(UNIT.cyl12, '#FF7B2E', [0, 0.8, 0], [0.75, 1.9, 0.75], null, SURF.gloss));
-      out.push(p(UNIT.cyl12, '#F4F1EA', [0, 1.3, 0], [0.77, 0.35, 0.77], null, SURF.gloss));
-      out.push(p(UNIT.cone16, '#FF7B2E', [0, 2.05, 0], [0.75, 0.6, 0.75], null, SURF.gloss));
-      break;
+    default: // regatta mark: inflatable orange PVC cylinder with a white band, mooring line
+      out.push(p(UNIT.cyl12, '#E06A2C', [0, 0.8, 0], [0.75, 1.9, 0.75], null, SURF.fabric));
+      out.push(p(UNIT.cyl12, '#E2DED2', [0, 1.3, 0], [0.77, 0.35, 0.77], null, SURF.fabric));
+      out.push(p(UNIT.cone16, '#E06A2C', [0, 2.05, 0], [0.75, 0.6, 0.75], null, SURF.fabric));
+      out.push(p(UNIT.torus, '#2A2E33', [0, -0.12, 0.62], [0.1, 0.1, 0.2], [0, 0, 0], SURF.rubber));
+      out.push(member([0, -0.15, 0.62], [0, -2.4, 1.6], 0.025, '#C9C2A8', SURF.fabric));
+      return out;
   }
-  out.push(p(UNIT.box, '#FFF4DC', [0, 3.6, 0], [0.16, 0.18, 0.16], null, emit(CH.ALWAYS, 0.4)));
+  out.push(p(UNIT.box, '#FFF4DC', [0, 3.42, 0], [0.13, 0.16, 0.13], null, emit(CH.ALWAYS, 0.4)));
   return out;
 }
 const BUOY_KINDS = ['east', 'west', 'north', 'south', 'isolated', 'mark'];
@@ -218,11 +282,28 @@ export class Floaters {
     if (b && b.max >= max) return b;
     if (b) this._dropBank(shape);
     const Wd = this.W;
-    const def = shape.startsWith('buoy:') ? { parts: () => buoyParts(shape.slice(5)), y: 0, R: 1.0, k: 1.5 } : SHAPES[shape];
-    const parts = def.parts();
-    const geo = bake(Wd.look, parts);
-    for (const part of parts) if (!Object.values(UNIT).includes(part.geometry)) part.geometry.dispose?.();
-    const mesh = new THREE.InstancedMesh(geo, Wd.mats.floater, max);
+    const def = shape.startsWith('buoy:') ? { parts: () => buoyParts(shape.slice(5)), y: 0, R: 1.0, k: 1.1 } : SHAPES[shape];
+    let geo;
+    let mat = Wd.mats.floater;
+    if (def.craft) {
+      // survivors' container (long axis Z → X here) on the craft material: per-instance phase so the
+      // rust/salt pattern differs from box to box
+      geo = containerGeometry().rotateY(Math.PI / 2);
+      const ph = new Float32Array(max * 4);
+      for (let i = 0; i < max; i++) ph[i * 4 + 2] = (i * 37.7) % 97;
+      geo.setAttribute('iCraft', new THREE.InstancedBufferAttribute(new Float32Array(max * 4), 4));
+      geo.setAttribute('iCraft2', new THREE.InstancedBufferAttribute(ph, 4));
+      if (!this._craftMat) {
+        const sv = Wd.ctx.survivors;
+        this._craftMat = createCraftMaterial(Wd.look, { roughness: 0.7, rim: sv?.rim, nightAmb: sv?.nightAmb, wear: { ...WEAR.heavy, streaks: 0.6, waterline: 0.55, scale: 1.25 }, key: '-floater' });
+      }
+      mat = this._craftMat;
+    } else {
+      const parts = def.parts();
+      geo = bake(Wd.look, parts);
+      for (const part of parts) if (!Object.values(UNIT).includes(part.geometry)) part.geometry.dispose?.();
+    }
+    const mesh = new THREE.InstancedMesh(geo, mat, max);
     mesh.name = `world-float-${shape}`;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -231,14 +312,7 @@ export class Floaters {
     mesh.setColorAt(0, _col.set(1, 1, 1));
     mesh.count = 0;
     Wd.root.add(mesh);
-    const keyline = new THREE.InstancedMesh(geo, Wd.mats.keyline, max);
-    keyline.instanceMatrix = mesh.instanceMatrix;
-    keyline.frustumCulled = false;
-    keyline.count = 0;
-    keyline.visible = false;
-    keyline.renderOrder = 1;
-    Wd.root.add(keyline);
-    b = { mesh, keyline, n: 0, max, def };
+    b = { mesh, n: 0, max, def };
     this.banks.set(shape, b);
     return b;
   }
@@ -247,7 +321,6 @@ export class Floaters {
     const b = this.banks.get(shape);
     if (!b) return;
     b.mesh.removeFromParent();
-    b.keyline.removeFromParent();
     b.mesh.geometry.dispose();
     b.mesh.dispose?.();
     this.banks.delete(shape);
@@ -259,9 +332,7 @@ export class Floaters {
     for (const b of this.banks.values()) {
       b.n = 0;
       b.mesh.count = 0;
-      b.keyline.count = 0;
       b.mesh.visible = false; // no empty draw calls (visibility does not touch the light setup)
-      b.keyline.visible = false;
     }
   }
 
@@ -332,7 +403,8 @@ export class Floaters {
     let ducks = null;
     const containers = props?.containers || [];
     containers.forEach((c, i) => {
-      add('container', { x: c.x, z: c.z, color: c.color || tintOf('container'), roll: (r() - 0.5) * 0.18, pitch: (r() - 0.5) * 0.08, tilt: 0.7, long: 3 });
+      // awash: 0.3–0.6 m of freeboard, listing 5–15° on a flooded corner
+      add('container', { x: c.x, z: c.z, color: c.color ? containerPaint(c.color) : tintOf('container'), roll: (r() < 0.5 ? -1 : 1) * (0.09 + r() * 0.17), pitch: (r() - 0.5) * 0.12, tilt: 0.7, long: 3, sink: r() * 0.3 });
       if (!ducks && r() < 0.05) ducks = c; // 1 in 20: a broken container spilled its cargo
     });
     if (ducks || this.W.ctx.params?.has?.('ducks')) {
@@ -375,9 +447,7 @@ export class Floaters {
     }
     for (const b of this.banks.values()) {
       b.mesh.count = b.n;
-      b.keyline.count = b.n;
       b.mesh.visible = b.n > 0;
-      b.keyline.visible = this.keylines && b.n > 0;
       if (b.mesh.instanceColor) b.mesh.instanceColor.needsUpdate = true;
     }
     this.frame = 0;
@@ -385,9 +455,9 @@ export class Floaters {
     this.update(0, null, true);
   }
 
-  setKeylines(on) {
-    this.keylines = on;
-    for (const b of this.banks.values()) b.keyline.visible = on && b.n > 0;
+  // Kept for world.js: floaters no longer draw ink keylines at any quality.
+  setKeylines() {
+    this.keylines = false;
   }
 
   // --------------------------------------------------------------------------------------------
@@ -450,7 +520,7 @@ export class Floaters {
         _qr.setFromEuler(_e);
         _q.multiply(_qr);
       }
-      let y = it.h + (it.def.y || 0) * (it.def.k || 1);
+      let y = it.h + (it.def.y || 0) * (it.def.k || 1) - (it.sink || 0);
       if (it.moored) {
         // buoys rock on their mooring: extra sway
         const sw = 0.06 * Math.sin(t * 1.3 + it.phase);
@@ -466,6 +536,21 @@ export class Floaters {
       if (it.light >= 0) {
         _p.set(0, 3.66, 0).applyMatrix4(_m);
         Wd.lamps.setLocal(it.light, _p.x, _p.y, _p.z);
+      }
+      // containers: the swell washes over the roof — foam where the sea stands above it at an end
+      if (it.long && !far && env && dt > 0 && ocean?.stamp) {
+        it.washT = (it.washT || 0) - dt;
+        if (it.washT <= 0) {
+          it.washT = 0.5;
+          const c = Math.cos(it.yaw), s = Math.sin(it.yaw);
+          for (const e of SIDES) {
+            const ex = it.x + c * 2.6 * e, ez = it.z - s * 2.6 * e;
+            if (ocean.heightAt(ex, ez) > y + CONT.freeboard - 0.12) {
+              ocean.stamp('foam', ex, ez, { radius: 1.5, strength: 0.55 });
+              it.washT = 1.2;
+            }
+          }
+        }
       }
       // foam collar + contact disc
       if (it.R > 0 && !far && env) {

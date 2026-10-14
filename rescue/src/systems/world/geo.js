@@ -3,8 +3,10 @@
 // icosahedra), ship hulls, lattice members and small part factories.
 //
 // Every baked geometry carries:
-//   position, normal, color (look.merge), uv (decal atlas coordinates, 0 when unused),
-//   aSurf vec4 = (roughness, metalness, emissive gain, channel)  — channel < 0 marks a decal surface.
+//   position, normal, color (look.merge), uv (decal atlas coordinates; (ground y, 1) for a part
+//   with `ground`; 0 when unused),
+//   aSurf vec4 = (roughness, metalness, emissive gain | wear code, channel) — channel < 0 marks a
+//   decal surface; emissive gain −1 = natural rock; −0.05…−0.45 = per-part wear (worn()).
 // The prop material (materials.js) reads aSurf, so one draw call can mix paint, steel, rubber,
 // glass, lamps and painted deck markings.
 import * as THREE from 'three';
@@ -27,6 +29,37 @@ export const SURF = {
 };
 // Emissive surface: lamp lens / lit window on channel ch (dark glass while the channel is off).
 export const emit = (ch, gain = 1, rough = 0.12) => [rough, 0, gain, ch];
+
+// Per-part weathering level (see materials.js header). aSurf.z == 0 → the material's default wear;
+// aSurf.z in −0.05…−0.45 → this part's own level: 0 clean · 1/3 light · 2/3 medium · 1 heavy.
+// worn(SURF.steel, 'heavy') or worn(SURF.paint, 0.5); a part may also carry `wear: 'heavy'`.
+export const WEAR_LEVEL = { clean: 0, light: 1 / 3, medium: 2 / 3, heavy: 1 };
+export const wearZ = (level) => -(0.05 + 0.4 * Math.min(1, Math.max(0, typeof level === 'string' ? WEAR_LEVEL[level] ?? 1 / 3 : level)));
+export const worn = (surf, level, rough = null) => [rough ?? surf[0], surf[1], surf[2] === 0 ? wearZ(level) : surf[2], surf[3]];
+SURF.paintWorn = worn(SURF.paint, 'medium', 0.62);
+SURF.paintFaded = worn(SURF.paint, 'light', 0.7);
+SURF.steelRusty = worn([0.6, 0.45, 0, 0], 'heavy');
+SURF.steelWorn = worn(SURF.steel, 'medium');
+SURF.concreteStained = worn(SURF.concrete, 'medium');
+SURF.concreteWet = worn(SURF.concrete, 'heavy', 0.8);
+
+// Bake a vertex-colour field into a geometry (used with part.vcol): fn(x, y, z, out: Color) gets
+// the geometry's own (pre-transform) vertex position and writes the colour (multiplied by
+// part.color at bake time). Grime gradients, rust bleeds, band fades — no textures.
+const _sc = new THREE.Color();
+export function shadeVerts(geometry, fn) {
+  const pos = geometry.attributes.position;
+  const c = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    _sc.setRGB(1, 1, 1);
+    fn(pos.getX(i), pos.getY(i), pos.getZ(i), _sc);
+    c[i * 3] = _sc.r;
+    c[i * 3 + 1] = _sc.g;
+    c[i * 3 + 2] = _sc.b;
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return geometry;
+}
 
 // Shared unit primitives. look.merge clones them, so they are never mutated.
 export const UNIT = {
@@ -115,7 +148,8 @@ export function bake(look, parts) {
     const g = part.geometry;
     const idx = g.index;
     const cnt = idx ? idx.count : g.attributes.position.count;
-    const s = part.surf || SURF.paint;
+    let s = part.surf || SURF.paint;
+    if (part.wear !== undefined && s[2] === 0) s = worn(s, part.wear);
     for (let i = 0; i < cnt; i++) {
       const j = (off + i) * 4;
       surf[j] = s[0];
@@ -141,6 +175,11 @@ export function bake(look, parts) {
         if (r) {
           uv[j] = r[0] + uv[j] * (r[2] - r[0]);
           uv[j + 1] = r[1] + uv[j + 1] * (r[3] - r[1]);
+        } else if (part.ground !== undefined) {
+          // non-decal part standing on land: uv = (ground y, 1) → base grime / salt / algae
+          // gather above that height instead of above the sea (materials.js)
+          uv[j] = part.ground;
+          uv[j + 1] = 1;
         } else {
           uv[j] = 0;
           uv[j + 1] = 0;

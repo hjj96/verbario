@@ -546,6 +546,19 @@ export class Weather {
           this.attractIdx = (this.attractIdx + 1) % ATTRACT_CYCLE.length;
           this.setPreset(ATTRACT_CYCLE[this.attractIdx], 8);
         }
+        // night storm on the title: a sea strike or an in-cloud flash every 8–12 s lights the scene
+        // (the lightning module still applies reduceFlashes)
+        const pal = this.state.palette;
+        if ((pal?.night ?? 0) > 0.6 && (pal?.lightning ?? 0) > 0.5) {
+          this._attractBolt = (this._attractBolt ?? 2) - dt;
+          if (this._attractBolt <= 0) {
+            const r = this.rng;
+            this._attractBolt = 8 + 4 * r.next();
+            const a = r.next() * Math.PI * 2;
+            const d = 120 + 180 * r.next();
+            this.strikeLightning(this.heliPos.x + Math.cos(a) * d, this.heliPos.z + Math.sin(a) * d, { cloudOnly: r.next() < 0.45, strength: 0.85 });
+          }
+        }
       }
     }
     if (this.forced) return;

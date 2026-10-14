@@ -1,8 +1,9 @@
 // Procedural SAR helicopter «Чайка-07» (DESIGN §2.9): ~17.5 m, main rotor R 8.1 m, ~2.5k triangles.
 //
-// Draw calls: hull (everything solid, incl. glass + decals, ONE physical material) · keyline ·
-// lights (all bulbs + halos, additive) · main rotor disc · tail rotor disc. Real blades for the
-// stroboscopic rotor shadow live on layer 1 (shadow pass only).
+// Draw calls: hull (everything solid, incl. glass + decals, ONE physical material) · rotor hub (same
+// material, turns with the blade alias) · lights (all bulbs + halos, additive) · main rotor disc ·
+// tail rotor disc. Real blades for the stroboscopic rotor shadow live on layer 1 (shadow pass only).
+// No toon keyline (realism pass): separation comes from the rim light, night fill and the contact cues.
 //
 // Local frame: nose → −Z, up +Y, starboard (right) +X. Origin = rotor-mast axis at mid-fuselage;
 // skids at y = −1.6.
@@ -27,16 +28,17 @@ const C = {
   exhaust: '#26282A',
   soot: '#09090A',
   grille: '#1B1E21',
+  antiGlare: '#1E2226',
 };
 
 // Surface classes → aSurf (roughness, metalness, clearcoat weight, flags)
 const SURF = {
-  paint: [0.55, 0, 1, 0],
+  paint: [0.42, 0, 1, 0],
   matte: [0.78, 0, 0.25, 0],
   metal: [0.42, 0.65, 0.15, 0],
   rubber: [0.82, 0, 0, 0],
   glass: [0.06, 0, 1, 2],
-  decal: [0.5, 0, 1, 1],
+  decal: [0.46, 0, 1, 1],
 };
 
 // Key named points (local) used by the lights, searchlight, winch, smoke…
@@ -87,12 +89,12 @@ function fuselageProfile() {
 function sponsonProfile(side) {
   const s = side;
   return stationProfile([
-    { z: -0.8, hw: 0.1, hh: 0.1, cx: 1.42 * s, cy: -0.62, n: 2.2 },
-    { z: -0.5, hw: 0.42, hh: 0.28, cx: 1.55 * s, cy: -0.62, n: 2.6 },
-    { z: 0.2, hw: 0.53, hh: 0.33, cx: 1.6 * s, cy: -0.62, n: 2.8 },
-    { z: 1.1, hw: 0.51, hh: 0.32, cx: 1.58 * s, cy: -0.62, n: 2.8 },
-    { z: 1.72, hw: 0.3, hh: 0.24, cx: 1.45 * s, cy: -0.6, n: 2.4 },
-    { z: 1.98, hw: 0.08, hh: 0.08, cx: 1.35 * s, cy: -0.58, n: 2.0 },
+    { z: -0.8, hw: 0.16, hh: 0.12, cx: 1.44 * s, cy: -0.64, n: 3.0 },
+    { z: -0.52, hw: 0.44, hh: 0.27, cx: 1.56 * s, cy: -0.62, n: 4.2 },
+    { z: 0.2, hw: 0.52, hh: 0.31, cx: 1.6 * s, cy: -0.61, n: 4.8 },
+    { z: 1.1, hw: 0.5, hh: 0.3, cx: 1.58 * s, cy: -0.61, n: 4.8 },
+    { z: 1.72, hw: 0.36, hh: 0.24, cx: 1.47 * s, cy: -0.6, n: 4.0 },
+    { z: 1.98, hw: 0.14, hh: 0.1, cx: 1.38 * s, cy: -0.58, n: 3.0 },
   ]);
 }
 
@@ -143,7 +145,7 @@ function buildHullParts() {
   paint.push({ geometry: L({ z0: 1.55, z1: 1.95, zSegs: 1, uFrom: 0.02, uTo: 0.98, uSegs: 12, inflate: OV }), color: C.orange });
 
   // anti-glare panel on the nose, walkways along the engine hump
-  matte.push({ geometry: L({ z0: -5.02, z1: -4.5, zSegs: 2, uFrom: 0.4, uTo: 0.6, uSegs: 4, inflate: OV }), color: C.dark });
+  matte.push({ geometry: L({ z0: -5.08, z1: -4.48, zSegs: 2, uFrom: 0.37, uTo: 0.63, uSegs: 5, inflate: OV }), color: C.antiGlare });
   matte.push({ geometry: L({ z0: -1.0, z1: 1.9, zSegs: 2, uFrom: 0.395, uTo: 0.43, uSegs: 1, inflate: OV }), color: C.dark });
   matte.push({ geometry: L({ z0: -1.0, z1: 1.9, zSegs: 2, uFrom: 0.57, uTo: 0.605, uSegs: 1, inflate: OV }), color: C.dark });
   // cabin door outline (starboard) — a dark frame, the winch works through it
@@ -175,6 +177,15 @@ function buildHullParts() {
     geometry: remapUv(L({ z0: -1.85, z1: 0.95, zSegs: 2, uFrom: 0.738, uTo: 0.8, uSegs: 2, inflate: OV }), DECAL_RECT.side, { swap: true, flipV: true }),
     color: C.white,
   });
+  // pale stencils on the boom ahead of the stabiliser («ОСТОРОЖНО — ВИНТ»)
+  decal.push({
+    geometry: remapUv(L({ z0: 7.0, z1: 8.25, zSegs: 1, uFrom: 0.255, uTo: 0.315, uSegs: 1, inflate: OV }), DECAL_RECT.boom, { swap: true, flipU: true }),
+    color: C.white,
+  });
+  decal.push({
+    geometry: remapUv(L({ z0: 7.0, z1: 8.25, zSegs: 1, uFrom: 0.685, uTo: 0.745, uSegs: 1, inflate: OV }), DECAL_RECT.boom, { swap: true, flipV: true }),
+    color: C.white,
+  });
 
   // --- sponsons (widen the silhouette from above), orange tops ---------------------------------
   for (const s of [1, -1]) {
@@ -188,16 +199,19 @@ function buildHullParts() {
   paint.push({ geometry: loft({ profile: hp, z0: -1.38, z1: 2.78, zSegs: 6, uFrom: 0.22, uTo: 0.78, uSegs: 8 }), color: C.white });
   for (const [a, b] of [[0.28, 0.36], [0.64, 0.72]]) {
     rubber.push({ geometry: loft({ profile: hp, z0: -1.0, z1: -0.45, zSegs: 1, uFrom: a, uTo: b, uSegs: 1, inflate: OV }), color: C.grille });
+    // intake grille: three raised slats across each intake
+    for (let k = 1; k <= 3; k++) {
+      const u = a + ((b - a) * k) / 4;
+      metal.push({ geometry: loft({ profile: hp, z0: -1.02, z1: -0.43, zSegs: 1, uFrom: u - 0.0035, uTo: u + 0.0035, uSegs: 1, inflate: 0.035 }), color: C.metalDark });
+    }
   }
   for (const s of [1, -1]) {
     metal.push({ geometry: tube([0.5 * s, 1.24, 2.05], [0.86 * s, 1.36, 2.72], 0.2, 0.17, 8), color: C.exhaust });
     rubber.push({ geometry: tube([0.82 * s, 1.35, 2.62], [0.88 * s, 1.37, 2.76], 0.13, 0.13, 8), color: C.soot });
   }
 
-  // --- rotor mast + hub ------------------------------------------------------------------------
-  metal.push({ geometry: tube([0, 1.38, -0.3], [0, 2.0, -0.3], 0.17, 0.14, 8), color: C.metalDark });
-  metal.push({ geometry: new THREE.CylinderGeometry(0.44, 0.48, 0.22, 10), position: [0, 2.02, -0.3], color: C.metalDark });
-  metal.push({ geometry: new THREE.CylinderGeometry(0.16, 0.2, 0.18, 8), position: [0, 2.2, -0.3], color: C.metal });
+  // --- rotor mast (the hub, swashplate and blade roots turn: buildHub) ---------------------------
+  metal.push({ geometry: tube([0, 1.38, -0.3], [0, 1.95, -0.3], 0.17, 0.14, 8), color: C.metalDark });
 
   // --- tail: fin, stabiliser with endplates, tail-rotor hub, antenna ---------------------------
   paint.push({ geometry: finGeometry([[8.75, 0.62], [9.95, 0.62], [10.42, 2.82], [10.05, 3.05], [9.62, 2.98], [8.95, 1.0]], 0.17), color: C.white });
@@ -208,6 +222,22 @@ function buildHullParts() {
   }
   metal.push({ geometry: tube([0.02, 2.1, 9.95], [-0.3, 2.1, 9.95], 0.1, 0.1, 6), color: C.metalDark });
   matte.push({ geometry: new THREE.BoxGeometry(0.04, 0.34, 0.26), position: [0, 0.95, 4.6], rotation: [0.35, 0, 0], color: C.dark });
+
+  // --- tail-boom strakes (raised strips), antenna farm ----------------------------------------------
+  matte.push({ geometry: L({ z0: 3.9, z1: 8.5, zSegs: 3, uFrom: 0.652, uTo: 0.662, uSegs: 1, inflate: 0.04 }), color: C.metalDark });
+  matte.push({ geometry: L({ z0: 4.4, z1: 8.2, zSegs: 3, uFrom: 0.338, uTo: 0.346, uSegs: 1, inflate: 0.035 }), color: C.metalDark });
+  const st = {};
+  const top = (z) => (fp(z, st), st.cy + st.hh);
+  const bot = (z) => (fp(z, st), st.cy - st.hh);
+  for (const [z, h, l, dn] of [[-3.05, 0.2, 0.3, 0], [5.6, 0.18, 0.26, 0], [7.15, 0.24, 0.22, 0], [-2.3, 0.2, 0.28, 1], [-0.2, 0.16, 0.24, 1], [2.7, 0.22, 0.3, 1]]) {
+    const y = dn ? bot(z) - h / 2 + 0.02 : top(z) + h / 2 - 0.02;
+    matte.push({ geometry: new THREE.BoxGeometry(0.035, h, l), position: [0, y, z], rotation: [dn ? -0.3 : 0.3, 0, 0], color: dn ? C.dark : C.white });
+  }
+  for (const s of [1, -1]) {
+    metal.push({ geometry: new THREE.CylinderGeometry(0.08, 0.09, 0.04, 8), position: [0.32 * s, top(-2.7) + 0.01, -2.7], color: C.metal });
+  }
+  metal.push({ geometry: tube([0.42, bot(0.6) + 0.04, 0.6], [0.42, bot(0.6) - 0.5, 0.95], 0.012, 0.008, 4), color: C.metalDark });
+  metal.push({ geometry: tube([0, top(3.9) - 0.03, 3.9], [0, top(3.9) + 0.55, 4.35], 0.012, 0.008, 4), color: C.metalDark });
 
   // --- skids + cross tubes ---------------------------------------------------------------------
   for (const s of [1, -1]) {
@@ -319,6 +349,29 @@ function buildBlades(look) {
   return look.merge(parts);
 }
 
+// Rotor hub, swashplate, pitch links and 5 blade roots (to r 1.3 m): opaque structure at the disc
+// centre (pivot-local, disc plane y = 0). heli.js turns it with the ghost-blade alias (or the crisp
+// blades in a lightning frame) so the roots always line up with what the disc shows.
+function buildHub(look) {
+  const metal = [];
+  const matte = [];
+  metal.push({ geometry: new THREE.CylinderGeometry(0.4, 0.46, 0.24, 10), position: [0, 0, 0], color: C.metalDark });
+  metal.push({ geometry: new THREE.CylinderGeometry(0.15, 0.22, 0.16, 8), position: [0, 0.2, 0], color: C.metal });
+  metal.push({ geometry: new THREE.CylinderGeometry(0.38, 0.38, 0.06, 12), position: [0, -0.3, 0], color: C.metal });
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    matte.push({ geometry: new THREE.BoxGeometry(0.95, 0.07, 0.36), position: [c * 0.83, 0.03, -sn * 0.83], rotation: [0, a, 0], color: C.blade });
+    metal.push({ geometry: new THREE.CylinderGeometry(0.075, 0.075, 0.22, 6).rotateZ(Math.PI / 2), position: [c * 0.5, 0.03, -sn * 0.5], rotation: [0, a, 0], color: C.metal });
+    metal.push({ geometry: tube([c * 0.34, -0.27, -sn * 0.34], [c * 0.44, -0.02, -sn * 0.44], 0.022, 0.022, 4), color: C.metalDark });
+  }
+  return mergeSurfaces(look, [
+    { surf: SURF.metal, parts: metal },
+    { surf: SURF.matte, parts: matte },
+  ]);
+}
+
 // ------------------------------------------------------------------------------------------------
 export function buildHeliModel(ctx) {
   const { look } = ctx;
@@ -349,11 +402,6 @@ export function buildHeliModel(ctx) {
   hull.receiveShadow = true;
   body.add(hull);
 
-  const keyline = new THREE.Mesh(hullGeo, look.keyline({ color: '#05090B', opacity: 0.55, px: 1 }));
-  keyline.name = 'heli.keyline';
-  keyline.renderOrder = -1;
-  body.add(keyline);
-
   const lightsMat = createLightsMaterial();
   const lights = new THREE.Mesh(buildLightsGeometry(), lightsMat);
   lights.name = 'heli.lights';
@@ -365,8 +413,20 @@ export function buildHeliModel(ctx) {
   const rotorPivot = new THREE.Group();
   rotorPivot.position.copy(POINTS.mast);
   body.add(rotorPivot);
+  const hub = new THREE.Mesh(buildHub(look), hullMat);
+  hub.name = 'heli.rotorHub';
+  hub.castShadow = true;
+  rotorPivot.add(hub);
   const discSegs = quality === 'low' ? 48 : 72;
-  const rotorMat = createRotorMaterial(look, { blades: 5, bladeHalfWidth: 0.27 / ROTOR_R, hull: [1.5 / ROTOR_R, 0.42 / ROTOR_R, 5.2 / ROTOR_R, -3.2 / ROTOR_R] });
+  // Light shared by both rotor veils (fed by heli.js from the weather palette + own lamps).
+  const rotorLight = {
+    uSunDir: { value: new THREE.Vector3(0.3, 0.9, 0.2) },
+    uSunCol: { value: new THREE.Color(1, 1, 1) },
+    uAmbCol: { value: new THREE.Color(0.5, 0.5, 0.5) },
+    uSkyCol: { value: new THREE.Color(0.3, 0.35, 0.4) },
+    uGlow: { value: new THREE.Color(0, 0, 0) },
+  };
+  const rotorMat = createRotorMaterial(look, { blades: 5, bladeHalfWidth: 0.27 / ROTOR_R, hull: [1.5 / ROTOR_R, 0.42 / ROTOR_R, 5.2 / ROTOR_R, -3.2 / ROTOR_R], light: rotorLight, inner: 0.1 });
   const rotor = new THREE.Mesh(new THREE.CircleGeometry(1, discSegs), rotorMat);
   rotor.name = 'heli.rotor';
   rotor.scale.setScalar(ROTOR_R);
@@ -374,7 +434,7 @@ export function buildHeliModel(ctx) {
   rotor.renderOrder = 4;
   rotorPivot.add(rotor);
 
-  const tailMat = createRotorMaterial(look, { blades: 4, bladeHalfWidth: 0.11 / TAIL_R });
+  const tailMat = createRotorMaterial(look, { blades: 4, bladeHalfWidth: 0.11 / TAIL_R, light: rotorLight, inner: 0.08 });
   const tail = new THREE.Mesh(new THREE.CircleGeometry(1, 32), tailMat);
   tail.name = 'heli.tailRotor';
   tail.scale.setScalar(TAIL_R);
@@ -411,7 +471,9 @@ export function buildHeliModel(ctx) {
     body,
     hull,
     hullMat,
-    keyline,
+    keyline: null,
+    hub,
+    rotorLight,
     lights,
     lightsMat,
     rotorPivot,

@@ -12,7 +12,7 @@
 // the «цветок» ring, faces turned to the heli, forearm against the downwash, slow spin on the cable;
 // rafts / hulls / containers / barge / ferry (survivors/craft.js) with foam collars and contact discs
 // (survivors/water.js). Draw calls: people 1 + underwater 1 + keylines 1, collars 1, glows 1, lines 1,
-// one per craft model in use (+ craft keylines on high).
+// one per craft model in use (craft carry no keylines: weathering, rim and contact foam separate them).
 //
 // Public API beyond the CONTRACT (all optional for other systems):
 //   types                         supported group types (mission/prepare.js reads it)
@@ -30,6 +30,7 @@
 //   survivor:jump {s, from}, survivor:creak {s, x, z}, survivor:downwash {s, level: 'push'|'capsize'},
 //   survivor:raft-boarded {s}, survivor:tip {s}, survivor:pet {s, pet: 'cat'|'dog', action: 'refuse'|'bark'}.
 import * as THREE from 'three';
+import { WEAR } from '../core/weathering.js';
 import { createRng } from '../core/math.js';
 import {
   TYPES, SUPPORTED_TYPES, DIFFICULTY_WARMTH, CRITICAL, LOST_FADE, DETECT, BEAM_SPOT_TIME, BEAM_RANGE,
@@ -39,8 +40,8 @@ import {
 } from './survivors/tables.js';
 import { Crowd, FEET_Y } from './survivors/crowd.js';
 import {
-  raftGeometry, capsizedHullGeometry, containerGeometry, bargeGeometry, ferryGeometry, stretcherGeometry,
-  lostBuoyGeometry, debrisGeometry, DEBRIS_KINDS, createCraftMaterial, CraftBatch, nameDecal, hullNameGeometry, RAFT,
+  raftGeometry, capsizedHullGeometry, containerGeometry, bargeGeometry, ferryGeometry, trawlerWreckGeometry, stretcherGeometry,
+  lostBuoyGeometry, debrisGeometry, DEBRIS_KINDS, createCraftMaterial, CraftBatch, nameDecal, hullNameGeometry, RAFT, CONT, containerPaint, planeGeometry, PLANE,
 } from './survivors/craft.js';
 import { Collars, Glows, Lines } from './survivors/water.js';
 import { Carrier, scatterDebris } from './survivors/carriers.js';
@@ -80,7 +81,7 @@ export class Survivors {
     this.list = [];
     this.datums = [];
     // ---- extras ----------------------------------------------------------------------------------
-    this.types = SUPPORTED_TYPES.filter((t) => t !== 'plane');
+    this.types = SUPPORTED_TYPES.slice(); // the Ан-2 is drawn now (planeGeometry), no raft fallback
     this.carriers = [];
     this.lostMarkers = [];
     this.pending = [];
@@ -140,46 +141,50 @@ export class Survivors {
     this.crowd.material.userData.uniforms.uRim = rim; // before the first compile picks the uniforms up
     root.add(this.crowd.mesh, this.crowd.ghost, this.crowd.keyline);
 
-    const keyline = look.keyline({ color: '#05090B', opacity: 0.55, px: 1 });
-    this.craftKeyline = keyline;
-    const raftMat = createCraftMaterial(look, { side: THREE.DoubleSide, roughness: 0.72, rim, lampLift: 0.62 }); // lamp-lit canopy stays orange
-    const hullMat = createCraftMaterial(look, { roughness: 0.6, rim });
-    const steelMat = createCraftMaterial(look, { roughness: 0.55, rim });
-    const debrisMat = createCraftMaterial(look, { roughness: 0.6, debris: true, rim });
-    this.batches = {
-      raft: new CraftBatch('rafts', raftGeometry(), raftMat, 16, { castShadow: true, keyline }),
-      boat: new CraftBatch('hulls', capsizedHullGeometry('boat'), hullMat, 6, { castShadow: true, keyline }),
-      yacht: new CraftBatch('yachts', capsizedHullGeometry('yacht'), hullMat, 6, { castShadow: true, keyline }),
-      container: new CraftBatch('containers', containerGeometry(), steelMat, 8, { castShadow: true, keyline, instanceColor: true }),
-      stretcher: new CraftBatch('stretcher', stretcherGeometry(), hullMat, 2, { castShadow: true }),
-      buoy: new CraftBatch('lostBuoys', lostBuoyGeometry(), hullMat, 48, { castShadow: false }),
-      debris: new CraftBatch('debris', debrisGeometry(), debrisMat, 96, { castShadow: false }),
+    // Craft wear the shared weathering (core/weathering.js) in their own frame; no ink keylines on craft
+    // (art direction: one realistic style — rim light, contact foam and shadows separate them instead).
+    const nightAmb = (this.nightAmb = { value: new THREE.Color(0, 0, 0) }); // moonlit hemi floor (ghostUniforms)
+    const base = { rim, nightAmb };
+    const raftMat = createCraftMaterial(look, { ...base, side: THREE.DoubleSide, roughness: 0.72, lampLift: 0.62, wear: { breakup: 0.07, streaks: 0, grime: 0.12, waterline: 0.55, roughBreakup: 0.1, deckWear: 0.1, scale: 1.6 } }); // lamp-lit canopy stays orange
+    const hullMat = createCraftMaterial(look, { ...base, roughness: 0.62, wear: { ...WEAR.heavy, streaks: 0.25, scale: 1.3 }, foul: true });
+    const contMat = createCraftMaterial(look, { ...base, roughness: 0.7, wear: { ...WEAR.heavy, streaks: 0.6, waterline: 0.55, scale: 1.25 } });
+    const gearMat = createCraftMaterial(look, { ...base, roughness: 0.6, wear: WEAR.clean });
+    const debrisMat = createCraftMaterial(look, { ...base, roughness: 0.6, debris: true, wear: WEAR.light });
+    this._bigMats = {
+      ferry: createCraftMaterial(look, { ...base, roughness: 0.6, wear: { ...WEAR.medium, scale: 0.8 } }),
+      trawler: createCraftMaterial(look, { ...base, roughness: 0.66, wear: { ...WEAR.heavy, scale: 0.85 } }),
+      barge: createCraftMaterial(look, { ...base, roughness: 0.7, wear: { ...WEAR.heavy, streaks: 0.7, scale: 0.8 } }),
     };
-    this._steelMat = steelMat;
+    this.batches = {
+      raft: new CraftBatch('rafts', raftGeometry(), raftMat, 16, { castShadow: true }),
+      boat: new CraftBatch('hulls', capsizedHullGeometry('boat'), hullMat, 6, { castShadow: true }),
+      yacht: new CraftBatch('yachts', capsizedHullGeometry('yacht'), hullMat, 6, { castShadow: true }),
+      container: new CraftBatch('containers', containerGeometry(), contMat, 8, { castShadow: true, instanceColor: true }),
+      plane: new CraftBatch('planes', planeGeometry(), createCraftMaterial(look, { ...base, roughness: 0.66, wear: { ...WEAR.medium, streaks: 0.25, scale: 1.2 } }), 2, { castShadow: true }),
+      stretcher: new CraftBatch('stretcher', stretcherGeometry(), gearMat, 2, { castShadow: true }),
+      buoy: new CraftBatch('lostBuoys', lostBuoyGeometry(), gearMat, 48, { castShadow: false }),
+      debris: new CraftBatch('debris', debrisGeometry(), debrisMat, 128, { castShadow: false }),
+    };
     this._bigGeos = new Map(); // deck height → barge / ferry geometry
     this.bigBatches = []; // per (kind, deck height) batches created on demand
     this.batchList = Object.values(this.batches); // fixed list (no per-frame Object.values)
-    for (const b of this.batchList) {
-      root.add(b.mesh);
-      if (b.keyline) root.add(b.keyline);
-    }
+    for (const b of this.batchList) root.add(b.mesh);
     this.collars = new Collars(look, 192);
     this.glows = new Glows(look, 160);
     this.lines = new Lines(192);
     root.add(this.collars.mesh, this.glows.mesh, this.lines.mesh);
   }
 
-  _bigBatch(kind, deckY) {
-    const key = `${kind}:${Math.round(deckY * 10)}`;
+  // model: 'ferry' | 'trawler' (wrecks), 'barge'
+  _bigBatch(model, deckY) {
+    const key = `${model}:${Math.round(deckY * 10)}`;
     let b = this.bigBatches.find((x) => x.key === key);
     if (b) return b;
-    const geo = kind === 'wreck' ? ferryGeometry(deckY) : bargeGeometry(deckY);
-    b = new CraftBatch(kind === 'wreck' ? 'ferry' : 'barge', geo, this._steelMat, 2, { castShadow: true, keyline: this.craftKeyline });
+    const geo = model === 'ferry' ? ferryGeometry(deckY) : model === 'trawler' ? trawlerWreckGeometry(deckY) : bargeGeometry(deckY);
+    b = new CraftBatch(model, geo, this._bigMats[model] || this._bigMats.barge, 2, { castShadow: true });
     b.key = key;
     b.geo = geo;
     this.root.add(b.mesh);
-    b.keylineOn = this.ctx.settings.get('quality') === 'high';
-    if (b.keyline) this.root.add(b.keyline);
     this.bigBatches.push(b);
     return b;
   }
@@ -188,9 +193,6 @@ export class Survivors {
     const q = this.ctx.settings.get('quality');
     this.quality = q;
     this.crowd.setQuality(q);
-    const high = q === 'high';
-    for (const b of this.batchList) b.keylineOn = high;
-    for (const b of this.bigBatches) b.keylineOn = high;
   }
 
   // ==============================================================================================
@@ -1177,13 +1179,14 @@ export class Survivors {
     // forearm over the face in strong downwash
     if (env.dwS > 0.35 && Math.hypot(p.x - env.hx, p.z - env.hz) < env.dwR * 0.85 && env.alt < 20 && w >= 0.4) return POSE.shield;
     const excited = s.excite > 0;
-    if (w < 0.4) return d < SEEN_RANGE || excited ? POSE.limp : onCarrier ? (kind === 'hull' ? POSE.keel : POSE.deck) : POSE.idle;
+    const keel = kind === 'hull' && s.carrier?.style !== 'plane';
+    if (w < 0.4) return d < SEEN_RANGE || excited ? POSE.limp : onCarrier ? (keel ? POSE.keel : POSE.deck) : POSE.idle;
     if (d < NEAR_WAVE || excited) return POSE.wave2;
     if (d < SEEN_RANGE) return s.flower ? POSE.wave1 : POSE.wave1;
     if (s.flower) return POSE.hold;
     if (kind === 'raft') return POSE.sit;
-    if (kind === 'hull') return POSE.keel;
-    if (kind === 'container' || kind === 'barge' || kind === 'wreck' || kind === 'rig') return POSE.deck;
+    if (keel) return POSE.keel;
+    if (kind === 'hull' || kind === 'container' || kind === 'barge' || kind === 'wreck' || kind === 'rig') return POSE.deck;
     return POSE.idle;
   }
 
@@ -1254,12 +1257,21 @@ export class Survivors {
       c.yaw = Math.atan2(this.env.windDirX, this.env.windDirZ) + Math.PI / 2 + (rng.next() - 0.5) * 0.6;
       scatterDebris(c, rng);
       if (e.name) this._hullDecal(c, e.name);
+    } else if (t === 'plane') {
+      // the Ан-2 floats like a capsized hull (sinks on the same clock), nose down, lower wing awash
+      c = new Carrier('hull', x, z, { style: 'plane', sinkAt: e.sinkTime ?? TYPES.plane.sink, phase: rng.next() * 100, leeway: TYPES.plane.leeway });
+      c.yaw = Math.atan2(this.env.windDirX, this.env.windDirZ) + (rng.next() - 0.5) * 0.8;
+      c.pitch = -0.1;
+      c.roll = (rng.next() - 0.5) * 0.08;
+      scatterDebris(c, rng);
+      this._planeDecal(c, e.reg || 'RA-40217');
     } else if (t === 'container') {
-      const col = e.color || CONTAINER_COLORS[Math.floor(rng.next() * CONTAINER_COLORS.length)];
+      const col = containerPaint(e.color || CONTAINER_COLORS[Math.floor(rng.next() * CONTAINER_COLORS.length)]);
       c = new Carrier('container', x, z, { color: col, phase: rng.next() * 100 });
       c.yaw = rng.next() * Math.PI * 2;
-      c.roll = (rng.next() - 0.5) * 0.12;
-      c.pitch = (rng.next() - 0.5) * 0.06;
+      // awash and listing 5–10° on her flooded end/side
+      c.roll = (rng.next() < 0.5 ? -1 : 1) * (0.09 + rng.next() * 0.08);
+      c.pitch = (rng.next() - 0.5) * 0.1;
     } else if (t === 'deck' || t === 'wreck') {
       const deckY = Number.isFinite(e.height) ? e.height : t === 'deck' ? 6 : 6;
       const yaw = -(e.heading ?? 0);
@@ -1269,7 +1281,9 @@ export class Survivors {
         c.baseY = 0;
       } else {
         const kind = t === 'wreck' ? 'wreck' : 'barge';
-        const batch = this._bigBatch(kind, deckY);
+        // «Вайгач» is a trawler, «Северянка» a ferry: pick the wreck model from the def
+        const trawler = this.theme === 'trawler' || /траул|trawl|вайгач/i.test(`${e.name || ''} ${e.label || ''} ${e.model || ''}`);
+        const batch = this._bigBatch(kind === 'barge' ? 'barge' : trawler ? 'trawler' : 'ferry', deckY);
         const stand = batch.geo.userData.stand;
         // place the hull so that its gathering point is where the def says the people are
         const cs = Math.cos(yaw);
@@ -1278,7 +1292,7 @@ export class Survivors {
         const cz = z - (-stand[0] * sn + stand[2] * cs);
         c = new Carrier(kind, cx, cz, { fixed: kind === 'barge', deckY, stand, yaw, floodTime: e.sinkTime ?? TYPES.wreck.flood, leeway: kind === 'wreck' ? TYPES.wreck.leeway : 0 });
         c.batch = batch;
-        if (kind === 'barge') c.roll = 0.05;
+        if (kind === 'barge') c.roll = 0.13; // aground: a fixed ~7.5° heel
         if (kind === 'wreck') this._wreckDecal(c, e.name || 'Северянка');
       }
       s.deckY = deckY;
@@ -1319,16 +1333,15 @@ export class Survivors {
 
   _wreckDecal(c, name) {
     const look = this.ctx.look;
-    const d = nameDecal(look, name, { width: 11, height: 1.9 });
+    const dp = c.batch?.geo?.userData?.decal || { x: 4.98, y: (c.deckY || 6) - 2.25, z: -16, w: 11, h: 1.9 };
+    const d = nameDecal(look, name, { width: dp.w, height: dp.h });
     const g = new THREE.BufferGeometry();
-    // two quads on the bow flanks (port and starboard), baked in the ferry frame
-    const L = 52;
+    // two quads on the bow flanks (port and starboard), baked in the vessel frame
     const quads = [];
     for (const side of [-1, 1]) {
-      const pl = new THREE.PlaneGeometry(11, 1.9);
+      const pl = new THREE.PlaneGeometry(dp.w, dp.h);
       pl.rotateY(side * Math.PI / 2);
-      if (side < 0) pl.scale(1, 1, 1);
-      pl.translate(side * 4.98, (c.deckY || 6) - 2.25, -L / 2 + 10);
+      pl.translate(side * dp.x, dp.y, dp.z);
       quads.push(pl);
     }
     const pos = [];
@@ -1349,6 +1362,20 @@ export class Survivors {
     mesh.frustumCulled = false;
     this.root.add(mesh);
     c.decal = { mesh, tex: d.tex, mat: d.mat, geo: g };
+  }
+
+  // Registration across the Ан-2's left upper wing (read from above), dark on the silver dope.
+  _planeDecal(c, text) {
+    const d = nameDecal(this.ctx.look, text, { color: '#24282A', width: 6.4, height: 1.5 });
+    d.geo.rotateX(-Math.PI / 2);
+    d.geo.translate(-4.6, PLANE.wingTop + 0.02, PLANE.wingZ);
+    d.mat.opacity = 0.85;
+    const mesh = new THREE.Mesh(d.geo, d.mat);
+    mesh.name = 'survivors.planeReg';
+    mesh.matrixAutoUpdate = false;
+    mesh.frustumCulled = false;
+    this.root.add(mesh);
+    c.decal = { mesh, tex: d.tex, mat: d.mat, geo: d.geo };
   }
 
   // «МАРИЯ» on the capsized hull's bottom flanks (one small mesh per named hull, ≤ 4 per mission).
@@ -1440,6 +1467,8 @@ export class Survivors {
       c.yaw += dt * 0.015 * Math.sin(c.phase);
     } else if (c.kind === 'wreck') {
       this._wreckLife(c, env, dt);
+    } else if (c.kind === 'barge') {
+      this._bargeLife(c, env, dt);
     }
     c.pose(env, ocean, dt);
     c.tapeLit = ocean.searchlightAt ? ocean.searchlightAt(c.x, c.z, c.y + 1.2) : 0;
@@ -1550,17 +1579,59 @@ export class Survivors {
     }
   }
 
+  // Barge aground: surf breaks along her low (−X) side and around the raked ends.
+  _bargeLife(c, env, dt) {
+    if (!env.play || !(dt > 0)) return;
+    c.washT = (c.washT || 0) - dt;
+    if (c.washT > 0) return;
+    const ud = c.batch?.geo?.userData || {};
+    const L = ud.L || 34;
+    const B = ud.B || 10;
+    c.washT = (0.9 + 0.9 * this.rng.next()) / (0.6 + 0.25 * Math.min(4, env.Hs));
+    const end = this.rng.next() < 0.25;
+    const lz = end ? (this.rng.next() < 0.5 ? -1 : 1) * L * 0.5 : (this.rng.next() - 0.5) * L * 0.9;
+    const lx = end ? (this.rng.next() - 0.5) * B : -B * 0.5 - 0.3;
+    c.toWorld(lx, 0, lz, _v);
+    this.ctx.ocean?.stamp?.('foam', _v.x, _v.z, { radius: 1.2 + 1.4 * this.rng.next(), strength: 0.18 + 0.06 * Math.min(4, env.Hs) });
+    if (this.rng.next() < 0.18 + 0.1 * Math.min(4, env.Hs)) this.ctx.fx?.splash?.(_v.x, 0, _v.z, 0.5 + 0.25 * Math.min(4, env.Hs));
+  }
+
   // Sinking ferry: heel grows, bow goes down, lights flicker and die; jumpers from 70 %, then she goes.
   _wreckLife(c, env, dt) {
     const ctx = this.ctx;
     c.flood = clamp01(c.age / Math.max(30, c.floodTime));
     const f = c.flood;
-    c.roll = -(0.07 + 0.42 * Math.pow(f, 1.4)) - 0.3 * c.sinking;
+    // a visible list from the first look (≥ 8°), growing to ~30° before she goes
+    c.roll = -(0.15 + 0.36 * Math.pow(f, 1.3)) - 0.3 * c.sinking;
     c.pitch = -(0.04 + 0.12 * f) - 0.5 * c.sinking * c.sinking;
     c.sink = 0.6 + 2.2 * f + 22 * c.sinking * c.sinking;
-    // lights: flicker more as she floods, gone by 88 %
+    // lights: cabins glow at night / under heavy overcast only (dark glass mirroring the sky by day);
+    // they flicker more as she floods and are gone by 88 %
     const flick = f > 0.35 ? (Math.sin(env.t * 31 + c.phase) * Math.sin(env.t * 7.3) > 0.55 - 0.9 * (f - 0.35) ? 0.15 : 1) : 1;
-    c.lights = (1 - smooth(0.78, 0.88, f)) * flick * (0.4 + 0.6 * env.night) + 0.05;
+    const dim = Math.max(env.night, env.sunny ? 0 : 0.3);
+    c.lights = (1 - smooth(0.78, 0.88, f)) * flick * dim;
+    // the low (starboard, +X) side: sea washing over the deck edge, foam along the waterline, and her
+    // oil sheen trailing downwind (stamps fade over minutes; keep them few)
+    if (env.play && dt > 0 && c.sinking < 1) {
+      c.washT = (c.washT || 0) - dt;
+      if (c.washT <= 0) {
+        const L = c.batch?.geo?.userData?.L || 50;
+        c.washT = 1.1 + 0.9 * this.rng.next();
+        const lz = (this.rng.next() - 0.5) * L * 0.8;
+        c.toWorld(c.batch?.geo?.userData?.B * 0.5 || 5, 0, lz, _v);
+        ctx.ocean?.stamp?.('foam', _v.x, _v.z, { radius: 1.4 + 1.6 * this.rng.next(), strength: 0.2 + 0.25 * f });
+        // once the deck edge is near the water, green water pours across it
+        c.toWorld(5.5, c.deckY, lz, _v);
+        if (_v.y < 1.6 && this.rng.next() < 0.5) ctx.fx?.splash?.(_v.x, Math.max(0, _v.y), _v.z, 0.5 + 0.6 * f);
+      }
+      c.oilT -= dt;
+      if (c.oilT <= 0 && c.oilN < 36) {
+        c.oilT = 6 + 3 * this.rng.next();
+        c.oilN++;
+        const r = 8 + this.rng.next() * 22;
+        ctx.ocean?.stamp?.('oil', c.x + env.windDirX * r + (this.rng.next() - 0.5) * 8, c.z + env.windDirZ * r + (this.rng.next() - 0.5) * 8, { radius: 6 + 6 * this.rng.next(), strength: 0.06 });
+      }
+    }
     const s = c.owner;
     if (s && env.play && f >= 0.7 && s.people.length > 0 && !c.sinking) {
       s.jumpT -= dt;
@@ -1628,7 +1699,8 @@ export class Survivors {
         // sea anchor line streaming upwind to the drogue
         if (!c.capsized && c.inflate > 0.9 && !c.dropped) this._anchorLine(c, ocean);
       } else if (c.kind === 'hull') {
-        const b = c.style === 'yacht' ? B.yacht : B.boat;
+        const plane = c.style === 'plane';
+        const b = plane ? B.plane : c.style === 'yacht' ? B.yacht : B.boat;
         b.push(c.matrix, lit, 0, 0, 0, c.dissolve, 0, c.phase);
         if (c.decal) {
           // matrix AND matrixWorld: the parent's world update would otherwise overwrite our copy
@@ -1638,7 +1710,12 @@ export class Survivors {
           c.decal.mat.opacity = 0.9 * (1 - c.dissolve * 2.5);
         }
         const yaw = c.yaw;
-        this.collars.push(c.x, c.y, c.z, c.nrm.x, c.nrm.y, c.nrm.z, c.style === 'yacht' ? 1.95 : 1.75, 0.8 * (1 - c.dissolve), 1 - c.dissolve, lit, c.phase, yaw, c.elong);
+        if (plane) {
+          // fuselage + the awash lower wing
+          this.collars.push(c.x, c.y, c.z, c.nrm.x, c.nrm.y, c.nrm.z, 1.05, 0.8 * (1 - c.dissolve), 1 - c.dissolve, lit, c.phase, yaw, 3.6);
+          c.toWorld(0, 0, PLANE.wingZ, _v);
+          this.collars.push(_v.x, c.y, _v.z, c.nrm.x, c.nrm.y, c.nrm.z, 1.0, 0.7 * (1 - c.dissolve), 0.6 * (1 - c.dissolve), lit, c.phase + 2, yaw + Math.PI / 2, 4.6);
+        } else this.collars.push(c.x, c.y, c.z, c.nrm.x, c.nrm.y, c.nrm.z, c.style === 'yacht' ? 1.95 : 1.75, 0.8 * (1 - c.dissolve), 1 - c.dissolve, lit, c.phase, yaw, c.elong);
         for (const d of c.debris) {
           d.y = ocean.heightAt(d.x, d.z);
           _q.setFromAxisAngle(UP, d.yaw);
@@ -1647,10 +1724,25 @@ export class Survivors {
         }
       } else if (c.kind === 'container') {
         B.container.push(c.matrix, lit, 0, 0, 0, c.dissolve, 0, c.phase, 0, c.color);
+        // swell washing over the roof: foam where the sea stands above the roof at either end
+        if (env.play && dt > 0 && ocean?.stamp) {
+          c.washT = (c.washT || 0) - dt;
+          if (c.washT <= 0) {
+            c.washT = 0.45;
+            for (let e = -1; e <= 1; e += 2) {
+              c.toWorld(0, CONT.freeboard, e * CONT.L * 0.42, _v);
+              if (ocean.heightAt(_v.x, _v.z) > _v.y - 0.12) {
+                ocean.stamp('foam', _v.x, _v.z, { radius: 1.5, strength: 0.55 });
+                c.washT = 1.1;
+              }
+            }
+          }
+        }
         this.collars.push(c.x, c.y, c.z, c.nrm.x, c.nrm.y, c.nrm.z, 1.4, 0.9 * (1 - c.dissolve), 1 - c.dissolve, lit, c.phase, c.yaw, 2.4);
       } else if (c.kind === 'barge' || c.kind === 'wreck') {
-        c.batch.push(c.matrix, lit, 0, 0, c.kind === 'wreck' ? c.lights : 0.25 + 0.75 * night, c.dissolve, 0, c.phase);
-        this.collars.push(c.x, c.y + (c.kind === 'wreck' ? 0.3 : 0), c.z, 0, 1, 0, c.kind === 'wreck' ? 6.5 : 5.6, c.kind === 'wreck' ? 1 : 0.7, 1, lit, c.phase, c.yaw, c.kind === 'wreck' ? 4.3 : 3.2);
+        c.batch.push(c.matrix, lit, 0, 0, c.kind === 'wreck' ? c.lights : Math.max(night, env.sunny ? 0 : 0.25), c.dissolve, 0, c.phase);
+        const gu = c.batch.geo.userData;
+        this.collars.push(c.x, c.y + (c.kind === 'wreck' ? 0.3 : 0), c.z, 0, 1, 0, gu.collarR || 5.6, c.kind === 'wreck' ? 1 : 0.7, 1, lit, c.phase, c.yaw, gu.elong || 3.2);
         if (c.decal) {
           c.decal.mesh.matrix.copy(c.matrix);
           c.decal.mesh.matrixWorld.copy(c.matrix);
@@ -1715,8 +1807,12 @@ export class Survivors {
     const day = 1 - env.night;
     if (pal?.sky?.isColor) this.rim.value.copy(pal.sky).multiplyScalar(0.35 * day);
     else this.rim.value.setRGB(0.1, 0.12, 0.14).multiplyScalar(day);
+    // night: craft keep a faint moonlit-hemisphere floor so they never fall below the sea's luminance
+    this.nightAmb.value.setRGB(0.009, 0.012, 0.016).multiplyScalar(env.night);
+    this.crowd.keylineOn = env.night > 0.45;
     const lightLevel = (pal?.sunIntensity ?? 2) * 0.4 + (pal?.ambientIntensity ?? 0.6) * 0.5;
-    this.crowd.material.userData.uniforms.uVestGlow.value = 0.035 + 0.16 * day * clamp01(1 - lightLevel);
+    // ≥ 0.05: the vest keeps its #FF5A00 hue under the warm sunset / storm hemisphere instead of going red
+    this.crowd.material.userData.uniforms.uVestGlow.value = 0.05 + 0.16 * day * clamp01(1 - lightLevel);
   }
 
   _occupants(c) {
@@ -1737,15 +1833,17 @@ export class Survivors {
       const k = i / n;
       const x = _v.x + (ax - _v.x) * k;
       const z = _v.z + (az - _v.z) * k;
-      const y = (ocean.heightAt ? ocean.heightAt(x, z) : 0) + 0.04 + (1 - k) * 0.3 * (1 - k);
+      // a wet line sagging into the sea between the raft's patch and the drogue (catenary below the
+      // surface in the middle, only its ends at the top)
+      const y = (ocean.heightAt ? ocean.heightAt(x, z) : 0) + 0.3 * (1 - k) * (1 - k) - 0.22 * Math.sin(Math.PI * k) - 0.12 * k * k;
       this.lines.seg(px, py, pz, x, y, z);
       px = x;
       py = y;
       pz = z;
     }
-    // the drogue itself: a small orange cone just under the surface
+    // the drogue itself: a small dark-orange fabric cone, mostly submerged (rim awash)
     _q.setFromAxisAngle(UP, Math.atan2(_v.x - ax, _v.z - az));
-    _m.compose(_v2.set(ax, py - 0.05, az), _q, _s.set(1, 1, 1));
+    _m.compose(_v2.set(ax, py - 0.02, az), _q, _s.set(1, 1, 1));
     this.batches.debris.push(_m, 0, 0, 0, 0, 0, 0, 0, DEBRIS_KINDS.indexOf('drogue') + 1);
   }
 
@@ -1772,7 +1870,8 @@ export class Survivors {
         p.z = _v.z;
         p.waterY = -50; // people aboard have nothing under the surface (no ghost, no keyline clip)
         // face the heli when it is around, else look along the craft
-        const target = s.dHeli < 400 ? Math.atan2(env.hx - p.x, env.hz - p.z) : c.yaw + (c.kind === 'hull' ? (i % 2 ? Math.PI / 2 : -Math.PI / 2) : 0);
+        const jit = (((i * 2654435761) >>> 0) % 1000) / 1000 - 0.5; // per-seat facing noise (no pawn grid)
+        const target = (s.dHeli < 400 ? Math.atan2(env.hx - p.x, env.hz - p.z) + jit * 0.7 : c.yaw + (c.kind === 'hull' ? (i % 2 ? Math.PI / 2 : -Math.PI / 2) : jit * 2.2));
         p.yaw += wrapAngle(target - p.yaw) * (1 - Math.exp(-dt * 1.4));
         const pose = this._poseFor(s, p, env, true);
         if (pose !== POSE.frozen) applyPose(p, poseTargets(pose, p, env.t, _pose, 4), dt);
@@ -1848,6 +1947,19 @@ export class Survivors {
       const busy = s.swimTo || pose === POSE.panic || pose === POSE.wave2 ? 0.85 : 0.5;
       this.collars.push(p.x, wy, p.z, s.nrm.x, s.nrm.y, s.nrm.z, supine ? 0.62 * S : 0.42 * S, busy * (1 - fade), 1 - fade, tape, p.phase, supine ? p.yaw : 0, supine ? 1.8 : 1);
       if (s.swimTo && dt > 0 && ocean?.addWake) ocean.addWake(p.x, p.z, 0.4, s.velocity.x, s.velocity.z);
+      // strokes / flailing break the surface: a small splash at the hand and a ripple ring per stroke
+      if (env.play && dt > 0 && !supine && fade < 0.5 && (s.swimTo || pose === POSE.panic || pose === POSE.wave2)) {
+        p.strokeT = (p.strokeT ?? p.phase % 0.8) - dt;
+        if (p.strokeT <= 0) {
+          p.strokeT = 0.65 + 0.35 * this.rng.next();
+          p.strokeSide = -(p.strokeSide || 1);
+          const cy = Math.cos(p.yaw), sy = Math.sin(p.yaw);
+          const hx = p.x + (cy * p.strokeSide * 0.32 + sy * 0.3) * S;
+          const hz = p.z + (-sy * p.strokeSide * 0.32 + cy * 0.3) * S;
+          ctx.fx?.splash?.(hx, wy, hz, 0.3);
+          if (s.dHeli < 160) ocean?.stamp?.('ring', hx, hz, { radius: 0.9, strength: 0.3 });
+        }
+      }
       this._signalVisuals(s, p, env, tape);
     }
   }
@@ -1898,7 +2010,8 @@ export class Survivors {
     const k = env.reduceFlashes ? 0.4 : 1;
     // light on the water and a star you can find the person by
     this.ctx.ocean?.addGlint?.(p.x, p.z, 3.2, 1.6 * k, C_STROBE);
-    this.glows.add(p.x, p.y + 0.4 * S, p.z, 0.25, C_STROBE, 9 * k, 4.5, 1.4 * k, 1, env.t * 0.37);
+    const haze = clamp01(Math.max(env.fog, env.intensity));
+    this.glows.add(p.x, p.y + 0.4 * S, p.z, 0.25, C_STROBE, 9 * k, 0.8 + 3.7 * haze, (0.6 + 0.8 * haze) * k, 1, env.t * 0.37);
     return k;
   }
 

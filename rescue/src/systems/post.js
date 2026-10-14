@@ -399,7 +399,11 @@ export class PostFX {
         }
         if (speed < 8) p.salt = clamp(p.salt + gdt * 0.06, 0, 1);
       }
-      this.drops.update(gdt, rate, speed, this._flow.x, this._flow.y, rivulets);
+      // light-rain / dry presets keep only a few beads; rain left over from a previous preset clears
+      // quickly, except the slow drying that is part of the clearing look
+      const cap = (P?.drops || 0) < 0.2 ? 6 : 0;
+      const dryK = st?.preset === 'clearing' ? 1 : 3.5;
+      this.drops.update(gdt, rate, speed, this._flow.x, this._flow.y, rivulets, cap, dryK);
       this.drops.upload();
       u.uDrops.value = this.drops.count > 0 ? 1 : 0;
       u.uFlow.value.copy(this._flow);

@@ -34,7 +34,7 @@ attribute vec4 iC; // size0, size1 (diameters, m), rotation, spin
 attribute vec4 iD; // colour rgb (linear, may be HDR), alpha
 attribute vec4 iE; // drag k, accY, windFollow, flags
 attribute vec4 iF; // end colour rgb, emissive 0..1
-uniform float uFadeIn, uFadeOut, uGrowth, uStretch, uBeamGain, uLightGain, uSunGain, uPush;
+uniform float uFadeIn, uFadeOut, uGrowth, uStretch, uMaxStretch, uBeamGain, uLightGain, uSunGain, uPush;
 varying vec2 vUv;
 varying vec4 vCol;
 varying float vAge;
@@ -97,7 +97,8 @@ void main() {
     float sl = length(sv);
     vec2 dir = sl > 1e-3 ? sv / sl : vec2(1.0, 0.0);
     vec2 perp = vec2(-dir.y, dir.x);
-    float len = size + sl * uStretch;
+    // motion blur, capped (spray ≤ 3:1): longer reads as hatching strokes / ink comb, not water
+    float len = min(size + sl * uStretch, size * uMaxStretch);
     off = dir * corner.x * len + perp * corner.y * size;
     alpha *= min(1.0, size / len * 1.6);
   } else {
@@ -136,9 +137,12 @@ const FRAG = {
     if (r2 > 1.0) discard;
     vec2 o = vec2(vSeed * 7.0, vSeed * 3.3);
     float n = texture2D(uAtlas, vUv * 0.28 + o).r;
-    float dots = smoothstep(0.78, 0.97, texture2D(uAtlas, vUv * 0.85 + o * 1.7).a);
-    float body = pow(1.0 - r2, 1.6) * (0.35 + 0.9 * n) * (1.0 - 0.55 * vAge);
-    float a = vCol.a * (body + dots * (1.0 - r2) * 0.9);
+    float n2 = texture2D(uAtlas, vUv * 0.7 + o * 1.7).r;
+    // soft droplet mist: two noise octaves erode the edge (no stippled dot texture — at gameplay
+    // height a hash-dot pattern reads as an ink illustration, not water)
+    float shape = 1.0 - smoothstep(0.0, 1.0, sqrt(r2));
+    float body = shape * smoothstep(0.2, 0.7, (n * 0.65 + n2 * 0.35) * 0.9 + shape * 0.4) * (1.0 - 0.55 * vAge);
+    float a = vCol.a * body * 1.25;
     vec3 col = mix(vCol.rgb, fogColorOr(vCol.rgb), vFog);
     gl_FragColor = vec4(col, clamp(a * (1.0 - 0.7 * vFog), 0.0, 1.0));
   `,
@@ -189,9 +193,9 @@ vec3 fogColorOr(vec3 c) {
 
 // Per-kind material defaults.
 const KIND = {
-  spray: { blending: THREE.NormalBlending, stretch: 0.14, fadeIn: 0.05, fadeOut: 0.55, growth: 0.6, push: 0.6, beam: 4.0, light: 0.5, sun: 0.5 },
-  smoke: { blending: THREE.NormalBlending, stretch: 0.06, fadeIn: 0.05, fadeOut: 0.45, growth: 0.5, push: 0.5, beam: 2.0, light: 0.6, sun: 0.55 },
-  glow: { blending: THREE.AdditiveBlending, stretch: 0.06, fadeIn: 0.02, fadeOut: 0.5, growth: 1.0, push: 0.2, beam: 0.0, light: 0.0, sun: 0.0 },
+  spray: { blending: THREE.NormalBlending, maxStretch: 3, stretch: 0.14, fadeIn: 0.05, fadeOut: 0.55, growth: 0.6, push: 0.6, beam: 4.0, light: 0.5, sun: 0.5 },
+  smoke: { blending: THREE.NormalBlending, maxStretch: 3, stretch: 0.06, fadeIn: 0.05, fadeOut: 0.45, growth: 0.5, push: 0.5, beam: 2.0, light: 1.0, sun: 0.55 },
+  glow: { blending: THREE.AdditiveBlending, maxStretch: 8, stretch: 0.06, fadeIn: 0.02, fadeOut: 0.5, growth: 1.0, push: 0.2, beam: 0.0, light: 0.0, sun: 0.0 },
 };
 
 export class ParticlePool {
@@ -232,6 +236,7 @@ export class ParticlePool {
         uFadeOut: { value: K.fadeOut },
         uGrowth: { value: K.growth },
         uStretch: { value: K.stretch },
+        uMaxStretch: { value: K.maxStretch },
         uBeamGain: { value: K.beam },
         uLightGain: { value: K.light },
         uSunGain: { value: K.sun },

@@ -1,13 +1,30 @@
 // Materials for the world (DESIGN §2.7.3, §2.11): one MeshStandardMaterial patch for every prop
 // (vertex colours + per-vertex surface, shared wetness, day rim, cloud shadows, emissive channels,
-// local light spill, canvas decals) and a handful of tiny ShaderMaterials for things that glow:
-// lamps (bulb + halo billboards), volumetric beams (lighthouse, deck floods), the rig flare and the
-// foam collar / contact disc under everything that floats.
+// local light spill, canvas decals, shared weathering) and a handful of tiny ShaderMaterials for
+// things that glow: lamps (bulb + halo billboards), volumetric beams (lighthouse, deck floods), the
+// rig flare and the foam collar / contact disc under everything that floats.
+//
+// WEATHERING / WEAR API (one realistic style: core/weathering.js on every man-made surface)
+//   createPropMaterial(look, shared, { wear, seaLevel, scale })
+//     wear      'clean' | 'light' | 'medium' | 'heavy' (core/weathering.js WEAR) or an options
+//               object — the default for every part of this material (default 'light').
+//     seaLevel  world y of the waterline the algae / salt band and base grime gather above (0).
+//     scale     weathering noise scale (big hulls / rigs < 1, small boats > 1).
+//   Per part (geo.js, baked into aSurf.z — no extra attributes):
+//     worn(SURF.steel, 'heavy') or part.wear = 'heavy' | 0..1 overrides the material default;
+//     ready-made: SURF.paintWorn, SURF.paintFaded, SURF.steelRusty, SURF.steelWorn,
+//     SURF.concreteStained, SURF.concreteWet.
+//     part.ground = world y of the land under a static part → base grime, a thin green-grey algae /
+//     salt band and the grime gradient gather above that height instead of above the sea.
+//   Streak colour is picked per fragment: rust bleed on steel and coloured paint, dark grime on
+//   concrete and white / grey paint. Natural rock (aSurf.z = −1) and lit lenses / windows are
+//   never weathered. mat.userData.weathering holds the live uniforms (uWxA, uWxB, colours).
 //
 // Custom shaders end with the tonemapping / colorspace chunks so they look right through the post
 // composer (linear target) and straight to the canvas alike.
 import * as THREE from 'three';
 import { LOOK_GLSL_UNIFORMS, LOOK_GLSL_FUNCS } from '../../core/look.js';
+import { patchWeathering, WEAR } from '../../core/weathering.js';
 
 const FINISH = /* glsl */ `
   #include <tonemapping_fragment>
@@ -77,13 +94,50 @@ function propLightsBegin() {
 }
 const PROP_LIGHTS_BEGIN = propLightsBegin();
 
+const _f = (v) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
+const _wxA = (w) => `vec4(${_f(w.breakup)}, ${_f(w.streaks)}, ${_f(w.grime)}, ${_f(w.waterline)})`;
+const _wxB = (w) => `vec2(${_f(w.roughBreakup)}, ${_f(w.deckWear)})`;
+// The four WEAR presets as GLSL constants: per-part levels interpolate clean → light → medium → heavy.
+const WX_PRESETS = /* glsl */ `
+const vec4 WXA0 = ${_wxA(WEAR.clean)}; const vec4 WXA1 = ${_wxA(WEAR.light)};
+const vec4 WXA2 = ${_wxA(WEAR.medium)}; const vec4 WXA3 = ${_wxA(WEAR.heavy)};
+const vec2 WXB0 = ${_wxB(WEAR.clean)}; const vec2 WXB1 = ${_wxB(WEAR.light)};
+const vec2 WXB2 = ${_wxB(WEAR.medium)}; const vec2 WXB3 = ${_wxB(WEAR.heavy)};
+`;
+// Runs just before the shared weathering block: per-part wear level (aSurf.z), land ground height
+// (uv when aSurf.w ≥ 0 and uv.y = 1), rust-or-grime streak colour, no weathering on rock / lamps.
+const WX_DECODE = /* glsl */ `
+vec4 wxA = uWxA;
+vec4 wxB = uWxB;
+if (vSurf.z < -0.02 && vSurf.z > -0.5) {
+  float wl = clamp((-vSurf.z - 0.05) / 0.4, 0.0, 1.0) * 3.0;
+  float wf = fract(min(wl, 2.999));
+  vec4 a0 = wl < 1.0 ? WXA0 : (wl < 2.0 ? WXA1 : WXA2);
+  vec4 a1 = wl < 1.0 ? WXA1 : (wl < 2.0 ? WXA2 : WXA3);
+  vec2 b0 = wl < 1.0 ? WXB0 : (wl < 2.0 ? WXB1 : WXB2);
+  vec2 b1 = wl < 1.0 ? WXB1 : (wl < 2.0 ? WXB2 : WXB3);
+  wxA = mix(a0, a1, wf);
+  wxB.xy = mix(b0, b1, wf);
+}
+float wxOn = (vSurf.z > 0.0 || vSurf.z < -0.5) ? 0.0 : 1.0;
+wxA *= wxOn;
+wxB.xy *= wxOn;
+if (vSurf.w > -0.5 && vPropG.y > 0.5) {
+  wxB.w = vPropG.x; // standing on land: base grime + a thin splash / algae line above the ground
+  wxA.w *= 0.5;
+}
+float wxMx = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));
+float wxSat = (wxMx - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b))) / max(wxMx, 1e-3);
+vec3 wxStreak = mix(uWxGrime * 1.35, uWxStreak, max(smoothstep(0.15, 0.4, vSurf.y), smoothstep(0.12, 0.35, wxSat)));
+`;
+
 // ------------------------------------------------------------------------------------------------
 // Props. aSurf = (roughness, metalness, emissive gain, channel); channel < 0 → decal surface.
 // Instanced meshes may encode glow in instanceColor > 1 (emissive = colour − 1).
 // Shared wetness: albedo ×(1 − .15·wet), roughness −.25·wet. Day rim: hemiSky·pow(1−N·V,3)·.35.
 // Cloud shadows: the sun share × mix(1, .72, lookCloud·k) — same field the ocean darkens.
 // Local light spill (uGlowPos/uGlowCol, object space): floods paint decks, the flare paints steel.
-export function createPropMaterial(look, shared, { decal = null, name = 'prop' } = {}) {
+export function createPropMaterial(look, shared, { decal = null, name = 'prop', wear = 'light', seaLevel = 0, scale = 1 } = {}) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.6, metalness: 0 });
   mat.name = `world-${name}`;
   const u = {
@@ -97,7 +151,12 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
   };
   mat.userData.uniforms = u;
   if (decal) mat.defines = { USE_WORLD_DECAL: '' };
+  const wxOpts = { ...(typeof wear === 'string' ? WEAR[wear] || WEAR.light : wear), seaLevel, scale };
   mat.onBeforeCompile = (sh) => {
+    // shared weathering first (its block lands right after <roughnessmap_fragment>); our own
+    // roughness / per-part wear decode is inserted after the same token below, i.e. BEFORE it.
+    mat.userData.weathering = patchWeathering(sh, look, wxOpts);
+    sh.fragmentShader = sh.fragmentShader.replace(/uWx([AB])\./g, 'wx$1.').replace(/uWxStreak \*/g, 'wxStreak *');
     Object.assign(sh.uniforms, u);
     sh.vertexShader = sh.vertexShader
       .replace(
@@ -107,6 +166,7 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
         varying vec4 vSurf;
         varying vec3 vPropW;
         varying vec3 vPropL;
+        varying vec2 vPropG;
         #ifdef USE_WORLD_DECAL
           varying vec2 vDecalUv;
         #endif`,
@@ -115,6 +175,7 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
         '#include <begin_vertex>',
         `#include <begin_vertex>
         vSurf = aSurf;
+        vPropG = uv;
         vPropL = transformed;
         vec4 propW = vec4(transformed, 1.0);
         #ifdef USE_INSTANCING
@@ -139,7 +200,9 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
         varying vec4 vSurf;
         varying vec3 vPropW;
         varying vec3 vPropL;
+        varying vec2 vPropG;
         float propShadow = 1.0;
+        ${WX_PRESETS}
         #ifdef USE_WORLD_DECAL
           uniform sampler2D uDecal;
           varying vec2 vDecalUv;
@@ -162,7 +225,7 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
             diffuseColor.rgb = mix(diffuseColor.rgb, dc.rgb, dc.a);
           }
         #endif
-        diffuseColor.rgb *= 1.0 - 0.15 * uWet;
+        diffuseColor.rgb *= 1.0 - 0.05 * uWet; // + the weathering block's wet darkening
         // natural rock (aSurf.z = −1): wet dark band at the waterline with a ragged, splash-driven top,
         // a slick sheen on it, and large-scale tone variation so a pile of rocks never reads uniform
         float propWetBand = 0.0;
@@ -180,8 +243,9 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-        roughnessFactor = clamp(vSurf.x - 0.25 * uWet, 0.04, 1.0);
-        roughnessFactor = mix(roughnessFactor, 0.32, propWetBand);`,
+        roughnessFactor = clamp(vSurf.x - 0.1 * uWet, 0.04, 1.0);
+        roughnessFactor = mix(roughnessFactor, 0.32, propWetBand);
+        ${WX_DECODE}`,
       )
       .replace(
         '#include <metalnessmap_fragment>',
@@ -213,7 +277,7 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
         reflectedLight.indirectSpecular *= propOcc;`,
       );
   };
-  mat.customProgramCacheKey = () => `mayday-world-prop-v4${decal ? '-decal' : ''}`;
+  mat.customProgramCacheKey = () => `mayday-world-prop-v5wx${decal ? '-decal' : ''}`;
   return mat;
 }
 
@@ -276,7 +340,7 @@ export function createLampMaterial(look, shared) {
         float r = length(vC);
         if (r > 1.0) discard;
         float core = 1.0 - smoothstep(vBulb * 0.45, vBulb, r);
-        float halo = exp(-r * r * 6.0) * (1.0 - r);
+        float halo = exp(-r * r * 5.0) * (1.0 - r * r) * (1.0 - r * r); // smooth to zero: no ring at the rim
         vec3 c = vCol * (core * uLampK.x + halo * uLampK.y);
         gl_FragColor = vec4(c, 1.0);
         ${FINISH}
@@ -289,8 +353,8 @@ export function createLampMaterial(look, shared) {
 
 // ------------------------------------------------------------------------------------------------
 // Volumetric beam (lighthouse double beam, deck flood cones): additive open cone, attribute aV
-// 0 at the lamp → 1 at the far end. alpha = density·pow(|N·V|,1.3)·falloff·noise, faded by the
-// fog bubble except for uPen (a beam in fog is lit fog itself — it stays "solid").
+// 0 at the lamp → 1 at the far end. alpha = density·gauss(1−|N·V|)·falloff·noise (capped at .5),
+// faded by the fog bubble except for uPen (a beam in fog is lit fog itself, but still translucent).
 export function createBeamMaterial(look, shared, { color = '#FFF4DC' } = {}) {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -329,14 +393,18 @@ export function createBeamMaterial(look, shared, { color = '#FFF4DC' } = {}) {
       varying vec3 vW;
       void main() {
         float ndv = abs(dot(normalize(vN), normalize(vView)));
+        // soft Gaussian edge (no hard cone silhouette), drifting density lumps along and across
+        // the beam (wind-carried haze + slow vertical banding), intensity dying with distance
+        float edge = exp(-pow((1.0 - ndv) * 3.2, 2.0));
         float n1 = texture2D(uAtlas, vW.xz * 0.011 - uWindOffset * 0.011 + vec2(uTime * 0.004, 0.0)).r;
         float n2 = texture2D(uAtlas, vW.xz * 0.045 + vec2(0.0, uTime * 0.02) - uWindOffset * 0.045).g;
-        float noise = 0.45 + 1.1 * n1 * (0.55 + 0.7 * n2);
+        float n3 = texture2D(uAtlas, vec2((vW.x + vW.z) * 0.021, vW.y * 0.09) + vec2(uTime * 0.01, 0.0)).r;
+        float noise = (0.35 + 1.2 * n1 * (0.55 + 0.7 * n2)) * (0.6 + 0.8 * n3);
         float along = pow(1.0 - vV, uFall) * smoothstep(0.0, 0.012, vV);
-        float a = uDensity * pow(ndv, 3.0) * along * noise;
+        float a = uDensity * edge * along * noise;
         a *= 1.0 - worldFogF(vW) * (1.0 - uPen);
         a *= smoothstep(-0.5, 2.0, vW.y); // dies where it meets the sea
-        gl_FragColor = vec4(uColor * a * uIntensity, 1.0);
+        gl_FragColor = vec4(uColor * min(a * uIntensity, 0.5), 1.0); // lit haze, never a solid wedge
         ${FINISH}
       }`,
     transparent: true,
@@ -453,14 +521,16 @@ export function flameGeometry() {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Water contact (DESIGN §2.7.2 "floating objects"): foam collar ring 0.8R…1.6R with noisy lace
-// alpha + dark contact disc 25 %. Instanced unit disc (radius 1 == 1.6R), per instance
+// Water contact (DESIGN §2.7.2 "floating objects"): soft foam collar 0.8R…1.6R (atlas blotches x
+// bubble speckle, exponential falloff from the hull, alpha ≤ .55, lace only as a faint modulation)
+// + dark contact disc 25 %. iData.y < 0 marks a trailing wake instance (Collars.pushWake). Instanced unit disc (radius 1 == 1.6R), per instance
 // iData = (foam, contact darkness, searchlight, phase). Normal blending + fog.
 export function createCollarMaterial(look, shared) {
   const fogU = THREE.UniformsUtils.clone(THREE.UniformsLib.fog);
   return new THREE.ShaderMaterial({
     uniforms: Object.assign(fogU, {
       uLace: look.uniforms.uLace,
+      uAtlas: look.uniforms.uAtlas,
       uTime: look.uniforms.uTime,
       uFoamCol: shared.uFoamCol,
       uNight: look.uniforms.uNight,
@@ -483,6 +553,7 @@ export function createCollarMaterial(look, shared) {
     fragmentShader: /* glsl */ `
       #include <fog_pars_fragment>
       uniform sampler2D uLace;
+      uniform sampler2D uAtlas;
       uniform float uTime;
       uniform vec3 uFoamCol;
       uniform float uNight;
@@ -492,15 +563,30 @@ export function createCollarMaterial(look, shared) {
       void main() {
         float r = length(vP);
         if (r > 1.0) discard;
-        float contact = (1.0 - smoothstep(0.3, 0.56, r)) * vData.y;
-        vec2 q = vW.xz * 0.09 + vec2(vData.w, uTime * 0.05);
-        float lace = texture2D(uLace, q).r;
-        float blot = texture2D(uLace, vW.xz * 0.035 + vec2(uTime * 0.02, vData.w * 0.3)).g;
-        float lace2 = texture2D(uLace, vW.xz * 0.23 - vec2(uTime * 0.04, vData.w)).b;
-        // broken, uneven foam: lace with blotchy holes, a ragged outer edge
-        float ragged = smoothstep(0.72, 1.0, r + (blot - 0.5) * 0.35);
-        float ringR = smoothstep(0.42, 0.6, r) * (1.0 - ragged);
-        float foam = ringR * smoothstep(0.18, 0.62, lace * 1.1 + lace2 * 0.35 + (blot - 0.5) * 0.5) * vData.x;
+        vec2 w = vW.xz;
+        // soft foam: low-frequency blotches x fine bubble speckle (atlas fbm + worley cells),
+        // falling off exponentially from the hull; the lace is only a faint modulation
+        float blot = texture2D(uAtlas, w * 0.05 + vec2(vData.w * 0.37, uTime * 0.006)).r;
+        float blot2 = texture2D(uAtlas, w * 0.13 - vec2(uTime * 0.012, vData.w)).r;
+        float c1 = texture2D(uAtlas, w * 0.32 + vec2(vData.w, uTime * 0.02)).g;
+        float c2 = texture2D(uAtlas, w * 0.85 - vec2(uTime * 0.03, vData.w * 0.5)).g;
+        float speck = (1.0 - smoothstep(0.06, 0.3, c1)) * 0.6 + (1.0 - smoothstep(0.08, 0.28, c2)) * 0.5;
+        float lace = texture2D(uLace, w * 0.09 + vec2(vData.w, uTime * 0.05)).r;
+        float foam, contact;
+        if (vData.y < 0.0) {
+          // trailing wake (elongated instance, local +z downstream): streaky froth, no dark disc
+          float st = texture2D(uAtlas, vec2(vP.x * 1.6, vP.y * 0.22) + vec2(vData.w, -uTime * 0.03)).r;
+          float body = exp(-r * r * 3.0) * (1.0 - smoothstep(0.7, 1.0, r));
+          foam = body * (0.3 + 0.9 * smoothstep(0.35, 0.75, st)) * (0.6 + 0.4 * speck) * (0.85 + 0.15 * lace) * vData.x * 0.45;
+          contact = 0.0;
+        } else {
+          contact = (1.0 - smoothstep(0.3, 0.58, r)) * vData.y;
+          float d = max(0.0, r - 0.56 + (blot2 - 0.5) * 0.12) / 0.44;
+          float fall = exp(-d * 3.5) * (1.0 - smoothstep(0.82, 1.0, r + (blot - 0.5) * 0.2));
+          float froth = smoothstep(0.5, 0.58, r) * (1.0 - smoothstep(0.6, 0.7 + 0.12 * blot, r)); // waterline froth
+          float body = fall * (0.3 + 0.9 * smoothstep(0.3, 0.72, blot)) * (0.5 + 0.5 * speck) * (0.85 + 0.15 * lace);
+          foam = clamp(max(body, froth * (0.55 + 0.45 * speck)), 0.0, 1.0) * smoothstep(0.46, 0.56, r) * vData.x * 0.55;
+        }
         vec3 fc = uFoamCol * (1.0 + 3.5 * vData.z);
         float a = clamp(foam + contact, 0.0, 1.0);
         vec3 col = mix(vec3(0.004, 0.012, 0.016), fc, foam / max(a, 1e-4));

@@ -3,7 +3,7 @@
 //  * Glows  — instanced additive sprites (HDR core + halo, round or 4-point star) for flare cores,
 //             rocket stars and lightning impact stars. Always carry their own halo, so they read on
 //             low quality without bloom (DESIGN §2.8).
-//  * Rings  — additive light rings on the water (lightning impact shock ring).
+//  * Rings  — additive light on the water (lightning impact: an uneven flash front with radial spatter).
 //  * Signals — player flares burning 40 s on the water (12–18 Hz flicker of a pooled red PointLight,
 //             smoke lit red, sparks, glint) and red parachute rockets (up to 80 m in 2.5 s, 2 m/s down
 //             for 25 s swaying at 0.5 Hz, a pooled light tinting sea & clouds within 120 m).
@@ -159,10 +159,18 @@ varying vec2 vXZ;
 varying vec4 vR;
 varying vec4 vRc;
 void main() {
+  // an uneven, noise-broken flash front with radial spatter — never a clean torus
   float r = length(vXZ);
-  float d = (r - vR.z) / max(vR.w, 0.1);
-  float n = texture2D(uAtlas, vXZ * 0.05 + vR.xy * 0.01).r;
-  float a = exp(-d * d) * (0.6 + 0.8 * n) + exp(-r * r / (vR.z * vR.z * 0.15 + 1.0)) * 0.15;
+  vec2 dir = vXZ / max(r, 1e-3);
+  vec2 sd = vR.xy * 0.013;
+  float na = texture2D(uAtlas, dir * 0.3 + sd).r;
+  float nb = texture2D(uAtlas, dir * 0.85 + sd.yx).r;
+  float rad = vR.z * (0.78 + 0.44 * na);
+  float d = (r - rad) / max(vR.w * (0.5 + nb), 0.1);
+  float gaps = smoothstep(0.38, 0.6, nb);
+  float n = texture2D(uAtlas, vXZ * 0.07 + sd).r;
+  float spat = smoothstep(0.58, 0.82, texture2D(uAtlas, dir * 2.9 + sd * 1.7).r) * smoothstep(0.15 * rad, 0.5 * rad, r) * (1.0 - smoothstep(0.8 * rad, 1.1 * rad, r));
+  float a = exp(-d * d) * gaps * (0.3 + 0.6 * n) + spat * 0.45 * n + exp(-r * r / (vR.z * vR.z * 0.12 + 1.0)) * 0.2 * n;
   gl_FragColor = vec4(vRc.rgb * vRc.a * a, 1.0);
   ${FINISH}
 }
@@ -273,13 +281,14 @@ export class Signals {
     }
     this.rockets = [];
     for (let i = 0; i < MAX_ROCKETS; i++) {
-      this.rockets.push({ alive: false, x: 0, y: 0, z: 0, x0: 0, y0: 0, z0: 0, t: 0, light: null, trailAcc: 0, seed: 0, color: new THREE.Color(COLORS.rocket) });
+      this.rockets.push({ alive: false, x: 0, y: 0, z: 0, x0: 0, y0: 0, z0: 0, px: 0, py: 0, pz: 0, sx: 0, sz: 0, t: 0, light: null, trailAcc: 0, seed: 0, color: new THREE.Color(COLORS.rocket) });
     }
     this.cFlare = new THREE.Color(COLORS.flare);
     this.cFlareCore = new THREE.Color(COLORS.flareCore);
     this.cFlareLight = new THREE.Color(COLORS.flareLight);
     this.cSmoke = new THREE.Color('#D2CAC6');
     this.cSmokeEnd = new THREE.Color('#9C9692');
+    this.cSmokeDay = new THREE.Color('#DDBDB4'); // by day the flare's red shows in its own smoke
     this.cEmber = new THREE.Color('#FF7A3A').multiplyScalar(7);
     this.cRocketCore = new THREE.Color('#FFE6DA');
     this.cTrail = new THREE.Color('#E8E4E0');
@@ -322,6 +331,9 @@ export class Signals {
     r.y = r.y0;
     r.z = z;
     r.t = 0;
+    r.px = r.x;
+    r.py = r.y;
+    r.pz = r.z;
     r.seed = Math.random() * 100;
     r.trailAcc = 0;
     toColor(opts.color ?? COLORS.rocket, r.color);
@@ -353,6 +365,9 @@ export class Signals {
     const t = fx.t;
     const flickAmp = reduceFlashes ? 0.08 : 0.24;
     const ocean = fx.ctx.ocean;
+    // daylight: every light pool / halo is scaled by (1 − .85·daylight) (DESIGN §2.10 by day)
+    const day = 1 - Math.min(1, Math.max(0, night));
+    const dayK = 1 - 0.85 * day;
 
     for (const f of this.flares) {
       if (!f.alive) continue;
@@ -382,23 +397,28 @@ export class Signals {
       f.flick = I;
       if (f.light) {
         f.light.position.set(f.x, f.y + 1.3, f.z);
-        f.light.set(1100 * I);
+        // firelight on wet stone, not red paint: a lower peak (lit rock tops out near L .45) and the
+        // 12–18 Hz flicker breathing in the reach too; the flare's own smoke carries most of the red
+        f.light.set(700 * I * dayK);
+        f.light.setDistance(62 * (0.82 + 0.18 * Math.min(1.2, flick)));
       }
-      // core + halo
-      glows.add(f.x, f.y + 0.35, f.z, 0.5, this.cFlareCore, 7 * I, 6.5, this.cFlare, 1.2 * I * (0.6 + 0.4 * night), 0);
-      ocean?.addGlint?.(f.x, f.z, 6, 1.8 * I, this.cFlare);
+      // core + halo: by day a small hot core and red-tinted smoke, not a haloed orb on a sunlit sea
+      glows.add(f.x, f.y + 0.35, f.z, 0.5, this.cFlareCore, 7 * I * (0.45 + 0.55 * night), 6.5 * (1 - 0.75 * day), this.cFlare, 1.2 * I * (0.6 + 0.4 * night) * dayK, 0);
+      ocean?.addGlint?.(f.x, f.z, 6, 1.8 * I * dayK, this.cFlare);
       if (dt > 0) {
         // smoke lit red by its own light, trailing with the wind
         f.smokeAcc += dt * 7 * end;
+        const sc = this.cTmp.copy(this.cSmoke).lerp(this.cSmokeDay, day);
         while (f.smokeAcc >= 1) {
           f.smokeAcc -= 1;
+          const s0 = 0.5 + 0.6 * Math.random();
           fx.pools.smoke.emit(
             t, f.x + (Math.random() - 0.5) * 0.4, f.y + 0.6, f.z + (Math.random() - 0.5) * 0.4,
             (Math.random() - 0.5) * 0.4, 0.9 + Math.random() * 0.5, (Math.random() - 0.5) * 0.4,
-            5 + Math.random() * 2.5, 0.8, 6 + Math.random() * 2.5, this.cSmoke, 0.42, this.cSmokeEnd, P_FLARE_SMOKE,
+            5 + Math.random() * 2.5, s0, 4.5 + Math.random() * 4, sc, 0.3 + 0.15 * Math.random(), this.cSmokeEnd, P_FLARE_SMOKE,
           );
         }
-        f.sparkAcc += dt * 5 * I;
+        f.sparkAcc += dt * 5 * I * (0.4 + 0.6 * night);
         while (f.sparkAcc >= 1) {
           f.sparkAcc -= 1;
           fx.pools.glow.emit(
@@ -427,17 +447,22 @@ export class Signals {
         r.x = r.x0 + wind.x * 0.15 * r.t;
         r.z = r.z0 + wind.y * 0.15 * r.t;
         I = 0.35 + 0.25 * k;
-        // smoky trail of the motor
+        // the motor's trail: a thin continuous wisp — puffs are spread along the path travelled this
+        // frame (at a low frame rate they clumped into a line of identical balls)
         if (dt > 0) {
-          r.trailAcc += dt * 26;
-          while (r.trailAcc >= 1) {
+          r.trailAcc += dt * 70;
+          let g = 32;
+          while (r.trailAcc >= 1 && g-- > 0) {
             r.trailAcc -= 1;
-            const back = Math.random() * 1.5;
+            const u = Math.random();
+            const s0 = 0.7 + 0.5 * Math.random();
             fx.pools.smoke.emit(
-              t, r.x, r.y - back, r.z, (Math.random() - 0.5) * 0.6, -0.5, (Math.random() - 0.5) * 0.6,
-              2.5 + Math.random() * 2, 0.5, 3.5, this.cTrail, 0.35, this.cSmokeEnd, P_TRAIL,
+              t, r.x + (r.px - r.x) * u, r.y + (r.py - r.y) * u, r.z + (r.pz - r.z) * u,
+              (Math.random() - 0.5) * 0.5, -0.4, (Math.random() - 0.5) * 0.5,
+              1.8 + Math.random() * 1.6, s0, 2 + 1.8 * Math.random(), this.cTrail, 0.1 + 0.08 * Math.random(), this.cSmokeEnd, P_TRAIL,
             );
           }
+          if (r.trailAcc > 4) r.trailAcc = 4;
         }
       } else {
         const td = r.t - ROCKET_RISE;
@@ -459,25 +484,33 @@ export class Signals {
           // a thin continuous wisp under the parachute (dense enough not to read as a dotted line in a gale)
           const wl2 = Math.hypot(wind.x, wind.y);
           r.trailAcc += dt * (4 + 0.6 * wl2);
-          while (r.trailAcc >= 1) {
+          let g = 16;
+          while (r.trailAcc >= 1 && g-- > 0) {
             r.trailAcc -= 1;
-            const back = Math.random() * 0.25;
+            const u = Math.random();
+            const s0 = 0.5 + 0.6 * Math.random();
             fx.pools.smoke.emit(
-              t, r.x + sx - wind.x * back, r.y - 0.6, r.z + sz - wind.y * back, 0, -0.3, 0,
-              3.5 + Math.random() * 2, 0.9, 4.5, this.cTrail, 0.13, this.cSmokeEnd, P_TRAIL,
+              t, r.x + sx + (r.px - r.x - sx) * u, r.y - 0.6 + (r.py - r.y) * u, r.z + sz + (r.pz - r.z - sz) * u, 0, -0.3, 0,
+              3.5 + Math.random() * 2, s0, 3 + 2.5 * Math.random(), this.cTrail, 0.1 + 0.06 * Math.random(), this.cSmokeEnd, P_TRAIL,
             );
           }
+          if (r.trailAcc > 4) r.trailAcc = 4;
         }
       }
       const px = r.x + (r.sx || 0);
       const pz = r.z + (r.sz || 0);
+      r.px = px;
+      r.py = r.y;
+      r.pz = pz;
+      // the parachute star only colours the sea / cloud at night or dusk; by day it is a bright point
+      const seaK = 0.03 + 0.97 * smooth(0.15, 0.6, night);
       if (r.light) {
         r.light.position.set(px, r.y, pz);
-        r.light.set((r.t < ROCKET_RISE ? 500 : 4200) * I);
+        r.light.set((r.t < ROCKET_RISE ? 500 : 4200) * I * seaK);
       }
-      const core = r.t < ROCKET_RISE ? 4 : 9;
-      glows.add(px, r.y, pz, r.t < ROCKET_RISE ? 0.5 : 1.0, this.cRocketCore, core * I, r.t < ROCKET_RISE ? 5 : 16, r.color, (r.t < ROCKET_RISE ? 1 : 3) * I, r.t < ROCKET_RISE ? 0 : 1, t * 0.3);
-      if (r.t >= ROCKET_RISE) ocean?.addGlint?.(px, pz, 20, 1.1 * I, r.color);
+      const core = (r.t < ROCKET_RISE ? 4 : 9) * (0.5 + 0.5 * night);
+      glows.add(px, r.y, pz, r.t < ROCKET_RISE ? 0.5 : 1.0, this.cRocketCore, core * I, (r.t < ROCKET_RISE ? 5 : 16) * (1 - 0.75 * day), r.color, (r.t < ROCKET_RISE ? 1 : 3) * I * dayK, r.t < ROCKET_RISE || day > 0.5 ? 0 : 1, t * 0.3);
+      if (r.t >= ROCKET_RISE) ocean?.addGlint?.(px, pz, 20, 1.1 * I * seaK, r.color);
     }
   }
 }

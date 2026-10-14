@@ -36,6 +36,8 @@ const DEG = Math.PI / 180;
 // Particle behaviour presets (constant objects: no allocation per spawn).
 const P = {
   dwSpray: { drag: 1.5, accY: -6, wind: 0.55, flags: F_STRETCH, emissive: 0, spin: 0.6 },
+  dwMist: { drag: 1.3, accY: -1.6, wind: 0.95, flags: 0, emissive: 0, spin: 0.7 }, // soft round wash mist
+  dwHaze: { drag: 0.7, accY: 0.25, wind: 1.0, flags: F_FLOAT, emissive: 0, spin: 0.15 }, // low annulus haze
   crest: { drag: 0.7, accY: -3.5, wind: 0.75, flags: F_STRETCH, emissive: 0, spin: 0.3 },
   droplet: { drag: 0.6, accY: -9.8, wind: 0.3, flags: 0, emissive: 0, spin: 0.8 },
   mist: { drag: 1.2, accY: -0.5, wind: 0.7, flags: 0, emissive: 0, spin: 0.3 },
@@ -43,6 +45,7 @@ const P = {
   damageSmoke: { drag: 1.1, accY: 0.7, wind: 1.0, flags: F_SWIRL | F_TURB, emissive: 0, spin: 0.5 },
   smoke: { drag: 0.9, accY: 0.9, wind: 0.85, flags: F_SWIRL | F_TURB, emissive: 0, spin: 0.35 },
   steam: { drag: 0.9, accY: 2.4, wind: 0.7, flags: 0, emissive: 0, spin: 0.4 },
+  boltSteam: { drag: 1.4, accY: 1.5, wind: 0.85, flags: F_TURB, emissive: 0, spin: 0.6 },
   spark: { drag: 0.8, accY: -9.8, wind: 0.2, flags: F_STRETCH | F_TWINKLE, emissive: 1, spin: 0 },
   bio: { drag: 1.6, accY: -3, wind: 0.4, flags: F_TWINKLE | F_BIO | F_FLOAT, emissive: 1, spin: 0 }, // skims the surface
   hail: { drag: 0.4, accY: -9.8, wind: 0.2, flags: 0, emissive: 0, spin: 0 },
@@ -84,8 +87,8 @@ export class Effects {
     this.jellies = new Jellies(look, this.air, HIGH.jelly);
     this.whale = new Whale(this, true);
     scene.add(
-      this.rain.mesh, this.rain.local, this.rain.localLight, this.rain.motes, this.scud.mesh, ...this.layers.layers, this.layers.glory,
-      this.gusts.mesh, this.glows.mesh, this.rings.mesh, this.gulls.mesh, this.dolphins.mesh, this.jellies.mesh, this.whale.mesh,
+      this.rain.mesh, this.rain.local, this.rain.localLight, this.rain.motes, this.scud.mesh, this.scud.shadow, ...this.layers.layers, this.layers.glory,
+      this.gusts.mesh, this.glows.mesh, this.rings.mesh, this.gulls.mesh, this.dolphins.mesh, this.jellies.mesh, this.whale.mesh, this.whale.shade,
     );
 
     // --- state / scratch --------------------------------------------------------------------------
@@ -101,7 +104,7 @@ export class Effects {
     this.stats = { emitted: 0 };
     // Debug / test switches (console: __game.fx.enabled.rain = false).
     this.enabled = { rain: true, scud: true, fogLayers: true, seaSmoke: true, gusts: true, particles: true, gulls: true, life: true, lightning: true };
-    this._acc = { dw: 0, bio: 0, crest: 0, hail: 0, hailShake: 0 };
+    this._acc = { dw: 0, dwHaze: 0, bio: 0, crest: 0, hail: 0, hailShake: 0 };
     this._c = new THREE.Color();
     this._c2 = new THREE.Color();
     this._col = new THREE.Color();
@@ -417,10 +420,20 @@ export class Effects {
     this._camera();
     this.lightning.strike(x, z, sea, strength, this.ctx.camera, this.focus, reduced);
     const k = reduced ? 0.3 : 1;
-    this.stars.push({ x, y: sea + 1.5, z, t: 0, life: reduced ? 0.6 : 0.32, I: k * Math.min(1.3, strength), reduced });
+    this.stars.push({ x, y: sea + 1.0, z, t: 0, life: reduced ? 0.6 : 0.32, I: k * Math.min(1.3, strength), reduced });
     if (this.stars.length > 6) this.stars.shift();
-    this.rings.spawn(x, z, 26 + 8 * Math.random(), 0.75, COLORS.boltHalo, 1.6 * k);
-    this.steam(x, sea, z, 10);
+    this.rings.spawn(x, z, 14 + 6 * Math.random(), 0.5, COLORS.boltHalo, 0.5 * k);
+    // a short, irregular steam burst: a few noise puffs scattered at random (not around a circle),
+    // rising and drifting downwind, gone in ~1.5 s
+    const sm = this.pools.smoke;
+    const n = 4 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const s0 = 1 + 2.5 * Math.random();
+      // born just after the return stroke (a negative age hides it), so the flash never lights a white ball
+      sm.emit(this.t + 0.12 + 0.25 * Math.random(), x + (Math.random() - 0.5) * 5, sea + 0.5 + 1.5 * Math.random(), z + (Math.random() - 0.5) * 5,
+        (Math.random() - 0.5) * 1.5, 2.5 + 4 * Math.random(), (Math.random() - 0.5) * 1.5,
+        1 + 0.9 * Math.random(), s0, s0 * (1.8 + 1.8 * Math.random()), this._steamCol, 0.12 + 0.16 * Math.random(), this._steamCol, P.boltSteam);
+    }
     // water thrown up by the strike
     const sp = this.pools.spray;
     for (let i = 0; i < 26; i++) {
@@ -589,7 +602,7 @@ export class Effects {
     this.rain.update(dt, st, camY, ctx.heli?.beam, this.wind, this._keyLight());
     this._heliScreen();
     this.scud.update(dt, st, this.wind, this.heliNdc, this.heli.alive, this.lightning.cloudFlash);
-    this.layers.update(dt, st, this.wind, this.focus, this.heli);
+    this.layers.update(dt, st, this.wind, this.focus, this.heli, this._camPos.y);
     this.gusts.update(dt, st.gustFronts, this._streakLight(st));
     this.rings.update(dt);
 
@@ -609,13 +622,13 @@ export class Effects {
   _applyEnabled(en) {
     const R = this.rain;
     if (!en.rain) R.mesh.visible = R.local.visible = R.localLight.visible = R.motes.visible = false;
-    if (!en.scud) this.scud.mesh.visible = false;
+    if (!en.scud) this.scud.mesh.visible = this.scud.shadow.visible = false;
     if (!en.fogLayers) for (let i = 0; i < 3; i++) this.layers.layers[i].visible = false;
     if (!en.fogLayers) this.layers.glory.visible = false;
     if (!en.seaSmoke) this.layers.layers[3].visible = false;
     if (!en.gusts) this.gusts.mesh.visible = false;
     if (!en.gulls) this.gulls.mesh.visible = false;
-    if (!en.life) this.dolphins.mesh.visible = this.jellies.mesh.visible = this.whale.mesh.visible = false;
+    if (!en.life) this.dolphins.mesh.visible = this.jellies.mesh.visible = this.whale.mesh.visible = this.whale.shade.visible = false;
     if (!en.lightning) for (const s of this.lightning.slots) s.setVisible(false);
     for (const pool of this._poolList) pool.mesh.visible = en.particles;
   }
@@ -658,50 +671,101 @@ export class Effects {
     this.heliNdc.y = v.y;
   }
 
-  // Downwash spray ring (DESIGN §2.13 [MUST]): 200 / 350 / 600 sprites on the ring radius, outward
-  // 8–14 m/s, life 0.8–1.4 s, 0.5 → 3 m; lit ×4 by the searchlight in the shader; teal sparks in
-  // bioluminescent night water.
+  // Downwash spray (DESIGN §2.13 [MUST], signature moment #3). Real rotor wash on water is an irregular,
+  // roughened disc with mist blown downwind, its spray flickering with gusts and blade passes — never an
+  // evenly spaced crown of petals. Emission angles are rejection-sampled from a downwind bias × slowly
+  // wandering lobes; radius ±25 %, sizes 0.5–4 m and lives are random. Most of it is soft round mist
+  // (α ≤ .35); a minority are short droplet streaks (≤ 3:1, fading fast); a few large, low haze puffs
+  // (α ≤ .25) drift downwind, their spread growing with altitude. Teal sparks in bioluminescent water.
   _downwashSpray(dt, night) {
     const dw = this.dw;
+    const acc = this._acc;
     if (dw.strength < 0.02 || !this.heli.alive) {
-      this._acc.dw = 0;
+      acc.dw = 0;
+      acc.dwHaze = 0;
       return;
     }
     const s = dw.strength;
-    const rate = (this.cfg.downwash / 1.1) * s;
-    this._acc.dw += rate * dt;
-    const sp = this.pools.spray;
     const t = this.t;
+    const R = dw.radius;
+    // blade passes alias into a ragged 3–5 Hz pulse; gust patches thicken the sheet
+    const gust = this.ctx.look?.gustField ? this.ctx.look.gustField(dw.x, dw.z) : 0.5;
+    const pulse = 0.55 + 0.45 * Math.abs(Math.sin(t * 12.7 + Math.sin(t * 3.1))) * (0.7 + 0.3 * Math.sin(t * 2.3));
+    acc.dw += (this.cfg.downwash / 1.1) * s * pulse * (0.7 + 0.6 * gust) * dt;
+    acc.dwHaze = (acc.dwHaze || 0) + (4 + 0.2 * R) * s * (this.cfg.downwash / 350) * dt;
+    const sp = this.pools.spray;
     const bio = night > 0.45 ? clamp01(this.ctx.ocean?.bioluminescence ?? 1) * smooth(0.45, 0.9, night) : 0;
+    const wl = Math.hypot(this.wind.x, this.wind.y);
+    const wx = wl > 0.1 ? this.wind.x / wl : 0;
+    const wz = wl > 0.1 ? this.wind.y / wl : 0;
+    const skew = smooth(1.5, 12, wl); // how hard the cloud leans downwind
+    const ph1 = t * 0.35 + 2.5 * Math.sin(t * 0.21) + 3 * gust;
+    const ph2 = 1.7 - t * 0.5 + Math.sin(t * 0.43);
     let guard = 64;
     // sample the sea on a few ring points once per frame (cheap, wave-accurate enough for spray)
     const ring = this._ringH || (this._ringH = new Float32Array(8));
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
-      ring[i] = this.seaHeight(dw.x + Math.cos(a) * dw.radius, dw.z + Math.sin(a) * dw.radius);
+      ring[i] = this.seaHeight(dw.x + Math.cos(a) * R, dw.z + Math.sin(a) * R);
     }
-    while (this._acc.dw >= 1 && guard-- > 0) {
-      this._acc.dw -= 1;
-      const a = Math.random() * Math.PI * 2;
-      const r = dw.radius * (0.82 + 0.3 * Math.random());
-      const cx = Math.cos(a);
-      const cz = Math.sin(a);
-      const sea = ring[Math.floor(((a / (Math.PI * 2)) * 8 + 0.5)) % 8];
-      const v = (8 + 6 * Math.random()) * (0.55 + 0.45 * s);
-      const sz = 0.5 + 0.3 * Math.random();
-      sp.emit(t, dw.x + cx * r, sea + 0.25, dw.z + cz * r, cx * v, 1.2 + 2.8 * Math.random() * s, cz * v,
-        0.8 + 0.6 * Math.random(), sz, 2.6 + 0.6 * Math.random(), this._sprayCol, (0.3 + 0.25 * Math.random()) * (0.4 + 0.6 * s), this._sprayCol, P.dwSpray);
+    while (acc.dw >= 1 && guard-- > 0) {
+      acc.dw -= 1;
+      let a = 0;
+      let cx = 1;
+      let cz = 0;
+      for (let k = 0; k < 4; k++) {
+        a = Math.random() * Math.PI * 2;
+        cx = Math.cos(a);
+        cz = Math.sin(a);
+        const down = 0.5 + 0.5 * (cx * wx + cz * wz);
+        const lobe = 0.5 + 0.25 * Math.sin(3 * a + ph1) + 0.25 * Math.sin(5 * a + ph2);
+        if (Math.random() < (1 - 0.65 * skew + 0.65 * skew * down) * (0.12 + 0.88 * lobe * lobe)) break;
+      }
+      const r = R * (0.75 + 0.5 * Math.random());
+      const sea = ring[Math.floor((a / (Math.PI * 2)) * 8 + 0.5) % 8];
+      const px = dw.x + cx * r;
+      const pz = dw.z + cz * r;
+      // upwind spray is beaten back by the wind, downwind spray carried further
+      const lean = 1 + 0.35 * skew * (cx * wx + cz * wz);
+      if (Math.random() < 0.85) {
+        const v = (2 + 6 * Math.random()) * (0.55 + 0.45 * s) * lean;
+        const s0 = 0.8 + 1.6 * Math.random() * Math.random();
+        sp.emit(t, px, sea + 0.3, pz, cx * v, 0.4 + 2 * Math.random() * s, cz * v,
+          0.8 + 1.6 * Math.random(), s0, Math.min(4, s0 * (1.8 + 1.2 * Math.random()) + 0.6), this._sprayCol,
+          (0.035 + 0.1 * Math.random()) * (0.45 + 0.55 * s), this._sprayCol, P.dwMist);
+      } else {
+        const v = (7 + 6 * Math.random()) * (0.55 + 0.45 * s) * lean;
+        const s0 = 0.25 + 0.3 * Math.random();
+        sp.emit(t, px, sea + 0.25, pz, cx * v, 1.2 + 2.8 * Math.random() * s, cz * v,
+          0.35 + 0.4 * Math.random(), s0, s0 * (2 + Math.random()), this._sprayCol,
+          (0.1 + 0.12 * Math.random()) * (0.4 + 0.6 * s), this._sprayCol, P.dwSpray);
+      }
       if (bio > 0.01) {
-        this._acc.bio += 0.75 * bio;
-        if (this._acc.bio >= 1) {
-          this._acc.bio -= 1;
-          const vb = v * (0.6 + 0.4 * Math.random());
-          this.pools.glow.emit(t, dw.x + cx * r, sea + 0.2, dw.z + cz * r, cx * vb, 0.6 + 2 * Math.random(), cz * vb,
+        acc.bio += 0.75 * bio;
+        if (acc.bio >= 1) {
+          acc.bio -= 1;
+          const vb = (5 + 5 * Math.random()) * (0.55 + 0.45 * s);
+          this.pools.glow.emit(t, px, sea + 0.2, pz, cx * vb, 0.6 + 2 * Math.random(), cz * vb,
             0.5 + 0.6 * Math.random(), 0.42, 0.2, this._bioCol, 0.9, this._bioCol, P.bio);
         }
       }
     }
-    if (this._acc.dw > 8) this._acc.dw = 8;
+    if (acc.dw > 8) acc.dw = 8;
+    // the misty annulus: big soft puffs low over the water, offset downwind, size ∝ wash radius
+    let hg = 4;
+    while (acc.dwHaze >= 1 && hg-- > 0) {
+      acc.dwHaze -= 1;
+      const a = Math.random() * Math.PI * 2;
+      const r = R * (0.55 + 0.85 * Math.random());
+      const px = dw.x + Math.cos(a) * r + wx * R * 0.35 * skew;
+      const pz = dw.z + Math.sin(a) * r + wz * R * 0.35 * skew;
+      const v = 1.5 + 2.5 * Math.random();
+      const s0 = R * (0.25 + 0.25 * Math.random());
+      this.pools.smoke.emit(t, px, this.seaHeight(px, pz) + 0.8, pz, Math.cos(a) * v, 0.3 + 0.6 * Math.random(), Math.sin(a) * v,
+        2.2 + 1.8 * Math.random(), s0, s0 * (1.8 + 0.6 * Math.random()), this._sprayCol,
+        (0.07 + 0.1 * Math.random()) * s, this._sprayCol, P.dwHaze);
+    }
+    if (acc.dwHaze > 3) acc.dwHaze = 3;
   }
 
   // Bioluminescent sparks for any splash at night.
@@ -789,7 +853,8 @@ export class Effects {
         continue;
       }
       const e = s.reduced ? softEnvelope(s.t) : strokeEnvelope(s.t);
-      this.glows.add(s.x, s.y, s.z, 1.4, this._starCol, 6 * e * s.I, 10, this._haloCol, 0.6 * e * s.I, 1, 0.4);
+      // a small, very hot core (no orb, no star rays): bloom does the glow
+      this.glows.add(s.x, s.y, s.z, 1.0, this._starCol, 3.5 * e * s.I, 2.4, this._haloCol, 0.08 * e * s.I, 0, 0);
     }
     for (let i = this.timedLights.length - 1; i >= 0; i--) {
       const l = this.timedLights[i];

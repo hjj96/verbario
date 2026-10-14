@@ -83,12 +83,17 @@ void main() {
   float rel = sd * mix(1.5, 6.5, sp.z) * (0.6 + 0.4 * env);
   float ue = 0.1 * B.y + rel * age;
   vec2 xz = rgPoint(A, ue, v);
+  // blown downwind as it flies (a soft cloud of spume, not a fan of parallel strokes)
+  float wr = fract(sp.y * 5.17 + cyc * 0.41);
+  xz += uWind * age * mix(0.15, 0.45, wr);
   float up = mix(4.0, 10.0, sp.y) * (0.55 + 0.45 * env);
   float y = H * 0.95 + up * age - 4.0 * age * age + 0.6;
   y = max(y, H * rgProfile(ue, B.y) * env + 0.8);
   vec3 p = vec3(xz.x, y, xz.y);
-  float size = mix(1.1, 5.8, pow(a01, 0.6)) * mix(0.7, 1.3, sp.x) * (0.6 + 0.4 * clamp(B.x / 14.0, 0.5, 1.5));
-  float alpha = 0.24 * B.w * smoothstep(0.08, 0.35, env) * smoothstep(0.0, 0.1, a01) * (1.0 - smoothstep(0.45, 1.0, a01));
+  // random sizes: droplet clots to big drifting puffs
+  float sr = fract(sp.x * 9.13 + cyc * 0.53);
+  float size = mix(1.2, 6.5, pow(a01, 0.6)) * mix(0.35, 1.7, sr * sr) * (0.6 + 0.4 * clamp(B.x / 14.0, 0.5, 1.5));
+  float alpha = mix(0.08, 0.2, wr) * B.w * smoothstep(0.08, 0.35, env) * smoothstep(0.0, 0.12, a01) * (1.0 - smoothstep(0.4, 1.0, a01));
   vec4 mv = viewMatrix * vec4(p, 1.0);
   mv.xyz += normalize(-mv.xyz) * size * 0.5;
   float rot = sp.x * 33.0 + age;
@@ -115,11 +120,12 @@ void main() {
   float r2 = dot(vUv, vUv);
   if (r2 > 1.0) discard;
   vec2 o = vec2(vSeed * 5.0, vSeed * 2.7);
-  float n = texture2D(uAtlas, vUv * 0.32 + o).r;
-  float dots = smoothstep(0.78, 0.97, texture2D(uAtlas, vUv * 0.85 + o * 1.3).a);
-  // torn spume: streaky wisps and droplets, never a fog bank over the crest the ocean draws
-  float a = vCol.a * (pow(1.0 - r2, 2.0) * smoothstep(0.25, 0.85, n) * 1.3 + dots * (1.0 - r2));
-  vec3 col = mix(vCol.rgb, hzFogColor(vCol.rgb), vFog);
+  float n = texture2D(uAtlas, vUv * 0.3 + o).r * 0.65 + texture2D(uAtlas, vUv * 0.75 + o * 1.7).r * 0.35;
+  // a soft volumetric puff of torn spume: noise-eroded edge, denser core, slightly self-shadowed
+  float shape = 1.0 - smoothstep(0.0, 1.0, sqrt(r2));
+  float a = vCol.a * shape * smoothstep(0.25, 0.75, n * 0.85 + shape * 0.4) * 1.4;
+  vec3 col = vCol.rgb * (0.78 + 0.32 * n);
+  col = mix(col, hzFogColor(col), vFog);
   gl_FragColor = vec4(col, clamp(a * (1.0 - 0.7 * vFog), 0.0, 1.0));
   ${FINISH}
 }
@@ -167,10 +173,12 @@ varying vec4 vClip;
 void main() {
   float back = vV.y;
   float b01 = back / (10.0 + 0.55 * 22.0);
-  // streaks along the travel direction, streaming backward off the lip
-  float n1 = texture2D(uLace, vec2(vV.x * 0.012, back * 0.05 + uHzTime * 0.35)).r;
-  float n2 = texture2D(uAtlas, vec2(vV.x * 0.004 + 0.3, back * 0.02 + uHzTime * 0.12)).r;
-  float streak = smoothstep(0.42, 0.8, 0.55 * n1 + 0.45 * n2);
+  // torn strands streaming back off the lip: 3 fbm octaves, elongated ≤ 2.5:1 along the stream and
+  // irregular along the crest (no lace tile, no periodic fingers)
+  float n1 = texture2D(uAtlas, vec2(vV.x * 0.03, back * 0.012 - uHzTime * 0.3)).r;
+  float n2 = texture2D(uAtlas, vec2(vV.x * 0.075 + 0.3, back * 0.035 - uHzTime * 0.5)).r;
+  float n3 = texture2D(uAtlas, vec2(vV.x * 0.009 + 0.7, back * 0.006 - uHzTime * 0.1)).r;
+  float streak = smoothstep(0.45, 0.85, 0.45 * n1 + 0.2 * n2 + 0.45 * n3);
   float a = smoothstep(0.1, 0.45, vV.z) * smoothstep(0.0, 0.12, b01) * pow(1.0 - clamp(b01, 0.0, 1.0), 1.3);
   a *= (0.1 + 0.9 * streak) * 0.4 * vV.w;
   if (a <= 0.003) discard;

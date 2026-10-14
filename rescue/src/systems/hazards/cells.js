@@ -2,7 +2,7 @@
 //   downburst  R 150 m, 25 s: radial outflow up to 18 m/s at 0.8R, sinking air −5 m/s inside 0.6R.
 //              Telegraph 6 s: a dark rain column and a growing white ring on the water.
 //   hail       cell R 220 m, 60–90 s, drifts with the wind: 1 %/s hull damage (×1.5 above 25 m/s).
-//              Telegraph: a pale green column #CFE3D6 (+ metallic ticking, audio). Drives weather.state.hail
+//              Telegraph: a whitish-grey hail shaft #C9CFD2 (+ metallic ticking, audio). Drives weather.state.hail
 //              near the heli so fx draws pellets.
 import * as THREE from 'three';
 import { DOWNBURST, HAIL, COLORS, rng32, lerp, clamp01, smooth, easeInOut } from './common.js';

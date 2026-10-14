@@ -416,7 +416,10 @@ export class Crowd {
     this.ghost.renderOrder = 12; // after the ocean (10)
     this.ghost.count = 0;
 
-    this.keylineMaterial = createKeylineMaterial(look);
+    // keylines only on PEOPLE, only at night, faint (≤ 0.3): they help find a body in storm foam; by
+    // day the rim light and contact foam do it (one realistic style, no ink outlines)
+    this.keylineMaterial = createKeylineMaterial(look, { opacity: 0.28 });
+    this.keylineOn = false; // survivors sets it from the night factor
     this.keyline = new THREE.InstancedMesh(g, this.keylineMaterial, max);
     this.keyline.name = 'survivors.keyline';
     this.keyline.instanceMatrix = this.mesh.instanceMatrix;
@@ -459,7 +462,8 @@ export class Crowd {
     this.ghost.count = n;
     this.keyline.count = n;
     this.mesh.visible = n > 0;
-    this.ghost.visible = this.keyline.visible = n > 0 && this.extras;
+    this.ghost.visible = n > 0 && this.extras;
+    this.keyline.visible = this.ghost.visible && this.keylineOn;
     if (!n) return;
     this.mesh.instanceMatrix.clearUpdateRanges();
     this.mesh.instanceMatrix.addUpdateRange(0, n * 16);

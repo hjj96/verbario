@@ -4,7 +4,8 @@
 //   ┌──────────────┬──────────────┐
 //   │  ROOF PLATE  │ ЧАЙКА-07     │  t 0.75..1   side lettering
 //   │  orange, «07»├──────────────┤
-//   │  + «СПАС»    │ (spare)      │
+//   │  + «СПАС»    │ boom stencil │  t 0.5..0.75  pale «ОСТОРОЖНО ВИНТ»
+//   │              │ (spare)      │
 //   └──────────────┴──────────────┘
 //   s 0..0.5        s 0.5..1
 //
@@ -12,6 +13,7 @@
 export const DECAL_RECT = {
   roof: [0, 0, 0.5, 1],
   side: [0.5, 0.75, 1, 1],
+  boom: [0.5, 0.5, 1, 0.75],
 };
 
 const ORANGE = '#FF4F1A';
@@ -82,4 +84,18 @@ export function drawDecals(g, w, h) {
   // a thin orange underline stripe on the side (the rescue band continues under the name)
   g.fillStyle = ORANGE;
   g.fillRect(sx + sw * 0.06, sh - 16, sw * 0.88, 9);
+
+  // --- boom stencil: small pale maintenance lettering. The patch is ~1.25 × 0.11 m, so the strip is
+  // drawn squeezed ×0.35 horizontally to come out with natural glyph proportions on the boom.
+  g.save();
+  g.translate(sx + sw * 0.08, sh + sh / 2);
+  g.scale(0.35, 1);
+  g.fillStyle = 'rgba(96,104,110,0.85)';
+  g.textAlign = 'left';
+  g.textBaseline = 'middle';
+  g.font = `600 58px ${FONT}`;
+  g.fillText('ОСТОРОЖНО  ВИНТ', 0, -14);
+  g.font = `500 34px ${FONT}`;
+  g.fillText('НЕ ПОДХОДИТЬ ПРИ РАБОТЕ ДВИГАТЕЛЕЙ', 0, 34);
+  g.restore();
 }

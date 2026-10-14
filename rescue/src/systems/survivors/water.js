@@ -50,13 +50,19 @@ export class Collars {
         varying vec2 vL;
         varying vec4 vD;
         varying vec3 vW;
+        varying vec3 vC; // collar centre (world xz) + its radius along local X (m)
         void main() {
           vL = position.xz;
           vD = iData;
-          vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+          mat4 mi = modelMatrix * instanceMatrix;
+          vec4 wp = mi * vec4(position, 1.0);
           vW = wp.xyz;
+          vC = vec3((mi * vec4(0.0, 0.0, 0.0, 1.0)).xz, length((mi * vec4(1.0, 0.0, 0.0, 0.0)).xyz));
           gl_Position = projectionMatrix * viewMatrix * wp;
         }`,
+      // Soft physical froth (no crackle lace): a continuous but ragged waterline band, a skirt that
+      // falls off exponentially from the hull, broken by low-frequency blotches and bubble speckle,
+      // and a short wake streak trailing upwind of a drifting object. Lace only as a faint ±10 %.
       fragmentShader: /* glsl */ `
         ${LOOK_GLSL_UNIFORMS}
         ${FOG_GLSL}
@@ -65,24 +71,32 @@ export class Collars {
         varying vec2 vL;
         varying vec4 vD;
         varying vec3 vW;
+        varying vec3 vC;
         void main() {
           float r = length(vL);                // 0..1 = 0..1.6R
           if (r > 1.0) discard;
-          // world-anchored noise, slowly crawling, phase-shifted per object so collars never match
-          vec2 uv = vW.xz + vec2(vD.w * 3.7, vD.w * 1.9 + uTime * 0.12);
-          float fine = texture2D(uLace, uv * 0.42).b;
+          vec2 uv = vW.xz + vec2(vD.w * 3.7, vD.w * 1.9);
+          vec2 crawl = vec2(0.0, uTime * 0.05);
+          float blot = texture2D(uAtlas, (uv - crawl) * 0.09).r;
+          float blot2 = texture2D(uAtlas, (uv + crawl) * 0.23 + 0.37).r;
+          float bub = texture2D(uAtlas, uv * 1.6 + crawl * 0.4).g;
+          float bubbles = 1.0 - smoothstep(0.05, 0.2, bub);
           float lace = texture2D(uLace, uv * 0.19 + 0.5).r;
-          float blot = texture2D(uLace, uv * 0.06 + 0.31).g;
           float ang = atan(vL.y, vL.x);
-          // waterline froth where the hull meets the sea (r ≈ 0.5 → 0.8R): broken by the lace so it
-          // reads as foam caught against the object, never as a drawn outline; it laps with the swell
           float lap = 0.5 + 0.5 * sin(ang * 5.0 + uTime * 1.7 + vD.w * 6.0);
-          float breakup = smoothstep(0.28, 0.72, 0.55 * fine + 0.45 * lace + 0.25 * lap - 0.1);
-          float band = exp(-pow((r - 0.52 - 0.03 * lap) / 0.1, 2.0)) * mix(0.18, 0.85, breakup);
-          // lacy skirt that thins out towards 1.6R
-          float skirt = smoothstep(0.46, 0.6, r) * (1.0 - smoothstep(0.6, 1.0, r));
-          float laceMask = smoothstep(0.5, 0.9, 0.55 * lace + 0.45 * fine + 0.35 * blot - 0.25 * r);
-          float foam = vD.x * min(0.8, band * 0.8 + skirt * laceMask * 0.5);
+          float edge = 0.5 + 0.035 * lap + 0.06 * (blot2 - 0.5);
+          float band = exp(-pow((r - edge) / 0.07, 2.0));
+          float skirt = exp(-max(0.0, r - edge) / 0.13) * smoothstep(edge - 0.1, edge, r);
+          float soft = smoothstep(0.2, 0.8, blot * 0.75 + blot2 * 0.45 - 0.1);
+          vec2 wd = normalize(uWind + vec2(1e-3, 0.0));
+          vec2 dW = (vW.xz - vC.xy) / max(vC.z, 0.1);
+          float along = dot(dW, -wd);
+          float lat = dot(dW, vec2(-wd.y, wd.x));
+          float wake = smoothstep(0.35, 0.55, along) * (1.0 - smoothstep(0.55, 1.0, along)) * exp(-lat * lat / 0.025) * smoothstep(1.0, 7.0, length(uWind));
+          float froth = band * mix(0.55, 1.0, soft) + skirt * soft * 0.55 + wake * (0.4 + 0.6 * soft) * 0.5;
+          froth *= (0.9 + 0.2 * lace) * (0.7 + 0.3 * bubbles);
+          froth += bubbles * skirt * 0.12;
+          float foam = vD.x * min(0.5, froth * 0.6);
           float dark = vD.y * 0.25 * (1.0 - smoothstep(0.35, 0.55, r));
           vec3 foamCol = mix(uFoam, uBeam, vD.z);
           float a = max(foam, dark);

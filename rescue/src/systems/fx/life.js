@@ -21,43 +21,208 @@ const unseen = (s) => s.state === 'hidden' || (s.state === 'drifting' && !s.spot
 const HINGE = 0.08;
 
 // ---------------------------------------------------------------------------------------------------
-// Gull geometry: nose towards −Z, wings along ±X (span ≈ 2.3 m, perceptual scale like the survivors).
+// Marine-life geometry helpers: lofted bodies (elliptic stations along +Z, nose at −Z) with a mottled
+// dark back and a lighter belly baked into vertex colours, flat planforms (flukes, fins) and a concat.
+const _hash = (x) => {
+  const v = Math.sin(x * 127.1 + 311.7) * 43758.5453;
+  return v - Math.floor(v);
+};
+
+// stations: [z, halfWidth, halfHeight, yOffset]; returns a non-indexed geometry (position/normal/color)
+function loftBody(stations, seg, top, belly, mottle, seed) {
+  const ct = new THREE.Color(top);
+  const cb = new THREE.Color(belly);
+  const c = new THREE.Color();
+  const pos = [];
+  const col = [];
+  const idx = [];
+  for (let i = 0; i < stations.length; i++) {
+    const [z, w, h, yo] = stations[i];
+    for (let j = 0; j <= seg; j++) {
+      const a = (j / seg) * Math.PI * 2;
+      const nx = Math.cos(a);
+      const ny = Math.sin(a);
+      pos.push(nx * w, yo + ny * h, z);
+      // countershading + low-frequency mottling (blotches along the body, none on the belly)
+      const b = smooth(0.15, -0.55, ny);
+      const m = mottle * (_hash(Math.floor(i * 0.7) * 3.1 + Math.floor(j / 2) * 1.7 + seed) - 0.5) * (1 - b);
+      c.copy(ct).lerp(cb, b).multiplyScalar(1 + m);
+      col.push(c.r, c.g, c.b);
+    }
+  }
+  const row = seg + 1;
+  for (let i = 0; i < stations.length - 1; i++) {
+    for (let j = 0; j < seg; j++) {
+      const a = i * row + j;
+      const b = a + row;
+      idx.push(a, a + 1, b, a + 1, b + 1, b);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  // close the normal seam where the ring wraps (j = 0 ≡ j = seg)
+  const n = g.attributes.normal;
+  for (let i = 0; i < stations.length; i++) {
+    const a = i * row;
+    const b = a + seg;
+    const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b);
+    const l = Math.hypot(x, y, z) || 1;
+    n.setXYZ(a, x / l, y / l, z / l);
+    n.setXYZ(b, x / l, y / l, z / l);
+  }
+  return g.toNonIndexed();
+}
+
+// A flat planform (flukes / flippers) in the xz plane at height y: outline of one half (x ≥ 0, fan from
+// `hub`), mirrored; top and bottom faces with their own colours.
+function planform(half, hub, y, thick, top, bottom) {
+  const ct = new THREE.Color(top);
+  const cbm = new THREE.Color(bottom);
+  const pos = [];
+  const nor = [];
+  const col = [];
+  const tri = (a, b, c, up) => {
+    const yy = y + (up ? thick : -thick);
+    const pts = up ? [a, b, c] : [a, c, b];
+    for (const q of pts) {
+      pos.push(q[0], yy, q[1]);
+      nor.push(0, up ? 1 : -1, 0);
+      const cc = up ? ct : cbm;
+      col.push(cc.r, cc.g, cc.b);
+    }
+  };
+  for (const sgn of [1, -1]) {
+    for (let i = 0; i < half.length - 1; i++) {
+      let a = [hub[0], hub[1]];
+      let b = [half[i][0] * sgn, half[i][1]];
+      let c = [half[i + 1][0] * sgn, half[i + 1][1]];
+      // wind CCW seen from above (+y): cross((b−a),(c−a)).y > 0 ⇔ (bz−az)(cx−ax) − (bx−ax)(cz−az) > 0
+      if ((b[1] - a[1]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[1] - a[1]) < 0) [b, c] = [c, b];
+      tri(a, b, c, true);
+      tri(a, b, c, false);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  return g;
+}
+
+// A thin falcate fin standing on the back: base front / back, tip (x = 0 plane), ±halfThick at the base.
+function finWedge(f, b, tip, ht, color) {
+  const c = new THREE.Color(color);
+  const pos = [];
+  const add = (...pts) => {
+    for (const q of pts) pos.push(...q);
+  };
+  const fl = [-ht, f[1], f[2]], fr = [ht, f[1], f[2]], bl = [-ht, b[1], b[2]], br = [ht, b[1], b[2]];
+  const mid = [0, (f[1] + tip[1]) * 0.5 + 0.04, (f[2] + tip[2]) * 0.5 - 0.06 * Math.abs(tip[2] - f[2])];
+  add(fr, tip, br, fr, mid, tip); // right (wound outwards, +x)
+  add(fl, bl, tip, fl, tip, mid); // left (−x)
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  const n = g.attributes.position.count;
+  const col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+function concatGeos(list) {
+  const out = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'color']) {
+    let total = 0;
+    for (const g of list) total += g.attributes[name].array.length;
+    const arr = new Float32Array(total);
+    let off = 0;
+    for (const g of list) {
+      arr.set(g.attributes[name].array, off);
+      off += g.attributes[name].array.length;
+    }
+    out.setAttribute(name, new THREE.BufferAttribute(arr, 3));
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Gull geometry: nose towards −Z, wings along ±X (half-span 1.12 m before the instance scale; ≈ 1.6 m
+// span in the world, a herring gull). A small spindle body, a gull-wing «M» (raised inner wing, drooping
+// hand), grey mantle on top, white underneath, black primaries with white mirrors on both faces.
 function gullGeometry() {
   const P = [];
   const C = [];
   const white = new THREE.Color(COLORS.gull);
-  const grey = new THREE.Color('#C9CED0');
+  const mantle = new THREE.Color('#9AA2A6');
+  const mantleEdge = new THREE.Color('#B4BBBE');
   const tip = new THREE.Color(COLORS.gullTip);
-  const tri = (a, b, c, ca, cb = ca, cc = ca) => {
-    P.push(...a, ...b, ...c);
+  const under = new THREE.Color('#E6EAEB');
+  const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _n = new THREE.Vector3();
+  // one triangle facing up (dir = 1) or down (dir = −1), whatever the order it was given in
+  const face = (a, b, c, ca, cb, cc, dir, dy = 0, ox = 0, oy = 1) => {
+    _a.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    _b.set(c[0] - a[0], c[1] - a[1], c[2] - a[2]);
+    _n.crossVectors(_a, _b);
+    if ((_n.x * ox + _n.y * oy) * dir < 0) {
+      [b, c] = [c, b];
+      [cb, cc] = [cc, cb];
+    }
+    P.push(a[0], a[1] + dy, a[2], b[0], b[1] + dy, b[2], c[0], c[1] + dy, c[2]);
     C.push(ca.r, ca.g, ca.b, cb.r, cb.g, cb.b, cc.r, cc.g, cc.b);
+  };
+  // a wing panel: grey (or black) on top, white (or black) underneath
+  const panel = (a, b, c, top, bot, ta = top, tb = top) => {
+    face(a, b, c, top, ta, tb, 1, 0.003);
+    face(a, b, c, bot, bot, bot, -1, -0.003);
   };
   for (const s of [1, -1]) {
     const v = (x, y, z) => [x * s, y, z];
-    const rootL = v(HINGE, 0, -0.13), rootT = v(HINGE, 0, 0.17);
-    const elbL = v(0.46, 0.07, -0.15), elbT = v(0.43, 0.07, 0.21);
-    const wriL = v(0.86, 0.02, -0.04), wriT = v(0.78, 0.02, 0.24);
-    const tipL = v(1.16, -0.03, 0.12), tipT = v(1.04, -0.03, 0.28);
-    tri(rootL, rootT, elbT, white);
-    tri(rootL, elbT, elbL, white);
-    tri(elbL, elbT, wriT, white, white, grey);
-    tri(elbL, wriT, wriL, white, grey, grey);
-    tri(wriL, wriT, tipT, tip);
-    tri(wriL, tipT, tipL, tip);
+    const rootL = v(HINGE, 0.012, -0.12), rootT = v(HINGE, 0.012, 0.16);
+    const elbL = v(0.42, 0.095, -0.14), elbT = v(0.4, 0.09, 0.2);
+    const wriL = v(0.78, 0.05, -0.07), wriT = v(0.72, 0.045, 0.22);
+    const tipL = v(1.12, -0.03, 0.1), tipT = v(1.0, -0.03, 0.25);
+    panel(rootL, rootT, elbT, mantle, white);
+    panel(rootL, elbT, elbL, mantle, white);
+    panel(elbL, elbT, wriT, mantle, white, mantle, mantleEdge);
+    panel(elbL, wriT, wriL, mantle, white, mantleEdge, mantle);
+    panel(wriL, wriT, tipT, tip, under);
+    panel(wriL, tipT, tipL, tip, tip);
+    // white mirror spots near the tip (on both faces)
+    const m1 = v(0.97, -0.012, 0.135), m2 = v(1.05, -0.022, 0.165), m3 = v(0.98, -0.014, 0.2);
+    face(m1, m2, m3, white, white, white, 1, 0.006);
+    face(m1, m2, m3, white, white, white, -1, -0.006);
   }
-  // body (diamond with a raised spine), head, tail fan
-  const nose = [0, 0.03, -0.46], tail = [0, 0.01, 0.34], l = [-HINGE, 0, 0.0], r = [HINGE, 0, 0.0], top = [0, 0.085, -0.06];
-  tri(nose, l, top, white);
-  tri(nose, top, r, white);
-  tri(top, l, tail, white);
-  tri(top, tail, r, white);
-  tri([-0.1, 0.01, 0.3], [0.1, 0.01, 0.3], [0, 0.01, 0.52], white);
+  // spindle body (6 sides, inside the hinge so the flap never bends it): white head / belly, grey back
+  const rings = [[-0.44, 0.0, 0.02], [-0.37, 0.035, 0.03], [-0.24, 0.06, 0.02], [-0.06, 0.075, 0.0], [0.12, 0.062, 0.0], [0.27, 0.035, 0.005], [0.36, 0.0, 0.008]];
+  const SIDES = 6;
+  const pt = (k, j) => {
+    const [z, r, yc] = rings[k];
+    const a = (j / SIDES) * Math.PI * 2;
+    return [Math.cos(a) * r * 0.95, yc + Math.sin(a) * r * 0.85, z];
+  };
+  const bodyCol = (p) => (p[1] > 0.02 && p[2] > -0.2 && p[2] < 0.2 ? mantle : white);
+  for (let k = 0; k < rings.length - 1; k++) {
+    for (let j = 0; j < SIDES; j++) {
+      const a = pt(k, j), b = pt(k, j + 1), c = pt(k + 1, j + 1), d = pt(k + 1, j);
+      // wound outwards from the body axis
+      const ox = (a[0] + b[0] + c[0] + d[0]) / 4;
+      const oy = (a[1] + b[1] + c[1] + d[1]) / 4 - (rings[k][2] + rings[k + 1][2]) / 2;
+      face(a, b, c, bodyCol(a), bodyCol(b), bodyCol(c), 1, 0, ox, oy);
+      face(a, c, d, bodyCol(a), bodyCol(c), bodyCol(d), 1, 0, ox, oy);
+    }
+  }
+  // tail fan (white both sides)
+  const t1 = [-0.075, 0.012, 0.26], t2 = [0.075, 0.012, 0.26], t3 = [0, 0.012, 0.47];
+  face(t1, t2, t3, white, white, white, 1, 0.002);
+  face(t1, t2, t3, white, white, white, -1, -0.002);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
   g.computeVertexNormals();
-  const s = 1.0;
-  g.scale(s, s, s);
   return g;
 }
 
@@ -104,7 +269,7 @@ export class Gulls {
     this.flapAttr = new THREE.InstancedBufferAttribute(new Float32Array(maxBirds), 1);
     this.flapAttr.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('iFlap', this.flapAttr);
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0, side: THREE.DoubleSide });
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0, side: THREE.FrontSide });
     mat.onBeforeCompile = (sh) => patchFlap(sh, true);
     mat.customProgramCacheKey = () => 'fx.gull';
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, side: THREE.DoubleSide });
@@ -136,7 +301,7 @@ export class Gulls {
     this._q = new THREE.Quaternion();
     this._e = new THREE.Euler(0, 0, 0, 'YXZ');
     this._p = new THREE.Vector3();
-    this._s = new THREE.Vector3(1.35, 1.35, 1.35); // perceptual scale (≈ 3.1 m span reads at H 150)
+    this._s = new THREE.Vector3(0.72, 0.72, 0.72); // ≈ 1.6 m span: a real herring gull (the shadow keeps it readable)
     this._ids = new Set();
   }
 
@@ -433,19 +598,18 @@ export class Gulls {
 
 // ---------------------------------------------------------------------------------------------------
 // Dolphins [NICE]: a pod porpoising across the view in calm daylight.
-function dolphinGeometry(look) {
-  const body = new THREE.SphereGeometry(0.5, 10, 6);
-  body.scale(0.42, 0.36, 2.3);
-  const fin = new THREE.ConeGeometry(0.2, 0.42, 4);
-  fin.scale(0.35, 1, 1.4);
-  const fluke = new THREE.BoxGeometry(0.9, 0.05, 0.25);
-  const flip = new THREE.BoxGeometry(0.8, 0.04, 0.2);
-  return look.merge([
-    { geometry: body, color: '#36454D' },
-    { geometry: fin, color: '#2B373E', position: [0, 0.28, 0.05], rotation: [-0.5, 0, 0] },
-    { geometry: fluke, color: '#2B373E', position: [0, 0, 1.18] },
-    { geometry: flip, color: '#2F3C43', position: [0, -0.06, -0.3] },
-  ]);
+// Dolphin (≈ 2.4 m): lofted spindle with a beak, falcate dorsal fin, swept flukes, small flippers;
+// dark grey back, pale flanks/belly.
+function dolphinGeometry() {
+  const body = loftBody([
+    [-1.2, 0.02, 0.02, -0.04], [-1.12, 0.05, 0.045, -0.05], [-1.0, 0.07, 0.06, -0.04], [-0.9, 0.14, 0.14, 0.0],
+    [-0.65, 0.2, 0.21, 0.02], [-0.3, 0.23, 0.25, 0.03], [0.05, 0.22, 0.25, 0.03], [0.4, 0.16, 0.2, 0.02],
+    [0.7, 0.09, 0.14, 0.01], [0.95, 0.05, 0.08, 0.0], [1.08, 0.03, 0.035, 0.0],
+  ], 12, '#3A464E', '#8C979C', 0.12, 7.3);
+  const fin = finWedge([0, 0.24, -0.12], [0, 0.22, 0.22], [0, 0.56, 0.32], 0.035, '#323E45');
+  const flukes = planform([[0.06, 0.98], [0.22, 1.06], [0.38, 1.2], [0.43, 1.3], [0.3, 1.27], [0.15, 1.24], [0.0, 1.2]], [0, 1.08], 0.0, 0.012, '#323E45', '#5A666C');
+  const flip = planform([[0.2, -0.5], [0.34, -0.38], [0.38, -0.3], [0.26, -0.36], [0.18, -0.4]], [0.17, -0.42], -0.12, 0.012, '#36424A', '#6E7A80');
+  return concatGeos([body, fin, flukes, flip]);
 }
 
 export class Dolphins {
@@ -454,7 +618,7 @@ export class Dolphins {
     this.max = Math.max(1, max);
     this.limit = max;
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0 });
-    this.mesh = new THREE.InstancedMesh(dolphinGeometry(fx.ctx.look), mat, this.max);
+    this.mesh = new THREE.InstancedMesh(dolphinGeometry(), mat, this.max);
     this.mesh.name = 'fx.dolphins';
     this.mesh.castShadow = false;
     this.mesh.frustumCulled = false;
@@ -640,34 +804,66 @@ export class Jellies {
 // Whale [NICE]: a ~14 m back surfacing in calm water, a blow, a short cruise, a flukes-up dive.
 const SURFACE_T = 16; // s for one surfacing
 
-function whaleGeometry(look) {
-  const body = new THREE.SphereGeometry(1, 16, 10);
-  body.scale(1.55, 1.25, 7);
-  const head = new THREE.SphereGeometry(1, 12, 8);
-  head.scale(1.35, 1.0, 2.4);
-  const hump = new THREE.SphereGeometry(0.5, 8, 6);
-  hump.scale(0.6, 0.5, 1.4);
-  const stock = new THREE.CylinderGeometry(0.35, 0.9, 3.2, 8);
-  stock.rotateX(Math.PI / 2);
-  const fluke = new THREE.SphereGeometry(1, 10, 4);
-  fluke.scale(2.6, 0.18, 0.9);
-  return look.merge([
-    { geometry: body, color: '#1C2428' },
-    { geometry: head, color: '#20292E', position: [0, 0.1, -5.6] },
-    { geometry: hump, color: '#161D21', position: [0, 1.15, 2.6] },
-    { geometry: stock, color: '#1A2226', position: [0, -0.1, 7.6] },
-    { geometry: fluke, color: '#151B1F', position: [0, -0.05, 9.4] },
-  ]);
+// Baleen whale (≈ 16 m): lofted body (20 radial segments) with a tapered, laterally compressed
+// peduncle, a small dorsal fin on the hump, a swept fluke planform with a median notch; mottled dark
+// slate back, paler belly. Mostly it is a dark shape under the water (see the body shade below).
+function whaleGeometry() {
+  const body = loftBody([
+    [-7.9, 0.1, 0.08, -0.25], [-7.5, 0.7, 0.42, -0.2], [-6.6, 1.2, 0.78, -0.15], [-5.0, 1.55, 1.05, -0.1],
+    [-3.0, 1.72, 1.22, -0.03], [-0.5, 1.75, 1.28, 0.0], [1.8, 1.58, 1.22, 0.02], [3.4, 1.28, 1.08, 0.05],
+    [4.8, 0.92, 0.95, 0.06], [5.9, 0.58, 0.8, 0.04], [6.8, 0.36, 0.6, 0.02], [7.5, 0.22, 0.36, 0.0], [7.9, 0.12, 0.14, 0.0],
+  ], 20, '#2A353B', '#59656B', 0.22, 3.1);
+  const fin = finWedge([0, 1.08, 3.0], [0, 1.0, 4.1], [0, 1.5, 4.0], 0.12, '#222C31');
+  const flukes = planform([[0.15, 7.6], [1.0, 7.95], [2.0, 8.5], [2.75, 9.1], [2.95, 9.45], [2.3, 9.35], [1.3, 9.2], [0.45, 9.05], [0.0, 8.85]], [0, 8.2], -0.02, 0.05, '#20292E', '#4B565C');
+  return concatGeos([body, fin, flukes]);
 }
+
+const SHADE_FRAG = /* glsl */ `
+${FOG_PARS}
+${LOOK_GLSL_UNIFORMS}
+${AIR_GLSL}
+uniform float uK;
+varying vec2 vUv;
+varying vec3 vW;
+void main() {
+  vec2 q = vUv * 2.0 - 1.0;
+  float d = length(vec2(q.x, q.y * (1.0 + 0.25 * q.y)));
+  float n = texture2D(uAtlas, vW.xz * 0.06).r;
+  float k = (1.0 - smoothstep(0.1, 1.0, d + (n - 0.5) * 0.3)) * uK * (1.0 - fxFog(vW));
+  gl_FragColor = vec4(vec3(1.0 - 0.5 * k), 1.0);
+}
+`;
 
 export class Whale {
   constructor(fx, allowed) {
     this.fx = fx;
     this.allowed = allowed;
-    this.mesh = new THREE.Mesh(whaleGeometry(fx.ctx.look), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0 }));
+    this.mesh = new THREE.Mesh(whaleGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0 }));
     this.mesh.name = 'fx.whale';
     this.mesh.visible = false;
     this.mesh.castShadow = false;
+    // the body under the surface: a soft dark shape on the water (multiply), the back breaks through it
+    const shadeGeo = new THREE.PlaneGeometry(1, 1);
+    shadeGeo.rotateX(-Math.PI / 2);
+    this.shade = new THREE.Mesh(shadeGeo, new THREE.ShaderMaterial({
+      uniforms: { ...fogUniforms(), ...fx.ctx.look.uniforms, ...fx.air, uK: { value: 0 } },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv; varying vec3 vW;
+        void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: SHADE_FRAG,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      blending: THREE.MultiplyBlending,
+      premultipliedAlpha: true,
+      toneMapped: false,
+      fog: true,
+    }));
+    this.shade.name = 'fx.whaleShade';
+    this.shade.scale.set(5.6, 1, 21);
+    this.shade.frustumCulled = false;
+    this.shade.renderOrder = 2;
+    this.shade.visible = false;
     this.active = false;
     this.timer = 50 + Math.random() * 60;
     this.t = 0;
@@ -686,14 +882,14 @@ export class Whale {
 
   clear() {
     this.active = false;
-    this.mesh.visible = false;
+    this.mesh.visible = this.shade.visible = false;
   }
 
   update(dt, st, focus, heli) {
     const fx = this.fx;
     const calm = (st.intensity ?? 0) < 0.2 && (st.waveHeight ?? 1) < 1.2 && (st.rain ?? 0) < 0.05;
     if (!this.active) {
-      this.mesh.visible = false;
+      this.mesh.visible = this.shade.visible = false;
       if (!this.allowed || !calm || !(dt > 0)) return;
       this.timer -= dt;
       if (this.timer > 0) return;
@@ -721,7 +917,7 @@ export class Whale {
     const k = this.t / SURFACE_T;
     if (k >= 1) {
       this.active = false;
-      this.mesh.visible = false;
+      this.mesh.visible = this.shade.visible = false;
       return;
     }
     const sea = fx.seaHeight(this.x, this.z);
@@ -743,23 +939,30 @@ export class Whale {
     this.mesh.rotation.copy(this._e);
     this.mesh.position.set(this.x, y, this.z);
     this.mesh.visible = true;
+    // the submerged body read through the water: strongest just under the surface
+    const sh = this.shade;
+    sh.visible = true;
+    sh.position.set(this.x, sea + 0.15, this.z);
+    sh.rotation.set(0, this._e.y, 0);
+    sh.material.uniforms.uK.value = smooth(-4.5, -1.2, y - sea) * (1 - smooth(0.82, 1, k)) * 0.8;
     if (dt > 0) {
       // the blow: a mist column, then a slick while cruising
       if (!this.blown && k > 0.22) {
         this.blown = true;
-        const sp = fx.pools.spray;
-        const hx = this.x + this.dx * 4.5;
-        const hz = this.z + this.dz * 4.5;
-        for (let i = 0; i < 26; i++) {
-          sp.emit(fx.t, hx + (Math.random() - 0.5) * 0.6, sea + 0.8, hz + (Math.random() - 0.5) * 0.6,
-            (Math.random() - 0.5) * 1.2, 7 + 4 * Math.random(), (Math.random() - 0.5) * 1.2,
-            1.6 + Math.random(), 0.8, 4.5 + 2 * Math.random(), this._mist, 0.32, this._mist, BLOW);
+        // the blow: a translucent, ragged mist column drifting downwind (not a white ball), no splash ring
+        const sm = fx.pools.smoke;
+        const hx = this.x + this.dx * 4.0;
+        const hz = this.z + this.dz * 4.0;
+        for (let i = 0; i < 14; i++) {
+          const s0 = 0.6 + 1.2 * Math.random();
+          sm.emit(fx.t, hx + (Math.random() - 0.5) * 0.8, sea + 1 + Math.random() * 2, hz + (Math.random() - 0.5) * 0.8,
+            (Math.random() - 0.5) * 1.4, 4 + 5 * Math.random(), (Math.random() - 0.5) * 1.4,
+            2.2 + 1.6 * Math.random(), s0, s0 * (3 + 2.5 * Math.random()), this._mist, 0.07 + 0.08 * Math.random(), this._mist, BLOW);
         }
-        fx.ctx.ocean?.splash?.(this.x, this.z, 4, 0.5);
       }
       if (k > 0.15 && k < 0.85) fx.ctx.ocean?.addWake?.(this.x, this.z, 0.8, this.dx, this.dz);
     }
   }
 }
 
-const BLOW = { drag: 1.4, accY: -2.2, wind: 0.8, flags: 0, emissive: 0, spin: 0.3 };
+const BLOW = { drag: 1.3, accY: -1.2, wind: 0.85, flags: 32, emissive: 0, spin: 0.3 }; // F_TURB

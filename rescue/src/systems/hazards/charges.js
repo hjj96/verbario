@@ -1,6 +1,7 @@
 // Lightning on the water (DESIGN §2.12 «Молния», §3.12, §3.8, §3.15 «Мимо молнии»).
 // Weather schedules strikes and owns the flash; hazards own the GROUND side:
-//   * `weather:charge {x, z, radius: 30, eta, target, heli}` → a pale pulsing #7FB8FF ring R 30 m on the water
+//   * `weather:charge {x, z, radius: 30, eta, target, heli}` → a charged zone R 30 m on the water: noise-broken
+//     pale #7FB8FF rim, flicker on the crests inside, a faint mist lifting off (the HUD carries the exact circle)
 //     for the eta (urgency rises: brighter, faster pulse, electric crackle; reduceFlashes → slow smooth glow)
 //   * `weather:lightning` at a charge → the ring flashes and dies; damage / EMP / near-miss for the heli:
 //       hit  : within the strike radius — the whole 30 m zone when the bolt seeks the heli (target 'heli'),
@@ -16,6 +17,8 @@ const HIT_DAMAGE = 0.2;
 const EMP_TIME = 4;
 const NEAR_MIN = 15;
 const NEAR_MAX = 40;
+// a faint mist lifting off the charged water (steam puffs, very low alpha)
+const MIST_OPTS = { kind: 'steam', alpha: 0.06, life: 2.4, size: [2.5, 8] };
 
 export class Charges {
   constructor(hz) {
@@ -42,6 +45,7 @@ export class Charges {
     c.target = e.target || 'sea';
     c.struck = false;
     c.t = 0;
+    c.seed = Math.random() * 6.283;
     c.ring = this.hz.glowRings.alloc();
     if (c.ring) {
       c.ring.x = c.x;
@@ -112,6 +116,18 @@ export class Charges {
           r.x = c.x;
           r.z = c.z;
         }
+        // mist lifting off the zone: 3 fixed spots per charge (so fx's smoke emitters coalesce)
+        const fx = this.ctx.fx;
+        if (fx?.smoke && dt > 0) {
+          const oc = this.hz.ocean;
+          for (let k = 0; k < 3; k++) {
+            const a = c.seed + k * 2.1;
+            const rr = c.radius * (0.2 + 0.22 * k);
+            const x = c.x + Math.cos(a) * rr;
+            const z = c.z + Math.sin(a) * rr;
+            fx.smoke(x, (oc?.heightAt ? oc.heightAt(x, z) : 0) + 0.4, z, '#BCCCE0', dt * (0.8 + 2.2 * prog), MIST_OPTS);
+          }
+        }
         c.t += dt;
         // the bolt never came (weather reset / mission change) → let the ring go
         if (c.eta < -1.5) c.struck = true;
@@ -120,7 +136,7 @@ export class Charges {
         if (r) {
           // impact: flash white-blue, then the ring collapses
           const k = Math.max(0, 1 - c.t / 0.55);
-          r.a = (reduce ? 1.2 : 3.2) * k * k;
+          r.a = (reduce ? 0.7 : 1.3) * k * k; // the bolt's own light does the flash; the zone just lets go
           r.b = 1;
           r.c = 0;
           r.color.copy(FLASH_COL);

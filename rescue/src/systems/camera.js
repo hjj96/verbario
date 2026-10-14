@@ -329,8 +329,14 @@ export class CameraRig {
       wH = 1.6;
       lb = ATTRACT_LB;
       const t = this._t;
-      tgt.x += 55 * Math.sin(t * 0.047) + 18 * Math.sin(t * 0.11);
-      tgt.z += 35 * Math.sin(t * 0.033 + 1.3) - 25;
+      // keep a lit human anchor in frame: drift between the parked heli and the lighthouse
+      const lh = this.ctx.world?.lighthouse;
+      if (lh && Number.isFinite(lh.x) && Math.hypot(lh.x - hp.x, lh.z - hp.z) < 450) {
+        tgt.x += (lh.x - hp.x) * 0.45;
+        tgt.z += (lh.z - hp.z) * 0.45;
+      }
+      tgt.x += 40 * Math.sin(t * 0.047) + 14 * Math.sin(t * 0.11);
+      tgt.z += 28 * Math.sin(t * 0.033 + 1.3) - 15;
     } else if (this.mode === 'cinematic') {
       Ht = 400;
       tiltT = 18;

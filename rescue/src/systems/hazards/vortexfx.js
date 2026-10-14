@@ -49,8 +49,13 @@ void main() {
   float thin = iC.z;
   float spinA = iC.x * mix(1.0, 1.6, layer);
   float r = fProfile(s, thin, iA.w, iD.y) * scale * mix(1.0, 0.7, layer);
-  // slow bulges travelling up and around the wall
+  // slow bulges travelling up and around the wall + fbm roughness (±20 %): no clean parallel edges
   r *= 1.0 + 0.09 * sin(3.0 * th - iD.z * spinA * 1.05 + s * 9.0 - uHzTime * 1.7 + iD.w * 7.0) * (0.35 + 0.65 * s);
+  float vn = texture2D(uAtlas, vec2(th * 0.4774648 + iD.w - iD.z * spinA * 0.08, s * 2.3 - uHzTime * 0.07)).r;
+  r *= 1.0 + 0.4 * (vn - 0.5);
+  // a wider, ragged spray / debris sheath around the bottom 15 m
+  float yb = s * iD.x;
+  r += (1.0 - smoothstep(0.0, 15.0, yb)) * (3.5 + 5.0 * vn) * sqrt(scale) * (1.0 - thin);
   // centre line: lean downwind towards the top, rope sway largest mid-height, small fast wobble
   float sw = sin(PI * s);
   vec2 swayV = vec2(sin(uHzTime * 0.37 + iB.w), cos(uHzTime * 0.29 + iB.w * 1.7)) * iB.z;
@@ -91,7 +96,12 @@ void main() {
   float n2 = texture2D(uAtlas, vec2(u * 6.0 + n1 * 0.35, s * 3.0 - uHzTime * 0.22 + vG.z)).r;
   float bands = smoothstep(0.2, 0.85, 0.55 * n1 + 0.45 * n2);
   float rings = 0.5 + 0.5 * sin(s * 52.0 + n1 * 8.0 - uHzTime * 2.4);
-  float tone = clamp(mix(bands, rings, 0.22) * 0.8 + 0.25, 0.0, 1.0);
+  // spiral striations winding up the wall (helix in the rotating frame)
+  float hel = texture2D(uAtlas, vec2(u * 5.0 + s * 2.2 + vG.z, s * 0.6 - uHzTime * 0.04)).r;
+  float stri = smoothstep(0.35, 0.75, hel);
+  float tone = clamp(mix(bands, rings, 0.15) * 0.7 + stri * 0.3 + 0.1, 0.0, 1.0);
+  // storm condensation is dark slate (#3B4447 → #A8B3B5 by the bands), pale only in clear air
+  tone *= mix(0.6, 1.0, uClear);
   vec3 alb = mix(mix(uDark, uTorDark, vF.w), mix(uLight, uTorLight, vF.w), tone);
   alb = mix(alb, uPale * mix(0.62, 1.0, tone), 0.8 * uClear * (1.0 - vF.w));
   alb *= mix(1.0, 0.72, vF.z); // the inner wall is the denser core
@@ -101,9 +111,18 @@ void main() {
   // DESIGN alpha: .55·(.4 + .6·(1 − |N·V|)^1.5) — the silhouette reads, the face we look into is veiled
   float a = 0.55 * (0.4 + 0.6 * pow(1.0 - nv, 1.5));
   a *= vis * vG.x * (0.85 + 0.3 * n2) * mix(1.0, 0.85, vF.z) * mix(1.0, 1.3, vG.w);
-  // condensation scatters like spray: a little brighter than a lambert wall under the same sky
+  // eroded silhouette: the condensation edge is torn by fbm, never a glass-smooth outline
+  float en = texture2D(uAtlas, vec2(u * 7.0 + vG.z * 3.0, s * 5.0 - uHzTime * 0.3)).r;
+  a *= mix(1.0, smoothstep(0.28, 0.68, en), smoothstep(0.35, 0.85, 1.0 - nv));
+  a *= 0.75 + 0.35 * stri;
+  // the bottom 15 m: a translucent, ragged spray sheath (lighter, thinner, torn)
+  float sh = 1.0 - smoothstep(2.0, 15.0, vW.y);
+  float sn2 = texture2D(uAtlas, vec2(u * 3.0 - vG.z, vW.y * 0.09 - uHzTime * 0.35)).r;
+  a *= mix(1.0, 0.55 * smoothstep(0.3, 0.75, sn2), sh * (1.0 - vG.w));
+  alb = mix(alb, uLight, sh * 0.45);
+  // condensation lit by the same sky as everything else (cap ×1.0 in storms — never brighter than the air)
   float sunK = 0.4 + 0.6 * max(dot(N, uAirSunDir), 0.0);
-  vec3 col = alb * hzAirLight(vW, sunK) * 1.3 * (1.0 + 2.0 * uFlash) + alb * uAirFlash * 0.9;
+  vec3 col = alb * hzAirLight(vW, sunK) * mix(1.0, 1.25, uClear) * (1.0 + 2.0 * uFlash) + alb * uAirFlash * 0.9;
   a *= hzHeliHole(vClip, vW, 0.35);
   a *= smoothstep(10.0, 38.0, distance(cameraPosition, vW));
   col = mix(col, hzFogColor(col), hzFog(vW));
@@ -258,13 +277,16 @@ void main() {
   float cyc = floor(tt / life);
   float a01 = age / life;
   float base = fract(sp.x * 7.13 + cyc * 0.6180339) * 6.2831853;
-  float rr = V.z * mix(0.55, 1.1, fract(sp.z * 3.7 + cyc * 0.37)) * (1.0 + 0.45 * a01);
+  float rr = V.z * mix(0.6, 1.6, fract(sp.z * 3.7 + cyc * 0.37)) * (1.0 + 0.6 * a01);
   float om = 25.0 * sqrt(scale) / max(rr, 1.0); // 25 m/s orbit
   float ang = base + V2.x * om * age;
-  vec3 p = vec3(V.x + cos(ang) * rr, 0.3 * uShadowY + V2.z * age * (0.7 + 0.6 * sp.y), V.y + sin(ang) * rr);
-  p.xz += uWind * 0.3 * age;
-  float size = mix(1.1, 4.6, pow(a01, 0.7)) * mix(0.7, 1.3, sp.y) * sqrt(scale);
-  float alpha = 0.18 * V.w * smoothstep(0.0, 0.14, a01) * (1.0 - smoothstep(0.55, 1.0, a01));
+  // a low, wide mist skirt, skewed downwind — not a column of cotton balls
+  float y = 0.3 * uShadowY + V2.z * age * (0.25 + 0.35 * sp.y);
+  vec3 p = vec3(V.x + cos(ang) * rr, min(y, 4.0 + 6.0 * sp.y), V.y + sin(ang) * rr);
+  p.xz += uWind * (0.35 + 0.35 * sp.z) * age;
+  float sr = fract(sp.y * 5.3 + cyc * 0.71);
+  float size = mix(2.0, 9.0, pow(a01, 0.6)) * mix(0.45, 1.5, sr * sr) * sqrt(scale);
+  float alpha = 0.11 * V.w * smoothstep(0.0, 0.14, a01) * (1.0 - smoothstep(0.5, 1.0, a01));
   vec4 mv = viewMatrix * vec4(p, 1.0);
   mv.xyz += normalize(-mv.xyz) * size * 0.6; // soft-particle push: do not slice the waves
   float rot = sp.x * 40.0 + age * 0.8;
@@ -290,12 +312,12 @@ void main() {
   float r2 = dot(vUv, vUv);
   if (r2 > 1.0) discard;
   vec2 o = vec2(vSeed * 7.0, vSeed * 3.3);
-  float n = texture2D(uAtlas, vUv * 0.3 + o).r;
-  float dots = smoothstep(0.8, 0.97, texture2D(uAtlas, vUv * 0.9 + o * 1.7).a);
-  // wispy, not a solid puff: hundreds of these overlap when the column is seen from above
-  float body = pow(1.0 - r2, 2.2) * smoothstep(0.2, 0.85, n) * 1.2;
-  float a = vCol.a * (body + dots * (1.0 - r2) * 0.8);
-  vec3 col = mix(vCol.rgb, hzFogColor(vCol.rgb), vFog);
+  float n = texture2D(uAtlas, vUv * 0.3 + o).r * 0.65 + texture2D(uAtlas, vUv * 0.75 + o * 1.7).r * 0.35;
+  // a soft, noise-eroded mist puff (hundreds overlap into a hazy annulus seen from above)
+  float shape = 1.0 - smoothstep(0.0, 1.0, sqrt(r2));
+  float a = vCol.a * shape * smoothstep(0.25, 0.75, n * 0.85 + shape * 0.4) * 1.4;
+  vec3 col = vCol.rgb * (0.8 + 0.3 * n);
+  col = mix(col, hzFogColor(col), vFog);
   gl_FragColor = vec4(col, clamp(a * (1.0 - 0.7 * vFog), 0.0, 1.0));
   ${FINISH}
 }

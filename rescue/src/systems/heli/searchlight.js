@@ -1,6 +1,7 @@
 // Gimballed searchlight (DESIGN §2.7.1, §2.9, §3.10): SpotLight #FFF1DA aimed at the cursor on the
-// water (≤ 60° from nadir), wide straight down, narrow when slanted; an open additive volumetric
-// cone to the water hit point with density by weather; drives ocean.setSearchlight every frame and
+// water (≤ 60° from nadir), wide straight down, narrow when slanted, soft penumbra (.6); a
+// single-scattering light shaft to the water hit point (materials.createConeMaterial: analytic cone,
+// front faces only, mist noise, phase, no end cap) with density by weather; drives ocean.setSearchlight every frame and
 // publishes the beam on heli.beam for fx (rain sparkle in the beam), survivors and the cable shader.
 import * as THREE from 'three';
 import { POINTS } from './model.js';
@@ -20,7 +21,7 @@ export class Searchlight {
     this.ctx = ctx;
     this.model = model;
     // Light (no shadow). Created once; only intensity/angle/direction change.
-    this.spot = new THREE.SpotLight(0xfff1da, 0, RANGE, 0.26, 0.35, 2);
+    this.spot = new THREE.SpotLight(0xfff1da, 0, RANGE, 0.26, 0.6, 2);
     this.spot.name = 'heli.searchlight';
     this.spot.castShadow = false;
     this.spot.target.name = 'heli.searchlightTarget';
@@ -108,7 +109,7 @@ export class Searchlight {
     // Spot: keep the pool brightness roughly constant with distance (pool 0.75–0.9 after tonemap).
     const spot = this.spot;
     spot.angle = this.angle;
-    spot.penumbra = 0.35;
+    spot.penumbra = 0.6; // soft falloff over the outer ~40 % of the pool — no stage-spot edge
     spot.position.copy(o);
     spot.target.position.copy(this.hit);
     spot.target.updateMatrixWorld();
@@ -123,13 +124,18 @@ export class Searchlight {
     const rain = st.rain || 0;
     const fog = st.fog || 0;
     const inten = st.intensity || 0;
-    let density = 0.02 + 0.16 * smooth(0, 0.8, rain) + 0.07 * smooth(0.6, 0.95, inten) + 0.33 * fog;
-    density = Math.min(0.4, density);
+    let density = 0.02 + 0.2 * smooth(0, 0.8, rain) + 0.07 * smooth(0.6, 0.95, inten) + 0.33 * fog;
+    density = Math.min(0.42, density);
     const cu = this.coneMat.uniforms;
     cu.uDensity.value = density;
-    cu.uIntensity.value = level * (0.3 + 0.7 * night) * 0.55; // double-sided cone: each wall adds
+    cu.uIntensity.value = level * (0.3 + 0.7 * night) * 0.55;
     cu.uLen.value = this.length;
-    const rEnd = this.length * Math.tan(this.angle * 1.05);
+    const tanA = Math.tan(this.angle * 1.05);
+    const rEnd = this.length * tanA;
+    cu.uApex.value.copy(o);
+    cu.uAxis.value.copy(this.dir);
+    cu.uTanA.value = tanA;
+    cu.uCos2.value = 1 / (1 + tanA * tanA);
     this.cone.visible = level > 0.01;
     if (this.cone.visible) {
       this.cone.position.copy(o);

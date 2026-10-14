@@ -1,6 +1,7 @@
 // Rings drawn ON the water, conformed to the live sea surface (CPU: ocean.heightAt per vertex, so they ride
 // the swell instead of slicing through it):
-//   'glow' — the lightning charge ring: pale pulsing #7FB8FF, R 30 m, additive (DESIGN §2.12, §3.12)
+//   'glow' — the lightning charge zone: a noise-broken pale #7FB8FF rim (30–50 % gaps) and a flickering
+//            glow hugging the crests inside, pulsing in brightness, additive (DESIGN §2.12, §3.12)
 //   'foam' — the downburst's growing white ring (§3.12 telegraph), normal blending, lacy
 // One draw call per kind; a slot is a ring. Only active slots touch the CPU (≈ 200 heightAt calls each).
 import * as THREE from 'three';
@@ -8,7 +9,7 @@ import { HZ_GLSL, FINISH, TAU } from './common.js';
 
 // Radial rows: the ring line plus a soft inner fill (fractions of the radius).
 const ROWS = {
-  glow: [0.66, 0.88, 0.975, 1.0, 1.03],
+  glow: [0.0, 0.4, 0.7, 0.88, 0.96, 1.0, 1.04, 1.1],
   foam: [0.9, 0.97, 1.0, 1.035, 1.1],
 };
 
@@ -34,14 +35,32 @@ void main() {
   int slot = int(vQ.z + 0.5);
   vec4 R = uRing[slot];
   float q = vQ.x;
-  float line = exp(-pow(q / 0.75, 2.0));
-  float halo = exp(-pow(q / 3.2, 2.0)) * 0.22;
-  float fill = smoothstep(-0.34 * R.x, -0.02 * R.x, q) * step(q, 0.0) * 0.06; // faint charged zone inside
-  // electric crackle: angular dashes re-rolled 18 times a second
-  float tick = floor(uHzTime * 18.0);
-  float h = texture2D(uAtlas, vec2(vQ.y * 9.0 + tick * 0.137, tick * 0.071)).a;
-  float crack = mix(1.0, 0.45 + 1.1 * step(0.45, h), R.w);
-  float I = (line * crack + halo + fill) * R.y * (0.45 + 0.55 * R.z);
+  float sl = float(slot);
+  // seamless angular noise (sampled on a circle in atlas space), drifting: the rim wobbles ±1.5 m and
+  // 30–50 % of it is simply missing — a charged sea, not an area-of-effect decal
+  float ang = vQ.y * 6.2831853;
+  vec2 cs = vec2(cos(ang), sin(ang));
+  float n1 = texture2D(uAtlas, cs * 0.21 + vec2(0.31 * sl, uHzTime * 0.013)).r;
+  float n2 = texture2D(uAtlas, cs * 0.6 + vec2(0.57, 0.11 * sl - uHzTime * 0.021)).r;
+  float n3 = texture2D(uAtlas, cs * 1.3 + vec2(0.13 * sl + uHzTime * 0.05, 0.71)).r;
+  float qq = q + (n1 - 0.5) * 5.0 + (n3 - 0.5) * 2.0;
+  // soft-ended gaps and a brightness that wanders along the arc (no even dashes)
+  float gaps = smoothstep(0.34, 0.62, n2 * 0.7 + n1 * 0.3);
+  float w = mix(1.0, 2.4, n3);
+  float line = exp(-pow(qq / w, 2.0)) * gaps * (0.35 + 0.65 * n3) / sqrt(w);
+  float halo = exp(-pow(qq / 5.0, 2.0)) * 0.16 * (0.35 + 0.65 * gaps);
+  // inside: a flickering pale glow that hugs the wave crests over capillary-agitated water
+  float inside = smoothstep(0.03 * R.x, -0.1 * R.x, q);
+  vec2 xz = vW.xz;
+  float tick = floor(uHzTime * 12.0);
+  float rip = texture2D(uAtlas, xz * 0.31 + vec2(tick * 0.137, tick * 0.071)).r;
+  float flick = texture2D(uAtlas, xz * 0.023 + vec2(uHzTime * 0.05, -uHzTime * 0.037)).r;
+  float crest = smoothstep(0.0, 1.6, vQ.w);
+  float spark = inside * (0.15 + 0.85 * crest) * smoothstep(0.5, 0.8, flick) * smoothstep(0.45, 0.8, rip);
+  // crackle towards the strike: smooth random brightness along the rim (no bead / dash pattern)
+  float ck = texture2D(uAtlas, cs * 0.9 + vec2(floor(uHzTime * 14.0) * 0.173, 0.3 + sl * 0.2)).r;
+  float crack = mix(1.0, 0.4 + 1.2 * ck, R.w);
+  float I = (line * crack * 1.7 + halo + spark * (0.3 + 0.3 * R.w)) * R.y * (0.4 + 0.6 * R.z);
   vec3 col = uRingCol[slot] * I * (1.0 - hzFog(vW));
   gl_FragColor = vec4(col, 1.0);
   ${FINISH}
@@ -170,6 +189,7 @@ export class WaterRings {
       any = true;
       dirty = true;
       this._parked[s.index] = false;
+      let sum = 0;
       for (let i = 0; i <= this.segs; i++) {
         const ang = (i / this.segs) * TAU;
         const cx = Math.cos(ang);
@@ -179,12 +199,17 @@ export class WaterRings {
           const x = s.x + cx * r;
           const z = s.z + cz * r;
           const v = i0 + i * R + j;
+          const h = ocean && ocean.heightAt ? ocean.heightAt(x, z) : 0;
+          sum += h;
           this.pos[v * 3] = x;
-          this.pos[v * 3 + 1] = (ocean && ocean.heightAt ? ocean.heightAt(x, z) : 0) + lift;
+          this.pos[v * 3 + 1] = h + lift;
           this.pos[v * 3 + 2] = z;
           this.q[v * 4] = r - s.radius;
         }
       }
+      // aQ.w: height above the ring's mean surface (the charge glow hugs the crests)
+      const mean = sum / this.perSlot + lift;
+      for (let v = i0; v < i0 + this.perSlot; v++) this.q[v * 4 + 3] = this.pos[v * 3 + 1] - mean;
     }
     if (dirty) {
       this.posAttr.needsUpdate = true;

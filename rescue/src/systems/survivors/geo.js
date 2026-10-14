@@ -124,7 +124,8 @@ export function limb(a, b, r, seg = 6) {
 // half-section mirrored in x. Returns a geometry with per-vertex colours from colorAt(x, y, z, out).
 //   length, beam, keel (depth below the reference line, positive down), freeboard (deck above it),
 //   bowStart (0..1 of the length where the bow starts tapering), sternTaper (0..1 transom width)
-export function shipHull({ length, beam, keel, freeboard, bowStart = 0.55, sternTaper = 0.8, stations = 14, deckRise = 0 }) {
+//   rows: extra section heights (m) inserted into the topsides so vertex-colour bands stay crisp
+export function shipHull({ length, beam, keel, freeboard, bowStart = 0.55, sternTaper = 0.8, stations = 14, deckRise = 0, rows = null }) {
   const P = [];
   const half = length / 2;
   const prof = (k) => {
@@ -140,7 +141,7 @@ export function shipHull({ length, beam, keel, freeboard, bowStart = 0.55, stern
   const section = (w, k) => {
     const sheer = freeboard + deckRise * Math.pow(Math.max(0, k - 0.6) / 0.4, 2);
     const kd = keel * (0.75 + 0.25 * Math.sin(Math.min(1, k * 1.15) * Math.PI));
-    return [
+    const pts = [
       [0, -kd],
       [w * 0.45, -kd * 0.82],
       [w * 0.82, -kd * 0.45],
@@ -148,6 +149,17 @@ export function shipHull({ length, beam, keel, freeboard, bowStart = 0.55, stern
       [w, sheer * 0.5],
       [w * 1.02, sheer],
     ];
+    if (!rows) return pts;
+    // every ring keeps the same point count (rows clamped into the section's height range)
+    for (const ry of rows) {
+      const y = Math.min(sheer - 0.02, Math.max(-kd * 0.05 + 0.01, ry));
+      let j = 3;
+      while (j < pts.length - 1 && pts[j + 1][1] < y) j++;
+      const a = pts[j], b = pts[j + 1];
+      const t = (y - a[1]) / Math.max(1e-4, b[1] - a[1]);
+      pts.splice(j + 1, 0, [a[0] + (b[0] - a[0]) * t, y]);
+    }
+    return pts;
   };
   const rings = [];
   for (let i = 0; i <= stations; i++) {

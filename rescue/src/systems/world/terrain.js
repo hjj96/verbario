@@ -8,7 +8,8 @@
 //   joints     two near-orthogonal fracture sets cut clefts / gullies (sheltered hollows)
 //   flats      structure footprints blended to a target height (pads, plinths, walkways)
 //   cuts       kept under water (jetty)
-// The grid gives an indexed mesh with smooth normals (underwater cells culled) and per-vertex
+// The grid gives an indexed mesh with smooth normals (deep cells culled; a seabed skirt sloping to
+// −10 m is kept round every shore so storm troughs never expose a cut edge) and per-vertex
 // aTerr = (cover, cavity, shelter, bird) for the terrain material, plus a CPU sampler for placing
 // vegetation and boulders on the rendered surface, and inscribed circles for ocean.setShoals.
 import * as THREE from 'three';
@@ -250,7 +251,7 @@ export function makeHeightFn(def) {
 // Grid sampling → mesh + sampler.
 //   opts.cover(x, z, h, ny, cav, shel) → 0..1 ground-cover weight; opts.bird(x, z, h, hmax) → 0..1
 //   opts.scaleTo: rescale the land part so the summit is exactly this high (rocks keep their H)
-export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover = null, bird = null, scaleTo = 0, height = null } = {}) {
+export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover = null, bird = null, scaleTo = 0, height = null, skirt = 0, skirtDepth = -10 } = {}) {
   const fn = height || makeHeightFn(def);
   const nx = Math.max(2, Math.ceil((x1 - x0) / step) + 1);
   const nz = Math.max(2, Math.ceil((z1 - z0) / step) + 1);
@@ -269,6 +270,48 @@ export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover 
     const k = scaleTo / hmax;
     for (let i = 0; i < N; i++) if (H[i] > 0) H[i] *= k;
     hmax = scaleTo;
+  }
+  // seabed skirt: storm troughs drop several metres below the cut, so cells within `skirt` metres of
+  // the shore are kept and the seabed slopes down to skirtDepth at the skirt's outer edge — the
+  // waterline shows rock running under the water, never a grid-aligned cut-off slab
+  let SD = null;
+  if (skirt > 0) {
+    SD = new Float32Array(N);
+    for (let i = 0; i < N; i++) SD[i] = H[i] >= cut ? 0 : 1e9;
+    const D1 = 1, D2 = Math.SQRT2;
+    for (let j = 0; j < nz; j++) {
+      for (let i = 0; i < nx; i++) {
+        const id = j * nx + i;
+        let d = SD[id];
+        if (i > 0) d = Math.min(d, SD[id - 1] + D1);
+        if (j > 0) {
+          d = Math.min(d, SD[id - nx] + D1);
+          if (i > 0) d = Math.min(d, SD[id - nx - 1] + D2);
+          if (i < nx - 1) d = Math.min(d, SD[id - nx + 1] + D2);
+        }
+        SD[id] = d;
+      }
+    }
+    for (let j = nz - 1; j >= 0; j--) {
+      for (let i = nx - 1; i >= 0; i--) {
+        const id = j * nx + i;
+        let d = SD[id];
+        if (i < nx - 1) d = Math.min(d, SD[id + 1] + D1);
+        if (j < nz - 1) {
+          d = Math.min(d, SD[id + nx] + D1);
+          if (i < nx - 1) d = Math.min(d, SD[id + nx + 1] + D2);
+          if (i > 0) d = Math.min(d, SD[id + nx - 1] + D2);
+        }
+        SD[id] = d;
+      }
+    }
+    const R = skirt / step;
+    for (let i = 0; i < N; i++) {
+      const d = SD[i];
+      if (d <= 0 || d > R + 1.5) continue;
+      const t = sstep(0.3 * R, R, d);
+      H[i] = Math.min(H[i], H[i] + (skirtDepth - H[i]) * t);
+    }
   }
   // normals (central differences)
   const NX = new Float32Array(N), NY = new Float32Array(N), NZ = new Float32Array(N);
@@ -312,7 +355,7 @@ export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover 
   for (let j = 0; j < nz - 1; j++) {
     for (let i = 0; i < nx - 1; i++) {
       const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
-      if (Math.max(H[a], H[b], H[c], H[d]) < cut) continue;
+      if (Math.max(H[a], H[b], H[c], H[d]) < cut && (!SD || Math.min(SD[a], SD[b], SD[c], SD[d]) * step > skirt)) continue;
       const A = use(a), Bv = use(b), C = use(c), D = use(d);
       // split along the shorter height diagonal (follows ridges and gullies)
       if (Math.abs(H[a] - H[d]) < Math.abs(H[b] - H[c])) idx.push(A, C, D, A, D, Bv);

@@ -11,7 +11,7 @@
 //  [SHOULD]        alpha ·= smoothstep(.6R, 1.2R, dist) with a churned rim.
 //  Glory [SHOULD]  two-band spectral ring R 6–14 m around the heli's SHADOW on fog / drizzle,
 //                  strength = fog × sun visibility.
-//  Sea smoke       from Beaufort 9: a plane at ~1.5 m with noise stretched along the wind, α .25.
+//  Sea smoke       from Beaufort 9: a plane just above the crests, wisps ≤ 3:1 only in gust patches, α ≤ .08.
 //  [SHOULD]
 import * as THREE from 'three';
 import { LOOK_GLSL_UNIFORMS, LOOK_GLSL_FUNCS } from '../../core/look.js';
@@ -28,6 +28,7 @@ attribute vec4 aS;  // tile x, tile z (0..1), size (m), height (m)
 attribute vec4 aS2; // rotation, noise seed u, v, rank
 uniform vec2 uScudOff;
 uniform float uTile;
+uniform float uShadowH;
 varying vec2 vUv;
 varying vec2 vLocal;
 varying vec3 vW;
@@ -41,6 +42,13 @@ void main() {
   q.x *= 1.25;
   vec2 r = vec2(cs * q.x - sn * q.y, sn * q.x + cs * q.y);
   vec3 wp = vec3(c.x + r.x, aS.w, c.y + r.y);
+#ifdef SCUD_SHADOW
+  // the patch's faint shade on the sea: projected along the sun to just above the crests
+  vec3 sd = uAirSunDir;
+  float sy = max(sd.y, 0.3);
+  wp.xz -= sd.xz / sy * (aS.w - uShadowH);
+  wp.y = uShadowH;
+#endif
   vW = wp;
   vUv = position.xy;
   vLocal = r; // world-oriented offset from the cloud centre (noise travels with the cloud)
@@ -61,6 +69,7 @@ uniform vec4 uCloudFlash[3];
 uniform vec3 uHeliNdc; // ndc xy, cutout radius (ndc units)
 uniform vec2 uWindDirN;
 uniform float uNightAlpha; // alpha multiplier at night (1 by day)
+uniform float uShadowK;    // strength of the sea shadow (0 at night)
 varying vec2 vUv;
 varying vec2 vLocal;
 varying vec3 vW;
@@ -87,7 +96,15 @@ void main() {
   // cl ≈ 0.58 ± 0.1: storm (pres 1) covers about half of every quad, overcast leaves thin wisps
   float thr = mix(0.70, 0.45, pres);
   float dens = smoothstep(thr, thr + 0.24, cl * (0.75 + 0.25 * edge)) * edge;
+  // 2-octave erosion: thin margins are torn into rags, the cores stay
+  float e1 = texture2D(uAtlas, q * 0.11 + vec2(evo * 4.0, 0.3)).r;
+  float e2 = texture2D(uAtlas, q * 0.27 - vec2(0.7, evo * 6.0)).r;
+  dens *= smoothstep(0.22, 0.6, e1 * 0.6 + e2 * 0.4 + dens * 0.45);
   if (dens < 0.004) discard;
+#ifdef SCUD_SHADOW
+  gl_FragColor = vec4(vec3(1.0 - 0.08 * uShadowK * smoothstep(0.0, 0.6, dens) * smoothstep(0.0, 0.3, pres)), 1.0);
+  return;
+#endif
   float alpha = dens * 0.35 * smoothstep(0.0, 0.3, pres);
   // at night the layer is all but invisible (never black ink stains over lit water) until a flash
   // or lightning inside it reveals it
@@ -103,8 +120,9 @@ void main() {
   // fade closer than 25 m to the camera
   alpha *= smoothstep(22.0, 42.0, distance(vW, cameraPosition));
 
-  // tops lit by the sun / sky; denser = brighter (more light scattered back up)
-  vec3 col = mix(uShade, uLit, smoothstep(0.1, 0.9, dens * 0.8 + n3 * 0.3));
+  // tops lit by the sun / sky, only a little brighter than the shaded body (no cotton wool); thin
+  // torn parts show the darker body
+  vec3 col = mix(uShade, uLit, smoothstep(0.15, 0.95, dens * 0.75 + n3 * 0.3) * (0.55 + 0.45 * e1));
   col += uAirFlash * 0.6 * (0.4 + 0.6 * dens);
   // in-cloud lightning: spots of #6A7BA8 glowing from inside
   for (int i = 0; i < 3; i++) {
@@ -168,6 +186,8 @@ export class Scud {
         uHeliNdc: { value: new THREE.Vector3(0, 0, 0.25) },
         uWindDirN: { value: new THREE.Vector2(1, 0) },
         uNightAlpha: { value: 1 },
+        uShadowH: { value: 3 },
+        uShadowK: { value: 1 },
       },
       vertexShader: SCUD_VERT,
       fragmentShader: SCUD_FRAG,
@@ -181,7 +201,28 @@ export class Scud {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 23.5; // before rain, bolts and glows: bright things above the layer shine through
     this.mesh.visible = false;
+    // faint (−8 %) moving shade of every patch on the sea: same quads, multiply-blended, no depth test
+    this.shadowMat = new THREE.ShaderMaterial({
+      uniforms: this.material.uniforms,
+      defines: { SCUD_SHADOW: 1 },
+      vertexShader: SCUD_VERT,
+      fragmentShader: SCUD_FRAG,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      side: THREE.DoubleSide,
+      blending: THREE.MultiplyBlending,
+      premultipliedAlpha: true,
+      toneMapped: false,
+      fog: true,
+    });
+    this.shadow = new THREE.Mesh(g, this.shadowMat);
+    this.shadow.name = 'fx.scudShadow';
+    this.shadow.frustumCulled = false;
+    this.shadow.renderOrder = 1.5;
+    this.shadow.visible = false;
     this._c = new THREE.Color();
+    this._c2 = new THREE.Color();
   }
 
   setCount(n) {
@@ -199,7 +240,10 @@ export class Scud {
     const frontOn = !!(front && front.active && prev && next && Number.isFinite(prev.scud) && Number.isFinite(next.scud));
     const any = Math.max(pres, frontOn ? Math.max(prev.scud, next.scud) : 0);
     this.mesh.visible = any > 0.01 && this.mesh.geometry.instanceCount > 0;
+    this.shadow.visible = this.mesh.visible && (st.night ?? 0) < 0.8;
     if (!this.mesh.visible) return;
+    u.uShadowH.value = 0.75 * (Number(st.waveHeight) || 0.5) + 1.2;
+    u.uShadowK.value = 1 - smooth(0.3, 0.8, st.night ?? 0);
     // drift with the wind ×1.35
     this.offset.x += wind.x * 1.35 * dt;
     this.offset.y += wind.y * 1.35 * dt;
@@ -217,9 +261,9 @@ export class Scud {
     // cloud tops seen from above: sky light ×2.2 (multiple scattering) + sun, a touch of fog colour
     const lit = this._c;
     lit.setRGB(0.3, 0.32, 0.34);
-    if (p.ambient) lit.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 1.7);
+    if (p.ambient) lit.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 1.3);
     if (p.sun) {
-      const k = (p.sunIntensity ?? 1) * 0.6 * Math.sqrt(sunY);
+      const k = (p.sunIntensity ?? 1) * 0.42 * Math.sqrt(sunY);
       lit.r += p.sun.r * k;
       lit.g += p.sun.g * k;
       lit.b += p.sun.b * k;
@@ -234,7 +278,8 @@ export class Scud {
     lit.multiplyScalar(0.85 + 0.15 * (1 - night));
     u.uNightAlpha.value = 1 - 0.5 * smooth(0.3, 0.9, night);
     u.uLit.value.copy(lit);
-    u.uShade.value.copy(lit).multiplyScalar(0.5);
+    u.uShade.value.copy(lit).multiplyScalar(0.62);
+    if (p.ambient) u.uShade.value.lerp(this._c2.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 0.7), 0.5);
     if (p.deep) u.uShade.value.lerp(p.deep, 0.15);
     for (let i = 0; i < 3; i++) this.cloudFlash[i].copy(cloudFlash[i]);
     u.uHeliNdc.value.set(heliNdc.x, heliNdc.y, 0.32);
@@ -292,17 +337,19 @@ void main() {
     float rim = exp(-pow((dl - 1.25 * R) / (0.35 * R), 2.0)) * 0.35;
     a = mix(a, a * hole + rim * a, uHole.w);
   } else {
-    // sea smoke (spindrift): a low haze torn into long soft streaks along the wind, densest in the
-    // gusts (the same cat's-paw field that pushes the heli) — a veil, never distinct white rods
+    // sea smoke (spindrift): spume blown off the crests, only inside the gust patches (the same
+    // cat's-paw field that pushes the heli) — short soft wisps ≤ 3:1 along the wind, broken across it
+    // by a rotated octave, with dark water between them. Never a screen-wide brushed veil.
     vec2 w = uWindDir;
     vec2 rel = p - uOff;
     vec2 uv = vec2(dot(rel, w), dot(rel, vec2(-w.y, w.x)));
-    float n1 = texture2D(uAtlas, vec2(uv.x * 0.0032, uv.y * 0.024) + uSeed).r;
-    float n2 = texture2D(uAtlas, vec2(uv.x * 0.0085, uv.y * 0.06) - uSeed).r;
-    float fine = texture2D(uAtlas, vec2(uv.x * 0.021, uv.y * 0.15) + uSeed * 2.0).g;
-    float streak = smoothstep(0.38, 0.88, n1 * 0.62 + n2 * 0.5);
-    float gust = 0.35 + 0.65 * lookGust(p) + 0.04 * lookFronts(p);
-    a = streak * (0.6 + 0.4 * fine) * clamp(gust, 0.0, 1.0);
+    vec2 uvr = mat2(0.82, 0.57, -0.57, 0.82) * uv;
+    float n1 = texture2D(uAtlas, vec2(uv.x * 0.009, uv.y * 0.027) + uSeed).r;
+    float n2 = texture2D(uAtlas, vec2(uvr.x * 0.02, uvr.y * 0.045) - uSeed).r;
+    float fine = texture2D(uAtlas, vec2(uv.x * 0.05, uv.y * 0.14) + uSeed * 2.0).r;
+    float streak = smoothstep(0.5, 0.86, n1 * 0.55 + n2 * 0.45 + (fine - 0.5) * 0.25);
+    float gust = smoothstep(0.5, 0.85, lookGust(p)) + 0.03 * lookFronts(p);
+    a = streak * clamp(gust, 0.0, 1.0);
   }
   a *= uAlpha;
   float fog = fxFog(vW);
@@ -427,7 +474,7 @@ export class AirLayers {
   }
 
   // focus {x, z}; heli: {x, y, z, alt, alive}; dw: {x, z, radius, strength}; st weather.state
-  update(dt, st, wind, focus, heli) {
+  update(dt, st, wind, focus, heli, camY = 120) {
     const p = st.palette || {};
     const fogAmt = clamp01(p.fog ?? st.fog ?? 0);
     const presence = smooth(0.55, 1.0, fogAmt);
@@ -463,16 +510,17 @@ export class AirLayers {
       u.uHole.value.set(heli.x, heli.z, R, holeK * reach);
     }
 
-    // sea smoke from Beaufort 9 (≈ 20.8 m/s): streaks along the wind, α .25
+    // sea smoke from Beaufort 9 (≈ 20.8 m/s): wisps in the gust patches, α ≤ .08; from cinematic
+    // heights (> 150 m) it would only flatten the swell, so it fades out
     const ws = Math.hypot(wind.x, wind.y);
-    const smokeAmt = this.seaSmokeAllowed ? smooth(17, 23, ws) : 0;
+    const smokeAmt = this.seaSmokeAllowed ? smooth(17, 23, ws) * (1 - smooth(150, 230, camY)) : 0;
     const sm = this.layers[3];
     sm.visible = smokeAmt > 0.01;
     if (sm.visible) {
       const u = sm.material.uniforms;
       u.uCenter.value.set(cx, cz);
-      u.uY.value = 1.4 + 0.35 * (st.waveHeight ?? 1);
-      u.uAlpha.value = 0.25 * smokeAmt;
+      u.uY.value = 1.2 + 0.4 * (st.waveHeight ?? 1);
+      u.uAlpha.value = 0.08 * smokeAmt;
       if (ws > 0.1) u.uWindDir.value.set(wind.x / ws, wind.y / ws);
       const c = u.uCol.value;
       if (p.foam) c.copy(p.foam);

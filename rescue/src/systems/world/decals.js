@@ -99,18 +99,97 @@ export function paintHelideck(g, ox, oy, S, R, opts = {}) {
     g.fillText(numbers[0], cx - (circle + 1.4) * k, cy);
     g.fillText(numbers[1], cx + (circle + 1.4) * k, cy);
   }
-  // tyre marks & oil stains on the touchdown zone
-  g.globalAlpha = 0.08;
-  g.strokeStyle = '#000';
-  g.lineWidth = 0.25 * k;
-  for (let i = 0; i < 6; i++) {
-    const a = (seed * 0.7 + i * 1.1) % (Math.PI * 2);
+  // weathering (one realistic style): chalky, sun-faded markings, tyre / skid arcs round the
+  // touchdown circle, oil drips near the centre, a grid of tie-down rings with rust halos, grime
+  // gathering toward the deck edge
+  helideckWear(g, cx, cy, k, R, circle, deck, seed);
+  g.restore();
+}
+
+function helideckWear(g, cx, cy, k, R, circle, deck, seed) {
+  let s = (seed * 7919 + 13) >>> 0;
+  const r = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const inOct = (x, y, m) => {
+    const a = Math.atan2(y, x), d = Math.hypot(x, y);
+    let off = (((a % (Math.PI / 4)) + Math.PI / 4) % (Math.PI / 4)); // edge middles at k·π/4
+    if (off > Math.PI / 8) off -= Math.PI / 4;
+    return d < ((R - m) * Math.cos(Math.PI / 8)) / Math.cos(off);
+  };
+  // faded paint: deck-coloured speckle eating into every marking (10-20 %)
+  g.fillStyle = deck;
+  g.globalAlpha = 0.1;
+  g.fillRect(cx - R * k, cy - R * k, 2 * R * k, 2 * R * k);
+  for (let i = 0; i < Math.round(4 * R * R * 8); i++) {
+    g.globalAlpha = 0.15 + 0.3 * r();
+    const rr = (0.04 + 0.22 * r() * r()) * k;
     g.beginPath();
-    g.arc(cx + Math.cos(a) * 1.2 * k, cy + Math.sin(a) * 1.0 * k, (2 + (i % 3)) * k, a, a + 0.8);
+    g.arc(cx + (r() * 2 - 1) * R * k, cy + (r() * 2 - 1) * R * k, rr, 0, Math.PI * 2);
+    g.fill();
+  }
+  // grime toward the edge (spray, soot, dust settle where nobody walks)
+  const gr = g.createRadialGradient(cx, cy, R * 0.45 * k, cx, cy, R * k);
+  gr.addColorStop(0, 'rgba(20,18,14,0)');
+  gr.addColorStop(1, 'rgba(20,18,14,0.22)');
+  g.globalAlpha = 1;
+  g.fillStyle = gr;
+  g.fillRect(cx - R * k, cy - R * k, 2 * R * k, 2 * R * k);
+  // tyre / skid arcs round the touchdown circle, short straight skids inside it
+  g.strokeStyle = '#0B0B0A';
+  g.lineCap = 'round';
+  for (let i = 0; i < 16; i++) {
+    const a = r() * Math.PI * 2;
+    const rad = (circle + (r() * 2 - 1) * 1.6) * k;
+    g.globalAlpha = 0.07 + 0.12 * r();
+    g.lineWidth = (0.18 + 0.22 * r()) * k;
+    g.beginPath();
+    g.arc(cx + (r() - 0.5) * 0.8 * k, cy + (r() - 0.5) * 0.8 * k, rad, a, a + 0.25 + 0.6 * r());
     g.stroke();
   }
+  for (let i = 0; i < 8; i++) {
+    const a = r() * Math.PI * 2, d = r() * (circle - 1) * k, l = (0.8 + 1.6 * r()) * k, h = a + (r() - 0.5) * 0.6;
+    const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
+    g.globalAlpha = 0.06 + 0.08 * r();
+    g.lineWidth = (0.16 + 0.12 * r()) * k;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + Math.cos(h) * l, y + Math.sin(h) * l);
+    g.stroke();
+  }
+  // oil drips and stains near the centre (where the aircraft stands)
+  for (let i = 0; i < 9; i++) {
+    const x = cx + (r() - 0.5) * 4.5 * k, y = cy + (r() - 0.5) * 3.5 * k, rr = (0.15 + 0.55 * r()) * k;
+    const og = g.createRadialGradient(x, y, 0, x, y, rr);
+    og.addColorStop(0, 'rgba(8,7,5,0.42)');
+    og.addColorStop(0.7, 'rgba(12,10,8,0.2)');
+    og.addColorStop(1, 'rgba(12,10,8,0)');
+    g.globalAlpha = 0.6 + 0.4 * r();
+    g.fillStyle = og;
+    g.beginPath();
+    g.ellipse(x, y, rr, rr * (0.6 + 0.4 * r()), r() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // tie-down grid (recessed rings every ~1.6 m), each with a rust halo bleeding into the deck
+  const step = 1.6;
+  for (let gx = -R; gx <= R; gx += step) {
+    for (let gy = -R; gy <= R; gy += step) {
+      if (!inOct(gx, gy, 1.2)) continue;
+      const x = cx + gx * k, y = cy + gy * k;
+      const rh = (0.22 + 0.2 * r()) * k;
+      const rg = g.createRadialGradient(x, y + 0.05 * k, 0, x, y + 0.05 * k, rh);
+      rg.addColorStop(0, 'rgba(107,58,34,0.55)');
+      rg.addColorStop(1, 'rgba(107,58,34,0)');
+      g.globalAlpha = 0.5 + 0.5 * r();
+      g.fillStyle = rg;
+      g.fillRect(x - rh, y - rh, rh * 2, rh * 2.4);
+      g.globalAlpha = 0.75;
+      g.strokeStyle = '#16181A';
+      g.lineWidth = Math.max(1, 0.05 * k);
+      g.beginPath();
+      g.arc(x, y, Math.max(1.2, 0.09 * k), 0, Math.PI * 2);
+      g.stroke();
+    }
+  }
   g.globalAlpha = 1;
-  g.restore();
 }
 
 // Roof banner: big painted letters on a flat roof (rig name, or «С ДНЁМ СПАСАТЕЛЯ» on 27 Dec).

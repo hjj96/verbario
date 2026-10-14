@@ -4,7 +4,7 @@
 //   2. radial chromatic aberration
 //   3. pulses (flash → #DCE6FF highlights, damage / hull / fuel edges, vortex smear + veil)
 //   4. grading: CDL slope/offset/power → S-curve around 0.42 → soft-light split tone → greenTint
-//      sickly lift → saturation with ORANGE PROTECTION (exact DESIGN snippet)
+//      sickly lift → saturation with ORANGE PROTECTION (high-chroma orange only, never boosted)
 //   5. tinted vignette (milky in fog)
 //   6. luminance grain reseeded at 24 Hz (+ chroma noise at night)
 //   7. letterbox 2.39:1
@@ -117,13 +117,14 @@ void main() {
             best = hz;
             dropK = k;
             dropN = vec3(dv / rr, hz);
-            dropA = clamp((1.0 - k) * rr * cellPx.y / 1.25, 0.0, 1.0);
+            // a lens focused at 100+ m sees the bead defocused: its edge is blurred over ≈ 3 px
+            dropA = smoothstep(0.0, 1.0, (1.0 - k) * rr * cellPx.y / 3.0);
           }
         }
       }
     }
     // a convex water lens: magnified, inverted view of what is behind it
-    uv -= dropN.xy * uRefr * dropA * vec2(1.0 / aspect, 1.0);
+    uv -= dropN.xy * uRefr * dropA * (1.0 - 0.6 * smoothstep(0.55, 1.0, dropK)) * vec2(1.0 / aspect, 1.0);
   }
 
   // fog condensation: micro droplets creeping in from the edges
@@ -160,17 +161,21 @@ void main() {
     col = mix(col, vec3(lv * 0.8 + 0.1), 0.3 * clamp(uVortex, 0.0, 1.0));
   }
 
-  // drop shading: dark rim, faint lift, specular glint from the upper left
+  // drop shading: a defocused water bead — the view through it is blurred, a faint lift, a barely
+  // darker meniscus (≤ 8 %) and a soft broad highlight; no icon-like rim or specular dot
   if (dropA > 0.0) {
-    // a defocused bead gathers ambient light: soft lift inside, darker meniscus at the rim
-    float lift = (0.03 + 0.1 * luma(col)) * (1.0 - 0.55 * uNight);
-    col = mix(col, col * 1.05 + lift, 0.7 * dropA * (1.0 - smoothstep(0.55, 1.0, dropK)));
-    col *= 1.0 - 0.32 * smoothstep(0.6, 1.0, dropK) * dropA;
+    vec2 bo = 2.5 * uPxScale / uRes;
+    vec3 blur = (texture2D(tDiffuse, uv + vec2(bo.x, bo.y)).rgb + texture2D(tDiffuse, uv + vec2(-bo.x, bo.y)).rgb
+               + texture2D(tDiffuse, uv + vec2(bo.x, -bo.y)).rgb + texture2D(tDiffuse, uv - bo).rgb) * 0.25;
+    col = mix(col, blur, 0.75 * dropA);
+    float lift = (0.02 + 0.06 * luma(col)) * (1.0 - 0.55 * uNight);
+    col = mix(col, col * 1.03 + lift, 0.5 * dropA * (1.0 - smoothstep(0.55, 1.0, dropK)));
+    col *= 1.0 - 0.08 * smoothstep(0.6, 1.0, dropK) * dropA;
     vec3 L = normalize(vec3(-0.45, 0.55, 0.7));
-    float spec = pow(max(dot(normalize(dropN), L), 0.0), 48.0);
-    // light focused through the bead: bright crescent opposite the glint
-    float caustic = smoothstep(0.45, 0.92, dropK) * (1.0 - smoothstep(0.92, 1.0, dropK)) * max(0.0, dot(dropN.xy, -L.xy) / length(L.xy));
-    col += vec3(0.85, 0.9, 0.95) * spec * 0.55 * dropA + col * caustic * 0.55 * dropA + caustic * 0.02 * dropA;
+    float spec = pow(max(dot(normalize(dropN), L), 0.0), 14.0);
+    // light focused through the bead: a soft crescent opposite the highlight
+    float caustic = smoothstep(0.4, 0.9, dropK) * (1.0 - smoothstep(0.9, 1.0, dropK)) * max(0.0, dot(dropN.xy, -L.xy) / length(L.xy));
+    col += vec3(0.85, 0.9, 0.95) * spec * 0.12 * dropA * (1.0 - 0.5 * uNight) + col * caustic * 0.22 * dropA;
   }
   if (condense > 0.0) col = mix(col, vec3(luma(col) * 0.7 + 0.22), clamp(condense, 0.0, 0.6));
   if (uSalt > 0.01) {
@@ -215,8 +220,10 @@ void main() {
     vec3 c = col;
     float maxc = max(c.r, max(c.g, c.b));
     float minc = min(c.r, min(c.g, c.b));
-    float orange = smoothstep(.15, .4, maxc - minc) * smoothstep(.1, .35, c.r - c.b) * (1. - smoothstep(.45, .7, c.g / max(c.r, 1e-3)));
-    float sat = mix(uSat, max(uSat, 1.1), orange) * uSatMul;
+    // a true protection: survivors' orange (vests, rafts, flares: chroma > .35) keeps at least its
+    // ungraded saturation; it is never boosted, so warm-sunlit granite is not pushed toward brick
+    float orange = smoothstep(.35, .5, maxc - minc) * smoothstep(.25, .45, c.r - c.b) * (1. - smoothstep(.45, .7, c.g / max(c.r, 1e-3)));
+    float sat = mix(uSat, max(uSat, 1.0), orange) * uSatMul;
     col = mix(vec3(luma(c)), c, sat);
   }
   col *= uBright;
