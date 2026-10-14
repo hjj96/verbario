@@ -65,6 +65,18 @@ float worldFogF(vec3 wp) {
 }
 `;
 
+// Light loop with the sun's shadow term captured into propShadow (same patch idea as the ocean's
+// coloured shadows). Props are lit twice by "sky" (hemisphere + PMREM environment), so a shadow that
+// only removes direct sun reads faint on bright decks and rock: the captured term also occludes part
+// of the indirect light (the heli hovering 5 m over a deck blocks the sky too) — DESIGN §2.7.2.
+function propLightsBegin() {
+  const src = THREE.ShaderChunk.lights_fragment_begin;
+  const re = /directLight\.color \*= \( directLight\.visible && receiveShadow \) \? getShadow\( directionalShadowMap\[ i \],([^;]*);/;
+  const out = src.replace(re, (m, rest) => `propShadow = min( propShadow, ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ],${rest} );\n\t\tdirectLight.color *= propShadow;`);
+  return out === src ? null : out;
+}
+const PROP_LIGHTS_BEGIN = propLightsBegin();
+
 // ------------------------------------------------------------------------------------------------
 // Props. aSurf = (roughness, metalness, emissive gain, channel); channel < 0 → decal surface.
 // Instanced meshes may encode glow in instanceColor > 1 (emissive = colour − 1).
@@ -127,6 +139,7 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
         varying vec4 vSurf;
         varying vec3 vPropW;
         varying vec3 vPropL;
+        float propShadow = 1.0;
         #ifdef USE_WORLD_DECAL
           uniform sampler2D uDecal;
           varying vec2 vDecalUv;
@@ -149,12 +162,26 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
             diffuseColor.rgb = mix(diffuseColor.rgb, dc.rgb, dc.a);
           }
         #endif
-        diffuseColor.rgb *= 1.0 - 0.15 * uWet;`,
+        diffuseColor.rgb *= 1.0 - 0.15 * uWet;
+        // natural rock (aSurf.z = −1): wet dark band at the waterline with a ragged, splash-driven top,
+        // a slick sheen on it, and large-scale tone variation so a pile of rocks never reads uniform
+        float propWetBand = 0.0;
+        if (vSurf.z < -0.5) {
+          float rn = texture2D(uAtlas, vPropW.xz * 0.045 + vec2(0.31, 0.17)).r;
+          float rn2 = texture2D(uAtlas, vPropW.xz * 0.19 + vPropW.y * 0.07).r;
+          float wetTop = 0.9 + 1.7 * rn + 0.5 * rn2 + 1.2 * uWet;
+          propWetBand = 1.0 - smoothstep(wetTop - 0.9, wetTop, vPropW.y);
+          diffuseColor.rgb *= mix(1.0, 0.42, propWetBand);
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 0.92, 0.84), propWetBand * (1.0 - smoothstep(0.0, 0.6, vPropW.y)));
+          float tone = texture2D(uAtlas, vPropW.xz * 0.012 + vec2(0.7, 0.2)).r;
+          diffuseColor.rgb *= mix(vec3(0.86, 0.88, 0.9), vec3(1.1, 1.06, 1.0), tone);
+        }`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-        roughnessFactor = clamp(vSurf.x - 0.25 * uWet, 0.04, 1.0);`,
+        roughnessFactor = clamp(vSurf.x - 0.25 * uWet, 0.04, 1.0);
+        roughnessFactor = mix(roughnessFactor, 0.32, propWetBand);`,
       )
       .replace(
         '#include <metalnessmap_fragment>',
@@ -174,15 +201,19 @@ export function createPropMaterial(look, shared, { decal = null, name = 'prop' }
         }
         totalEmissiveRadiance += propSpill * diffuseColor.rgb;`,
       )
+      .replace('#include <lights_fragment_begin>', PROP_LIGHTS_BEGIN || '#include <lights_fragment_begin>')
       .replace(
         '#include <lights_fragment_end>',
         `#include <lights_fragment_end>
         float propCloud = mix(1.0, 0.72, lookCloud(vPropW.xz) * uCloudK);
         reflectedLight.directDiffuse *= propCloud;
-        reflectedLight.directSpecular *= propCloud;`,
+        reflectedLight.directSpecular *= propCloud;
+        float propOcc = mix(1.0, 0.45, 1.0 - propShadow);
+        reflectedLight.indirectDiffuse *= propOcc;
+        reflectedLight.indirectSpecular *= propOcc;`,
       );
   };
-  mat.customProgramCacheKey = () => `mayday-world-prop-v3${decal ? '-decal' : ''}`;
+  mat.customProgramCacheKey = () => `mayday-world-prop-v4${decal ? '-decal' : ''}`;
   return mat;
 }
 

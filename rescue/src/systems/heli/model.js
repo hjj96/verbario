@@ -366,7 +366,7 @@ export function buildHeliModel(ctx) {
   rotorPivot.position.copy(POINTS.mast);
   body.add(rotorPivot);
   const discSegs = quality === 'low' ? 48 : 72;
-  const rotorMat = createRotorMaterial(look, { blades: 5, bladeHalfWidth: 0.27 / ROTOR_R });
+  const rotorMat = createRotorMaterial(look, { blades: 5, bladeHalfWidth: 0.27 / ROTOR_R, hull: [1.5 / ROTOR_R, 0.42 / ROTOR_R, 5.2 / ROTOR_R, -3.2 / ROTOR_R] });
   const rotor = new THREE.Mesh(new THREE.CircleGeometry(1, discSegs), rotorMat);
   rotor.name = 'heli.rotor';
   rotor.scale.setScalar(ROTOR_R);

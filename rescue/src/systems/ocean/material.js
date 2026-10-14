@@ -94,6 +94,7 @@ export function createOceanUniforms(look, bank, features) {
     uMem: { value: null },
     uMemWin: { value: v4(0, 0, 320, 0) },
     uSunDirS: { value: new THREE.Vector3(0, 1, 0) },
+    uSpotWater: { value: 0.3 }, // share of the physical SpotLights on the water (layer 11 is look-driven)
     uFront: { value: v4(0, 0, 1, 0) },
     uFrontB: { value: v4(0, 120, 0, 0) },
     uPrevDeep: { value: col() },
@@ -124,6 +125,13 @@ function patchLightsBegin() {
   out = out.replace(
     'getDirectionalLightInfo( directionalLight, directLight );',
     'getDirectionalLightInfo( directionalLight, directLight );\n\t\tdirectLight.color *= oCloudMul;',
+  );
+  // Spot lights (heli searchlight, lighthouse): on the water only a share of the physical light —
+  // the pool's brightness is the look-driven layer 11 (DESIGN §2.1 pool 0.75–0.9). At full
+  // strength the GGX glare of the lamp and lit downwash foam blew out under the night bloom.
+  out = out.replace(
+    'getSpotLightInfo( spotLight, geometryPosition, directLight );',
+    'getSpotLightInfo( spotLight, geometryPosition, directLight );\n\t\tdirectLight.color *= uSpotWater;',
   );
   // The sun only contributes its specular: the water's diffuse response to sun and sky is the
   // look-driven term in OCEAN_FRAGMENT_FINAL. Local lights (searchlight, flares) stay physical.
@@ -197,6 +205,6 @@ export function createOceanMaterial(uniforms, defines) {
     shader.fragmentShader = fs;
   };
   // Program cache: defines are part of the key already; bump the tag when the injection changes.
-  mat.customProgramCacheKey = () => 'mayday-ocean-1';
+  mat.customProgramCacheKey = () => 'mayday-ocean-2';
   return mat;
 }

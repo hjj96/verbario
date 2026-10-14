@@ -391,6 +391,72 @@ output) and `render(dt)`. Reads weather & heli state for per-weather tuning, `se
 post.render(dt); post.resize(w, h); post.pulse(name, strength) // e.g. 'damage' red edge, 'lightning'
 ```
 
+## Extensions in use (beyond the sections above — other systems now depend on these)
+
+Each system's file header lists its full extras; this is the cross-module part. All are optional for
+consumers (guard against stubs), but **do not rename or remove them** without updating the readers.
+
+**heli** — fields: `pitch, yawRate, vy, speed, airspeed, seaY, surfaceY, skidClearance, bingo, bingoPad,
+fuelBurn, overheat, autorotation, crash {phase:'autorot'|'ditched', t, reason, deck}, ditched, damageTaken,
+refueling, seatsUsed, ceiling, hoistWorld, downwash {x, z, radius, strength}`, `beam {on, intensity,
+origin, dir, hit, cosOuter, angle, length}` (fx rain sparkle, survivors, cable), `setSearchlight(on)`,
+`winch.{tension, jammed, surfaceY, height, inRange, radius, stretcher, cabinFull, denied}`. The winch
+surface under the basket = max(sea, pad deck, `survivors.deckAt`).
+Events: `heli:capture {survivor}` (basket closes on a person — HUD/audio/radio), `heli:slip {survivor,
+reason}`, `heli:snag {x, z}`, `heli:winch-denied {reason:'high'|'fast'|'landed'}`, `heli:cabin-full
+{survivor, seats}`, `heli:unload-person {pad, person, left}`, `heli:resupply {pad}`, `heli:overheat`,
+`heli:autorotation`, `heli:failing {reason}`, `heli:water-strike {x, z, strength}`, `heli:touchdown {pad,
+vy}`, `heli:flare-throw {x, z, eta}`, `heli:raft-throw {x, z}`; `heli:refuel` carries `state:
+'start'|'done'|'stop'`, `heli:land` `{autorotation, vy}`, `heli:crash` `{x, z, onDeck, pad}`,
+`heli:winch` `{state, load}`, `heli:pickup {survivor, person}`.
+
+**mission** — state: `state ('title'|'briefing'|'play'|'crash'|'debrief'), index, endless, elapsed,
+timeLeft, score, finalScore, stats, objectives [{id, text, kind, progress, target, done, failed}], task,
+hint, chapter {n, text, title}, goldenHour, calls, result, debriefPhase ('cinematic'|'logbook'), manifest,
+marks, cards(), career, rank, continueIndex, isUnlocked(i), square(x, z), trackPoints(), complete(),
+fail(reason)`. Events: `mission:chapter {n, text, title}` (HUD caption + camera letterbox),
+`mission:task {text}`, `mission:call {call}` («Смена»), `mission:logbook {report}`, `mission:locked
+{index, text}`; `mission:hint` hide = `{key, text: null, show: false, learned}`.
+
+**hud / ui** — `hud.capturingBack` (mission's pause poll ignores «Назад» while a sub-menu owns it),
+`hud.toast(title, detail, opts)`, `hud.screen`, `hud.activeMenu`. Extra UI events (audio listens):
+`ui:back, ui:pause, ui:endless, ui:click, ui:hover, ui:type, ui:stamp, ui:static`.
+
+**survivors** — `types` (prepare.js reads it), `deckAt(x, z) → y | −Infinity` (barge / ferry / rig lower
+deck: winch surface), `fireSignal(s, kind)` (`'rocket'|'smoke'|'flare'|'whistle'|'dye'|'mirror'`, mission
+scripts), `spot(s, by)`, `byTag(tag)`, `boardOne(s)`, `carriers, lostMarkers, elapsed, rescuedTotal,
+lostTotal`; group extras `tag, label, name, velocity, warmth, critical, signal {kind, x, z, error, arc},
+strobe, carrier, inBasket, deckY, flower, dwWarn, pet`. Events: `survivor:capsize {s, cause}`,
+`survivor:sinking {s, phase:'warn'|'sunk'}`, `survivor:jump {s, from}`, `survivor:creak {s, x, z}`,
+`survivor:downwash {s, level:'push'|'capsize'}`, `survivor:raft-boarded {s}`, `survivor:tip {s}`,
+`survivor:pet {s, pet, action}`; `survivor:shout` has `reason:'near'|'loudspeaker'`, `survivor:signal`
+has `arc`.
+
+**ocean** — `heightAt/normalAt/velocityAt(x, z, …, tOffset)`, `featureHeightAt(x, z, tOffset)` (rogue /
+whirlpool part only), `featureFlowAt(x, z, out)`, `addWake(x, z, strength, dirX, dirZ)` (direction
+optional: oriented V-wake), `searchlightAt(x, z, y = 0)`, `snapWaves()`, `waveStats`, `selfTest()`. The
+searchlight pool on the water is look-driven (layer 11); SpotLights reach the water at a reduced share.
+
+**weather** — `state.paletteNext` (spatial front: blend per pixel `mix(paletteNext, palettePrev, f)`),
+`state.sunDirShadow` (cheated sun; `sunDir` = light in use incl. the strike swing), `flashColor, wet,
+severity, presetLabel, windFrom (deg «from»), gustMax, pressureTrend, rates {lightning, spouts, rogues},
+transition {active, from, to, t, over, progress}, lastStrike {x, z, distance, cloudOnly, t}`; palette extras
+`shadowRadius, fog, cloudShadow (−1 = clearing sun patches), glitter, glitterExp, sss, scud, beam, detect
+{base, altBonus}, sea.clearing, sea.cloudReflect`; `cloudShadowAt(x, z)`, `labels`, `presets`,
+`lights.sun` (the shadow light). Note: `windSpeed/gust` refresh in `update()`, not in `setPreset()`.
+
+**world** — pads also carry `height, tilt, velocity, services {fuel, repair, resupply}, lee`;
+`obstacles[]` entries have `kind, name`; `world.lighthouse`; event `world:slam {x, z, strength, ship}`
+(bow slams spray), `world:foghorn`, `world:horn {x, z, distance, name}`.
+
+**cameraRig** — `cinematicBars(duration)` (letterbox pulse: mission start ≈2.4 s, chapters, first hazard
+reveal; skipped for the opening of `?autostart`), `slowMo(scale, duration, key)` (≤ once per key per
+mission), `setMode(mode)`, `focusPoint, height, tiltDeg, viewHeight, reveal, trauma, heliScreen {x, y,
+ndcX, ndcY}, heliScreenVelocity` (post lens rivulets). Event `camera:zoom {zoom, index}`.
+
+**post** — `pulse(name, strength)` names: `'damage' | 'hit' | 'lightning' | 'strike' | 'vortex' | 'spray' |
+'salt' | 'flash'`; event `post:quality-hint {quality, suggest, frameMs}`.
+
 ## Debug / test URL parameters (must keep working — automated playtests depend on them)
 
 | param | owner | effect |
@@ -416,4 +482,4 @@ Systems expose enough on `window.__game` for tests, e.g. `__game.weather.setPres
 `weather:lightning`, `hazard:warning`, `hazard:spawn`, `hazard:hit`, `hazard:end`, `heli:damage`,
 `heli:crash`, `heli:winch`, `heli:pickup`, `heli:land`, `heli:takeoff`, `heli:unload`, `heli:fuel-low`,
 `heli:refuel`, `heli:flare`, `survivor:spawn`, `survivor:spotted`, `survivor:critical`, `survivor:lost`,
-`survivor:boarded`, `survivor:rescued`, `radio:line`.
+`survivor:boarded`, `survivor:rescued`, `radio:line`; extras listed under «Extensions in use».

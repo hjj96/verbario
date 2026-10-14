@@ -513,7 +513,7 @@ export function createCraftMaterial(look, opts = {}) {
         totalEmissiveRadiance += uRim * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
         ${debris ? '' : `
         int ck = int(vCrMat.x + 0.5);
-        if (ck == 1) totalEmissiveRadiance += uTape * 3.5 * vCr.x; // canopy patches: big, keep the orange readable
+        if (ck == 1) totalEmissiveRadiance += uTape * 1.4 * vCr.x; // canopy patches are big: at 3.5 their night bloom veiled the canopy pale pink — keep the orange readable
         else if (ck == 2) totalEmissiveRadiance += vec3(1.0, 0.98, 0.95) * (0.3 + 18.0 * vCr.y);
         else if (ck == 3) totalEmissiveRadiance += uWin * 2.2 * vCr.w;
         else if (ck == 4) totalEmissiveRadiance += uChem * (0.4 + 3.5 * vCr2.y);

@@ -135,9 +135,13 @@ export function createHullMaterial(look, decalTex) {
 // Rotor disc (DESIGN §2.9): alpha .10 + .12·pow(.5+.5cos(N(θ−ghost)), exp) ghost blades with the
 // stagecoach drift, yellow tip ring r .96–1 at α .3, crisp frozen blades when the lightning flash
 // > .5 (or the rotor is slow), St. Elmo's blue crackle on the tip ring. Geometry radius = 1.
-export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033 } = {}) {
+// hull: (half-width of the cabin, half-width of the boom, nose, boom start) in disc units — the
+// blur fades to 40 % over the fuselage so the disc never greys the hull (DESIGN §2.1 pillar 8: the
+// heli stays the most readable object; a full disc darkened the white paint by 10–22 %).
+export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, hull = null } = {}) {
   return new THREE.ShaderMaterial({
     uniforms: {
+      uHull: { value: hull ? new THREE.Vector4(...hull) : new THREE.Vector4(0, 0, 0, 0) },
       uTime: look.uniforms.uTime,
       uGhost: { value: 0 },
       uBlade: { value: 0 },
@@ -161,6 +165,7 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033 }
     fragmentShader: /* glsl */ `
       uniform float uTime, uGhost, uBlade, uSharp, uExp, uElmo, uBlades, uBladeW, uOpacity, uLit;
       uniform vec3 uDiscColor, uTipColor, uElmoColor;
+      uniform vec4 uHull;
       varying vec2 vP;
       void main() {
         float r = length(vP);
@@ -168,6 +173,12 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033 }
         float th = atan(vP.y, vP.x);
         float ghost = pow(0.5 + 0.5 * cos(uBlades * (th - uGhost)), uExp);
         float aG = 0.10 + 0.12 * ghost;
+        if (uHull.x > 0.0) {
+          // disc-local +y = nose. Cabin (wide) → tail boom (narrow) → beyond the nose: open disc.
+          float hw = mix(uHull.y, uHull.x, smoothstep(uHull.w - 0.12, uHull.w + 0.08, vP.y));
+          float hullM = (1.0 - smoothstep(hw, hw + 0.06, abs(vP.x))) * (1.0 - smoothstep(uHull.z - 0.06, uHull.z + 0.04, vP.y));
+          aG *= 1.0 - 0.6 * hullM;
+        }
         float seg = 6.2831853 / uBlades;
         float d = abs(mod(th - uBlade + 0.5 * seg, seg) - 0.5 * seg) * r;
         float blade = (1.0 - smoothstep(uBladeW * 0.75, uBladeW * 1.25, d)) * smoothstep(0.07, 0.13, r);

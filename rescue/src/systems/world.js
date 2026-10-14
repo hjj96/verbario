@@ -26,6 +26,7 @@ import { Ship } from './world/ship.js';
 import { Rig } from './world/rig.js';
 import { Boat } from './world/boats.js';
 import { bake, rockGeometry, rng, SURF } from './world/geo.js';
+import { createRockField, updateLandforms, landformsQuality } from './world/landforms.js';
 import { clamp, smoothstep } from '../core/math.js';
 
 const SERVICES = {
@@ -185,9 +186,9 @@ export class World {
     this.ship = this.lighthouse = this.rig = null;
     this.lamps.clear();
     this.floaters.clear();
-    if (this.rocks) {
-      this.rocks.removeFromParent();
-      this.rocks.geometry.dispose();
+    if (this.rockField) {
+      this.rockField.dispose();
+      this.rockField = null;
       this.rocks = null;
     }
     this._shoals.length = 0;
@@ -280,39 +281,15 @@ export class World {
     this._updateShoals(true);
   }
 
+  // Rocks (fog pinnacles, reefs, «Кошки»): granite heightfields merged into one mesh + boulders
+  // (world/landforms.js); obstacles keep the defined radius/height, surf rings hug the coastline.
   _buildRocks(list, seed) {
     if (!list.length) return;
-    const r = rng(seed * 31 + 5);
-    const parts = [];
-    for (const rk of list) {
-      const R = rk.radius || 10;
-      const H = rk.height || 6;
-      const spire = clamp((H / R - 0.7) / 1.3, 0, 1);
-      const s0 = Math.floor(r() * 1000);
-      // a cluster, not a ball: a main crag plus lower shoulders and skerries around it
-      parts.push({ geometry: rockGeometry(s0, { detail: 2, spire, rough: 0.6, moss: spire > 0.3 ? 0 : 0.5 }), vcol: true, position: [rk.x + (r() - 0.5) * R * 0.2, 0, rk.z + (r() - 0.5) * R * 0.2], scale: [R * 0.62, H, R * 0.5], rotation: [0, r() * 6.28, 0], surf: SURF.rock });
-      const sh = 3 + Math.floor(r() * 2);
-      for (let k = 0; k < sh; k++) {
-        const a = (k / sh) * Math.PI * 2 + r() * 0.8, d = R * (0.35 + 0.35 * r());
-        const rr = R * (0.28 + 0.2 * r());
-        parts.push({ geometry: rockGeometry(s0 + k + 1, { detail: 1, rough: 0.55 }), vcol: true, position: [rk.x + Math.cos(a) * d, 0, rk.z + Math.sin(a) * d], scale: [rr, H * (0.2 + 0.35 * r()), rr * (0.6 + 0.3 * r())], rotation: [0, r() * 6.28, 0], surf: SURF.rock });
-      }
-      const sk = 2 + Math.floor(r() * 3);
-      for (let k = 0; k < sk; k++) {
-        const a = r() * Math.PI * 2, d = R * (0.8 + 0.5 * r());
-        const rr = 1.5 + R * 0.08 * r();
-        parts.push({ geometry: rockGeometry(s0 + 20 + k, { detail: 1, rough: 0.5, terrace: 0.3 }), vcol: true, position: [rk.x + Math.cos(a) * d, 0, rk.z + Math.sin(a) * d], scale: [rr, 0.8 + r() * 1.2, rr * 0.8], rotation: [0, r() * 6.28, 0], surf: SURF.rock });
-      }
-      this.obstacles.push({ x: rk.x, z: rk.z, radius: R * 0.7, top: H, kind: 'rock', name: rk.name || 'скала' });
-      this._shoals.push({ x: rk.x, z: rk.z, radius: R * 0.8 });
-    }
-    const geo = bake(this.look, parts);
-    for (const p of parts) p.geometry.dispose();
-    this.rocks = new THREE.Mesh(geo, this.mats.plain);
-    this.rocks.name = 'world-rocks';
-    this.rocks.castShadow = true;
-    this.rocks.receiveShadow = true;
-    this.root.add(this.rocks);
+    this.rockField = createRockField(this, list, seed, this.ctx.settings.get('quality'));
+    this.rocks = this.rockField.terrain;
+    this.root.add(this.rockField.group);
+    for (const o of this.rockField.obstacles) this.obstacles.push(o);
+    this._shoals.push(...this.rockField.shoals);
   }
 
   _applyQuality() {
@@ -322,6 +299,7 @@ export class World {
     // no bloom on low: lamps carry their own halos
     this.shared.uLampK.value.set(1, q === 'low' ? 0.5 : 0.28, 1);
     this.quality = q;
+    landformsQuality(this, q);
   }
 
   // Keep the 8 shoals nearest to the camera focus in the ocean's surf uniforms.
@@ -447,6 +425,7 @@ export class World {
     for (const pl of this.places) pl.update(dt, env);
     for (const b of this.boats) b.update(dt, env);
     this.floaters.update(dt, env);
+    updateLandforms(env);
 
     // ship pads: live tilt / heading
     for (const pad of this.pads) {

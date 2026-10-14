@@ -17,6 +17,11 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { clamp, damp, createRng } from '../core/math.js';
 import { createFinalMaterial } from './post/finalShader.js';
+
+const smoothstep01 = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 import { LensDrops, GRID_X, GRID_Y } from './post/drops.js';
 
 const SAMPLES = { low: 0, medium: 2, high: 4 };
@@ -317,6 +322,8 @@ export class PostFX {
     }
     u.uNight.value = st?.night || 0;
     u.uFloor.value = 0.006 + 0.006 * (st?.night || 0);
+    // daylight toe for the dark storm grades (none at night: night water stays 0.015–0.06)
+    u.uDayToe.value = 0.05 * (1 - smoothstep01(0.4, 0.75, st?.night || 0));
     u.uFlash.value = flash;
     if (st?.flashColor) setSRGB(u.uFlashTint.value, st.flashColor, this._col);
     u.uSatMul.value = (1 - 0.65 * flash) * (1 - 0.3 * p.damage) * (1 - 0.6 * p.pause);

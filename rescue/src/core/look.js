@@ -44,6 +44,41 @@ function periodicValueNoise(u, v, period, seed) {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
+// Periodic gradient (Perlin) noise: no lattice-aligned value blocks. Used for the atlas R channel
+// (gusts / cat's paws, cloud shadows & reflections) — value noise there showed as a checker of
+// square blotches in calm and hard diagonal bands in clearing once thresholded by smoothstep.
+function periodicGradNoise(u, v, period, seed) {
+  const x = u * period;
+  const y = v * period;
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const fx = x - xi;
+  const fy = y - yi;
+  const sx = fx * fx * fx * (fx * (fx * 6 - 15) + 10);
+  const sy = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
+  const m = (a) => ((a % period) + period) % period;
+  const g = (ix, iy, dx, dy) => {
+    const a = hash2i(m(ix), m(iy), seed) * Math.PI * 2;
+    return Math.cos(a) * dx + Math.sin(a) * dy;
+  };
+  const a = g(xi, yi, fx, fy);
+  const b = g(xi + 1, yi, fx - 1, fy);
+  const c = g(xi, yi + 1, fx, fy - 1);
+  const d = g(xi + 1, yi + 1, fx - 1, fy - 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+function periodicGradFbm(u, v, basePeriod, octaves, seed) {
+  let sum = 0, amp = 0.5, norm = 0, p = basePeriod;
+  for (let o = 0; o < octaves; o++) {
+    sum += amp * periodicGradNoise(u, v, p, seed + o * 17);
+    norm += amp;
+    amp *= 0.5;
+    p *= 2;
+  }
+  return sum / norm;
+}
+
 function periodicFbm(u, v, basePeriod, octaves, seed) {
   let sum = 0, amp = 0.5, norm = 0, p = basePeriod;
   for (let o = 0; o < octaves; o++) {
@@ -94,14 +129,33 @@ const smooth = (a, b, x) => {
 function makeAtlas(seed) {
   const data = new Uint8Array(ATLAS * ATLAS * 4);
   const w = [0, 0];
+  // R: gradient fbm, histogram-matched to the value-noise fbm every consumer was tuned on (same
+  // coverage for every smoothstep threshold, just without the lattice-aligned blocks).
+  const n = ATLAS * ATLAS;
+  const ref = new Float32Array(n);
+  const grad = new Float32Array(n);
   for (let y = 0; y < ATLAS; y++) {
     for (let x = 0; x < ATLAS; x++) {
       const u = x / ATLAS;
       const v = y / ATLAS;
-      const r = periodicFbm(u, v, 4, 4, seed);
+      ref[y * ATLAS + x] = Math.min(1, Math.max(0, (periodicFbm(u, v, 4, 4, seed) - 0.15) / 0.7));
+      grad[y * ATLAS + x] = periodicGradFbm(u, v, 4, 5, seed + 3);
+    }
+  }
+  const order = new Uint32Array(n);
+  for (let i = 0; i < n; i++) order[i] = i;
+  order.sort((a, b) => grad[a] - grad[b]);
+  ref.sort();
+  const rch = new Float32Array(n);
+  for (let k = 0; k < n; k++) rch[order[k]] = ref[k];
+  for (let y = 0; y < ATLAS; y++) {
+    for (let x = 0; x < ATLAS; x++) {
+      const u = x / ATLAS;
+      const v = y / ATLAS;
+      const r = rch[y * ATLAS + x];
       worley(u, v, 8, seed + 7, w);
       const i = (y * ATLAS + x) * 4;
-      data[i] = Math.round(Math.min(1, Math.max(0, (r - 0.15) / 0.7)) * 255);
+      data[i] = Math.round(r * 255);
       data[i + 1] = Math.round(Math.min(1, w[0] / 1.0) * 255);
       data[i + 2] = Math.round(Math.min(1, (w[1] - w[0]) / 0.8) * 255);
       data[i + 3] = Math.round(hash2i(x, y, seed + 99) * 255);

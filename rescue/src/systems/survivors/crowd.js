@@ -233,7 +233,7 @@ export function createPersonMaterial(look) {
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
         // retro-reflective tape: #E9F2FF × 6 × searchlightAt (flashes the instant the beam touches)
-        if (abs(vSvPart - 5.0) < 0.5) totalEmissiveRadiance += uTape * 6.0 * vSvFx.x;
+        if (abs(vSvPart - 5.0) < 0.5) totalEmissiveRadiance += uTape * 4.0 * vSvFx.x;
         // personal strobe: 60 ms flash
         if (abs(vSvPart - 6.0) < 0.5) totalEmissiveRadiance += vec3(uStrobeGain) * vSvFx.y + vec3(0.04);
         // skin: a breath of warmth (DESIGN §2.7.3: кожа — emissive ×0.08)

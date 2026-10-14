@@ -34,6 +34,7 @@ const ALT_MIN = 4;
 const ALT_MAX = 120;
 const IDLE_RPM = 0.55;
 const MAX_TILT = 0.38;
+const WHITE = new THREE.Color(1, 1, 1);
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -552,6 +553,14 @@ export class Helicopter {
       hu.uRim.value.copy(pal.ambient).multiplyScalar(1 - night);
       if (night > 0 && pal.sun) hu.uRim.value.add(this._col.copy(pal.sun).multiplyScalar(0.9 * night));
       if (pal.sun) hu.uFill.value.copy(pal.sun).multiplyScalar(0.2 * night * night);
+      // Day under heavy cloud (squall/storm): the white airframe sank to ≈0.3 on screen, darker
+      // than the foam around it. A soft "overcast sky on white paint" fill keeps it the most
+      // readable object of the frame (DESIGN §2.1 pillar 8, hull ≤ 0.85); zero in calm sun.
+      const sy = Math.max(0.2, st.sunDirShadow?.y ?? st.sunDir?.y ?? 0.7);
+      const lumOf = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+      const light = (pal.sunIntensity ?? 1) * sy * lumOf(pal.sun || pal.ambient) + (pal.ambientIntensity ?? 0.6) * lumOf(pal.ambient);
+      const dull = clamp(1 - light / 1.1, 0, 1) * (1 - smooth(0.3, 0.8, night));
+      if (dull > 0) hu.uFill.value.add(this._col.copy(pal.ambient).multiplyScalar(0.5 / Math.max(0.05, lumOf(pal.ambient))).lerp(WHITE, 0.5).multiplyScalar(0.42 * dull));
     }
     const cloud = ctx.look?.cloudAt ? ctx.look.cloudAt(this.position.x, this.position.z) : 0;
     hu.uSunScale.value = 1 - 0.2 * cloud * (1 - night);

@@ -1,5 +1,5 @@
 // Lighthouse «Скалистый» (DESIGN §2.11 [MUST], §3.9, catalogue #31, #43): the start pad.
-// Island of displaced icosahedra #2E3437 with surf (ocean.setShoals), white tower with red bands
+// Island: granite terrain (landforms.js — heightfield, boulders, krummholz) with surf (ocean.setShoals), white tower with red bands
 // #B3261E, lantern room, keeper's house, fuel tank, jetty, radio mast; helipad at 12 m with a
 // painted deck; rotating DOUBLE beam (8 s per turn) = additive volumetric cones + the world's one
 // SpotLight sweeping the sea; "solid" in fog; windsock on the pad; foghorn every 30 s in fog.
@@ -8,6 +8,8 @@ import { bake, p, member, railParts, rockGeometry, windowParts, latticeParts, UN
 import { CH, createPropMaterial, beamGeometry, setGlow } from './materials.js';
 import { paintHelideck, decalTexture } from './decals.js';
 import { Windsock } from './rigging.js';
+import { createIsland } from './landforms.js';
+import { setTerrainGlow } from './terrainMaterial.js';
 import { clamp, smoothstep } from '../../core/math.js';
 
 const DECK_Y = 12;
@@ -49,6 +51,10 @@ export class Lighthouse {
     this.mesh.receiveShadow = true;
     this.group.add(this.mesh);
 
+    // the island itself: granite terrain + tide-washed boulders + krummholz (landforms.js)
+    this.land = createIsland(W, W.ctx.settings.get?.('quality') || 'high');
+    this.group.add(this.land.group);
+
     // double beam (one geometry, rotates as a whole)
     this.beam = new THREE.Mesh(beamGeometry(BEAM_LEN, 0.9, 34, { twin: true, tilt: -1.4 * Math.PI / 180 }), W.mats.beam);
     this.beam.position.set(TOWER.x, LANTERN_Y, TOWER.z);
@@ -70,7 +76,8 @@ export class Lighthouse {
       { x: this.x + TOWER.x, z: this.z + TOWER.z, radius: 5, top: LANTERN_Y + 3, kind: 'tower', name: 'маяк' },
       { x: this.x + 22, z: this.z - 31, radius: 1.8, top: 27, kind: 'mast', name: 'мачта' },
     ];
-    this.shoals = [{ x: this.x - 9, z: this.z - 17, radius: 32 }, { x: this.x + 20, z: this.z - 20, radius: 16 }];
+    // surf rings = circles inscribed in the real coastline (fitted on the terrain grid)
+    this.shoals = this.land.shoals.map((s) => ({ x: this.x + s.x, z: this.z + s.z, radius: s.radius }));
     this.island = { x: this.x - 6, z: this.z - 17, radius: 26, top: 10.5, kind: 'rock', name: 'скалы' };
     this.obstacles.push(this.island);
     // lantern light spill on the gallery & tower top, house windows on the rock
@@ -81,26 +88,7 @@ export class Lighthouse {
   // --------------------------------------------------------------------------------------------
   _parts() {
     const P = [];
-    // --- island: a pile of faceted rocks (fixed seeds: the island is a landmark, always the same)
-    const rocks = [
-      // x, z, rx, h, rz, seed, rotY, moss
-      [-9, -18, 36, 11.4, 27, 11, 0.3, 0.9],
-      [-34, -4, 14, 7.0, 11, 12, 1.1, 0.6],
-      [12, -38, 16, 7.8, 12, 13, 2.2, 0.6],
-      [-30, -40, 11, 5.2, 10, 14, 0.7, 0.3],
-      [20, 4, 10, 5.0, 8, 16, 1.7, 0.3],
-      [4, 15, 9, 3.2, 7, 17, 0.2, 0],
-      [29, -18, 10, 6.0, 9, 18, 2.4, 0.4],
-      [-16, 12, 8, 3.6, 8, 19, 1.3, 0],
-      [-47, -24, 7, 2.6, 6, 15, 2.9, 0],
-      [40, 0, 5, 1.8, 4, 20, 0.9, 0],
-      [-50, 2, 5, 1.6, 4, 21, 2.0, 0],
-      [-8, 30, 4, 1.4, 3, 22, 0.4, 0],
-      [33, -42, 5, 2.0, 4, 23, 1.6, 0],
-    ];
-    for (const [x, z, rx, h, rz, seed, ry, moss] of rocks) {
-      P.push({ geometry: rockGeometry(seed, { detail: 2, moss, terrace: rx > 12 ? 0.7 : 0.45 }), vcol: true, position: [x, 0, z], scale: [rx, h, rz], rotation: [0, ry, 0], surf: SURF.rock });
-    }
+    // --- island: terrain in landforms.js (structures below are seated on its flats)
 
     // --- helipad: concrete octagon on a plinth, painted deck, safety net
     P.push(p(UNIT.oct, C.concreteDark, [0, 7.4, 0], [PAD_R, 9.2, PAD_R], null, SURF.concrete));
@@ -172,8 +160,8 @@ export class Lighthouse {
     P.push(p(UNIT.box, C.concrete, [15, 9.6, -8.5], [6.6, 1.4, 3.6], null, SURF.concrete));
     P.push(p(UNIT.cyl20, '#E6E6E0', [15, 11.7, -8.5], [1.35, 5, 1.35], [0, 0, Math.PI / 2], SURF.gloss));
     P.push(p(UNIT.box, '#C9A227', [15, 11.7, -8.5], [0.4, 2.75, 2.75], null, SURF.paint)); // band
-    P.push(p(UNIT.box, '#B9BDB9', [11.6, 11.2, -6.4], [1.2, 1.8, 0.8], null, SURF.paint));
-    P.push(p(UNIT.cyl12, '#2A2E33', [11.6, 11.2, -5.8], [0.5, 0.4, 0.5], [Math.PI / 2, 0, 0], SURF.rubber));
+    P.push(p(UNIT.box, '#B9BDB9', [11.6, 10.3, -6.4], [1.2, 1.8, 0.8], null, SURF.paint)); // pump on the rock shelf
+    P.push(p(UNIT.cyl12, '#2A2E33', [11.6, 10.5, -5.8], [0.5, 0.4, 0.5], [Math.PI / 2, 0, 0], SURF.rubber));
 
     // --- windsock mast at the pad edge
     P.push(member([10.4, 3, 7.6], [10.4, DECK_Y + 4.8, 7.6], 0.11, '#D8D8D2', SURF.paint));
@@ -264,6 +252,12 @@ export class Lighthouse {
     setGlow(this.material, 1, 0, DECK_Y + 3, 0, 13, W._col.set('#FFE6B0'), 0.22 * W.channels[CH.PADLIGHT]);
     // the tower is floodlit from its base at night: the striped landmark stays readable
     setGlow(this.material, 2, TOWER.x, 17, TOWER.z + 5, 11, W._col.set('#FFE2B0'), 0.55 * W.channels[CH.PADLIGHT]);
+    // the same floods / windows spill onto the rock round them (terrain material, world space)
+    const pl = W.channels[CH.PADLIGHT];
+    setTerrainGlow(0, this.x, DECK_Y, this.z, 21, W._col.set('#FFE6B0'), 0.9 * pl);
+    setTerrainGlow(1, this.x + TOWER.x, 12, this.z + TOWER.z + 3, 12, W._col.set('#FFE2B0'), 0.8 * pl);
+    setTerrainGlow(2, this.x + 13, 10, this.z - 22.5, 7, W._col.set('#FFC98A'), 0.45 * W.channels[CH.WINDOWS]);
+    setTerrainGlow(3, this.x + this.jettyHead[0], 3, this.z + this.jettyHead[1], 7, W._col.set('#12FF6E'), 0.3 * W.channels[CH.NAV]);
 
     // SpotLight: sweep the sea with whichever beam faces the heli; the swap happens at zero.
     const spot = W.lights.spot;
@@ -297,6 +291,8 @@ export class Lighthouse {
 
   dispose() {
     this.group.removeFromParent();
+    this.land.dispose();
+    for (let i = 0; i < 4; i++) setTerrainGlow(i, 0, -1e4, 0, 1, this.W._col.set(0, 0, 0), 0);
     this.mesh.geometry.dispose();
     this.beam.geometry.dispose();
     this.material.dispose();

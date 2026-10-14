@@ -55,11 +55,16 @@ void oceanVertex(vec2 gl, out vec3 pos, out vec3 nrm) {
   float damp = oceanEdge(gl) * oceanShoalDamp(p0);
   vec2 dxz = vec2(0.0);
   float y = 0.0, jxx = 0.0, jzz = 0.0, jxz = 0.0, sx = 0.0, sz = 0.0;
+  float nxx = 0.0, nzz = 0.0, nxz = 0.0;
   if (damp > 0.0) {
     for (int i = 0; i < OCEAN_WAVES; i++) {
       vec4 A = uWaveA[i];
       vec4 B = uWaveB[i];
       float w = damp * smoothstep(3.5, 5.0, B.z / cell);   // LOD: short waves move to the fragment normal
+      // Normals need more vertices per wavelength than the displacement: a wave sampled by 4–8
+      // vertices gives piecewise-linear normals — the blocky checker seen on the calm swell from
+      // altitude. Below 10 cells per wavelength its normal is computed per fragment instead.
+      float wn = damp * smoothstep(7.0, 10.0, B.z / cell);
       float th = A.z * dot(A.xy, gl) + B.y;
       float s = sin(th);
       float c = cos(th);
@@ -71,7 +76,11 @@ void oceanVertex(vec2 gl, out vec3 pos, out vec3 nrm) {
       jxx += kbs * A.x * A.x;
       jzz += kbs * A.y * A.y;
       jxz += kbs * A.x * A.y;
-      float kac = A.z * a * c;
+      float kbn = A.z * B.x * wn * s;
+      nxx += kbn * A.x * A.x;
+      nzz += kbn * A.y * A.y;
+      nxz += kbn * A.x * A.y;
+      float kac = A.z * A.w * wn * c;
       sx += kac * A.x;
       sz += kac * A.y;
     }
@@ -82,8 +91,8 @@ void oceanVertex(vec2 gl, out vec3 pos, out vec3 nrm) {
     fh = oceanFeatureHeight(p0);
     fg = vec2(oceanFeatureHeight(p0 + vec2(0.5, 0.0)) - fh, oceanFeatureHeight(p0 + vec2(0.0, 0.5)) - fh) * 2.0;
   }
-  vec3 tx = vec3(1.0 - jxx, sx + fg.x, -jxz);
-  vec3 tz = vec3(-jxz, sz + fg.y, 1.0 - jzz);
+  vec3 tx = vec3(1.0 - nxx, sx + fg.x, -nxz);
+  vec3 tz = vec3(-nxz, sz + fg.y, 1.0 - nzz);
   nrm = normalize(cross(tz, tx));
   pos = vec3(p0.x + dxz.x, y + fh, p0.y + dxz.y);
   vGrid = p0;
@@ -148,6 +157,7 @@ uniform vec4 uSplashS[6];  // strengths, packed 4 per vec4
 uniform sampler2D uMem;    // water memory: R foam, G dye, B disturbance, A oil
 uniform vec4 uMemWin;      // centre x, z, window size, enabled
 uniform vec3 uSunDirS;     // shadow-casting (clamped) sun direction
+uniform float uSpotWater;  // share of the physical SpotLights on the water
 uniform vec4 uFront;       // spatial weather front (DESIGN §2.5): origin xz, unit direction xz
 uniform vec4 uFrontB;      // travelled distance (speed·t), half-width W, active, 0
 uniform vec3 uPrevDeep;    // palettePrev / paletteNext subset blended per pixel across the front
@@ -289,7 +299,7 @@ float oDetAmt = cSea.x * (0.6 + 0.8 * oGustV) * (1.0 + 0.3 * oBeam);
 for (int i = 0; i < OCEAN_WAVES; i++) {
   vec4 A = uWaveA[i];
   vec4 B = uWaveB[i];
-  float wv = oDamp * (1.0 - smoothstep(3.5, 5.0, B.z / oCell)) * smoothstep(2.5, 5.0, B.z / oFoot);
+  float wv = oDamp * (1.0 - smoothstep(7.0, 10.0, B.z / oCell)) * smoothstep(2.5, 5.0, B.z / oFoot);
   if (wv <= 0.0) continue;
   float th = A.z * dot(A.xy, oG - uOffset) + B.y;
   oSd += (A.w * A.z * cos(th) * wv) * A.xy;
@@ -341,8 +351,14 @@ if (uRain > 0.02) {
 #endif
 
 // ---- 3. body colour, cat's paws, troughs, pressed water
-vec3 oBodyC = mix(cDeep, cBody, pow(oH01, 1.2));
-oBodyC *= mix(0.78, 1.0, smoothstep(0.0, 0.45, oH01));
+// Wave groups: the fixed Gerstner bank interferes into a regular lattice, and colouring every crest
+// equally drew it as a checker in calm and as hard diagonal bands in clearing. Crests read in sets
+// instead (low-frequency group envelope), and the height tint fades with the pixel footprint so a
+// 0.4 m swell does not paint the sea when seen from 230 m.
+float oGroup = smoothstep(0.15, 0.85, texture2D(uAtlas, oXZ * 0.0045 + vec2(0.61, 0.13) - uWindOffset * 0.003).r);
+float oHc = clamp(0.5 + (oH01 - 0.5) * mix(0.3, 1.2, oGroup) * mix(1.0, 0.6, smoothstep(0.15, 0.6, oFoot)), 0.0, 1.0);
+vec3 oBodyC = mix(cDeep, cBody, pow(oHc, 1.2));
+oBodyC *= mix(0.78, 1.0, smoothstep(0.0, 0.45, oHc));
 oBodyC *= 1.0 - 0.12 * oGustV * (1.0 - 0.75 * oNight);
 oBodyC *= 1.0 - 0.10 * oDwIn;
 
@@ -534,7 +550,7 @@ oOil = smoothstep(0.05, 0.4, oMem.a) * (1.0 - oFoam);
 // 3. crest SSS, look-driven: backlit crests take the palette crest colour ("bottle green")
 vec2 oLh = normalize(uSunDirV.xz + vec2(1e-4, 0.0));
 float oAway = clamp(0.5 - dot(oNm.xz, oLh) * 4.0, 0.0, 1.0);
-float oSssM = smoothstep(0.55, 1.0, oH01) * (0.35 + 0.65 * oAway) * uSeaB.y;
+float oSssM = smoothstep(0.55, 1.0, oHc) * (0.35 + 0.65 * oAway) * uSeaB.y;
 oSssM = max(oSssM, oFeatSss);
 oBodyC = mix(oBodyC, mix(cCrest, cCrest * 1.6, oFeatSss), clamp(oSssM, 0.0, 1.0) * 0.75 * (1.0 - 0.85 * oNight));
 // aeration halo under and around foam (crest·1.15 at 0.35): turquoise bubbles in the holes of the lace
@@ -599,7 +615,9 @@ if (oBeam + oRing > 0.0) {
   vec3 Ls = normalize(uSearchPos - oP);
   float sp = pow(clamp(dot(oN, normalize(Ls + oV)), 0.0, 1.0), 90.0);   // glittering hotspot on facets
   float nl = clamp(dot(oN, Ls), 0.0, 1.0);
-  oEmis += vec3(1.0, 0.879, 0.701) * (oBeam * ((0.04 + 0.05 * oH01) * (0.4 + 0.9 * nl) + 0.2 * oFoam + 2.5 * sp * (1.0 - oFoam)) + oRing * 0.035);
+  // the pool itself is look-driven (OCEAN_FRAGMENT_FINAL); here only the glitter on lit facets and
+  // the hot ring at 0.85 R
+  oEmis += vec3(1.0, 0.879, 0.701) * (oBeam * (0.9 * sp * (1.0 - oFoam) * (0.4 + 0.6 * nl)) + oRing * 0.07);
 }
 // 12. light glints (strobes, nav lights, raft lamps): gaussian stretched toward the screen bottom
 #if OCEAN_GLINTS > 0
@@ -679,6 +697,24 @@ export const OCEAN_FRAGMENT_FINAL = /* glsl */ `
   vec3 tl = uShadowTint / max(max(uShadowTint.r, max(uShadowTint.g, uShadowTint.b)), 1e-4);
   vec3 tint = mix(vec3(1.0), tl, 0.5);
   outgoingLight *= mix(vec3(1.0), tint, clamp(sh * 1.3, 0.0, 1.0));
+  // lightning: the flash exposure boost (post: ×(1+2.4f)) also lifts the shadowed sea; cancel most
+  // of it inside the swung strike shadow so the heli's shadow visibly snaps (DESIGN §2.7.2)
+  float flashSh = sh * smoothstep(0.05, 0.35, uSeaE.y) * uLookK.z;
+  outgoingLight *= mix(1.0, 1.0 / (1.0 + 2.4 * uSeaE.y), flashSh);
+  // 11. searchlight pool, look-driven: "the lamp opens the sea" — inside the beam the water is shown
+  // at the DESIGN §2.1 pool luminance (≈0.75–0.85 on screen, foam a touch brighter, never clipping),
+  // the warm lamp tint over the lit body colour, shaded by the facets facing the lamp.
+  if (oBeam > 0.001) {
+    vec3 Lp = normalize(uSearchPos - oP);
+    float nlp = clamp(dot(oN, Lp), 0.0, 1.0);
+    float nhp = clamp(dot(oN, normalize(Lp + oV)), 0.0, 1.0);
+    float facet = 0.72 + 0.55 * pow(nhp, 14.0);                     // wave facets catch the lamp
+    vec3 litWater = vec3(0.56, 0.68, 0.62) * (0.8 + 0.25 * nlp) * (0.88 + 0.24 * oH01) * facet;
+    vec3 poolDisp = mix(min(litWater, vec3(0.78)), min(oFoamC * 0.9, vec3(0.8)), oFoam) * vec3(1.0, 0.97, 0.9);
+    vec3 poolLook = oInvACES(poolDisp) * uLookK.y;
+    // by day the pool only lifts the water a little (it never fights the sun)
+    outgoingLight = mix(outgoingLight, max(outgoingLight, poolLook), clamp(oBeam, 0.0, 1.0) * mix(0.3, 1.0, uSeaE.z));
+  }
   float hr = length(oXZ - uHeliP.xy);
   float alt = max(uHeliP.z, 0.0);
   float patchK = exp(-pow(hr / (3.5 + 0.25 * alt), 2.0)) * mix(0.55, 0.15, clamp(alt / 60.0, 0.0, 1.0))

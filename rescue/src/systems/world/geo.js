@@ -18,7 +18,7 @@ export const SURF = {
   steel: [0.42, 0.55, 0, 0],
   rust: [0.82, 0.15, 0, 0],
   rubber: [0.8, 0, 0, 0],
-  rock: [0.93, 0, 0, 0],
+  rock: [0.93, 0, -1, 0], // emissive gain −1 = natural rock flag (wet waterline band in the prop shader)
   concrete: [0.88, 0, 0, 0],
   wood: [0.85, 0, 0, 0],
   glass: [0.07, 0, 0, 0],
@@ -205,30 +205,37 @@ export function rng(seed) {
 }
 
 // --------------------------------------------------------------------------------------------
-// Rock: displaced icosahedron, flat-shaded facets, base #2E3437 with lichen on sunny tops, guano
-// on the crown and a dark wet band at the waterline. Unit size: x,z ≈ [−1, 1], y ∈ [−0.3, 1].
-// opts.spire (0..1) sharpens the crown (fog pinnacles).
+// Rock: displaced icosahedron, base #2E3437 with lichen on sunny tops, guano on the crown, darker
+// crevices and colour variation per vertex. Normals are mostly smooth with a little of the facet
+// kept (stylised, but reads as weathered granite, not a crude low-poly blob); the wet band at the
+// waterline is drawn by the prop shader in world metres (aSurf.z = −1). Unit size: x,z ≈ [−1, 1],
+// y ∈ [−0.3, 1]. opts.detail = icosahedron subdivision (r185: (n+1)²·20 triangles).
 const ROCK_BASE = new THREE.Color('#2E3437');
+const ROCK_WARM = new THREE.Color('#3A3833');
 const ROCK_DARK = new THREE.Color('#22282B');
 const ROCK_LICHEN = new THREE.Color('#77775C');
+const ROCK_ORANGE = new THREE.Color('#8A6A3A'); // xanthoria lichen specks on sea cliffs
 const ROCK_MOSS = new THREE.Color('#5A6644');
 const ROCK_GUANO = new THREE.Color('#A8AAA2');
-const ROCK_WET = new THREE.Color('#161C1C');
 const ROCK_ALGAE = new THREE.Color('#1F2A22');
+const FACET = 0.28; // share of the flat facet normal kept in the shading normal
 // opts: detail, spire (0..1 pinnacle), rough (displacement), terrace (0..1 ledge strength),
 // moss (0..1 tundra on flat tops — island crowns).
-export function rockGeometry(seed, { detail = 1, spire = 0, rough = 0.5, terrace = 0.65, moss = 0 } = {}) {
+export function rockGeometry(seed, { detail = 4, spire = 0, rough = 0.5, terrace = 0.65, moss = 0 } = {}) {
   const g = new THREE.IcosahedronGeometry(1, detail);
   const pos = g.attributes.position;
   const v = new THREE.Vector3();
   let minY = Infinity, maxY = -Infinity;
   const shear = h3(seed, 1, 2, 3) - 0.5;
+  const disp = new Float32Array(pos.count);
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
     const n1 = fbm3(v.x * 1.25 + 3.1, v.y * 1.25, v.z * 1.25, seed, 3);
     const n2 = vnoise3(v.x * 3.4, v.y * 3.4 + 7.7, v.z * 3.4, seed + 5);
+    const n3 = vnoise3(v.x * 7.5 + 2.2, v.y * 7.5, v.z * 7.5 - 1.4, seed + 13);
     const ridge = 1 - Math.abs(2 * vnoise3(v.x * 2.1 + 1.3, v.y * 2.1, v.z * 2.1, seed + 9) - 1);
-    const r = 1 + rough * 2 * (n1 - 0.5) + 0.16 * (n2 - 0.5) + 0.12 * (ridge - 0.5);
+    const r = 1 + rough * 2 * (n1 - 0.5) + 0.16 * (n2 - 0.5) + 0.12 * (ridge - 0.5) + 0.05 * (n3 - 0.5);
+    disp[i] = r;
     v.multiplyScalar(r);
     // squash the underside (rocks sit on the sea floor), lift the crown for spires
     if (v.y < 0) v.y *= 0.4;
@@ -257,30 +264,52 @@ export function rockGeometry(seed, { detail = 1, spire = 0, rough = 0.5, terrace
     }
     pos.setY(i, -0.3 + y * 1.3);
   }
-  g.computeVertexNormals(); // non-indexed → flat facets
+  g.computeVertexNormals(); // non-indexed → flat facet normals
+  // Smooth normals: vertices sharing a position (the geometry is non-indexed) average their facets.
   const nrm = g.attributes.normal;
+  const acc = new Map();
+  const key = (i) => `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+  const keys = new Array(pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    const k = (keys[i] = key(i));
+    let a = acc.get(k);
+    if (!a) acc.set(k, (a = [0, 0, 0]));
+    a[0] += nrm.getX(i);
+    a[1] += nrm.getY(i);
+    a[2] += nrm.getZ(i);
+  }
+  for (let i = 0; i < pos.count; i++) {
+    const a = acc.get(keys[i]);
+    const l = Math.hypot(a[0], a[1], a[2]) || 1;
+    v.set(nrm.getX(i) * FACET + (a[0] / l) * (1 - FACET), nrm.getY(i) * FACET + (a[1] / l) * (1 - FACET), nrm.getZ(i) * FACET + (a[2] / l) * (1 - FACET)).normalize();
+    nrm.setXYZ(i, v.x, v.y, v.z);
+  }
+  // Per-vertex colour (shared positions get the same colour → no faceted patchwork).
   const col = new Float32Array(pos.count * 3);
   const c = new THREE.Color();
-  for (let f = 0; f < pos.count; f += 3) {
-    const cy = (pos.getY(f) + pos.getY(f + 1) + pos.getY(f + 2)) / 3;
-    const ny = (nrm.getY(f) + nrm.getY(f + 1) + nrm.getY(f + 2)) / 3;
-    const cx = (pos.getX(f) + pos.getX(f + 1) + pos.getX(f + 2)) / 3;
-    const cz = (pos.getZ(f) + pos.getZ(f + 1) + pos.getZ(f + 2)) / 3;
-    const jitter = 0.8 + 0.4 * h3(Math.floor(cx * 9), Math.floor(cy * 9), Math.floor(cz * 9), seed + 11);
-    c.copy(ny < 0.35 ? ROCK_DARK : ROCK_BASE).multiplyScalar(jitter);
+  for (let i = 0; i < pos.count; i++) {
+    const cx = pos.getX(i), cy = pos.getY(i), cz = pos.getZ(i);
+    const a = acc.get(keys[i]);
+    const ny = a[1] / (Math.hypot(a[0], a[1], a[2]) || 1);
+    const tone = fbm3(cx * 1.6 + 5.0, cy * 1.6, cz * 1.6, seed + 41, 2);
+    c.copy(ROCK_BASE).lerp(ROCK_WARM, smooth01((tone - 0.35) / 0.4));
+    if (ny < 0.3) c.lerp(ROCK_DARK, 0.55 * smooth01((0.3 - ny) / 0.5));
+    // faint strata along the terraces, broken up by noise
+    const strata = Math.sin((cy * steps + 0.8 * (tone - 0.5)) * Math.PI * 2);
+    c.multiplyScalar(0.94 + 0.06 * strata + 0.16 * (fbm3(cx * 6, cy * 6, cz * 6, seed + 11, 2) - 0.5));
+    // crevices: displaced inward → darker (cheap cavity occlusion)
+    c.multiplyScalar(0.72 + 0.28 * smooth01((disp[i] - 0.78) / 0.32));
     const patch = fbm3(cx * 3.5, cy * 3.5, cz * 3.5, seed + 21, 2);
-    if (ny > 0.55) {
-      c.lerp(ROCK_LICHEN, Math.min(0.6, (ny - 0.55) * 1.6) * (patch > 0.5 ? 1 : 0.3));
+    if (ny > 0.5) {
+      c.lerp(ROCK_LICHEN, Math.min(0.55, (ny - 0.5) * 1.5) * smooth01((patch - 0.38) / 0.25));
       if (moss > 0 && cy > 0.25) c.lerp(ROCK_MOSS, moss * smooth01((patch - 0.42) / 0.2) * smooth01((ny - 0.7) / 0.2));
     }
+    if (cy > 0.2 && cy < 0.8 && ny > 0.2) c.lerp(ROCK_ORANGE, 0.45 * smooth01((fbm3(cx * 9, cy * 9, cz * 9, seed + 51, 2) - 0.62) / 0.1));
     if (cy > 0.78 && ny > 0.3) c.lerp(ROCK_GUANO, 0.2 + 0.35 * fbm3(cx * 6, cy * 6, cz * 6, seed + 31, 2));
-    if (cy < 0.12) c.lerp(ROCK_ALGAE, 0.55);
-    if (cy < 0.02) c.lerp(ROCK_WET, 0.7);
-    for (let k = 0; k < 3; k++) {
-      col[(f + k) * 3] = c.r;
-      col[(f + k) * 3 + 1] = c.g;
-      col[(f + k) * 3 + 2] = c.b;
-    }
+    if (cy < 0.08) c.lerp(ROCK_ALGAE, 0.35 * smooth01((0.08 - cy) / 0.12));
+    col[i * 3] = c.r;
+    col[i * 3 + 1] = c.g;
+    col[i * 3 + 2] = c.b;
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   return g;

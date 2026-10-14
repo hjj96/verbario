@@ -114,7 +114,10 @@ export class Searchlight {
     spot.target.updateMatrixWorld();
     const night = st.night || 0;
     const dayDim = 0.55 + 0.45 * night; // by day the pool still shows but never fights the sun
-    spot.intensity = level * dayDim * 1.8 * Math.max(150, this.length * this.length); // lit foam ≈ 0.6–0.7 after tonemap
+    // The pool on the water is the ocean's look-driven layer 11 (it only takes a share of this light):
+    // the SpotLight is sized for what floats in it — a raft canopy stays orange (≈0.6 on screen),
+    // not a blown pink-white disc under the night bloom.
+    spot.intensity = level * dayDim * 0.6 * Math.max(150, this.length * this.length);
 
     // Volumetric cone: density by weather (clear .02, rain .18, storm .25, fog .35).
     const rain = st.rain || 0;

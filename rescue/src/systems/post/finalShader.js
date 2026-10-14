@@ -52,6 +52,7 @@ uniform float uGrain;
 uniform float uNight;
 uniform float uSeed;
 uniform float uLetterbox;
+uniform float uDayToe;
 uniform float uFloor;
 varying vec2 vUv;
 
@@ -187,6 +188,14 @@ void main() {
   col = mix(col, uEdge.rgb, clamp(uEdge.a * edgeMask, 0.0, 1.0));
 
   // ---- 4. grading ---------------------------------------------------------------------------
+  // human orange (rafts, vests, the heli's stripes) is measured before grading: the cold highlight
+  // split-tone must not turn a lit canopy pink (DESIGN §2.8 «защита оранжевого»)
+  float orange0;
+  {
+    float mx0 = max(col.r, max(col.g, col.b));
+    float mn0 = min(col.r, min(col.g, col.b));
+    orange0 = smoothstep(.12, .35, mx0 - mn0) * smoothstep(.08, .3, col.r - col.b) * (1. - smoothstep(.55, .8, col.g / max(col.r, 1e-3)));
+  }
   col = pow(max(col * uSlope + uOffset, 0.0), vec3(uPower));
   col = vec3(sCurve(col.r, 0.42, uContrast), sCurve(col.g, 0.42, uContrast), sCurve(col.b, 0.42, uContrast));
   // split tone in soft-light mode. The tints are luminance-normalised (hue + chroma only), so a dark
@@ -197,7 +206,7 @@ void main() {
   vec3 tH = clamp(mix(vec3(0.5), uSplitHighlight * (0.5 / max(luma(uSplitHighlight), 0.02)), 0.75), 0.0, 1.0);
   col = clamp(col, 0.0, 1.0);
   col = mix(col, softLight(col, tS), uSplitStrength * (1.0 - smoothstep(0.0, 0.6, l)));
-  col = mix(col, softLight(col, tH), uSplitStrength * smoothstep(0.3, 1.0, l));
+  col = mix(col, softLight(col, tH), uSplitStrength * smoothstep(0.3, 1.0, l) * (1.0 - 0.85 * orange0));
   // «Зелёное небо»: sickly olive lift in the shadows and mids
   col += uGreen * vec3(0.012, 0.03, 0.004) * (1.0 - l);
   col = mix(col, col * vec3(0.95, 1.04, 0.88), uGreen * 0.6);
@@ -217,6 +226,14 @@ void main() {
   // ---- 5. vignette (tinted; milky in fog) ----------------------------------------------------
   col = mix(col, uVignetteColor, uVignette * er * er * (1.25 - 0.25 * er));
 
+  // daylight toe (DESIGN §2.1: open water by day never below ≈0.08): power + S-curve + vignette of
+  // the storm grades crushed the sea to ≈0.03–0.05. Lift only the deepest tones (after the
+  // vignette, so dark corners obey the floor too); the mids keep the grade's contrast.
+  if (uDayToe > 0.0) {
+    float lt = luma(col);
+    float lift = uDayToe * (1.0 - smoothstep(0.0, 0.2, lt));
+    col *= (lt + lift) / max(lt, 0.02);
+  }
   // ---- 6. grain: luminance, 24 Hz reseed; chroma noise at night -------------------------------
   vec2 gp = floor(gl_FragCoord.xy / uPxScale);
   float n = hash12(gp + vec2(uSeed * 37.0, uSeed * 17.0)) + hash12(gp + vec2(uSeed * 11.0 + 5.3, uSeed * 23.0 + 1.7)) - 1.0;
@@ -271,6 +288,7 @@ export function createFinalMaterial(dropsTexture) {
       uNight: { value: 0 },
       uSeed: { value: 0 },
       uLetterbox: { value: 0 },
+      uDayToe: { value: 0 },
       uFloor: { value: 0.008 },
     },
     vertexShader: VERT,

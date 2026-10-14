@@ -61,15 +61,20 @@ export class Input {
     this.enabled = true;
     this.anyPressedThisFrame = false;
 
+    // Codes / buttons that went down since the last poll: a tap shorter than one frame (fast fingers
+    // at low fps, synthetic test input) still counts as one press instead of being lost.
+    this._taps = new Set();
     this._onKeyDown = (e) => {
       if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
       this.keys.add(e.code);
+      if (!e.repeat) this._taps.add(e.code);
       this.lastDevice = 'keyboard';
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'PageUp', 'PageDown'].includes(e.code)) e.preventDefault();
     };
     this._onKeyUp = (e) => this.keys.delete(e.code);
     this._onBlur = () => {
       this.keys.clear();
+      this._taps.clear();
       this.mouseButtons.clear();
     };
     this._onMouseMove = (e) => {
@@ -83,7 +88,10 @@ export class Input {
     this._onMouseDown = (e) => {
       this.mouse.down = true;
       this.mouse.lastMoveT = performance.now();
-      if (e.target && e.target.tagName === 'CANVAS' && e.target.closest('#game')) this.mouseButtons.add('Mouse' + e.button);
+      if (e.target && e.target.tagName === 'CANVAS' && e.target.closest('#game')) {
+        this.mouseButtons.add('Mouse' + e.button);
+        this._taps.add('Mouse' + e.button);
+      }
     };
     this._onMouseUp = (e) => {
       this.mouse.down = false;
@@ -115,8 +123,8 @@ export class Input {
     for (const name of Object.keys(BINDINGS.axes)) {
       const [neg, pos] = BINDINGS.axes[name];
       let v = 0;
-      if (neg.some((k) => this.keys.has(k))) v -= 1;
-      if (pos.some((k) => this.keys.has(k))) v += 1;
+      if (neg.some((k) => this.keys.has(k) || this._taps.has(k))) v -= 1;
+      if (pos.some((k) => this.keys.has(k) || this._taps.has(k))) v += 1;
       if (pad && name === 'lift') {
         const up = pad.buttons[PAD.lift.up]?.value || 0;
         const down = pad.buttons[PAD.lift.down]?.value || 0;
@@ -151,7 +159,7 @@ export class Input {
     }
 
     for (const name of Object.keys(BINDINGS.buttons)) {
-      let down = BINDINGS.buttons[name].some((k) => this.keys.has(k) || this.mouseButtons.has(k));
+      let down = BINDINGS.buttons[name].some((k) => this.keys.has(k) || this.mouseButtons.has(k) || this._taps.has(k));
       if (pad && PAD.buttons[name]) down = down || PAD.buttons[name].some((i) => pad.buttons[i]?.pressed);
       if (this.virtualButtons[name]) down = true;
       this.prevButtons.set(name, this.buttons.get(name) || false);
@@ -159,6 +167,8 @@ export class Input {
       if (down && !this.prevButtons.get(name)) this.anyPressedThisFrame = true;
     }
     if (this.mouse.down) this.anyPressedThisFrame = this.anyPressedThisFrame || !prevAny;
+    if (this._taps.size) this.anyPressedThisFrame = true;
+    this._taps.clear();
   }
 
   // Wheel delta accumulated since the last call (consumed).
