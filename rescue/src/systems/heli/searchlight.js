@@ -114,7 +114,7 @@ export class Searchlight {
     spot.target.updateMatrixWorld();
     const night = st.night || 0;
     const dayDim = 0.55 + 0.45 * night; // by day the pool still shows but never fights the sun
-    spot.intensity = level * dayDim * 2.5 * Math.max(150, this.length * this.length); // lit foam ≈ 0.6 after tonemap
+    spot.intensity = level * dayDim * 1.8 * Math.max(150, this.length * this.length); // lit foam ≈ 0.6–0.7 after tonemap
 
     // Volumetric cone: density by weather (clear .02, rain .18, storm .25, fog .35).
     const rain = st.rain || 0;

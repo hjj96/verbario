@@ -7,6 +7,8 @@
 //                   keep their noses into the wind. One ambient flock wanders on the title / debrief.
 //                   Wing flap is a vertex rotation (instanced attribute), also in the shadow pass.
 //  Dolphins [NICE]  a pod porpoising across the view in calm daylight (medium / high).
+//  Whale [NICE]     now and then in calm water (day or moonlit night): a dark back breaks the surface,
+//                   blows a mist column, cruises leaving a slick, then dives flukes-up.
 //  Jellyfish [NICE] faint teal / violet pulses under the surface on calm nights.
 import * as THREE from 'three';
 import { LOOK_GLSL_UNIFORMS } from '../../core/look.js';
@@ -131,7 +133,7 @@ export class Gulls {
     this._q = new THREE.Quaternion();
     this._e = new THREE.Euler(0, 0, 0, 'YXZ');
     this._p = new THREE.Vector3();
-    this._s = new THREE.Vector3(1, 1, 1);
+    this._s = new THREE.Vector3(1.35, 1.35, 1.35); // perceptual scale (≈ 3.1 m span reads at H 150)
     this._ids = new Set();
   }
 
@@ -179,7 +181,7 @@ export class Gulls {
       if (!b) break;
       b.on = true;
       b.flock = f;
-      b.rad = 10 + Math.random() * 14;
+      b.rad = 7 + Math.random() * 10;
       b.alt = 17 + Math.random() * 7;
       b.ang = Math.random() * Math.PI * 2;
       b.w = (0.28 + Math.random() * 0.22) * (Math.random() < 0.5 ? -1 : 1);
@@ -625,3 +627,131 @@ export class Jellies {
     this.drift.y += wind.y * 0.02 * dt;
   }
 }
+
+// ---------------------------------------------------------------------------------------------------
+// Whale [NICE]: a ~14 m back surfacing in calm water, a blow, a short cruise, a flukes-up dive.
+const SURFACE_T = 16; // s for one surfacing
+
+function whaleGeometry(look) {
+  const body = new THREE.SphereGeometry(1, 16, 10);
+  body.scale(1.55, 1.25, 7);
+  const head = new THREE.SphereGeometry(1, 12, 8);
+  head.scale(1.35, 1.0, 2.4);
+  const hump = new THREE.SphereGeometry(0.5, 8, 6);
+  hump.scale(0.6, 0.5, 1.4);
+  const stock = new THREE.CylinderGeometry(0.35, 0.9, 3.2, 8);
+  stock.rotateX(Math.PI / 2);
+  const fluke = new THREE.SphereGeometry(1, 10, 4);
+  fluke.scale(2.6, 0.18, 0.9);
+  return look.merge([
+    { geometry: body, color: '#1C2428' },
+    { geometry: head, color: '#20292E', position: [0, 0.1, -5.6] },
+    { geometry: hump, color: '#161D21', position: [0, 1.15, 2.6] },
+    { geometry: stock, color: '#1A2226', position: [0, -0.1, 7.6] },
+    { geometry: fluke, color: '#151B1F', position: [0, -0.05, 9.4] },
+  ]);
+}
+
+export class Whale {
+  constructor(fx, allowed) {
+    this.fx = fx;
+    this.allowed = allowed;
+    this.mesh = new THREE.Mesh(whaleGeometry(fx.ctx.look), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0 }));
+    this.mesh.name = 'fx.whale';
+    this.mesh.visible = false;
+    this.mesh.castShadow = false;
+    this.active = false;
+    this.timer = 50 + Math.random() * 60;
+    this.t = 0;
+    this.x = 0;
+    this.z = 0;
+    this.dx = 1;
+    this.dz = 0;
+    this.blown = false;
+    this._e = new THREE.Euler(0, 0, 0, 'YXZ');
+    this._mist = new THREE.Color(1.1, 1.15, 1.2);
+  }
+
+  setAllowed(v) {
+    this.allowed = v;
+  }
+
+  clear() {
+    this.active = false;
+    this.mesh.visible = false;
+  }
+
+  update(dt, st, focus, heli) {
+    const fx = this.fx;
+    const calm = (st.intensity ?? 0) < 0.2 && (st.waveHeight ?? 1) < 1.2 && (st.rain ?? 0) < 0.05;
+    if (!this.active) {
+      this.mesh.visible = false;
+      if (!this.allowed || !calm || !(dt > 0)) return;
+      this.timer -= dt;
+      if (this.timer > 0) return;
+      this.timer = 80 + Math.random() * 90;
+      // somewhere in view, away from the heli
+      for (let i = 0; i < 6; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = 30 + Math.random() * 45;
+        this.x = focus.x + Math.cos(a) * r;
+        this.z = focus.z + Math.sin(a) * r * 0.6;
+        if (Math.hypot(this.x - heli.x, this.z - heli.z) > 45) break;
+      }
+      const h = Math.random() * Math.PI * 2;
+      this.dx = Math.sin(h);
+      this.dz = -Math.cos(h);
+      this.t = 0;
+      this.blown = false;
+      this.active = true;
+    }
+    if (dt > 0) {
+      this.t += dt;
+      this.x += this.dx * 1.8 * dt;
+      this.z += this.dz * 1.8 * dt;
+    }
+    const k = this.t / SURFACE_T;
+    if (k >= 1) {
+      this.active = false;
+      this.mesh.visible = false;
+      return;
+    }
+    const sea = fx.seaHeight(this.x, this.z);
+    // rise (0–.18), cruise with a gentle roll (.18–.7), dive: pitch down, flukes up (.7–1)
+    let y, pitch;
+    if (k < 0.18) {
+      const u = k / 0.18;
+      y = sea - 3.2 + 2.75 * u * u * (3 - 2 * u);
+      pitch = 0.12 * (1 - u);
+    } else if (k < 0.7) {
+      y = sea - 0.45 + 0.12 * Math.sin(this.t * 0.9);
+      pitch = 0.02 * Math.sin(this.t * 0.7);
+    } else {
+      const u = (k - 0.7) / 0.3;
+      pitch = -0.75 * Math.sin(Math.min(1, u * 1.3) * Math.PI * 0.5);
+      y = sea - 0.45 - 4.5 * u * u;
+    }
+    this._e.set(pitch, -Math.atan2(this.dx, -this.dz), 0.04 * Math.sin(this.t * 0.6));
+    this.mesh.rotation.copy(this._e);
+    this.mesh.position.set(this.x, y, this.z);
+    this.mesh.visible = true;
+    if (dt > 0) {
+      // the blow: a mist column, then a slick while cruising
+      if (!this.blown && k > 0.22) {
+        this.blown = true;
+        const sp = fx.pools.spray;
+        const hx = this.x + this.dx * 4.5;
+        const hz = this.z + this.dz * 4.5;
+        for (let i = 0; i < 26; i++) {
+          sp.emit(fx.t, hx + (Math.random() - 0.5) * 0.6, sea + 0.8, hz + (Math.random() - 0.5) * 0.6,
+            (Math.random() - 0.5) * 1.2, 7 + 4 * Math.random(), (Math.random() - 0.5) * 1.2,
+            1.6 + Math.random(), 0.8, 4.5 + 2 * Math.random(), this._mist, 0.32, this._mist, BLOW);
+        }
+        fx.ctx.ocean?.splash?.(this.x, this.z, 4, 0.5);
+      }
+      if (k > 0.15 && k < 0.85) fx.ctx.ocean?.addWake?.(this.x, this.z, 0.8, this.dx, this.dz);
+    }
+  }
+}
+
+const BLOW = { drag: 1.4, accY: -2.2, wind: 0.8, flags: 0, emissive: 0, spin: 0.3 };

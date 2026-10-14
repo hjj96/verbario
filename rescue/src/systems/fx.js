@@ -27,7 +27,7 @@ import { LightningFx } from './fx/lightning.js';
 import { Scud, AirLayers } from './fx/sky.js';
 import { GustStreaks } from './fx/gusts.js';
 import { Glows, Rings, Signals } from './fx/signals.js';
-import { Gulls, Dolphins, Jellies } from './fx/life.js';
+import { Gulls, Dolphins, Jellies, Whale } from './fx/life.js';
 
 const HIGH = QUALITY.high;
 const MAX_SPRAY = HIGH.downwash + HIGH.crest + HIGH.splash;
@@ -35,8 +35,8 @@ const DEG = Math.PI / 180;
 
 // Particle behaviour presets (constant objects: no allocation per spawn).
 const P = {
-  dwSpray: { drag: 1.5, accY: -6, wind: 0.55, flags: 0, emissive: 0, spin: 0.6 },
-  crest: { drag: 0.7, accY: -3.5, wind: 0.75, flags: 0, emissive: 0, spin: 0.3 },
+  dwSpray: { drag: 1.5, accY: -6, wind: 0.55, flags: F_STRETCH, emissive: 0, spin: 0.6 },
+  crest: { drag: 0.7, accY: -3.5, wind: 0.75, flags: F_STRETCH, emissive: 0, spin: 0.3 },
   droplet: { drag: 0.6, accY: -9.8, wind: 0.3, flags: 0, emissive: 0, spin: 0.8 },
   mist: { drag: 1.2, accY: -0.5, wind: 0.7, flags: 0, emissive: 0, spin: 0.3 },
   signalSmoke: { drag: 0.8, accY: 1.2, wind: 0.8, flags: 0, emissive: 0, spin: 0.25 },
@@ -67,7 +67,8 @@ export class Effects {
       smoke: new ParticlePool('smoke', 'smoke', look, this.air, HIGH.smoke),
       glow: new ParticlePool('glow', 'glow', look, this.air, HIGH.glow),
     };
-    for (const p of Object.values(this.pools)) scene.add(p.mesh);
+    this._poolList = [this.pools.spray, this.pools.smoke, this.pools.glow];
+    for (const p of this._poolList) scene.add(p.mesh);
 
     // --- air, sky, life ---------------------------------------------------------------------------
     this.rain = new Rain(look, this.air, HIGH.rain, HIGH.motes);
@@ -81,9 +82,10 @@ export class Effects {
     this.gulls = new Gulls(this, HIGH.gulls);
     this.dolphins = new Dolphins(this, HIGH.dolphins);
     this.jellies = new Jellies(look, this.air, HIGH.jelly);
+    this.whale = new Whale(this, true);
     scene.add(
-      this.rain.mesh, this.rain.motes, this.scud.mesh, ...this.layers.layers, this.layers.glory,
-      this.gusts.mesh, this.glows.mesh, this.rings.mesh, this.gulls.mesh, this.dolphins.mesh, this.jellies.mesh,
+      this.rain.mesh, this.rain.local, this.rain.localLight, this.rain.motes, this.scud.mesh, ...this.layers.layers, this.layers.glory,
+      this.gusts.mesh, this.glows.mesh, this.rings.mesh, this.gulls.mesh, this.dolphins.mesh, this.jellies.mesh, this.whale.mesh,
     );
 
     // --- state / scratch --------------------------------------------------------------------------
@@ -173,6 +175,7 @@ export class Effects {
     this.gulls.setLimit(c.gulls);
     this.dolphins.setLimit(c.dolphins);
     this.jellies.setLimit(c.jelly);
+    this.whale.setAllowed(c.dolphins > 0);
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -258,7 +261,7 @@ export class Effects {
     let kind = opts?.kind;
     if (!kind) kind = isOrange(c) ? 'signal' : lum(c) < 0.05 ? 'damage' : 'generic';
     const kindId = kind === 'signal' ? 1 : kind === 'damage' ? 2 : kind === 'steam' ? 3 : 4;
-    const maxRate = kind === 'signal' ? 9 : kind === 'damage' ? 16 : 12;
+    const maxRate = kind === 'signal' ? 12 : kind === 'damage' ? 16 : 12;
     const slot = this._emitter(x, z, kindId);
     const t = this.t;
     slot.budget = Math.min(3, slot.budget + (t - slot.lastT) * maxRate);
@@ -303,11 +306,12 @@ export class Effects {
     const j = () => (Math.random() - 0.5);
     if (kind === 'signal') {
       // survivor's orange day smoke: the best wind indicator in the game (DESIGN §2.10)
-      const s0 = opts?.size?.[0] ?? 1;
+      const s0 = opts?.size?.[0] ?? 0.9;
       const s1 = opts?.size?.[1] ?? 10;
-      pool.emit(t, x + j() * 0.4, y + 0.3, z + j() * 0.4, j() * 0.5, opts?.rise ?? 1.5, j() * 0.5,
-        opts?.life ?? 9 + 3 * Math.random(), s0, s1 * (0.85 + 0.3 * Math.random()),
-        this._c.copy(this._orange).lerp(c, 0.5), opts?.alpha ?? 0.6, this._orangeEnd, P.signalSmoke);
+      const v = 0.9 + 0.2 * Math.random();
+      pool.emit(t, x + j() * 0.4, y + 0.3, z + j() * 0.4, j() * 0.6, opts?.rise ?? 1.5, j() * 0.6,
+        opts?.life ?? 9 + 4 * Math.random(), s0, s1 * (0.75 + 0.5 * Math.random()),
+        this._c.copy(this._orange).lerp(c, 0.5).multiplyScalar(v), opts?.alpha ?? 0.5, this._orangeEnd, P.signalSmoke);
     } else if (kind === 'damage') {
       // exhaust smoke: inherits a little of the heli's motion, then the downwash takes it
       const h = this.heli;
@@ -409,11 +413,11 @@ export class Effects {
     const reduced = !!this.ctx.settings.get('reduceFlashes');
     const sea = this.seaHeight(x, z);
     this._camera();
-    this.lightning.strike(x, z, sea, strength, this._camPos, this.focus, reduced);
+    this.lightning.strike(x, z, sea, strength, this.ctx.camera, this.focus, reduced);
     const k = reduced ? 0.3 : 1;
     this.stars.push({ x, y: sea + 1.5, z, t: 0, life: reduced ? 0.6 : 0.32, I: k * Math.min(1.3, strength), reduced });
     if (this.stars.length > 6) this.stars.shift();
-    this.rings.spawn(x, z, 26 + 8 * Math.random(), 0.75, COLORS.boltHalo, 3.2 * k);
+    this.rings.spawn(x, z, 26 + 8 * Math.random(), 0.75, COLORS.boltHalo, 1.6 * k);
     this.steam(x, sea, z, 10);
     // water thrown up by the strike
     const sp = this.pools.spray;
@@ -446,6 +450,7 @@ export class Effects {
     this.gusts.clear();
     this.gulls.clear();
     this.dolphins.clear();
+    this.whale.clear();
   }
 
   seaHeight(x, z) {
@@ -552,16 +557,18 @@ export class Effects {
     const ctx = this.ctx;
     this.t += dt;
     const st = ctx.weather?.state || this._fallbackSt;
+    const en = this.enabled;
     this._readState();
     this._updateAir(st);
 
-    // mean wind (scud / rain / layers drift); look.uWind is what the particle shaders use
+    // mean wind: look.uWind (weather writes it) is what the particle shaders use too
     const lw = ctx.look?.uniforms?.uWind?.value;
     if (lw) this.wind.copy(lw);
     else if (st.windDir) this.wind.copy(st.windDir).multiplyScalar(st.windSpeed ?? 0);
     const reduce = !!ctx.settings.get('reduceFlashes');
     const night = clamp01(st.night ?? 0);
 
+    // emitters, signals, lightning → then the light pool picks its 4 lights for this frame
     this.glows.begin();
     if (dt > 0) {
       this._downwashSpray(dt, night);
@@ -573,39 +580,71 @@ export class Effects {
     this.lightning.update(dt, night);
     this.lightPool.update(this.focus.x, this.focus.z, this.air);
 
-    // air layers
+    // air between camera and sea
     const camY = Math.max(20, this._camPos.y);
-    const en = this.enabled;
-    this.rain.update(dt, st, camY, ctx.heli?.beam, this.wind);
-    if (!en.rain) this.rain.mesh.visible = this.rain.motes.visible = false;
+    this.rain.update(dt, st, camY, ctx.heli?.beam, this.wind, this._keyLight());
     this._heliScreen();
     this.scud.update(dt, st, this.wind, this.heliNdc, this.heli.alive, this.lightning.cloudFlash);
-    if (!en.scud) this.scud.mesh.visible = false;
     this.layers.update(dt, st, this.wind, this.focus, this.heli);
-    if (!en.fogLayers) for (let i = 0; i < 3; i++) this.layers.layers[i].visible = false;
-    if (!en.seaSmoke) this.layers.layers[3].visible = false;
-    const p = st.palette || {};
-    const L = this._light;
-    if (p.ambient && p.ambient.isColor) L.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 1.1);
-    else L.setRGB(0.4, 0.42, 0.44);
-    if (p.sun && p.sun.isColor) L.r += p.sun.r * (p.sunIntensity ?? 1) * 0.35, L.g += p.sun.g * (p.sunIntensity ?? 1) * 0.35, L.b += p.sun.b * (p.sunIntensity ?? 1) * 0.35;
-    this.gusts.update(dt, st.gustFronts, L);
-    if (!en.gusts) this.gusts.mesh.visible = false;
+    this.gusts.update(dt, st.gustFronts, this._streakLight(st));
     this.rings.update(dt);
 
     // life
     this.gulls.update(dt, st, this.wind, this.focus, this.heli);
     this.dolphins.update(dt, st, this.focus, this.heli);
     this.jellies.update(dt, st, this.wind);
+    this.whale.update(dt, st, this.focus, this.heli);
 
-    if (!en.gulls) this.gulls.mesh.visible = false;
-    if (!en.life) this.dolphins.mesh.visible = this.jellies.mesh.visible = false;
     this.glows.end();
-    for (const pool of Object.values(this.pools)) {
-      pool.flush();
-      pool.mesh.visible = en.particles;
-    }
+    for (const pool of this._poolList) pool.flush();
+    this._applyEnabled(en);
     this.stats.emitted = this.pools.spray.emitted + this.pools.smoke.emitted + this.pools.glow.emitted;
+  }
+
+  // Debug / test switches (fx.enabled): hide whole layers without touching their state.
+  _applyEnabled(en) {
+    const R = this.rain;
+    if (!en.rain) R.mesh.visible = R.local.visible = R.localLight.visible = R.motes.visible = false;
+    if (!en.scud) this.scud.mesh.visible = false;
+    if (!en.fogLayers) for (let i = 0; i < 3; i++) this.layers.layers[i].visible = false;
+    if (!en.fogLayers) this.layers.glory.visible = false;
+    if (!en.seaSmoke) this.layers.layers[3].visible = false;
+    if (!en.gusts) this.gusts.mesh.visible = false;
+    if (!en.gulls) this.gulls.mesh.visible = false;
+    if (!en.life) this.dolphins.mesh.visible = this.jellies.mesh.visible = this.whale.mesh.visible = false;
+    if (!en.lightning) for (const s of this.lightning.slots) s.setVisible(false);
+    for (const pool of this._poolList) pool.mesh.visible = en.particles;
+  }
+
+  // Light on the gust streaks: sky + a share of the sun.
+  _streakLight(st) {
+    const p = st.palette || {};
+    const L = this._light;
+    if (p.ambient && p.ambient.isColor) L.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 1.1);
+    else L.setRGB(0.4, 0.42, 0.44);
+    if (p.sun && p.sun.isColor) {
+      const k = (p.sunIntensity ?? 1) * 0.35;
+      L.r += p.sun.r * k;
+      L.g += p.sun.g * k;
+      L.b += p.sun.b * k;
+    }
+    return L;
+  }
+
+  // The pooled light that matters most near the view (flare / rocket) — rain sparkles red around it.
+  _keyLight() {
+    let best = null;
+    let bs = 0;
+    for (const l of this.lightPool.lights) {
+      if (!(l.intensity > 50)) continue;
+      const d = Math.hypot(l.position.x - this.focus.x, l.position.z - this.focus.z);
+      const sc = l.intensity / (1 + (d / 70) ** 2);
+      if (sc > bs) {
+        bs = sc;
+        best = l.position;
+      }
+    }
+    return best;
   }
 
   _heliScreen() {
@@ -746,7 +785,7 @@ export class Effects {
         continue;
       }
       const e = s.reduced ? softEnvelope(s.t) : strokeEnvelope(s.t);
-      this.glows.add(s.x, s.y, s.z, 1.6, this._starCol, 40 * e * s.I, 26, this._haloCol, 3.5 * e * s.I, 1, 0.4);
+      this.glows.add(s.x, s.y, s.z, 1.4, this._starCol, 6 * e * s.I, 16, this._haloCol, 0.9 * e * s.I, 1, 0.4);
     }
     for (let i = this.timedLights.length - 1; i >= 0; i--) {
       const l = this.timedLights[i];

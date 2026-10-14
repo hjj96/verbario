@@ -2,9 +2,7 @@
 // pads — landing, unload, refuel, repair, resupply (§3.9), consumables (rafts, flares, loudspeaker),
 // crash / ditching sequence (§3.15).
 import * as THREE from 'three';
-import { SKID_Y } from './model.js';
 
-const SKID = -SKID_Y;
 const DIFF = { cadet: 0.6, pilot: 1, ace: 1.3 };
 const CRUISE = 30; // m/s airspeed assumed for the BINGO estimate
 const UNLOAD_PERSON = 1;
@@ -426,4 +424,3 @@ export class HeliOps {
   }
 }
 
-export { SKID };

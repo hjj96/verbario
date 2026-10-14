@@ -91,7 +91,7 @@ void main() {
     vec2 perp = vec2(-dir.y, dir.x);
     float len = size + sl * uStretch;
     off = dir * corner.x * len + perp * corner.y * size;
-    alpha *= size / len * 1.6;
+    alpha *= min(1.0, size / len * 1.6);
   } else {
     float r = iC.z + iC.w * age;
     float cs = cos(r), sn = sin(r);
@@ -141,9 +141,10 @@ const FRAG = {
     vec2 drift = vec2(0.05, 0.11) * vAge;
     float n = texture2D(uAtlas, vUv * 0.32 + o + drift).r;
     float n2 = texture2D(uAtlas, vUv * 0.75 + o * 1.3 - drift).g;
-    float shape = 1.0 - smoothstep(0.2, 1.0, r);
-    float erosion = smoothstep(0.15 + 0.45 * vAge, 0.75 + 0.2 * vAge, n * 0.85 + shape * 0.55);
-    float dens = shape * erosion * (0.75 + 0.5 * (1.0 - n2));
+    float shape = 1.0 - smoothstep(0.15, 1.0, r);
+    // older puffs get torn into wisps
+    float erosion = smoothstep(0.2 + 0.55 * vAge, 0.7 + 0.3 * vAge, n * 0.9 + shape * 0.5);
+    float dens = shape * erosion * (0.65 + 0.7 * (1.0 - n2)) * (1.0 - 0.45 * vAge);
     // fake volume: the sun-facing side of the puff is brighter
     vec3 nrm = normalize(vec3(vUv, sqrt(max(0.0, 1.0 - r * r))));
     float lit = 0.72 + 0.4 * clamp(dot(nrm.xy, normalize(vSun + 1e-4)) * length(vSun), -1.0, 1.0);
@@ -179,8 +180,8 @@ vec3 fogColorOr(vec3 c) {
 
 // Per-kind material defaults.
 const KIND = {
-  spray: { blending: THREE.NormalBlending, fadeIn: 0.05, fadeOut: 0.55, growth: 0.6, push: 0.6, beam: 4.0, light: 1.0, sun: 0.5 },
-  smoke: { blending: THREE.NormalBlending, fadeIn: 0.06, fadeOut: 0.4, growth: 0.55, push: 0.5, beam: 2.0, light: 1.2, sun: 0.55 },
+  spray: { blending: THREE.NormalBlending, fadeIn: 0.05, fadeOut: 0.55, growth: 0.6, push: 0.6, beam: 4.0, light: 0.5, sun: 0.5 },
+  smoke: { blending: THREE.NormalBlending, fadeIn: 0.05, fadeOut: 0.3, growth: 0.5, push: 0.5, beam: 2.0, light: 0.6, sun: 0.55 },
   glow: { blending: THREE.AdditiveBlending, fadeIn: 0.02, fadeOut: 0.5, growth: 1.0, push: 0.2, beam: 0.0, light: 0.0, sun: 0.0 },
 };
 

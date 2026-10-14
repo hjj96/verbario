@@ -68,13 +68,14 @@ void main() {
   vec2 perp = vec2(-sdir.y, sdir.x);
   vec4 c = position.y > 0.0 ? ch : ct;
   float pxPerM = projectionMatrix[1][1] * hr.y / max(c.w, 0.5);
-  float wpx = max(1.3, 0.45 * pxPerM);
+  float wpx = max(1.6, 0.9 * pxPerM);
   c.xy += perp * position.x * wpx * 0.5 / hr * c.w;
   gl_Position = c;
   vQ = position.xy;
   float env = smoothstep(0.0, 0.2, ph) * (1.0 - smoothstep(0.6, 1.0, ph));
   float fog = fxFog(ph3);
-  vA = 0.12 * F2.x * env * (1.0 - fog) * (0.7 + 0.6 * rH);
+  // DESIGN α .12 is the average over a stroke's life; the peak is brighter so the telegraph reads
+  vA = 0.24 * F2.x * env * (1.0 - fog) * (0.7 + 0.6 * rH);
   vC = uLight + uAirFlash * 1.5;
 }
 `;
@@ -83,7 +84,7 @@ varying vec2 vQ;
 varying float vA;
 varying vec3 vC;
 void main() {
-  float across = 1.0 - vQ.x * vQ.x;
+  float across = exp(-vQ.x * vQ.x * 3.0);
   float along = sin(3.14159 * (vQ.y * 0.5 + 0.5));
   // a dry-brush stroke: brighter head, ragged tail
   float stroke = mix(0.55, 1.0, vQ.y * 0.5 + 0.5);
@@ -223,7 +224,7 @@ export class GustStreaks {
       if (this.uF2[i].x > 0.001) any = true;
     }
     this.mesh.visible = any;
-    if (any) this.material.uniforms.uLight.value.copy(this._streakCol).multiply(light);
+    if (any) this.material.uniforms.uLight.value.copy(this._streakCol).multiply(light).multiplyScalar(1.6);
   }
 
   clear() {

@@ -118,8 +118,8 @@ class RibbonSlot {
       return mesh;
     };
     const spider = kind === 'spider';
-    this.halo = mk(FRAG_HALO, spider ? 5 : 6, spider ? [4, 30] : [5, 46], COLORS.boltHalo, 26);
-    this.core = mk(FRAG_CORE, spider ? 0.45 : 0.8, spider ? [1.2, 4] : [1.6, 6.5], COLORS.bolt, 27);
+    this.halo = mk(FRAG_HALO, spider ? 5 : 6, spider ? [4, 20] : [5, 18], COLORS.boltHalo, 26);
+    this.core = mk(FRAG_CORE, spider ? 0.4 : 0.6, spider ? [1.1, 3] : [1.4, 4], COLORS.bolt, 27);
     this.halo.name = `fx.${kind}Halo`;
     this.core.name = `fx.${kind}Core`;
     this.t = 99;
@@ -148,7 +148,7 @@ class RibbonSlot {
     const o = this.n * 4;
     this.A[o] = ax; this.A[o + 1] = ay; this.A[o + 2] = az; this.A[o + 3] = along;
     this.B[o] = bx; this.B[o + 1] = by; this.B[o + 2] = bz; this.B[o + 3] = width;
-    this.C[o] = inten; this.C[o + 1] = branch; this.C[o + 2] = 0; this.C[o + 3] = 0;
+    this.C[o] = inten * (0.7 + 0.3 * Math.random()); this.C[o + 1] = branch; this.C[o + 2] = 0; this.C[o + 3] = 0;
     this.n++;
   }
 
@@ -241,8 +241,9 @@ export class LightningFx {
     }
   }
 
-  // Sea strike. cam: camera Vector3, focus: {x, z} ground point under the screen centre.
-  strike(x, z, seaY, strength, cam, focus, reduced) {
+  // Sea strike. camera: THREE.Camera, focus: {x, z} ground point under the screen centre.
+  strike(x, z, seaY, strength, camera, focus, reduced) {
+    const cam = camera.position;
     const s = this._slot('bolt');
     const r = this.rand;
     s.active = true;
@@ -264,12 +265,21 @@ export class LightningFx {
       ux /= ul;
       uz /= ul;
     }
+    // The channel comes down from high above the camera: we start it ~30–40 m under the lens and slide
+    // the top outwards until it projects off-frame, so the bolt enters from the frame edge.
     const H = Math.max(60, cam.y - seaY);
-    const lat = (r() * 2 - 1) * 0.25 * H;
-    const off = (0.45 + 0.25 * r()) * H;
-    const tx = x + ux * off - uz * lat;
-    const tz = z + uz * off + ux * lat;
-    const ty = cam.y - 12 - 6 * r();
+    const lat = (r() * 2 - 1) * 0.2 * H;
+    const ty = cam.y - Math.max(28, 0.22 * H) - 8 * r();
+    let off = 0.3 * H;
+    let tx = x, tz = z;
+    const v = this._pv || (this._pv = new THREE.Vector3());
+    for (let i = 0; i < 12; i++) {
+      tx = x + ux * off - uz * lat;
+      tz = z + uz * off + ux * lat;
+      v.set(tx, ty, tz).project(camera);
+      if (Math.abs(v.x) > 1.08 || Math.abs(v.y) > 1.08 || v.z > 1) break;
+      off += 0.12 * H;
+    }
     s.y = ty;
     // where the channel crosses the scud layer (~72 m): the cloud lights up there
     const kc = Math.max(0, Math.min(1, (ty - 72) / Math.max(1, ty - seaY)));
@@ -277,7 +287,7 @@ export class LightningFx {
     s.cz = tz + (z - tz) * kc;
     s.begin();
     // main channel: 7 levels → 128 segments
-    const n = this._displace(tx, ty, tz, x, seaY, z, 7, 0.16, 0.05);
+    const n = this._displace(tx, ty, tz, x, seaY, z, 7, 0.24, 0.07);
     this._emitPolyline(s, n, 0, 1, 1, 1, 0);
     // keep a copy of the main path for branch roots
     const mx = this._mx || (this._mx = new Float32Array(130));
@@ -307,7 +317,7 @@ export class LightningFx {
       const ex = bx0 + (hx / bl) * len;
       const ey = Math.max(seaY + 4, by0 + (hy / bl) * len);
       const ez = bz0 + (hz / bl) * len;
-      const nn = this._displace(bx0, by0, bz0, ex, ey, ez, 5, 0.2, 0.08);
+      const nn = this._displace(bx0, by0, bz0, ex, ey, ez, 5, 0.26, 0.1);
       const a0 = k / (n - 1);
       this._emitPolyline(s, nn, a0, a0 + 0.25, 0.55, 0.6, 1);
     }
@@ -415,8 +425,11 @@ export class LightningFx {
       I *= s.strength;
       const cu = s.core.material.uniforms;
       const hu = s.halo.material.uniforms;
-      const coreGain = s.kind === 'bolt' ? 30 : 10;
-      const haloGain = s.kind === 'bolt' ? 4 : 1.6;
+      // Core: white-hot HDR. DESIGN asks ×30, but our UnrealBloom (threshold ~1) turns a ×30 line into
+      // a shapeless white cloud — ×6 keeps a crisp spear with a strong glow. The 6 m halo is a soft
+      // gaussian that must not saturate (it would read as a solid band).
+      const coreGain = s.kind === 'bolt' ? 8 : 3;
+      const haloGain = s.kind === 'bolt' ? 0.5 : 0.35;
       cu.uI.value = I * coreGain;
       hu.uI.value = I * haloGain;
       cu.uBranchI.value = hu.uBranchI.value = branch;

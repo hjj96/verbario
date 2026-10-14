@@ -159,7 +159,8 @@ vec3 fxPointLights(vec3 p) {
     float dd = dot(d, d);
     float r = uFxLightCol[i].w;
     float win = clamp(1.0 - dd / (r * r), 0.0, 1.0);
-    s += uFxLightCol[i].rgb * (lp.w / max(dd, 4.0)) * win * win;
+    // soft-cored falloff (r0 = 20 m): media glow around a flare without blowing out to white
+    s += uFxLightCol[i].rgb * (lp.w / (dd + 400.0)) * win * win;
   }
   return s;
 }

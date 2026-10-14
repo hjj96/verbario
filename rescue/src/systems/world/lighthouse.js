@@ -60,8 +60,6 @@ export class Lighthouse {
     this.fogT = 22; // first foghorn soon after the fog rolls in
     this.windsock = new Windsock(3);
     this.hoop = new THREE.Vector3(this.x + 10.4, DECK_Y + 4.6, this.z + 7.6);
-    this._v = new THREE.Vector3();
-    this._d = new THREE.Vector3();
     this._lamps();
 
     // gameplay data

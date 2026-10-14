@@ -269,7 +269,7 @@ export class Signals {
     this.fx = fx;
     this.flares = [];
     for (let i = 0; i < MAX_FLARES; i++) {
-      this.flares.push({ alive: false, x: 0, y: 0, z: 0, t: 0, life: FLARE_LIFE, seed: 0, light: null, smokeAcc: 0, sparkAcc: 0, flick: 1 });
+      this.flares.push({ alive: false, x: 0, y: 0, z: 0, t: 0, life: FLARE_LIFE, seed: 0, light: null, smokeAcc: 0, sparkAcc: 0, flick: 1, held: false, lift: 1.3, lx: 0, lz: 0 });
     }
     this.rockets = [];
     for (let i = 0; i < MAX_ROCKETS; i++) {
@@ -294,6 +294,11 @@ export class Signals {
     f.x = x;
     f.z = z;
     f.y = this.fx.seaHeight(x, z);
+    // held flares (a survivor's hand): opts.held, or detected when somebody else moves f.x / f.z
+    f.held = !!opts.held;
+    f.lift = Number.isFinite(opts.lift) ? opts.lift : 1.3;
+    f.lx = x;
+    f.lz = z;
     f.t = 0;
     f.life = opts.life ?? FLARE_LIFE;
     f.seed = Math.random() * 100;
@@ -358,10 +363,15 @@ export class Signals {
         f.light = null;
         continue;
       }
-      // drift slowly with the wind (leeway) and bob on the surface
-      f.x += wind.x * 0.03 * dt;
-      f.z += wind.y * 0.03 * dt;
-      f.y = fx.seaHeight(f.x, f.z);
+      // floating: drift slowly with the wind (leeway) and bob on the surface; held: follow the hand
+      if (Math.abs(f.x - f.lx) > 1e-4 || Math.abs(f.z - f.lz) > 1e-4) f.held = true;
+      if (!f.held) {
+        f.x += wind.x * 0.03 * dt;
+        f.z += wind.y * 0.03 * dt;
+      }
+      f.y = fx.seaHeight(f.x, f.z) + (f.held ? f.lift : 0);
+      f.lx = f.x;
+      f.lz = f.z;
       // 12–18 Hz flicker (two incommensurate tones + a little noise), sputter at the end
       const ph = t + f.seed;
       let flick = 1 - flickAmp + flickAmp * (0.55 * Math.sin(ph * 2 * Math.PI * 12.7) + 0.45 * Math.sin(ph * 2 * Math.PI * 17.3 + 1.3)) + (Math.random() - 0.5) * flickAmp * 0.4;
@@ -375,7 +385,7 @@ export class Signals {
         f.light.set(1100 * I);
       }
       // core + halo
-      glows.add(f.x, f.y + 0.35, f.z, 0.55, this.cFlareCore, 16 * I, 9, this.cFlare, 2.4 * I * (0.6 + 0.4 * night), 0);
+      glows.add(f.x, f.y + 0.35, f.z, 0.5, this.cFlareCore, 7 * I, 6.5, this.cFlare, 1.2 * I * (0.6 + 0.4 * night), 0);
       ocean?.addGlint?.(f.x, f.z, 6, 1.8 * I, this.cFlare);
       if (dt > 0) {
         // smoke lit red by its own light, trailing with the wind
@@ -462,7 +472,7 @@ export class Signals {
         r.light.position.set(px, r.y, pz);
         r.light.set((r.t < ROCKET_RISE ? 500 : 4200) * I);
       }
-      const core = r.t < ROCKET_RISE ? 6 : 22;
+      const core = r.t < ROCKET_RISE ? 4 : 9;
       glows.add(px, r.y, pz, r.t < ROCKET_RISE ? 0.5 : 1.0, this.cRocketCore, core * I, r.t < ROCKET_RISE ? 5 : 16, r.color, (r.t < ROCKET_RISE ? 1 : 3) * I, r.t < ROCKET_RISE ? 0 : 1, t * 0.3);
       if (r.t >= ROCKET_RISE) ocean?.addGlint?.(px, pz, 20, 1.1 * I, r.color);
     }

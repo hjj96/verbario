@@ -83,8 +83,8 @@ void main() {
   float n3 = texture2D(uAtlas, q * 0.052 + vec2(0.0, evo * 3.0)).r;
   float cl = n1 * 0.62 + n3 * 0.3 + (1.0 - n2) * 0.2;
   float edge = 1.0 - smoothstep(0.4, 1.0, r);
-  float thr = mix(0.7, 0.46, pres);
-  float dens = smoothstep(thr, thr + 0.16, cl * (0.6 + 0.4 * edge)) * edge;
+  float thr = mix(0.74, 0.53, pres);
+  float dens = smoothstep(thr, thr + 0.24, cl * (0.6 + 0.4 * edge)) * edge;
   if (dens < 0.004) discard;
   float alpha = dens * 0.35 * smoothstep(0.0, 0.3, pres);
 
@@ -109,7 +109,7 @@ void main() {
     col += uCloudLitCol * f * (2.5 + 5.0 * dens * n1);
     alpha = min(0.6, alpha + f * 0.18 * dens);
   }
-  col += fxPointLights(vW + vec3(0.0, -3.0, 0.0)) * 0.6;
+  col += fxPointLights(vW + vec3(0.0, -3.0, 0.0)) * 0.3 * (0.5 + dens);
   float fog = fxFog(vW);
 #ifdef USE_FOG
   col = mix(col, fogColor, fog * 0.85);
@@ -172,7 +172,7 @@ export class Scud {
     this.mesh = new THREE.Mesh(g, this.material);
     this.mesh.name = 'fx.scud';
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = 30;
+    this.mesh.renderOrder = 23.5; // before rain, bolts and glows: bright things above the layer shine through
     this.mesh.visible = false;
     this._c = new THREE.Color();
   }
@@ -210,9 +210,9 @@ export class Scud {
     // cloud tops seen from above: sky light ×2.2 (multiple scattering) + sun, a touch of fog colour
     const lit = this._c;
     lit.setRGB(0.3, 0.32, 0.34);
-    if (p.ambient) lit.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 2.2);
+    if (p.ambient) lit.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 1.7);
     if (p.sun) {
-      const k = (p.sunIntensity ?? 1) * 0.8 * Math.sqrt(sunY);
+      const k = (p.sunIntensity ?? 1) * 0.6 * Math.sqrt(sunY);
       lit.r += p.sun.r * k;
       lit.g += p.sun.g * k;
       lit.b += p.sun.b * k;
@@ -289,7 +289,7 @@ void main() {
   float fog = fxFog(vW);
   a *= 1.0 - 0.5 * fog;
   if (a < 0.003) discard;
-  vec3 col = uCol + uAirFlash * 1.2 + fxPointLights(vW + vec3(0.0, 2.0, 0.0)) * 0.5
+  vec3 col = uCol + uAirFlash * 1.2 + fxPointLights(vW + vec3(0.0, 2.0, 0.0)) * 0.2
            + vec3(1.0, 0.945, 0.855) * fxBeam(vW) * 1.6;
 #ifdef USE_FOG
   col = mix(col, fogColor, fog * 0.7);
@@ -314,7 +314,8 @@ void main() {
   float r = distance(vW.xz, uGlory.xy);
   float b1 = smoothstep(5.5, 6.5, r) * (1.0 - smoothstep(8.5, 9.5, r));
   float b2 = smoothstep(9.8, 10.8, r) * (1.0 - smoothstep(13.2, 14.4, r));
-  vec3 c = spectral(clamp((r - 6.0) / 3.0, 0.0, 1.0)) * b1 + spectral(clamp((r - 10.4) / 3.4, 0.0, 1.0)) * b2 * 0.6;
+  vec3 c = spectral(clamp((r - 6.0) / 3.0, 0.0, 1.0)) * b1 + spectral(clamp((r - 10.4) / 3.4, 0.0, 1.0)) * b2 * 0.55;
+  c = mix(vec3(dot(c, vec3(0.333))), c, 0.7); // a glory is pastel, not a neon rainbow
   // a soft bright core around the shadow (the «halo» of the glory)
   c += vec3(1.0, 0.97, 0.9) * exp(-r * r / 14.0) * 0.25;
   float n = texture2D(uAtlas, (vW.xz - uOff) * uGlory.w).r;
@@ -464,9 +465,11 @@ export class AirLayers {
     }
 
     // glory around the heli's shadow on fog / drizzle (sun side visible)
+    // needs a fog bank (or real mist) under the heli and a sun bright enough to cast a shadow
     const sunVis = clamp01((p.sunIntensity ?? 0) / 1.2) * (1 - (st.night ?? 0)) * (1 - 0.7 * clamp01(st.rain ?? 0));
-    const drizzle = smooth(0.0, 0.15, st.rain ?? 0) * (1 - smooth(0.3, 0.6, st.rain ?? 0));
-    const gloryK = Math.max(presence, drizzle * 0.6) * sunVis * (heli.alive ? 1 : 0);
+    const mist = smooth(0.35, 0.8, fogAmt);
+    const drizzle = smooth(0.02, 0.12, st.rain ?? 0) * (1 - smooth(0.25, 0.5, st.rain ?? 0)) * mist;
+    const gloryK = Math.max(presence, drizzle * 0.5) * sunVis * (heli.alive ? 1 : 0) * (1 - smooth(60, 110, heli.y));
     this.glory.visible = gloryK > 0.02;
     if (this.glory.visible) {
       const sd = st.sunDir || st.sunDirVisual;
@@ -476,7 +479,7 @@ export class AirLayers {
       const sz = heli.z - (sd ? sd.z : 0) * (h / sy);
       const u = this.glory.material.uniforms;
       u.uCenter.value.set(sx, sz);
-      u.uGlory.value.set(sx, sz, gloryK * 0.55, LAYER_SCALE[0]);
+      u.uGlory.value.set(sx, sz, gloryK * 0.3, LAYER_SCALE[0]);
     }
   }
 }

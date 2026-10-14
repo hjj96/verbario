@@ -93,6 +93,7 @@ export class World {
       dt: 0,
       night: 0,
       fogK: 0,
+      haze: 0,
       rain: 0,
       intensity: 0,
       visibility: 20000,
@@ -357,7 +358,9 @@ export class World {
     env.rain = clamp(st.rain ?? 0, 0, 1);
     env.intensity = clamp(st.intensity ?? 0, 0, 1);
     env.visibility = st.visibility ?? 20000;
-    env.fogK = clamp(Math.max(st.fog ?? 0, smoothstep(600, 220, env.visibility)), 0, 1);
+    // real fog only (the storm presets carry a 0.45–0.55 haze in state.fog — that is not «туман»)
+    env.haze = clamp(st.fog ?? 0, 0, 1);
+    env.fogK = clamp(Math.max(smoothstep(0.6, 0.95, env.haze), smoothstep(650, 250, env.visibility)), 0, 1);
     env.Hs = pal.sea?.Hs ?? st.waveHeight ?? 0.5;
     env.flash = st.flash ?? 0;
     env.reduceFlashes = !!ctx.settings.get('reduceFlashes');
@@ -384,7 +387,7 @@ export class World {
     if (pal.sun?.isColor) S.uRim.value.add(this._col.copy(pal.sun).multiplyScalar(0.55 * env.night));
     S.uCloudK.value = clamp(pal.shadowIntensity ?? 0.5, 0, 1) * (1 - env.night);
     if (pal.foam?.isColor) S.uFoamCol.value.copy(pal.foam);
-    S.uScatter.value = clamp(env.fogK + 0.5 * env.rain, 0, 1);
+    S.uScatter.value = clamp(env.fogK + 0.5 * env.rain + 0.25 * env.haze, 0, 1);
     S.uNightK.value = env.night;
     const fog = ctx.scene.fog;
     if (fog && fog.isFog) {

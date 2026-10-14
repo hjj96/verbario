@@ -13,6 +13,7 @@ import { AIR_GLSL, FOG_PARS, FINISH, COLORS, fogUniforms, rng32, smooth } from '
 
 const FALL = 9.0; // m/s, mean terminal velocity of big drops
 const LEN = 1.2; // m
+const LOCAL_MAX = 1600;
 
 const RAIN_VERT = /* glsl */ `
 ${FOG_PARS}
@@ -21,6 +22,8 @@ ${AIR_GLSL}
 attribute vec4 aSeed;   // x, y: position in the tile, z: vertical phase, w: density rank
 attribute vec4 aSeed2;  // x: fall-speed factor, y: length factor, z: alpha factor, w: sparkle seed
 uniform float uR, uFall, uLen, uRainAmt, uHail, uSpan, uRainGain, uNearFrac;
+uniform vec4 uLocalA; // local population: centre xyz, w = mode (0 off, 1 searchlight cone, 2 point light)
+uniform vec4 uLocalB; // half-size xz, half-height, gain
 uniform vec2 uDrift;
 uniform vec3 uDir;
 uniform vec4 uFrontA;   // origin.xy, dir.xy
@@ -40,9 +43,19 @@ void main() {
   vec2 focus = mix(cameraPosition.xz + fwd.xz * (cameraPosition.y / fy), cameraPosition.xz + fwd.xz * (20.0 / fy), nearSel);
   float top = cameraPosition.y - 8.0;
   float bottom = mix(uSeaLevel - 1.5 - 0.6 * uHs, top - 26.0, nearSel);
-  float span = max(top - bottom, 10.0);
   float Rb = mix(uR, 22.0, nearSel);
-  float hail = step(aSeed2.w, uHail * 0.7);
+  bool local = uLocalA.w > 0.5;
+  if (local) {
+    // dense local population around a light (searchlight cone / flare / rocket): only the lit drops show
+    focus = uLocalA.xz;
+    top = uLocalA.y + uLocalB.y;
+    bottom = uLocalA.y - uLocalB.y;
+    Rb = uLocalB.x;
+    nearSel = 0.0;
+  }
+  float span = max(top - bottom, 4.0);
+  // hail pellets: a share of the drops, plus every drop beyond the rain amount when only hail falls
+  float hail = max(step(aSeed2.w, uHail * 0.7), step(uRainAmt, aSeed.w) * step(0.001, uHail));
   float s = aSeed.z * span + uFall * aSeed2.x * (1.0 + 0.7 * hail);
   float cyc = floor(s / span);
   float y = top - (s - cyc * span);
@@ -59,7 +72,7 @@ void main() {
     float f = smoothstep(-uFrontB.y, uFrontB.y, along + (n - 0.5) * 0.6 * uFrontB.y);
     rain = mix(uFrontB.w, uFrontB.z, f);
   }
-  if (aSeed.w > rain || rr > 1.0) {
+  if (aSeed.w > max(rain, uHail * 0.8) || rr > 1.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
@@ -87,11 +100,18 @@ void main() {
   sp = sp * sp * (1.0 + 2.5 * step(0.88, fract(aSeed2.w * 13.7)));
   vec3 light = (uAirAmb + uAirSun * 0.25) * uRainGain + uAirFlash * 4.0
              + vec3(1.0, 0.945, 0.855) * cone * 6.0 * (0.35 + 0.65 * sp)
-             + fxPointLights(head) * 1.5;
+             + fxPointLights(head) * 0.6;
   vC = uRainCol * light * mix(1.0, 1.8, hail);
   float fog = fxFog(head);
   float edge = (1.0 - smoothstep(0.82, 1.0, rr)) * smoothstep(0.0, 5.0, top - y) * smoothstep(bottom, bottom + 2.5, y);
   vA = (0.18 + 0.17 * aSeed2.z) * edge * (1.0 - 0.9 * fog) * mix(1.0, 1.6, hail) * mix(1.0, 0.75, nearSel);
+  if (local) {
+    float vis;
+    if (uLocalA.w < 1.5) vis = smoothstep(0.02, 0.35, cone);
+    else vis = 1.0 - smoothstep(0.25, 1.0, length(head - uLocalA.xyz) / uLocalB.x);
+    vA = (0.22 + 0.2 * aSeed2.z) * vis * uLocalB.w * (1.0 - 0.9 * fog);
+    vC = uRainCol * (vec3(1.0, 0.945, 0.855) * cone * 6.0 * (0.35 + 0.65 * sp) + fxPointLights(head) * 0.6 + uAirFlash * 4.0);
+  }
 }
 `;
 
@@ -190,6 +210,8 @@ export class Rain {
         uSpan: { value: 100 },
         uRainGain: { value: 1.5 },
         uNearFrac: { value: 0.06 },
+        uLocalA: { value: new THREE.Vector4(0, 0, 0, 0) },
+        uLocalB: { value: new THREE.Vector4(10, 10, 10, 1) },
         uDrift: { value: this.drift },
         uDir: { value: this._dir },
         uFrontA: { value: new THREE.Vector4(0, 0, 1, 0) },
@@ -209,6 +231,25 @@ export class Rain {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 24;
     this.mesh.visible = false;
+
+    // Local dense populations: rain sparkling in the searchlight cone, and red around the most
+    // important flare / rocket. Same shader, own seeds; only the lit drops are visible.
+    const mkLocal = (seed, name) => {
+      const g = streakGeometry(LOCAL_MAX, seed);
+      const m = this.material.clone();
+      // share every uniform object except the local box (clone() copied the values)
+      for (const k of Object.keys(this.material.uniforms)) {
+        if (k !== 'uLocalA' && k !== 'uLocalB') m.uniforms[k] = this.material.uniforms[k];
+      }
+      const mesh = new THREE.Mesh(g, m);
+      mesh.name = name;
+      mesh.frustumCulled = false;
+      mesh.renderOrder = 24.5;
+      mesh.visible = false;
+      return mesh;
+    };
+    this.local = mkLocal(4471, 'fx.rainBeam');
+    this.localLight = mkLocal(8123, 'fx.rainLight');
 
     // motes
     this.maxMotes = maxMotes;
@@ -248,12 +289,15 @@ export class Rain {
 
   setCounts(rain, motes) {
     this.geometry.instanceCount = Math.min(this.max, rain);
+    this.local.geometry.instanceCount = Math.min(LOCAL_MAX, Math.round(rain * 0.18));
+    this.localLight.geometry.instanceCount = Math.min(LOCAL_MAX, Math.round(rain * 0.12));
     this.motes.geometry.instanceCount = Math.min(this.maxMotes, motes);
     this.motes.userData.allowed = motes > 0;
   }
 
   // st: weather.state; camY: camera height above the sea; beam: heli.beam (or null).
-  update(dt, st, camY, beam, wind) {
+  // light: {x, y, z} of the most important pooled light (or null) for the local population.
+  update(dt, st, camY, beam, wind, light = null) {
     const u = this.material.uniforms;
     const rain = Math.max(0, Math.min(1, st.rain ?? 0));
     const hail = Math.max(0, Math.min(1, st.hail ?? 0));
@@ -290,6 +334,27 @@ export class Rain {
       u.uFrontB.value.set((front.speed ?? 20) * (front.t ?? 0), front.width ?? 120, prev.rain, next.rain);
     }
     this.mesh.visible = anyRain > 0.003;
+
+    // local populations: the searchlight cone, and the brightest pooled light (flare / rocket)
+    const la = this.local.material.uniforms.uLocalA.value;
+    const lb = this.local.material.uniforms.uLocalB.value;
+    const beamOk = anyRain > 0.05 && beam && beam.on && beam.intensity > 0.05 && beam.origin && beam.hit;
+    if (beamOk) {
+      const o = beam.origin;
+      const h = beam.hit;
+      const rEnd = (beam.length || 30) * Math.tan((beam.angle || 0.26) * 1.05);
+      la.set((o.x + h.x) * 0.5, (o.y + h.y) * 0.5, (o.z + h.z) * 0.5, 1);
+      lb.set(Math.max(6, Math.hypot(h.x - o.x, h.z - o.z) * 0.5 + rEnd * 1.1), Math.max(3, (o.y - h.y) * 0.5 + 1), 0, 1);
+    }
+    this.local.visible = !!beamOk && this.mesh.visible;
+    const lla = this.localLight.material.uniforms.uLocalA.value;
+    const llb = this.localLight.material.uniforms.uLocalB.value;
+    const lightOk = anyRain > 0.05 && !!light;
+    if (lightOk) {
+      lla.set(light.x, light.y + 4, light.z, 2);
+      llb.set(22, 12, 0, 1);
+    }
+    this.localLight.visible = lightOk && this.mesh.visible;
 
     // Motes in the beam on dry nights.
     const mu = this.moteMaterial.uniforms;
