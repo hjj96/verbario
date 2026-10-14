@@ -123,7 +123,8 @@ export function buildReport(m, success, reason) {
   // Weather summary: the worst wind seen and the sequence of presets flown through.
   const presetPath = [];
   for (const p of st.presets) if (presetPath[presetPath.length - 1] !== p) presetPath.push(p);
-  const weatherText = `${windLine(st.maxWind, st.maxWindFrom)}${presetPath.length ? ` · ${presetPath.map((p) => (PRESETS[p] ? PRESETS[p].chapter.toLowerCase() : p)).join(' → ')}` : ''}`;
+  const gusts = (st.maxGust || 0) > st.maxWind + 2.5 ? `, порывы до ${Math.round(st.maxGust)}${NBSP}м/с` : '';
+  const weatherText = `${windLine(st.maxWind, st.maxWindFrom)}${gusts}${presetPath.length ? ` · ${presetPath.map((p) => (PRESETS[p] ? PRESETS[p].chapter.toLowerCase() : p)).join(' → ')}` : ''}`;
 
   const lines = [
     { label: 'Дата', value: `${def.date}, ${def.clock}` },

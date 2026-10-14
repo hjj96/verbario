@@ -36,8 +36,9 @@ export function blankStats() {
     flares: 0,
     spotted: 0,
     nearMisses: 0,
-    maxWind: 0,
+    maxWind: 0, // sustained (mean) wind — the logbook's Beaufort number
     maxWindFrom: 0,
+    maxGust: 0, // mean + gust
     presets: [],
     calls: 0,
     closed: 0,
@@ -289,7 +290,10 @@ export class Ledger {
   weatherTick(sampleWind = true) {
     const w = this.ctx.weather?.state;
     if (!w) return;
-    const wind = (w.windSpeed || 0) + (w.gust || 0);
+    // Beaufort from the sustained wind, gusts apart: a scripted 8 m/s gust in a calm read as
+    // «ветер 11 м/с, 5 баллов · штиль» in the logbook.
+    const wind = w.windSpeed || 0;
+    if (sampleWind) this.stats.maxGust = Math.max(this.stats.maxGust, wind + (w.gust || 0));
     if (sampleWind && wind > this.stats.maxWind) {
       this.stats.maxWind = wind;
       if (Number.isFinite(w.windFrom)) this.stats.maxWindFrom = w.windFrom;

@@ -401,7 +401,7 @@ fuelBurn, overheat, autorotation, crash {phase:'autorot'|'ditched', t, reason, d
 refueling, seatsUsed, ceiling, hoistWorld, downwash {x, z, radius, strength}`, `beam {on, intensity,
 origin, dir, hit, cosOuter, angle, length}` (fx rain sparkle, survivors, cable), `setSearchlight(on)`,
 `winch.{tension, jammed, surfaceY, height, inRange, radius, stretcher, cabinFull, denied}`. The winch
-surface under the basket = max(sea, pad deck, `survivors.deckAt`).
+surface under the basket = max(sea, pad deck, `survivors.deckAt`, `world.deckAt`).
 Events: `heli:capture {survivor}` (basket closes on a person — HUD/audio/radio), `heli:slip {survivor,
 reason}`, `heli:snag {x, z}`, `heli:winch-denied {reason:'high'|'fast'|'landed'}`, `heli:cabin-full
 {survivor, seats}`, `heli:unload-person {pad, person, left}`, `heli:resupply {pad}`, `heli:overheat`,
@@ -443,9 +443,11 @@ severity, presetLabel, windFrom (deg «from»), gustMax, pressureTrend, rates {l
 transition {active, from, to, t, over, progress}, lastStrike {x, z, distance, cloudOnly, t}`; palette extras
 `shadowRadius, fog, cloudShadow (−1 = clearing sun patches), glitter, glitterExp, sss, scud, beam, detect
 {base, altBonus}, sea.clearing, sea.cloudReflect`; `cloudShadowAt(x, z)`, `labels`, `presets`,
-`lights.sun` (the shadow light). Note: `windSpeed/gust` refresh in `update()`, not in `setPreset()`.
+`lights.sun` (the shadow light), `setHail(v)` (hazards' hail cells → `state.hail`, read by fx). Note:
+`windSpeed/gust` refresh in `update()`, not in `setPreset()`.
 
-**world** — pads also carry `height, tilt, velocity, services {fuel, repair, resupply}, lee`;
+**world** — `deckAt(x, z) → y | −Infinity` (the rig's open lower deck at 22 m); pads also carry `height,
+tilt, velocity, services {fuel, repair, resupply}, lee, lowerDeck`;
 `obstacles[]` entries have `kind, name`; `world.lighthouse`; event `world:slam {x, z, strength, ship}`
 (bow slams spray), `world:foghorn`, `world:horn {x, z, distance, name}`.
 
