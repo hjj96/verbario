@@ -708,12 +708,13 @@ export const OCEAN_FRAGMENT_FINAL = /* glsl */ `
     vec3 Lp = normalize(uSearchPos - oP);
     float nlp = clamp(dot(oN, Lp), 0.0, 1.0);
     float nhp = clamp(dot(oN, normalize(Lp + oV)), 0.0, 1.0);
-    float facet = 0.72 + 0.55 * pow(nhp, 14.0);                     // wave facets catch the lamp
+    float facet = 0.78 + 0.5 * pow(nhp, 14.0);                      // wave facets catch the lamp (pool ≈0.8)
     vec3 litWater = vec3(0.56, 0.68, 0.62) * (0.8 + 0.25 * nlp) * (0.88 + 0.24 * oH01) * facet;
     vec3 poolDisp = mix(min(litWater, vec3(0.78)), min(oFoamC * 0.9, vec3(0.8)), oFoam) * vec3(1.0, 0.97, 0.9);
     vec3 poolLook = oInvACES(poolDisp) * uLookK.y;
-    // by day the pool only lifts the water a little (it never fights the sun)
-    outgoingLight = mix(outgoingLight, max(outgoingLight, poolLook), clamp(oBeam, 0.0, 1.0) * mix(0.3, 1.0, uSeaE.z));
+    // by day the pool only lifts the water a little (it never fights the sun): at 0.3 it showed as a
+    // flat milky ellipse on sunlit water
+    outgoingLight = mix(outgoingLight, max(outgoingLight, poolLook), clamp(oBeam, 0.0, 1.0) * mix(0.1, 1.0, smoothstep(0.0, 0.7, uSeaE.z)));
   }
   float hr = length(oXZ - uHeliP.xy);
   float alt = max(uHeliP.z, 0.0);

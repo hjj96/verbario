@@ -433,11 +433,12 @@ export function debrisGeometry() {
 // ------------------------------------------------------------------------------------------------
 // Shared material patch for every craft batch.
 export function createCraftMaterial(look, opts = {}) {
-  const { side = THREE.FrontSide, roughness = 0.7, debris = false } = opts;
+  const { side = THREE.FrontSide, roughness = 0.7, debris = false, lampLift = 0 } = opts;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness, metalness: 0, side });
   const u = {
     uTime: look.uniforms.uTime,
     uWet: look.uniforms.uWet,
+    uNight: look.uniforms.uNight || { value: 0 },
     uTape: { value: new THREE.Color(C.tape) },
     uChem: { value: new THREE.Color(C.chem) },
     uWin: { value: new THREE.Color('#FFC98A') },
@@ -480,6 +481,7 @@ export function createCraftMaterial(look, opts = {}) {
         '#include <common>',
         `#include <common>
         uniform float uWet;
+        uniform float uNight;
         uniform vec3 uTape;
         uniform vec3 uChem;
         uniform vec3 uWin;
@@ -513,14 +515,18 @@ export function createCraftMaterial(look, opts = {}) {
         totalEmissiveRadiance += uRim * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
         ${debris ? '' : `
         int ck = int(vCrMat.x + 0.5);
-        if (ck == 1) totalEmissiveRadiance += uTape * 1.4 * vCr.x; // canopy patches are big: at 3.5 their night bloom veiled the canopy pale pink — keep the orange readable
+        // lamp-lit fabric (DESIGN §2.1 / §2.8 «защита оранжевого»): in the searchlight at night the
+        // canopy reads as saturated orange (≈0.8 linear red → sRGB ≈ (230, 105, 25)) instead of a muddy
+        // brown under the cone haze; albedo-proportional, so the hue never drifts toward the lamp white
+        if (ck == 0) totalEmissiveRadiance += diffuseColor.rgb * ${lampLift.toFixed(3)} * vCr.x * (0.2 + 0.8 * uNight);
+        else if (ck == 1) totalEmissiveRadiance += uTape * 1.4 * vCr.x; // tape strips: at 3.5 their night bloom veiled the canopy pale pink
         else if (ck == 2) totalEmissiveRadiance += vec3(1.0, 0.98, 0.95) * (0.3 + 18.0 * vCr.y);
         else if (ck == 3) totalEmissiveRadiance += uWin * 2.2 * vCr.w;
         else if (ck == 4) totalEmissiveRadiance += uChem * (0.4 + 3.5 * vCr2.y);
         else if (ck == 5) totalEmissiveRadiance += diffuseColor.rgb * 5.0 * vCr.w;`}`,
       );
   };
-  mat.customProgramCacheKey = () => `survivors-craft-${debris ? 'debris' : 'v1'}-${side}`;
+  mat.customProgramCacheKey = () => `survivors-craft-${debris ? 'debris' : 'v2'}-${side}-${lampLift}`;
   return mat;
 }
 

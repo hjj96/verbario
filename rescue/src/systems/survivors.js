@@ -142,7 +142,7 @@ export class Survivors {
 
     const keyline = look.keyline({ color: '#05090B', opacity: 0.55, px: 1 });
     this.craftKeyline = keyline;
-    const raftMat = createCraftMaterial(look, { side: THREE.DoubleSide, roughness: 0.72, rim });
+    const raftMat = createCraftMaterial(look, { side: THREE.DoubleSide, roughness: 0.72, rim, lampLift: 0.62 }); // lamp-lit canopy stays orange
     const hullMat = createCraftMaterial(look, { roughness: 0.6, rim });
     const steelMat = createCraftMaterial(look, { roughness: 0.55, rim });
     const debrisMat = createCraftMaterial(look, { roughness: 0.6, debris: true, rim });

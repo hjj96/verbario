@@ -9,6 +9,14 @@ import { distU, deg3, clamp01, smooth, easeOutBack, num1, groupOf, NBSP } from '
 import { isOpen, isSpotted, isPinged } from './model.js';
 import { font, MONO, HEAD } from '../common/fonts.js';
 
+// '#RRGGBB' (or '#RGB') → 'rgba(r, g, b, a)' for canvas gradients
+function rgbaHex(hex, a) {
+  let h = String(hex || '#ffffff').replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const n = parseInt(h.slice(0, 6), 16) || 0;
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
 const TAU = Math.PI * 2;
 const DASH_A = [5, 5];
 const DASH_B = [2, 4];
@@ -128,8 +136,14 @@ export class Overlay {
       g.beginPath();
       g.ellipse(p.x, p.y, r, r * 0.97, 0, 0, TAU);
       g.stroke();
-      g.globalAlpha = 0.07;
-      g.fillStyle = pal.info;
+      // A soft lift only along the inside of the rim: a uniform 7 % veil over the whole area doubled
+      // the night sea (0.04 → 0.08) and left the screen beyond the arc as a dark «wedge» in a corner.
+      const night = this.ctx.weather?.state?.night || 0;
+      const rim = g.createRadialGradient(p.x, p.y, r * 0.8, p.x, p.y, r);
+      rim.addColorStop(0, rgbaHex(pal.info, 0));
+      rim.addColorStop(1, rgbaHex(pal.info, 0.07 * (1 - 0.6 * night)));
+      g.globalAlpha = 1;
+      g.fillStyle = rim;
       g.fill();
       g.globalAlpha = 0.75;
       g.font = font(500, 10 * hs, MONO);

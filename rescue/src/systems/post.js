@@ -291,7 +291,12 @@ export class PostFX {
     if (flash > 0.35) p.after = 1;
     else p.after = Math.max(0, p.after - dt / 0.6);
     const afterMul = Math.pow(2, -0.25 * p.after * (1 - flash));
-    const exposure = (pal?.exposure ?? 1) * (1 + 2.4 * flash) * afterMul;
+    // At night the strike already lights the scene (hemisphere ×4, the swung sun ×5, the sea's own
+    // flash layer); the full ×(1+2.4f) on top pushed the sea to ≈0.77 in the strike frame, so the
+    // white-hot bolt (which peaks in that same frame) had nothing to stand out against. Half the
+    // boost at night keeps the silver sea and lets the spear read.
+    const night = st?.night || 0;
+    const exposure = (pal?.exposure ?? 1) * (1 + 2.4 * flash * (1 - 0.5 * night)) * afterMul;
     ctx.renderer.toneMappingExposure = exposure;
 
     // --- bloom ----------------------------------------------------------------------------------
