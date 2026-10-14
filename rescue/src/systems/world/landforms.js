@@ -5,7 +5,7 @@
 // flats below keep every structure seated: pad plinth, tower plinth, keeper's house, shed, fuel
 // station, radio mast + guy anchors, walkway steps, jetty root, and the jetty channel stays wet.
 import * as THREE from 'three';
-import { buildTerrain, coverRule, fitShoals, sstep, hash01, boulderGeometry, scatterBoulders } from './terrain.js';
+import { buildTerrain, coverRule, fitShoals, sstep, hash01, boulderGeometry, scatterBoulders, terrainColumns } from './terrain.js';
 import { createTerrainMaterial, terrainUniforms } from './terrainMaterial.js';
 import { Vegetation } from './vegetation.js';
 import { rng } from './geo.js';
@@ -144,6 +144,8 @@ export function buildIslandTerrain(quality = 'high') {
 // ------------------------------------------------------------------------------------------------
 // Props rocks: a main crag (dome or sea stack), lower shoulders and skerries — one landmass each.
 // Returns the definition and its grid bounds (world coordinates).
+// Props rocks share one glacier-flow bearing: whalebacks, shoulders and skerries elongate along it.
+const ICE_R = 0.45;
 export function rockDef(rk, seed) {
   const R = rk.radius || 10;
   const H = rk.height || 6;
@@ -151,7 +153,7 @@ export function rockDef(rk, seed) {
   const r = rng(seed);
   const lobes = [];
   const jx = (r() - 0.5) * R * 0.2, jz = (r() - 0.5) * R * 0.2;
-  lobes.push({ x: rk.x + jx, z: rk.z + jz, rx: R * 0.56, rz: R * (0.38 + 0.08 * r()), rot: r() * 6.28, h: H, w: 0.5 - 0.36 * spire, k: 2 + 1.2 * spire, peak: 0.15 + 0.6 * spire, rag: 1.3 });
+  lobes.push({ x: rk.x + jx, z: rk.z + jz, rx: R * 0.56, rz: R * (0.38 + 0.08 * r()), rot: -ICE_R + (r() - 0.5) * 1.2, h: H, w: 0.5 - 0.36 * spire, k: 2 + 1.2 * spire, peak: 0.15 + 0.6 * spire, rag: 1.3 });
   // secondary summits / buttresses: crags are never a single dome
   const cr = 2 + Math.floor(r() * 2);
   const a0 = r() * Math.PI * 2;
@@ -164,13 +166,13 @@ export function rockDef(rk, seed) {
   for (let k = 0; k < sh; k++) {
     const a = (k / sh) * Math.PI * 2 + r() * 0.8, d = R * (0.4 + 0.3 * r());
     const rr = R * (0.24 + 0.16 * r());
-    lobes.push({ x: rk.x + Math.cos(a) * d, z: rk.z + Math.sin(a) * d, rx: rr, rz: rr * (0.45 + 0.3 * r()), rot: a + (r() - 0.5), h: Math.min(6, H * (0.08 + 0.18 * r())), w: 0.6, k: 1.7, peak: 0, rag: 0.9 });
+    lobes.push({ x: rk.x + Math.cos(a) * d, z: rk.z + Math.sin(a) * d, rx: rr, rz: rr * (0.45 + 0.3 * r()), rot: -ICE_R + (r() - 0.5) * 0.9, h: Math.min(6, H * (0.08 + 0.18 * r())), w: 0.6, k: 1.7, peak: 0, rag: 0.9 });
   }
   const sk = 2 + Math.floor(r() * 3);
   for (let k = 0; k < sk; k++) {
     const a = r() * Math.PI * 2, d = R * (0.85 + 0.45 * r());
     const rr = 1.6 + R * 0.08 * r();
-    lobes.push({ x: rk.x + Math.cos(a) * d, z: rk.z + Math.sin(a) * d, rx: rr, rz: rr * 0.6, rot: r() * 6.28, h: 0.6 + r() * 0.9, w: 0.75, k: 1.6, peak: 0, rag: 0.9 });
+    lobes.push({ x: rk.x + Math.cos(a) * d, z: rk.z + Math.sin(a) * d, rx: rr, rz: rr * 0.6, rot: -ICE_R + (r() - 0.5) * 0.8, h: 0.6 + r() * 0.9, w: 0.75, k: 1.6, peak: 0, rag: 0.9 });
   }
   const ext = R * 1.55 + 6;
   return {
@@ -180,7 +182,7 @@ export function rockDef(rk, seed) {
       expose: [Math.cos(seed), Math.sin(seed)],
       tilt: [0.09 * Math.cos(seed * 1.7), 0.09 * Math.sin(seed * 1.7)],
       cliff: 0.55 + 0.3 * spire,
-      ice: 0.45,
+      ice: ICE_R,
       ridge: Math.min(4.5, 0.8 + H * 0.11),
       bump: Math.min(1.1, 0.4 + R * 0.025),
       step: 1.5 + H * 0.035,
@@ -201,7 +203,7 @@ export function buildRockTerrain(rk, seed, quality = 'high') {
   const moss = D.spire > 0.3 ? 0.12 : 0.9;
   const cover = coverRule(D.def.seed, moss);
   // bird rocks: guano-whitened crowns and ledges on the stacks
-  const birdK = 0.25 + 0.75 * D.spire;
+  const birdK = 0.85 * D.spire; // only the stacks hold seabird colonies
   const bird = (x, z, h, hmax) => birdK * sstep(0.45, 0.9, h / Math.max(1, hmax));
   const T = buildTerrain(D.def, { ...D.bounds, step, cover, bird, cut: -1.4, scaleTo: D.H });
   T.shoals = fitShoals(T.sampler, 1, { minR: 2, margin: 1.5 });
@@ -273,6 +275,8 @@ export function createIsland(W, quality = 'high') {
     veg,
     sampler: T.sampler,
     shoals: T.shoals,
+    // collision columns hugging the rock above 2.5 m (island-local)
+    obstacles: terrainColumns(T.sampler, ISLAND_BOUNDS, { cell: 7, min: 2.5 }),
     buildMs: T.ms,
     setQuality(q) {
       boulderCount(boulders, q);
@@ -309,15 +313,9 @@ export function createRockField(W, list, seed, quality = 'high') {
     const T = buildRockTerrain(rk, s0, quality);
     geos.push(T.geometry);
     const R = T.rock.R, H = T.rock.H;
-    obstacles.push({ x: rk.x, z: rk.z, radius: R * 0.7, top: H, kind: 'rock', name: rk.name || 'скала' });
-    // buttresses / secondary summits poking out of that cylinder get their own (measured) columns
-    for (const L of T.def.lobes.slice(1)) {
-      if (L.h < 3) continue;
-      const rad = (L.rx + L.rz) * 0.4;
-      if (Math.hypot(L.x - rk.x, L.z - rk.z) + rad <= R * 0.7) continue;
-      let top = 0;
-      for (let k = 0; k < 9; k++) top = Math.max(top, T.sampler.heightAt(L.x + Math.cos(k * 0.7) * rad * 0.6 * (k > 0), L.z + Math.sin(k * 0.7) * rad * 0.6 * (k > 0)));
-      if (top > 2.5) obstacles.push({ x: L.x, z: L.z, radius: rad, top: top + 0.5, kind: 'rock', name: rk.name || 'скала' });
+    // collision: columns fitted to the rendered rock (crag, buttresses, shoulders above 2.5 m)
+    for (const o of terrainColumns(T.sampler, T.rock.bounds, { cell: Math.max(5, Math.min(9, R * 0.4)), min: 2.5 })) {
+      obstacles.push({ x: o.x, z: o.z, radius: o.radius, top: o.top, kind: 'rock', name: rk.name || 'скала' });
     }
     for (const sh of T.shoals) shoals.push(sh);
     const br = rng(s0 + 77);

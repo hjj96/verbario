@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { LOOK_GLSL_UNIFORMS, LOOK_GLSL_FUNCS } from '../../core/look.js';
 import { rng } from './geo.js';
+import { fbm2 } from './terrain.js';
 
 export const VEG_COUNTS = {
   high: { spruce: 64, shrub: 300, tuft: 340 },
@@ -71,37 +72,41 @@ function drawFrond(g, ox, oy, w, h, seed) {
 function drawClump(g, ox, oy, s, seed, cols, leaf) {
   const r = rng(seed);
   const cx = ox + s / 2, cy = oy + s / 2;
-  g.fillStyle = leaf ? 'rgba(70,45,28,0.55)' : 'rgba(30,42,30,0.6)';
-  g.beginPath();
-  g.arc(cx, cy, s * 0.38, 0, Math.PI * 2);
-  g.fill();
-  // twigs
+  // lobed canopy body, dense enough to survive the alpha test seen from above (a mat, not a wreath)
+  g.fillStyle = leaf ? 'rgba(58,38,24,0.92)' : 'rgba(24,33,25,0.94)';
+  for (let i = 0; i < 9; i++) {
+    const a = r() * Math.PI * 2, d = s * 0.14 * Math.sqrt(r());
+    g.beginPath();
+    g.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, s * (0.2 + 0.1 * r()), 0, Math.PI * 2);
+    g.fill();
+  }
+  // twigs at the ragged rim
   g.strokeStyle = '#3E3128';
   g.lineWidth = 1.5;
   for (let i = 0; i < 14; i++) {
     const a = r() * Math.PI * 2;
     g.beginPath();
-    g.moveTo(cx, cy);
-    g.lineTo(cx + Math.cos(a) * s * 0.42, cy + Math.sin(a) * s * 0.42);
+    g.moveTo(cx + Math.cos(a) * s * 0.25, cy + Math.sin(a) * s * 0.25);
+    g.lineTo(cx + Math.cos(a) * s * 0.45, cy + Math.sin(a) * s * 0.45);
     g.stroke();
   }
-  const n = leaf ? 520 : 1400;
+  const n = leaf ? 1500 : 2200;
   for (let i = 0; i < n; i++) {
     const a = r() * Math.PI * 2;
-    const d = Math.sqrt(r()) * s * 0.46 * (0.85 + 0.15 * Math.sin(a * 5 + seed));
+    const d = Math.sqrt(r()) * s * 0.45 * (0.85 + 0.15 * Math.sin(a * 5 + seed));
     const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
     g.fillStyle = cols[Math.floor(r() * cols.length)];
     g.strokeStyle = g.fillStyle;
     if (leaf) {
       g.beginPath();
-      g.ellipse(x, y, 3.2 + 2 * r(), 2.2 + 1.2 * r(), r() * Math.PI, 0, Math.PI * 2);
+      g.ellipse(x, y, 2.4 + 1.6 * r(), 1.7 + 1 * r(), r() * Math.PI, 0, Math.PI * 2);
       g.fill();
     } else {
       const b = r() * Math.PI * 2;
-      g.lineWidth = 1.5;
+      g.lineWidth = 1.4;
       g.beginPath();
       g.moveTo(x, y);
-      g.lineTo(x + Math.cos(b) * 4.5, y + Math.sin(b) * 4.5);
+      g.lineTo(x + Math.cos(b) * 4, y + Math.sin(b) * 4);
       g.stroke();
     }
   }
@@ -130,8 +135,8 @@ export function vegTexture() {
   g.clearRect(0, 0, 512, 512);
   drawFrond(g, 0, 0, 256, 128, 11);
   drawFrond(g, 256, 0, 256, 128, 23);
-  drawClump(g, 0, 128, 256, 31, ['#B5651D', '#C9A13B', '#8E3B22', '#A0522D', '#6E7A3A', '#B8862E', '#7A3320'], true);
-  drawClump(g, 256, 128, 256, 37, ['#2C3B2A', '#3A4A33', '#26332A', '#46553A', '#33402E'], false);
+  drawClump(g, 0, 128, 256, 31, ['#8E4A24', '#A8692C', '#6E3A20', '#B4843A', '#7C5A2E', '#5F4B2C', '#9A5428', '#6A6A36'], true);
+  drawClump(g, 256, 128, 256, 37, ['#26341F', '#33422A', '#1F2B1E', '#3E4D30', '#2D3A26', '#4A5536'], false);
   drawTuft(g, 0, 384, 256, 128, 41);
   g.fillStyle = '#4A4038';
   g.fillRect(256, 384, 32, 128);
@@ -240,27 +245,26 @@ function spruceGeometry(seed = 5) {
 function shrubGeometry(seed = 9) {
   const r = rng(seed);
   const B = new Builder();
-  const N = 9;
+  const N = 8; // two near-flat crown cards + six rim cards sloping down and out (a dome)
   for (let c = 0; c < N; c++) {
-    const top = c === 0;
-    const a = top ? 0 : ((c - 1) / (N - 1)) * Math.PI * 2 + (r() - 0.5) * 0.4;
-    const ring = top ? 0 : 0.42 + 0.12 * r();
-    const tilt = top ? 0.12 : 0.55 + 0.35 * r(); // radians from horizontal, facing out
+    const top = c < 2;
+    const a = top ? 0.3 + c * 1.9 : ((c - 2) / (N - 2)) * Math.PI * 2 + (r() - 0.5) * 0.5;
+    const ring = top ? 0.05 : 0.36 + 0.1 * r();
+    const tilt = top ? 0.06 + 0.1 * c : 0.42 + 0.3 * r(); // radians below horizontal, outward
     const cx = Math.cos(a) * ring, cz = Math.sin(a) * ring;
-    const cy = top ? 0.62 : 0.3 + 0.12 * r();
-    const s = top ? 0.62 : 0.5 + 0.12 * r();
-    // card axes: radial (tilted up) and tangent
+    const cy = top ? 0.66 - 0.1 * c : 0.32 + 0.08 * r();
+    const s = top ? 1.0 - 0.14 * c : 0.55 + 0.12 * r();
+    // card axes: radial (sloping down) and tangent
     const rx = Math.cos(a), rz = Math.sin(a);
     const tx = -rz, tz = rx;
-    const ux = rx * Math.cos(tilt), uy = Math.sin(tilt), uz = rz * Math.cos(tilt);
-    const nx = rx * 0.6, nz = rz * 0.6, ny = 1;
+    const ux = rx * Math.cos(tilt), uy = -Math.sin(tilt), uz = rz * Math.cos(tilt);
     const base = B.p.length / 3;
     const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
     for (const [i, j] of corners) {
       const x = cx + (tx * i + ux * j) * s * 0.5;
       const y = cy + uy * j * s * 0.5;
       const z = cz + (tz * i + uz * j) * s * 0.5;
-      B.v(x, Math.max(0, y), z, nx + x * 0.5, ny, nz + z * 0.5, (i + 1) * 0.25, 0.25 + (j + 1) * 0.25, y / 0.9, Math.min(1, Math.hypot(x, z) / 0.7), r(), 0);
+      B.v(x, Math.max(0.02, y), z, x * 0.9, 1, z * 0.9, (i + 1) * 0.25, 0.25 + (j + 1) * 0.25, Math.max(0.02, y) / 0.7, Math.min(1, Math.hypot(x, z) / 0.7), r(), 0);
     }
     B.i.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
   }
@@ -455,11 +459,11 @@ export class Vegetation {
     }
     // --- shrubs: anywhere the tundra is thick; birch in hollows, juniper / crowberry on knolls
     const shrubs = [];
-    for (let t = 0; t < 9000 && shrubs.length < max.shrub; t++) {
+    for (let t = 0; t < 16000 && shrubs.length < max.shrub; t++) {
       const x = x0 + r() * (x1 - x0), z = z0 + r() * (z1 - z0);
       if (!S.inside(x, z) || !free(x, z, 0.5)) continue;
-      const gr = grow(x, z);
-      if (gr < 0.15 + 0.35 * r()) continue;
+      const gr = grow(x, z) * (0.7 + 0.9 * Math.max(0, fbm2(x * 0.09, z * 0.09, seed + 61, 2) + 0.2));
+      if (gr < 0.2 + 0.4 * r()) continue;
       const s = 0.45 + 0.9 * r() * r();
       if (trees.some((q) => Math.hypot(q.x - x, q.z - z) < q.r * 0.8)) continue;
       shrubs.push({ x, z, y: S.heightAt(x, z) - 0.05, s, hs: 0.45 + 0.4 * r() });

@@ -14,7 +14,8 @@
 //
 // Public API beyond the contract: pads[].{pitch, roll, up, place, leeLength, leeNoise, flare,
 // lowerDeck}, obstacles[].{kind, name}, world.places, world.ship / lighthouse / rig (first of each),
-// world.channels (lamp channel values), world.env, events 'world:slam' {x, z, strength}.
+// world.channels (lamp channel values), world.env, deckAt(x, z) (rig open lower deck → y or −Infinity),
+// events 'world:slam' {x, z, strength}.
 import * as THREE from 'three';
 import { CH, createShared, createPropMaterial, createBeamMaterial, createFlameMaterial } from './world/materials.js';
 import { Lamps } from './world/lamps.js';
@@ -163,6 +164,17 @@ export class World {
     return best;
   }
 
+  // Height of a walkable structure deck under (x, z) that is not a pad (the rig's open lower deck at
+  // 22 m), or −Infinity. The winch counts its height window from it and the basket stops on it.
+  deckAt(x, z) {
+    let y = -Infinity;
+    for (const pl of this.places) {
+      const d = pl.lowerDeck;
+      if (d && d.x0 !== undefined && x >= d.x0 && x <= d.x1 && z >= d.z0 && z <= d.z1 && d.y > y) y = d.y;
+    }
+    return y;
+  }
+
   nearestPad(x, z) {
     let best = null, bd = Infinity;
     for (const p of this.pads) {
@@ -263,8 +275,13 @@ export class World {
       for (const o of rig.obstacles) this.obstacles.push(o);
     }
 
-    // Rocks (fog pinnacles, reefs): one merged mesh, obstacles, surf.
-    this._buildRocks(props.rocks || [], def.seed || 1);
+    // Rocks (fog pinnacles, reefs): one merged mesh, obstacles, surf. A boat aground gets a low
+    // drying ledge under its bow (heading convention: forward = (sin h, −cos h)).
+    const ledges = (props.boats || []).filter((b) => b.aground).map((b) => {
+      const h = b.heading || 0;
+      return { x: b.x + Math.sin(h) * 12, z: b.z - Math.cos(h) * 12, radius: 12, height: 2.2, name: b.name ? 'камни' : 'риф' };
+    });
+    this._buildRocks([...(props.rocks || []), ...ledges], def.seed || 1);
 
     // Scenery boats.
     (props.boats || []).forEach((b, i) => {

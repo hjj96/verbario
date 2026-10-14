@@ -78,8 +78,9 @@ export class Lighthouse {
     ];
     // surf rings = circles inscribed in the real coastline (fitted on the terrain grid)
     this.shoals = this.land.shoals.map((s) => ({ x: this.x + s.x, z: this.z + s.z, radius: s.radius }));
+    // the rock itself: collision columns fitted to the terrain (crags, shoulders, skerries)
     this.island = { x: this.x - 6, z: this.z - 17, radius: 26, top: 10.5, kind: 'rock', name: 'скалы' };
-    this.obstacles.push(this.island);
+    for (const o of this.land.obstacles) this.obstacles.push({ x: this.x + o.x, z: this.z + o.z, radius: o.radius, top: o.top, kind: 'rock', name: 'скалы' });
     // lantern light spill on the gallery & tower top, house windows on the rock
     setGlow(this.material, 0, TOWER.x, LANTERN_Y, TOWER.z, 5, new THREE.Color('#FFE2B0'), 0);
     setGlow(this.material, 1, 0, DECK_Y + 4, 0, 14, new THREE.Color('#FFE6B0'), 0);

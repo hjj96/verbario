@@ -710,7 +710,7 @@ export class Hazards {
     this._setHail(level);
   }
 
-  // weather owns state.hail; it has no setter yet, so hazards drive it while a cell is near (see report).
+  // weather owns state.hail (weather.setHail); hazards drive it while a cell is near (direct write only for a stub).
   _setHail(v) {
     const w = this.ctx.weather;
     if (!w) return;

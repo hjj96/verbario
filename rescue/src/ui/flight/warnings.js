@@ -47,12 +47,26 @@ export class Warnings {
     this.shownT = 0;
     this._poll = 0;
     this.time = 0;
+    this._seq = 0;
+  }
+
+  // hazard:end — drop every event warning that points at the finished hazard
+  endHazard(hz) {
+    if (!hz) return;
+    for (const id of Object.keys(this.state)) {
+      const s = this.state[id];
+      if (s.active && !s.persistent && s.hazard === hz) s.active = false;
+    }
   }
 
   // Event-driven warning (hazards). ttl seconds.
   raise(id, text, detail, opts = {}) {
     const s = this.state[id] || (this.state[id] = { active: false, since: 0, ttl: 0, level: 'caution', persistent: false });
     if (!s.active) s.since = this.time;
+    // the newest event wins ties (a tornado arriving replaces «СМЕРЧ · 60 М», not the other way round)
+    s.seq = ++this._seq;
+    // one vortex at a time on the plate: a new spout/tornado warning retires the other one
+    if (id === 'spout' || id === 'tornado') this.state[id === 'spout' ? 'tornado' : 'spout'].active = false;
     s.active = true;
     s.persistent = false;
     s.ttl = opts.ttl ?? 4;
@@ -195,12 +209,15 @@ export class Warnings {
     // choose the visible one by priority
     let best = null;
     let bp = -1;
+    let bs = -1;
     for (const id of Object.keys(this.state)) {
       const s = this.state[id];
       if (!this._visible(s)) continue;
       const p = DEFS[id]?.prio ?? 1;
-      if (p > bp) {
+      const q = s.persistent ? -1 : s.seq || 0;
+      if (p > bp || (p === bp && q > bs)) {
         bp = p;
+        bs = q;
         best = id;
       }
     }

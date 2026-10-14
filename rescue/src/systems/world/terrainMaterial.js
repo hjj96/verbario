@@ -119,9 +119,9 @@ export function rockTexture() {
 
 // ------------------------------------------------------------------------------------------------
 const PALETTE = {
-  cGranL: '#878279',
-  cGranD: '#474441',
-  cGranP: '#8A7368',
+  cGranL: '#8A8884',
+  cGranD: '#454549',
+  cGranP: '#8C7A72',
   cQuartz: '#BDB8AE',
   cLichG: '#9EA095',
   cLichY: '#8E8A5A',
@@ -249,20 +249,20 @@ export function createTerrainMaterial(look, shared, { name = 'terrain', lq = fal
         // --- granite
         float mott = R1.r * 0.65 + M2.r * 0.35;
         vec3 alb = mix(cGranD, cGranL, smoothstep(0.2, 0.85, mott));
-        alb = mix(alb, cGranP, smoothstep(0.55, 0.85, M2.g) * 0.35);
+        alb = mix(alb, cGranP, smoothstep(0.55, 0.85, M2.g) * 0.28);
         alb *= (0.84 + 0.32 * R2.r) * (0.76 + 0.42 * M.r);
         float vq = abs(fract(dot(P, vec3(0.071, 0.023, -0.052)) + 0.4 * M2.r) - 0.5);
         alb = mix(alb, cQuartz, (1.0 - smoothstep(0.004, 0.012, vq)) * smoothstep(0.5, 0.75, M.g) * 0.4);
         // lichens: pale crusts, yellow-green map lichen, orange on sunny (south) faces & perches
         float lich = smoothstep(0.52, 0.72, M2.r * 0.5 + R1.r * 0.3 + R2.a * 0.15 + 0.1 * up);
         alb = mix(alb, cLichG, lich * 0.5);
-        alb = mix(alb, cLichY, smoothstep(0.7, 0.86, M2.g * 0.55 + R2.a * 0.45) * 0.45 * smoothstep(0.2, 0.7, up));
+        alb = mix(alb, cLichY, smoothstep(0.7, 0.86, M2.g * 0.55 + R2.a * 0.45) * 0.3 * smoothstep(0.2, 0.7, up));
         // dark streaks: black crust lichen and seepage down the slopes
         float streakD = smoothstep(0.56, 0.78, M2.b * 0.55 + R1.r * 0.45) * smoothstep(0.97, 0.55, up);
         alb *= 1.0 - 0.45 * streakD;
         float sunny = smoothstep(-0.15, 0.55, tn.z) * (0.35 + 0.65 * smoothstep(0.25, 0.8, up));
         float orng = smoothstep(0.74, 0.9, R2.a * 0.65 + R1.a * 0.25 + 0.18 * sunny + 0.3 * tBird);
-        alb = mix(alb, cLichO, orng * (0.35 + 0.55 * sunny));
+        alb = mix(alb, cLichO, orng * (0.25 + 0.45 * sunny));
         // joints: texture cracks + two straight joint sets (only where the warp lets them open)
         float jA = abs(fract(dot(P.xz, vec2(0.083, 0.031)) + 0.18 * M2.r) - 0.5);
         float jB = abs(fract(dot(P.xz, vec2(-0.027, 0.091)) + 0.2 * M.r) - 0.5);

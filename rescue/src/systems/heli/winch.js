@@ -293,6 +293,8 @@ export class Winch {
     // the height window counts from the deck (DESIGN §3.5 «на конструкции»).
     const deck = ctx.survivors?.deckAt ? ctx.survivors.deckAt(x, z) : -Infinity;
     if (deck > y) y = deck;
+    const sdeck = ctx.world?.deckAt ? ctx.world.deckAt(x, z) : -Infinity; // the rig's open lower deck
+    if (sdeck > y) y = sdeck;
     const t = this.pub.target || this.pub.load;
     if (t && t.position && (t.type === 'deck' || t.type === 'wreck')) {
       const d = Math.hypot(t.position.x - x, t.position.z - z);

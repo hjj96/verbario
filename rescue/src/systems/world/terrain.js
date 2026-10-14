@@ -398,6 +398,37 @@ function makeSampler(G) {
   };
 }
 
+// Collision columns for a landmass (world.obstacles are vertical cylinders): one per grid cell
+// whose rock rises above `min`, fitted round the high samples (centroid + farthest sample).
+export function terrainColumns(sampler, { x0, z0, x1, z1 }, { cell = 7, min = 2.5, sub = 1 } = {}) {
+  const out = [];
+  for (let cz = z0; cz < z1; cz += cell) {
+    for (let cx = x0; cx < x1; cx += cell) {
+      let n = 0, sx = 0, sz = 0, top = -Infinity;
+      for (let z = cz + sub * 0.5; z < cz + cell; z += sub) {
+        for (let x = cx + sub * 0.5; x < cx + cell; x += sub) {
+          const h = sampler.heightAt(x, z);
+          if (h < min) continue;
+          n++;
+          sx += x;
+          sz += z;
+          if (h > top) top = h;
+        }
+      }
+      if (!n) continue;
+      const mx = sx / n, mz = sz / n;
+      let rad = 0;
+      for (let z = cz + sub * 0.5; z < cz + cell; z += sub) {
+        for (let x = cx + sub * 0.5; x < cx + cell; x += sub) {
+          if (sampler.heightAt(x, z) >= min) rad = Math.max(rad, Math.hypot(x - mx, z - mz));
+        }
+      }
+      out.push({ x: mx, z: mz, radius: rad + sub * 0.5, top: top + 0.3 });
+    }
+  }
+  return out;
+}
+
 // Inscribed circles of the land (surf rings for ocean.setShoals): greedy maxima of a chamfer
 // distance transform; each circle is the largest one fitting the coast where nothing is covered yet.
 export function fitShoals(sampler, count, { minR = 4, margin = 1.5, level = 0.15 } = {}) {

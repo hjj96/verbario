@@ -89,7 +89,8 @@ export class Rig {
 
     this.padPosition = new THREE.Vector3(this.x + PAD.x, UPPER_Y, this.z + PAD.z);
     this.padRadius = 10.5;
-    this.lowerDeck = { x: this.x, z: this.z + 11, y: LOWER_Y };
+    // open part of the cellar deck (under open sky, not under the upper deck): world rect + top height
+    this.lowerDeck = { x: this.x, z: this.z + 11, y: LOWER_Y, x0: this.x - 21.8, x1: this.x + 21.8, z0: this.z - 1.5, z1: this.z + 21.8 };
     const o = (x, z, radius, top, kind, name) => ({ x: this.x + x, z: this.z + z, radius, top, kind, name });
     this.obstacles = [
       o(DERRICK.x, DERRICK.z, 6.5, DERRICK.top + 2, 'derrick', 'буровая вышка'),

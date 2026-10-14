@@ -210,6 +210,7 @@ export class FlightHud {
       this.warnings.onHazardWarning(p);
       m.activity = 0;
     });
+    on('hazard:end', (p) => this.warnings.endHazard(p?.hazard));
     on('hazard:hit', (p) => {
       if (p.type === 'lightning' || p.emp) this.glitch(0.3);
     });

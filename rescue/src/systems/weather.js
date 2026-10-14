@@ -21,7 +21,7 @@
 //   glitterExp, sss, scud, beam, detect {base, altBonus}, wind/gust/turbulence/rate keys,
 //   sea.roughnessRain (already folded into sea.roughness), sea.clearing, sea.cloudReflect
 //   setPreset(name, over, { windFrom })   wind «from» bearing rotates with the wind channel
-//   strikeLightning(x, z, { cloudOnly, strength, charge, eta })
+//   strikeLightning(x, z, { cloudOnly, strength, charge, eta }); setHail(v) (hazards' hail cells)
 //   cloudShadowAt(x, z) → sun multiplier on props; attract (title cycle flag); labels; presets
 //   events: weather:preset also carries {worse, label, windFrom, gust}; weather:charge {target, heli}
 import * as THREE from 'three';
@@ -311,6 +311,11 @@ export class Weather {
     this.greenTarget = clamp(Number(v) || 0, 0, 1);
   }
 
+  // Hail level 0..1 at the heli (hazards' hail cells drive it; fx rain pellets / bounces read state.hail).
+  setHail(v) {
+    this.state.hail = clamp(Number(v) || 0, 0, 1);
+  }
+
   // Scripted gust front (onboarding: harmless, labelled «ПОРЫВ»). Reaches the heli in `eta` s.
   spawnGust({ strength = 8, dir, eta = 6, harmless = false } = {}) {
     const st = this.state;
@@ -380,6 +385,7 @@ export class Weather {
     this.lightning.reset();
     this.greenTarget = 0;
     this.state.greenTint = 0;
+    this.state.hail = 0;
     this.state.wet = 0;
     this.runScript(def.weather || {});
     this.state.timeOfDay = this.forcedTod ?? (Number.isFinite(def.timeOfDay) ? def.timeOfDay : 0.4);
