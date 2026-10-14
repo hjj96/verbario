@@ -234,7 +234,7 @@ function cargoParts(seed) {
     const l = c.r * 0.3 + c.g * 0.55 + c.b * 0.15;
     return c.lerp(new THREE.Color(l, l, l), 0.25);
   });
-  const box = containerGeo();
+  const box = containerGeo(true);
   const MC = worn(SURF.paint, 'medium', 0.66);
   for (let bay = 0; bay < 8; bay++) {
     const zc = -55 + bay * 12.9;

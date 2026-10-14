@@ -388,21 +388,31 @@ const M = (x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) =>
   _m4.clone().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
 
 // 20' ISO container (world bake; origin bottom centre, long axis Z, doors at +Z): corrugated long
-// sides (real folds → the sun picks out the ribs), darker underside, door end with seam, four
-// lock bars and corner posts. Vertex colours are a white multiplier → part.color is the paint.
+// sides (real folds → the sun picks out the ribs), door end with seam, four lock bars and corner
+// posts; no underside (never seen). Vertex colours are a white multiplier → part.color is the
+// paint. lo = deck-cargo variant for big stacks (12 folds, two lock bars, no posts: ~130 tris).
 export const BOX20 = { L: 6.06, W: 2.44, H: 2.59 };
-let _box20 = null;
-export function containerGeo() {
-  if (_box20) return _box20;
+const _box20 = {};
+export function containerGeo(lo = false) {
+  const key = lo ? 'lo' : 'hi';
+  if (_box20[key]) return _box20[key];
   const { L, W, H } = BOX20;
-  const body = new THREE.BoxGeometry(W, H, L, 1, 1, 26).toNonIndexed();
+  const SEG = lo ? 12 : 26;
+  const full = new THREE.BoxGeometry(W, H, L, 1, 1, SEG).toNonIndexed();
+  // drop the underside triangles
+  const fp = full.attributes.position.array;
+  const keep = [];
+  for (let i = 0; i < fp.length; i += 9) if (!(fp[i + 1] < -H / 2 + 1e-4 && fp[i + 4] < -H / 2 + 1e-4 && fp[i + 7] < -H / 2 + 1e-4)) for (let j = 0; j < 9; j++) keep.push(fp[i + j]);
+  full.dispose();
+  const body = new THREE.BufferGeometry();
+  body.setAttribute('position', new THREE.Float32BufferAttribute(keep, 3));
   const pos = body.attributes.position;
-  const step = L / 26;
+  const step = L / SEG;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i);
     if (Math.abs(Math.abs(x) - W / 2) < 1e-4) {
       const k = Math.round((z + L / 2) / step);
-      if (k > 0 && k < 26 && k % 2) pos.setX(i, x - Math.sign(x) * 0.05);
+      if (k > 0 && k < SEG && k % 2) pos.setX(i, x - Math.sign(x) * 0.05);
     }
   }
   body.computeVertexNormals();
@@ -420,11 +430,11 @@ export function containerGeo() {
   const list = [[body]];
   const dz = L / 2 + 0.03;
   list.push([box, '#3A3633', M(0, H / 2, dz, 0.04, H * 0.94, 0.04)]);
-  for (let i = 0; i < 4; i++) list.push([box, '#77726B', M(-W / 2 + 0.36 + i * 0.57, H / 2, dz + 0.03, 0.05, H * 0.92, 0.05)]);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) list.push([box, '#CFCFCF', M(sx * (W / 2 - 0.08), H / 2, sz * (L / 2 - 0.08), 0.18, H + 0.02, 0.18)]);
-  _box20 = mergeColored(list);
+  for (let i = 0; i < 4; i++) if (!lo || i === 1 || i === 2) list.push([box, '#77726B', M(-W / 2 + 0.36 + i * 0.57, H / 2, dz + 0.03, 0.05, H * 0.92, 0.05)]);
+  if (!lo) for (const sx of [-1, 1]) for (const sz of [-1, 1]) list.push([box, '#CFCFCF', M(sx * (W / 2 - 0.08), H / 2, sz * (L / 2 - 0.08), 0.18, H + 0.02, 0.18)]);
+  _box20[key] = mergeColored(list);
   box.dispose();
-  return _box20;
+  return _box20[key];
 }
 
 // Enclosed lifeboat (SOLAS totally-enclosed type; free-fall variant longer with a raked stern):

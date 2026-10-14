@@ -4,6 +4,12 @@
 // helideck with H at 32 m; flare boom whose flame bends with the wind (emissive flame mesh + fx
 // smoke/sparks + a pooled fx light when close) and lights the low cloud base #FF8A2A.
 // On 27 December the accommodation roof reads «С ДНЁМ СПАСАТЕЛЯ» (День спасателя).
+// Realism pass: heavy wear; painted cellar-deck plating with gratings, laydown hatching and the
+// muster point (decal), pipe racks, stair towers, IBC totes, gas bottles, corrugated containers,
+// free-fall lifeboats on 35° skids, davit boats, banded accommodation windows, roof plant + radio
+// mast, ribbed process modules, splash-zone growth / rust weeping / anodes on the legs. The flare
+// is a stack of fbm-eaten billboard licks + a smoke ribbon (rig-local shaders), its light a tight
+// flickering pool (12–18 Hz) instead of a wide brown wash.
 import * as THREE from 'three';
 import { bake, p, member, beam as boxBeam, railParts, latticeParts, windowParts, shadeVerts, UNIT, SURF, emit, worn } from './geo.js';
 import { CH, createPropMaterial, setGlow } from './materials.js';
@@ -375,7 +381,7 @@ export class Rig {
     L.add(X + PAD.x + 6, UPPER_Y + 1, Z + PAD.z - 9, '#FFE6B0', { gain: 4, bulb: 0.25, halo: 1.8, ch: CH.PADLIGHT });
     // flare: hot core lamp + glow on the low cloud base
     L.add(X + FLARE_TIP[0], FLARE_TIP[1] + 2, Z + FLARE_TIP[2], '#FF9A40', { gain: 0.8, bulb: 0.5, halo: 4, ch: CH.FLAME, pen: 0.8 });
-    this.cloudLamp = L.add(X + FLARE_TIP[0], 74, Z + FLARE_TIP[2], '#FF8A2A', { gain: 0.2, bulb: 0.01, halo: 50, ch: CH.CLOUD, pen: 0.9 });
+    this.cloudLamp = L.add(X + FLARE_TIP[0], 74, Z + FLARE_TIP[2], '#FF8A2A', { gain: 0.14, bulb: 0.01, halo: 34, ch: CH.CLOUD, pen: 0.9 });
     this.unloadLamps = [];
     for (let i = 0; i < 4; i++) {
       const a = Math.PI / 4 + (i * Math.PI) / 2;
@@ -405,8 +411,8 @@ export class Rig {
     this.flicker = 0.82 + 0.1 * Math.sin(t * 11.3) + 0.08 * Math.sin(t * 23.7 + 1.3) + 0.06 * Math.sin(t * 5.1);
     // 12–18 Hz jitter of the light it throws (the flame's own licks animate in the shader)
     const jit = 1 + 0.13 * Math.sin(t * TAU * 13.1) + 0.09 * Math.sin(t * TAU * 17.3 + 1.7) + 0.05 * Math.sin(t * TAU * 15.2 + 0.4);
-    u.uLen.value = 15 + 3 * Math.sin(t * 0.7);
-    u.uRad.value = 2.9;
+    u.uLen.value = 17 + 3 * Math.sin(t * 0.7);
+    u.uRad.value = 3.3;
     u.uI.value = 0.75 + 0.55 * env.night;
     u.uGlow.value = this.flicker * (0.08 + 0.5 * env.night);
     u.uDay.value = 1 - env.night;

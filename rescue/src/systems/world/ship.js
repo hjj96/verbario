@@ -5,6 +5,12 @@
 // pitches / rolls / heaves from three ocean samples (deck tilt → pad.tilt), slams its bow into
 // crests (fx spray), leaves a Kelvin wake (ocean.addWake), a signalman marshals with glowing wands,
 // and the horn sounds when the heli comes within 300 m ('world:horn').
+// Realism pass (one style with the granite terrain): weathered hull (2.5 m plating, rust runs from
+// hawses / scuppers, grimy boot-top), bulwark with freeing ports, hawse pipes with stowed anchors,
+// windlass + chain, painted foredeck plating (decal), raked bridge glass with open wings, tripod
+// mast with radar platform, sooty funnel with exhausts, enclosed lifeboats on gravity davits,
+// helideck safety net; medium wear on the shared prop material; green water sweeps the
+// forecastle after a heavy bow slam (sheet + fx spray).
 import * as THREE from 'three';
 import { bake, p, member, beam as boxBeam, hullGeometry, deckGeometry, windowParts, railParts, shadeVerts, UNIT, SURF, emit, worn } from './geo.js';
 import { CH, createPropMaterial, beamGeometry, setGlow } from './materials.js';
@@ -727,7 +733,7 @@ void main() {
   float body = smoothstep(-0.04, 0.03, b + (n1 - 0.5) * 0.08) * exp(-max(b, 0.0) * 2.4);
   float crest = exp(-pow((b + (n2 - 0.5) * 0.05) / 0.05, 2.0));
   float foam = smoothstep(0.45, 0.8, n1 * 0.65 + n2 * 0.5);
-  float a = uK * clamp(body * (0.25 + 0.5 * foam) + crest * (0.5 + 0.4 * n2), 0.0, 0.88);
+  float a = uK * clamp(body * (0.3 + 0.55 * foam) + crest * (0.65 + 0.35 * n2), 0.0, 0.9);
   vec3 fwd = -vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
   vec2 focus = fwd.xz * (cameraPosition.y / max(-fwd.y, 0.25));
   a *= 1.0 - smoothstep(uFogNear, uFogFar, length(vW.xz - cameraPosition.xz - focus));
