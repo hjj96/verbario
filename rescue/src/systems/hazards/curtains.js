@@ -1,5 +1,5 @@
 // Precipitation curtains (one instanced draw call): the downburst's dark rain column (§3.12 telegraph),
-// the hail cell's pale green shaft #CFE3D6 and the tornado's rain arc (§2.12 «дуга дождя»).
+// the hail cell's stippled whitish-grey shaft #C9CFD2 and the tornado's rain arc (§2.12 «дуга дождя»).
 // Open cylinders (or arcs of them) with falling fbm streaks, denser at the silhouette, cut around the heli.
 import * as THREE from 'three';
 import { HZ_GLSL, FINISH, cylinderGridGeometry, addInstanceAttrs } from './common.js';
@@ -58,6 +58,15 @@ void main() {
   float ends = smoothstep(0.0, 0.12, u) * (1.0 - smoothstep(0.88, 1.0, u));
   float vert = smoothstep(0.0, 0.05, s) * (1.0 - smoothstep(0.75, 1.0, s));
   float a = vK.z * (0.3 + 0.7 * rim) * (0.45 + 0.8 * streak) * ends * vert;
+  if (vK.w > 0.5) {
+    // hail: a translucent stippled shaft of falling pellets that thins out at its edges (no solid
+    // pillar with a crisp silhouette)
+    // (two fbm octaves, not the hash channel: magnified hash texels read as a woven checker)
+    float st1 = texture2D(uAtlas, vec2(u * 41.0 + vSeed, (h + fall * 2.5) * 0.045)).r;
+    float st2 = texture2D(uAtlas, vec2(u * 113.0 - vSeed, (h + fall * 3.0) * 0.11)).r;
+    float stip = smoothstep(0.45, 0.72, st1 * 0.55 + st2 * 0.45);
+    a *= (0.3 + 0.9 * stip) * (1.0 - 0.75 * smoothstep(0.82, 0.99, 1.0 - abs(dot(N, V))));
+  }
   if (a <= 0.003) discard;
   vec3 col = vC.rgb * hzAirLight(vW, 0.55) * (1.0 + 2.0 * uFlash) + vC.rgb * uAirFlash * 0.8;
   // hail glitters faintly in the beam / flash

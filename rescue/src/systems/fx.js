@@ -311,7 +311,8 @@ export class Effects {
     if (kind === 'signal') {
       // survivor's orange day smoke: the best wind indicator in the game (DESIGN §2.10)
       // dense saturated orange at the canister, billowing out into a wide pale plume downwind
-      const s0 = opts?.size?.[0] ?? 0.9;
+      // per-puff random size (and rotation, in emit): a billowing plume, not a string of equal balls
+      const s0 = (opts?.size?.[0] ?? 0.9) * (0.6 + 0.8 * Math.random());
       const s1 = opts?.size?.[1] ?? 10;
       const v = 0.9 + 0.2 * Math.random();
       pool.emit(t, x + j() * 0.4, y + 0.3, z + j() * 0.4, j() * 1.3, opts?.rise ?? 1.5, j() * 1.3,

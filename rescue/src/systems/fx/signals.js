@@ -450,21 +450,23 @@ export class Signals {
         // the motor's trail: a thin continuous wisp — puffs are spread along the path travelled this
         // frame (at a low frame rate they clumped into a line of identical balls)
         if (dt > 0) {
-          r.trailAcc += dt * 70;
-          let g = 32;
+          // emitted per metre travelled (the motor is fastest at launch): ~1.3 overlapping puffs per
+          // metre, each wider than the spacing, so the wisp never breaks into beads at any frame rate
+          r.trailAcc += 1.3 * Math.hypot(r.x - r.px, r.y - r.py, r.z - r.pz);
+          let g = 40;
           while (r.trailAcc >= 1 && g-- > 0) {
             r.trailAcc -= 1;
             const u = Math.random();
-            const s0 = 0.7 + 0.5 * Math.random();
+            const s0 = 1.3 + 0.8 * Math.random();
             // born when the motor passed that point (one shared birth time per frame grew the puffs
             // in lock-step and beaded the trail)
             fx.pools.smoke.emit(
               t - dt * u, r.x + (r.px - r.x) * u, r.y + (r.py - r.y) * u, r.z + (r.pz - r.z) * u,
               (Math.random() - 0.5) * 0.5, -0.4, (Math.random() - 0.5) * 0.5,
-              1.8 + Math.random() * 1.6, s0, 2 + 1.8 * Math.random(), this.cTrail, 0.1 + 0.08 * Math.random(), this.cSmokeEnd, P_TRAIL,
+              1.8 + Math.random() * 1.6, s0, s0 * (1.5 + 0.9 * Math.random()), this.cTrail, 0.06 + 0.05 * Math.random(), this.cSmokeEnd, P_TRAIL,
             );
           }
-          if (r.trailAcc > 4) r.trailAcc = 4;
+          if (r.trailAcc > 2) r.trailAcc = 2;
         }
       } else {
         const td = r.t - ROCKET_RISE;
