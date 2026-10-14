@@ -367,13 +367,24 @@ export class Look {
   setFronts(fronts) {
     const A = this.uniforms.uGustFronts.value;
     const B = this.uniforms.uGustFrontsB.value;
+    if (!this._frontPool) this._frontPool = [0, 1, 2, 3].map(() => ({ x: 0, z: 0, dx: 0, dz: 0, s: 0, w: 140, l: 500 }));
     this._fronts.length = 0;
     for (let i = 0; i < 4; i++) {
       const f = fronts[i];
       if (f && f.strength > 0) {
+        const w = f.width || 140;
+        const l = f.length || 500;
         A[i].set(f.x, f.z, f.dirX, f.dirZ);
-        B[i].set(f.strength, f.width || 140, f.length || 500, 0);
-        this._fronts.push({ x: f.x, z: f.z, dx: f.dirX, dz: f.dirZ, s: f.strength, w: f.width || 140, l: f.length || 500 });
+        B[i].set(f.strength, w, l, 0);
+        const c = this._frontPool[i];
+        c.x = f.x;
+        c.z = f.z;
+        c.dx = f.dirX;
+        c.dz = f.dirZ;
+        c.s = f.strength;
+        c.w = w;
+        c.l = l;
+        this._fronts.push(c);
       } else {
         B[i].x = 0;
       }

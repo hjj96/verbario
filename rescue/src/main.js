@@ -50,7 +50,14 @@ async function boot() {
     powerPreference: 'high-performance',
     stencil: false,
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioCap()));
+  // Pixel ratio: per-quality cap, and never more than ~1080p worth of pixels (DESIGN §8.2).
+  const pixelRatio = () =>
+    Math.min(
+      window.devicePixelRatio || 1,
+      settings.pixelRatioCap(),
+      Math.max(1, Math.sqrt((1920 * 1080) / (window.innerWidth * window.innerHeight))),
+    );
+  renderer.setPixelRatio(pixelRatio());
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -131,7 +138,7 @@ async function boot() {
   const onResize = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioCap()));
+    renderer.setPixelRatio(pixelRatio());
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
