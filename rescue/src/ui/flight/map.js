@@ -6,10 +6,9 @@ import { el, fitCanvas, setClass } from '../common/dom.js';
 import { buildChartModel, makeView, drawChart, drawFront } from '../common/chart.js';
 import { distL, NBSP, PRESET_SEVERITY } from '../common/fmt.js';
 import { isOpen, isSpotted } from './model.js';
+import { font, MONO, HEAD } from '../common/fonts.js';
 
 const TAU = Math.PI * 2;
-const FONT_MONO = '"JetBrains Mono", ui-monospace, monospace';
-const FONT_HEAD = 'Oswald, Impact, "Arial Narrow", sans-serif';
 
 export class TacMap {
   constructor(flight, parent) {
@@ -181,7 +180,7 @@ export class TacMap {
       g.setLineDash([]);
       g.globalAlpha = 1;
       if (d.label) {
-        g.font = `500 10px ${FONT_MONO}`;
+        g.font = font(500, 10, MONO);
         g.fillStyle = pal.info;
         g.fillText(String(d.label).toUpperCase(), x, y - r - 8);
       }
@@ -199,9 +198,9 @@ export class TacMap {
       g.beginPath();
       g.arc(x, y, 7, 0, TAU);
       g.stroke();
-      g.font = `700 9px ${FONT_HEAD}`;
+      g.font = font(700, 9, HEAD);
       g.fillText('H', x, y + 0.5);
-      g.font = `500 10px ${FONT_MONO}`;
+      g.font = font(500, 10, MONO);
       g.textAlign = 'left';
       g.fillText(String(p.name || '').toUpperCase(), x + 11, y);
       g.textAlign = 'center';
@@ -244,7 +243,7 @@ export class TacMap {
       g.fill();
       const n = s.remaining ?? s.count ?? 1;
       if (n > 1) {
-        g.font = `600 10px ${FONT_MONO}`;
+        g.font = font(600, 10, MONO);
         g.textAlign = 'left';
         g.fillText(`×${n}`, x + 8, y);
         g.textAlign = 'center';
@@ -261,7 +260,7 @@ export class TacMap {
       g.stroke();
       g.setLineDash([]);
       g.fillStyle = pal.rescue;
-      g.font = `700 11px ${FONT_HEAD}`;
+      g.font = font(700, 11, HEAD);
       g.fillText('?', X(sg.x), Z(sg.z));
     }
     // heli + heading line
@@ -290,11 +289,11 @@ export class TacMap {
     g.beginPath();
     g.arc(S / 2, S / 2, S / 2 - 1, 0, TAU);
     g.stroke();
-    g.font = `600 12px ${FONT_HEAD}`;
+    g.font = font(600, 12, HEAD);
     g.fillStyle = pal.fg;
     g.textAlign = 'center';
     g.fillText('КАРТА РАЙОНА', S / 2, 22);
-    g.font = `500 10px ${FONT_MONO}`;
+    g.font = font(500, 10, MONO);
     g.fillStyle = pal.dim;
     g.fillText(`РАДИУС ${distL(R).toUpperCase()}`, S / 2, 38);
   }

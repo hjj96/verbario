@@ -19,25 +19,28 @@
 //   fireSignal(s, kind)           scripted signals: 'rocket' | 'smoke' | 'flare' | 'whistle' | 'dye' | 'mirror'
 //   spot(s, by)                   force "spotted" (tests, scripts)
 //   byTag(tag) → [groups]         every group carrying a def tag (splits keep the tag)
+//   deckAt(x, z) → y | −Infinity  deck height of the structures people stand on (barge, ferry, rig lower
+//                                 deck) — the winch can use it as the surface under the basket
 //   carriers, lostMarkers, elapsed, rescuedTotal, lostTotal
 //   group extras: tag, def, label, name, velocity (Vector3), warmth (= health), critical, signal
 //     {kind, x, z, error, arc, t, until} (last «СИГНАЛ»), strobe (flashing now), panic, carrier,
-//     inBasket (person record on the cable), deckY, flower (ring of 2+), dwWarn (0..1 downwash danger)
+//     inBasket (person record on the cable), deckY, flower (ring of 2+), dwWarn (0..1 downwash danger),
+//     pet {kind: 'cat'|'dog', refused} (NICE: def.pet; it leaves with the last person, record.pet)
 // Extra events: survivor:capsize {s, cause}, survivor:sinking {s, phase: 'warn'|'sunk'},
 //   survivor:jump {s, from}, survivor:creak {s, x, z}, survivor:downwash {s, level: 'push'|'capsize'},
-//   survivor:raft-boarded {s}, survivor:tip {s}.
+//   survivor:raft-boarded {s}, survivor:tip {s}, survivor:pet {s, pet: 'cat'|'dog', action: 'refuse'|'bark'}.
 import * as THREE from 'three';
 import { createRng } from '../core/math.js';
 import {
   TYPES, SUPPORTED_TYPES, DIFFICULTY_WARMTH, CRITICAL, LOST_FADE, DETECT, BEAM_SPOT_TIME, BEAM_RANGE,
   FLARE_SPOT_R, FLARE_SPOT_LIFE, STROBE_MULT, SIG, NEAR_WAVE, SEEN_RANGE, SWIM_TO_BASKET, SWIM_SPEED,
   SWIM_TO_RAFT, RAFT_SEATS, DW_PUSH_ALT, DW_CAPSIZE_ALT, DW_CAPSIZE_R, DW_CAPSIZE_T, ROGUE_SWEEP, ROGUE_SWEEP_T,
-  CONTAINER_COLORS, SKIN, HOOD, JACKET, PANTS, PERSON_SCALE, clamp, clamp01, smooth, lerp, wrapAngle, approach,
+  CONTAINER_COLORS, SKIN, HOOD, HOOD_COUNT, JACKET, PANTS, PERSON_SCALE, clamp, clamp01, smooth, lerp, wrapAngle, approach,
 } from './survivors/tables.js';
 import { Crowd, FEET_Y } from './survivors/crowd.js';
 import {
   raftGeometry, capsizedHullGeometry, containerGeometry, bargeGeometry, ferryGeometry, stretcherGeometry,
-  lostBuoyGeometry, debrisGeometry, DEBRIS_KINDS, createCraftMaterial, CraftBatch, nameDecal, RAFT,
+  lostBuoyGeometry, debrisGeometry, DEBRIS_KINDS, createCraftMaterial, CraftBatch, nameDecal, hullNameGeometry, RAFT,
 } from './survivors/craft.js';
 import { Collars, Glows, Lines } from './survivors/water.js';
 import { Carrier, scatterDebris } from './survivors/carriers.js';
@@ -103,6 +106,7 @@ export class Survivors {
     };
 
     this._buildRender();
+    this._warm = 4; // frames of program warm-up (see _warmup)
 
     const ev = ctx.events;
     ev.on('mission:setup', ({ def } = {}) => this._setup(def));
@@ -131,15 +135,17 @@ export class Survivors {
     root.name = 'survivors';
     ctx.scene.add(root);
 
+    const rim = (this.rim = { value: new THREE.Color(0, 0, 0) }); // shared day rim light (people + craft)
     this.crowd = new Crowd(look, 192);
+    this.crowd.material.userData.uniforms.uRim = rim; // before the first compile picks the uniforms up
     root.add(this.crowd.mesh, this.crowd.ghost, this.crowd.keyline);
 
     const keyline = look.keyline({ color: '#05090B', opacity: 0.55, px: 1 });
     this.craftKeyline = keyline;
-    const raftMat = createCraftMaterial(look, { side: THREE.DoubleSide, roughness: 0.72 });
-    const hullMat = createCraftMaterial(look, { roughness: 0.6 });
-    const steelMat = createCraftMaterial(look, { roughness: 0.55 });
-    const debrisMat = createCraftMaterial(look, { roughness: 0.6, debris: true });
+    const raftMat = createCraftMaterial(look, { side: THREE.DoubleSide, roughness: 0.72, rim });
+    const hullMat = createCraftMaterial(look, { roughness: 0.6, rim });
+    const steelMat = createCraftMaterial(look, { roughness: 0.55, rim });
+    const debrisMat = createCraftMaterial(look, { roughness: 0.6, debris: true, rim });
     this.batches = {
       raft: new CraftBatch('rafts', raftGeometry(), raftMat, 16, { castShadow: true, keyline }),
       boat: new CraftBatch('hulls', capsizedHullGeometry('boat'), hullMat, 6, { castShadow: true, keyline }),
@@ -152,7 +158,8 @@ export class Survivors {
     this._steelMat = steelMat;
     this._bigGeos = new Map(); // deck height → barge / ferry geometry
     this.bigBatches = []; // per (kind, deck height) batches created on demand
-    for (const b of Object.values(this.batches)) {
+    this.batchList = Object.values(this.batches); // fixed list (no per-frame Object.values)
+    for (const b of this.batchList) {
       root.add(b.mesh);
       if (b.keyline) root.add(b.keyline);
     }
@@ -171,10 +178,8 @@ export class Survivors {
     b.key = key;
     b.geo = geo;
     this.root.add(b.mesh);
-    if (b.keyline) {
-      b.keyline.visible = this.ctx.settings.get('quality') === 'high';
-      this.root.add(b.keyline);
-    }
+    b.keylineOn = this.ctx.settings.get('quality') === 'high';
+    if (b.keyline) this.root.add(b.keyline);
     this.bigBatches.push(b);
     return b;
   }
@@ -184,7 +189,8 @@ export class Survivors {
     this.quality = q;
     this.crowd.setQuality(q);
     const high = q === 'high';
-    for (const b of [...Object.values(this.batches), ...this.bigBatches]) if (b.keyline) b.keyline.visible = high;
+    for (const b of this.batchList) b.keylineOn = high;
+    for (const b of this.bigBatches) b.keylineOn = high;
   }
 
   // ==============================================================================================
@@ -268,6 +274,8 @@ export class Survivors {
       dHeli: 1e9,
       swimTo: null,
       jumpT: 0,
+      // NICE: a pet aboard (def.pet 'cat' | 'dog'): the cat refuses the first basket, the dog barks
+      pet: entry.pet ? { kind: entry.pet === 'cat' ? 'cat' : 'dog', far: false, refused: false, hopT: 0, barkT: 0, yaw: 0 } : null,
     };
     s.object3d.name = `survivor-${s.id}`;
     // people (the mission's manifest when it has one, so cabin and logbook agree)
@@ -298,13 +306,17 @@ export class Survivors {
   }
 
   // Closest pick-up-able group to (x, z) within maxDist, ranked by distance / capture radius of its type.
+  // People standing on a structure are only reachable from deck level: a basket hanging in the water
+  // below the rig's lower deck (or beside the ferry) does not get them.
   nearestFor(x, z, maxDist = 4.5) {
     let best = null;
     let bk = Infinity;
+    const by = this.ctx.heli?.winch?.basket?.y;
     for (const s of this.list) {
       if (!this._pickable(s)) continue;
       const d = Math.hypot(s.position.x - x, s.position.z - z);
       if (d > maxDist) continue;
+      if (s.deckY !== undefined && s.deckY > 1.5 && Number.isFinite(by) && by < s.deckY - 2.5) continue;
       const r = TYPES[s.type]?.capture ?? 3;
       const k = d / r;
       if (k < bk) {
@@ -337,6 +349,13 @@ export class Survivors {
     p.spin = Math.random() * Math.PI * 2;
     s.attached = p;
     s.inBasket = p.rec;
+    if (s.pet && s.pet.kind === 'cat' && !s.pet.refused) {
+      // «кот отказывается от первой корзины»: it bolts to the far end of whatever they are on
+      s.pet.refused = true;
+      s.pet.far = true;
+      s.pet.hopT = 0.8;
+      this._emit('survivor:pet', { s, pet: 'cat', action: 'refuse' });
+    }
     s.stateBefore = s.state === 'winching' ? 'spotted' : s.state;
     s.state = 'winching';
     if (!s.spotted) this.spot(s, 'basket');
@@ -464,6 +483,19 @@ export class Survivors {
     return this.list.filter((s) => s.tag === tag);
   }
 
+  // Deck height under (x, z) of the structures people stand on (barge, sinking ferry, the rig's lower
+  // deck), or −Infinity. The winch can treat it as the surface: the basket stops on the deck and the
+  // height window counts from it (DESIGN §3.5 «на конструкции»).
+  deckAt(x, z) {
+    let best = -Infinity;
+    for (const c of this.carriers) {
+      if ((c.kind !== 'barge' && c.kind !== 'wreck' && c.kind !== 'rig') || !c.alive || c.dissolve > 0.3) continue;
+      const y = c.deckHeightAt(x, z);
+      if (y > best) best = y;
+    }
+    return best;
+  }
+
   // ==============================================================================================
   // Mission setup / events
   _setup(def) {
@@ -533,8 +565,11 @@ export class Survivors {
           this._near(s, env, dt);
         }
       }
+      if (s.pet) this._petLife(s, env, dt);
       if (s.excite > 0) s.excite -= dt;
       if (s.calm > 0) s.calm -= dt;
+      // «СИГНАЛ» is a moment, not a marker: 20 s after the last ping the group is «нет данных» again
+      if (s.state === 'drifting' && !s.spotted && (!s.signal || env.t > s.signal.until)) s.state = 'hidden';
     }
     for (const c of this.carriers) this._carrier(c, env, dt);
     for (let i = this.carriers.length - 1; i >= 0; i--) {
@@ -1106,7 +1141,7 @@ export class Survivors {
     const p = {
       rec: rec || null,
       skin: Math.floor(rng.next() * SKIN.length),
-      hood: Math.floor(rng.next() * HOOD.length),
+      hood: rng.next() < 0.6 ? Math.floor(rng.next() * HOOD_COUNT) : HOOD_COUNT + Math.floor(rng.next() * (HOOD.length - HOOD_COUNT)),
       jacket: Math.floor(rng.next() * JACKET.length),
       pants: Math.floor(rng.next() * PANTS.length),
       scale: child ? 0.74 : 0.95 + rng.next() * 0.1,
@@ -1152,6 +1187,51 @@ export class Survivors {
     return POSE.idle;
   }
 
+  // Pets (NICE, DESIGN §4 #27): the dog barks in time with the basket's approach (faster as it nears).
+  _petLife(s, env, dt) {
+    const pet = s.pet;
+    if (pet.hopT > 0) pet.hopT = Math.max(0, pet.hopT - dt);
+    if (pet.kind !== 'dog' || !env.play || s.remaining <= 0 || s.state === 'lost') return;
+    const lowering = env.wState === 'lowering' || env.wState === 'down';
+    const d = Math.hypot(env.bx - s.position.x, env.bz - s.position.z);
+    if (!lowering || d > 25) {
+      pet.barkT = 0;
+      return;
+    }
+    pet.barkT -= dt;
+    if (pet.barkT <= 0) {
+      pet.barkT = 0.45 + 0.08 * d;
+      pet.hopT = Math.max(pet.hopT, 0.18);
+      this._emit('survivor:pet', { s, pet: 'dog', action: 'bark', distance: d });
+    }
+  }
+
+  // Draw the pet on the craft (or paddling next to its owner in the water). It leaves with the last person.
+  _drawPet(s, c, env, fade) {
+    const pet = s.pet;
+    if (!pet || s.remaining <= 0 || s.state === 'rescued' || (s.attached && s.remaining <= 1)) return;
+    const kind = DEBRIS_KINDS.indexOf(pet.kind) + 1;
+    const hop = pet.hopT > 0 ? Math.sin(Math.PI * Math.min(1, pet.hopT / (pet.kind === 'cat' ? 0.8 : 0.18))) * (pet.kind === 'cat' ? 0.45 : 0.1) : 0;
+    if (c) {
+      c.petSlot(pet.far, _slot);
+      c.toWorld(_slot[0], _slot[1], _slot[2], _v);
+      // look at the heli when it is near, else along the craft; a lazy idle sway
+      const target = s.dHeli < 200 ? Math.atan2(env.hx - _v.x, env.hz - _v.z) - c.yaw : _slot[3];
+      pet.yaw += wrapAngle(target - pet.yaw) * (1 - Math.exp(-(env.dt || 0) * 2));
+      _q.copy(c.quat).multiply(_q2.setFromAxisAngle(UP, pet.yaw + 0.15 * Math.sin(env.t * 0.9 + s.id)));
+      _v.y += hop - fade * 0.4;
+    } else {
+      // swimming dog: only the head and back above the water, beside the first person
+      const p = s.people[0];
+      if (!p) return;
+      const a = p.yaw + Math.PI / 2;
+      _v.set(p.x + Math.sin(a) * 0.9, p.waterY - 0.24 * S - fade * 0.4, p.z + Math.cos(a) * 0.9);
+      _q.setFromUnitVectors(UP, s.nrm).multiply(_q2.setFromAxisAngle(UP, p.yaw + 0.3 * Math.sin(env.t * 1.3)));
+    }
+    _m.compose(_v, _q, _s.set(1, 1, 1));
+    this.batches.debris.push(_m, 0, 0, 0, 0, fade, 0, 0, kind);
+  }
+
   _flareHolder(s) {
     return s.people[0] || null;
   }
@@ -1173,6 +1253,7 @@ export class Survivors {
       c = new Carrier('hull', x, z, { style, sinkAt: e.sinkTime ?? TYPES.hull.sink, phase: rng.next() * 100 });
       c.yaw = Math.atan2(this.env.windDirX, this.env.windDirZ) + Math.PI / 2 + (rng.next() - 0.5) * 0.6;
       scatterDebris(c, rng);
+      if (e.name) this._hullDecal(c, e.name);
     } else if (t === 'container') {
       const col = e.color || CONTAINER_COLORS[Math.floor(rng.next() * CONTAINER_COLORS.length)];
       c = new Carrier('container', x, z, { color: col, phase: rng.next() * 100 });
@@ -1270,10 +1351,27 @@ export class Survivors {
     c.decal = { mesh, tex: d.tex, mat: d.mat, geo: g };
   }
 
+  // «МАРИЯ» on the capsized hull's bottom flanks (one small mesh per named hull, ≤ 4 per mission).
+  _hullDecal(c, name) {
+    const d = nameDecal(this.ctx.look, name, { color: '#ECEBE6' });
+    d.geo.dispose();
+    const key = c.style === 'yacht' ? 'yacht' : 'boat';
+    this._hullNameGeos = this._hullNameGeos || {};
+    const g = this._hullNameGeos[key] || (this._hullNameGeos[key] = hullNameGeometry(key));
+    d.mat.opacity = 0.9;
+    const mesh = new THREE.Mesh(g, d.mat);
+    mesh.name = 'survivors.hullName';
+    mesh.matrixAutoUpdate = false;
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 11;
+    this.root.add(mesh);
+    c.decal = { mesh, tex: d.tex, mat: d.mat, geo: null };
+  }
+
   _disposeCarrier(c) {
     if (c.decal) {
       this.root.remove(c.decal.mesh);
-      c.decal.geo.dispose();
+      c.decal.geo?.dispose();
       c.decal.mat.dispose();
       c.decal.tex.dispose();
       c.decal = null;
@@ -1358,12 +1456,15 @@ export class Survivors {
   _hullLife(c, env, dt) {
     const ctx = this.ctx;
     const left = c.sinkAt - c.age;
-    // oil sheen and the slow spread of things around her
-    if (env.play && dt > 0) {
+    // a thin oil sheen leaking from her (water memory A, 600 s half-life — stamps add up, so keep them
+    // faint and few: the slick trails behind her as she drifts)
+    if (env.play && dt > 0 && c.oilN < 40) {
       c.oilT -= dt;
       if (c.oilT <= 0 && c.sinking < 1) {
-        c.oilT = 2.5;
-        ctx.ocean?.stamp?.('oil', c.x + (this.rng.next() - 0.5) * 6, c.z + (this.rng.next() - 0.5) * 6, { radius: 7 + 4 * this.rng.next(), strength: 0.25 });
+        c.oilT = 5 + 2 * this.rng.next();
+        c.oilN++;
+        const r = this.rng.next() * 5;
+        ctx.ocean?.stamp?.('oil', c.x - env.windDirX * r + (this.rng.next() - 0.5) * 4, c.z - env.windDirZ * r + (this.rng.next() - 0.5) * 4, { radius: 3.5 + 3 * this.rng.next(), strength: 0.07 });
       }
     }
     if (left < 30 && c.sinking < 1) {
@@ -1492,7 +1593,7 @@ export class Survivors {
     const crowd = this.crowd;
     const B = this.batches;
     crowd.begin();
-    for (const b of Object.values(B)) b.begin();
+    for (const b of this.batchList) b.begin();
     for (const b of this.bigBatches) b.begin();
     this.collars.begin();
     this.glows.begin();
@@ -1529,6 +1630,13 @@ export class Survivors {
       } else if (c.kind === 'hull') {
         const b = c.style === 'yacht' ? B.yacht : B.boat;
         b.push(c.matrix, lit, 0, 0, 0, c.dissolve, 0, c.phase);
+        if (c.decal) {
+          // matrix AND matrixWorld: the parent's world update would otherwise overwrite our copy
+          c.decal.mesh.matrix.copy(c.matrix);
+          c.decal.mesh.matrixWorld.copy(c.matrix);
+          c.decal.mesh.visible = c.dissolve < 0.4;
+          c.decal.mat.opacity = 0.9 * (1 - c.dissolve * 2.5);
+        }
         const yaw = c.yaw;
         this.collars.push(c.x, c.y, c.z, c.nrm.x, c.nrm.y, c.nrm.z, c.style === 'yacht' ? 1.95 : 1.75, 0.8 * (1 - c.dissolve), 1 - c.dissolve, lit, c.phase, yaw, c.elong);
         for (const d of c.debris) {
@@ -1552,6 +1660,7 @@ export class Survivors {
       }
       // people aboard (owner + riders), as many as the craft shows
       if (occupants) this._drawAboard(c, env, dt);
+      if (c.owner?.pet) this._drawPet(c.owner, c, env, c.owner.state === 'lost' ? clamp01(c.owner.lostT / LOST_FADE) : 0);
     }
 
     // --- groups without a carrier (swimmers, the injured, flower rings) ---------------------------
@@ -1561,6 +1670,7 @@ export class Survivors {
       if (s.state === 'rescued') continue;
       if (s.state === 'lost' && s.lostT > LOST_FADE + 0.2) continue;
       this._drawSwimmers(s, env, dt);
+      if (s.pet && s.pet.kind === 'dog') this._drawPet(s, null, env, s.state === 'lost' ? clamp01(s.lostT / LOST_FADE) : 0);
     }
 
     // --- lost-person markers: grey buoy («ПОТЕРЯН» is the HUD's label) ------------------------------
@@ -1578,20 +1688,35 @@ export class Survivors {
     }
 
     crowd.end();
-    for (const b of Object.values(B)) b.end();
+    for (const b of this.batchList) b.end();
     for (const b of this.bigBatches) b.end();
     this.collars.end();
     this.glows.end();
     this.lines.end();
     this.ghostUniforms();
+    if (this._warm > 0) this._warmup();
+  }
+
+  // Empty batches are hidden (no draw, no shadow pass). For the first frames keep everything visible
+  // so every program compiles up front with the final light set, not on the first raft of the night.
+  _warmup() {
+    this._warm--;
+    for (const o of this.root.children) if (o.isMesh && !(o.isInstancedMesh && o.count > 0 && o.visible)) o.visible = true;
   }
 
   ghostUniforms() {
+    const env = this.env;
     const u = this.crowd.ghostMaterial.uniforms;
-    u.uLight.value.copy(this.env.ghostLight);
+    u.uLight.value.copy(env.ghostLight);
     const pal = this.ctx.weather?.state?.palette;
     if (pal?.body?.isColor) u.uWater.value.copy(pal.body);
-    this.collars.material.uniforms.uFoam.value.copy(this.env.foam);
+    this.collars.material.uniforms.uFoam.value.copy(env.foam);
+    // day rim (DESIGN §2.7.3: hemiSky·pow(1 − N·V, 3)·.35) and the vest's own read in dim daylight
+    const day = 1 - env.night;
+    if (pal?.sky?.isColor) this.rim.value.copy(pal.sky).multiplyScalar(0.35 * day);
+    else this.rim.value.setRGB(0.1, 0.12, 0.14).multiplyScalar(day);
+    const lightLevel = (pal?.sunIntensity ?? 2) * 0.4 + (pal?.ambientIntensity ?? 0.6) * 0.5;
+    this.crowd.material.userData.uniforms.uVestGlow.value = 0.035 + 0.16 * day * clamp01(1 - lightLevel);
   }
 
   _occupants(c) {
@@ -1629,10 +1754,12 @@ export class Survivors {
     const raise = c.kind === 'raft' && env.bWet && Math.hypot(env.bx - c.x, env.bz - c.z) < 15;
     const seats = c.visibleSeats(raise);
     let i = 0;
-    const groups = c.owner ? [c.owner, ...c.riders] : c.riders;
-    let total = 0;
-    for (const g of groups) total += g.people.length;
-    for (const s of groups) {
+    // the owner first, then riders (no per-frame array: k = −1 is the owner)
+    const owner = c.owner;
+    let total = owner ? owner.people.length : 0;
+    for (const g of c.riders) total += g.people.length;
+    for (let k = owner ? -1 : 0; k < c.riders.length; k++) {
+      const s = k < 0 ? owner : c.riders[k];
       if (s.state === 'rescued' && !s.people.length) continue;
       const fade = s.state === 'lost' ? clamp01(s.lostT / LOST_FADE) : 0;
       if (s.state === 'lost' && s.lostT > LOST_FADE + 0.2) continue;
@@ -1718,7 +1845,7 @@ export class Survivors {
       const tape = ocean?.searchlightAt ? ocean.searchlightAt(p.x, p.z, p.y + 0.3) : 0;
       this.crowd.push(_m, p.aL, p.pL, p.aR, p.pR, 0, fade, p.skin, p.hood, p.jacket, p.pants, tape, this._strobe(s, p, env), wy, tape * 0.6);
       // collar & contact disc per person; splashier when swimming or flailing
-      const busy = s.swimTo || pose === POSE.panic || pose === POSE.wave2 ? 1 : 0.6;
+      const busy = s.swimTo || pose === POSE.panic || pose === POSE.wave2 ? 0.85 : 0.5;
       this.collars.push(p.x, wy, p.z, s.nrm.x, s.nrm.y, s.nrm.z, supine ? 0.62 * S : 0.42 * S, busy * (1 - fade), 1 - fade, tape, p.phase, supine ? p.yaw : 0, supine ? 1.8 : 1);
       if (s.swimTo && dt > 0 && ocean?.addWake) ocean.addWake(p.x, p.z, 0.4, s.velocity.x, s.velocity.z);
       this._signalVisuals(s, p, env, tape);

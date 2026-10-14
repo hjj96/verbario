@@ -173,7 +173,7 @@ export class SignalDesk {
         if (sig.flares <= 0 && !scripted) return false;
         sig.flares = Math.max(0, sig.flares - 1);
         sig.flareBurn = SIG.flareBurn;
-        sig.flareObj = ctx.fx?.flare ? ctx.fx.flare(p.x, p.z, { life: SIG.flareBurn }) : null;
+        sig.flareObj = ctx.fx?.flare ? ctx.fx.flare(p.x, p.z, { life: SIG.flareBurn, held: true }) : null;
         sys._emitSignal(s, 'flare', p.x + (rng.next() - 0.5) * 20, p.z + (rng.next() - 0.5) * 20, 12, 0, true);
         return true;
       }

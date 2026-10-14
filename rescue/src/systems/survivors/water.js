@@ -74,13 +74,15 @@ export class Collars {
           float lace = texture2D(uLace, uv * 0.19 + 0.5).r;
           float blot = texture2D(uLace, uv * 0.06 + 0.31).g;
           float ang = atan(vL.y, vL.x);
-          // waterline band where the hull meets the sea (r = 0.5 → 0.8R), lapping with the swell
+          // waterline froth where the hull meets the sea (r ≈ 0.5 → 0.8R): broken by the lace so it
+          // reads as foam caught against the object, never as a drawn outline; it laps with the swell
           float lap = 0.5 + 0.5 * sin(ang * 5.0 + uTime * 1.7 + vD.w * 6.0);
-          float band = exp(-pow((r - 0.51 - 0.02 * lap) / 0.075, 2.0)) * (0.55 + 0.45 * fine);
+          float breakup = smoothstep(0.28, 0.72, 0.55 * fine + 0.45 * lace + 0.25 * lap - 0.1);
+          float band = exp(-pow((r - 0.52 - 0.03 * lap) / 0.1, 2.0)) * mix(0.18, 0.85, breakup);
           // lacy skirt that thins out towards 1.6R
-          float skirt = smoothstep(0.46, 0.58, r) * (1.0 - smoothstep(0.58, 1.0, r));
-          float laceMask = smoothstep(0.45, 0.85, 0.55 * lace + 0.45 * fine + 0.35 * blot - 0.25 * r);
-          float foam = vD.x * min(0.9, band * 0.95 + skirt * laceMask * 0.6);
+          float skirt = smoothstep(0.46, 0.6, r) * (1.0 - smoothstep(0.6, 1.0, r));
+          float laceMask = smoothstep(0.5, 0.9, 0.55 * lace + 0.45 * fine + 0.35 * blot - 0.25 * r);
+          float foam = vD.x * min(0.8, band * 0.8 + skirt * laceMask * 0.5);
           float dark = vD.y * 0.25 * (1.0 - smoothstep(0.35, 0.55, r));
           vec3 foamCol = mix(uFoam, uBeam, vD.z);
           float a = max(foam, dark);
@@ -158,6 +160,7 @@ export class Glows {
     this.P = mk('iP', 4); // xyz, core size (m)
     this.Cc = mk('iC', 4); // rgb, intensity
     this.H = mk('iH', 4); // halo size (m), halo intensity, kind (0 round, 1 star), rotation
+    this.attrs = [this.P, this.Cc, this.H];
     this.material = new THREE.ShaderMaterial({
       uniforms: { ...THREE.UniformsLib.fog, uResolution: look.uniforms.uResolution },
       vertexShader: /* glsl */ `
@@ -248,7 +251,7 @@ export class Glows {
     this.mesh.count = n;
     this.mesh.visible = n > 0;
     if (!n) return;
-    for (const a of [this.P, this.Cc, this.H]) {
+    for (const a of this.attrs) {
       a.clearUpdateRanges();
       a.addUpdateRange(0, n * 4);
       a.needsUpdate = true;

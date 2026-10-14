@@ -16,13 +16,12 @@ export class WinchPanel {
     el('div.wp-title', { text: 'ЛЕБЁДКА', parent: this.node });
     this.cable = new TextSlot(el('div.wp-cable', { parent: this.node }));
     const right = el('div.wp-right', { parent: this.node });
-    const sl = el('div.wp-row', { parent: right });
-    el('span.wp-lab', { text: 'УСТОЙЧИВОСТЬ', parent: sl });
-    this.steadyWordEl = el('span.wp-word', { parent: sl });
-    this.steadyWord = new TextSlot(this.steadyWordEl);
+    el('div.wp-lab', { text: 'УСТОЙЧИВОСТЬ', parent: right });
     const segs = el('div.wp-segs', { parent: right });
     this.segs = [];
     for (let i = 0; i < 10; i++) this.segs.push(el('i', { parent: segs }));
+    this.steadyWordEl = el('div.wp-word', { parent: right });
+    this.steadyWord = new TextSlot(this.steadyWordEl);
     this.capEl = el('div.wp-capture', { parent: right });
     this.cap = new TextSlot(this.capEl);
     this.statusEl = el('div.wp-status', { parent: right });
@@ -69,8 +68,10 @@ export class WinchPanel {
     const hs = this.flight.L.hs;
     this.op.set(this.visible.toFixed(3));
     this.tr.set(`translateY(${((1 - this.visible) * 16 * hs).toFixed(1)}px)`);
-    setClass(this.node, 'on', this.visible > 0.01);
-    return this.visible > 0.01;
+    const on = this.visible > 0.01;
+    setClass(this.node, 'on', on);
+    setClass(this.flight.node, 'winch-on', on);
+    return on;
   }
 
   // 12 Hz texts
@@ -119,17 +120,17 @@ export class WinchPanel {
       } else if ((w.height ?? 9) < 1.6) st = 'КОРЗИНА В ВОДЕ';
       else st = 'КОРЗИНА ВНИЗУ';
     } else if (w.denied === 'high') {
-      st = 'ВЫСОКО — СНИЗЬТЕСЬ ДО 30 М';
+      st = 'ВЫСОКО · НИЖЕ 30 М';
       cls = 'warn';
     } else if (w.denied === 'fast') {
-      st = 'СЛИШКОМ БЫСТРО — ЗАВИСНИТЕ';
+      st = 'БЫСТРО · ЗАВИСНИТЕ';
       cls = 'warn';
     } else if (w.denied === 'full' || w.cabinFull) {
       st = 'САЛОН ЗАПОЛНЕН';
       cls = 'warn';
     } else {
       const dev = this.ctx.input?.lastDevice;
-      st = dev === 'gamepad' ? 'ГОТОВ · [A] ДЕРЖАТЬ' : dev === 'touch' ? 'ГОТОВ · ЛЕБЁДКА — ДЕРЖАТЬ' : 'ГОТОВ · [ПРОБЕЛ] ДЕРЖАТЬ';
+      st = dev === 'gamepad' ? 'ГОТОВ · ДЕРЖИТЕ [A]' : dev === 'touch' ? 'ГОТОВ · ДЕРЖИТЕ ▼' : 'ГОТОВ · ДЕРЖИТЕ ПРОБЕЛ';
     }
     this.status.set(st);
     setClass(this.statusEl, 'ok', cls === 'ok');

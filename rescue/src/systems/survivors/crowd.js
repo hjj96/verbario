@@ -44,18 +44,25 @@ export function buildPersonGeometry() {
     position: [0, 0.338, -0.012],
     scale: [1.02, 1.05, 1.08],
   });
-  // inflated collar (horseshoe) + chest lobes — the orange read from above
-  add(new THREE.TorusGeometry(0.2, 0.078, 6, 14), P_VEST, L_BODY, C.vest, { position: [0, 0.165, 0.0], rotation: [Math.PI / 2 + 0.22, 0, 0] });
+  // inflated collar — a horseshoe behind the neck, open at the chin — + chest lobes: from above the
+  // orange reads as a «U» around the head (a full ring would read as a lifebuoy)
+  const gap = 1.15; // opening at the front (rad)
+  add(new THREE.TorusGeometry(0.2, 0.08, 6, 14, Math.PI * 2 - gap), P_VEST, L_BODY, C.vest, {
+    position: [0, 0.165, 0.0],
+    rotation: [Math.PI / 2 + 0.22, 0, Math.PI / 2 + gap / 2],
+  });
+  // the horseshoe's ends tuck into the chest lobes
+  for (const side of [-1, 1]) add(new THREE.SphereGeometry(0.085, 8, 6), P_VEST, L_BODY, C.vest, { position: [side * 0.115, 0.13, 0.15] });
   add(new THREE.SphereGeometry(0.115, 8, 6), P_VEST, L_BODY, C.vest, { position: [-0.105, 0.03, 0.12], scale: [1, 1.45, 0.82] });
   add(new THREE.SphereGeometry(0.115, 8, 6), P_VEST, L_BODY, C.vest, { position: [0.105, 0.03, 0.12], scale: [1, 1.45, 0.82] });
   add(new THREE.BoxGeometry(0.4, 0.3, 0.16), P_VEST, L_BODY, C.vest, { position: [0, -0.02, -0.07] }); // back panel
-  // two retro-reflective bands across the collar, front-left and front-right (DESIGN §2.10)
+  // two retro-reflective bands across the collar over the shoulders (DESIGN §2.10)
   for (const side of [-1, 1]) {
-    const band = new THREE.TorusGeometry(0.2, 0.0815, 6, 4, 0.42);
-    // the arc starts at +X and runs towards +Y; centre it, then move it along the ring to ±35° from the
+    const band = new THREE.TorusGeometry(0.2, 0.0835, 6, 4, 0.36);
+    // the arc starts at +X and runs towards +Y; centre it, then move it along the ring to ±62° from the
     // front (after the collar's lay-flat rotation the ring angle is measured from +X towards +Z)
-    band.rotateZ(-0.21);
-    add(band, P_TAPE, L_BODY, C.tape, { position: [0, 0.165, 0], rotation: [Math.PI / 2 + 0.22, 0, Math.PI / 2 - side * 0.62] });
+    band.rotateZ(-0.18);
+    add(band, P_TAPE, L_BODY, C.tape, { position: [0, 0.165, 0], rotation: [Math.PI / 2 + 0.22, 0, Math.PI / 2 - side * 1.08] });
   }
   // personal strobe on the left shoulder of the collar
   add(new THREE.CylinderGeometry(0.026, 0.03, 0.06, 8), P_FIXED, L_BODY, '#2A2E30', { position: [-0.16, 0.235, -0.07] });
@@ -143,6 +150,8 @@ export function createPersonMaterial(look) {
     uTape: { value: new THREE.Color(C.tape) },
     uWet: look.uniforms.uWet,
     uStrobeGain: { value: 30 },
+    uRim: { value: new THREE.Color(0, 0, 0) }, // day rim light (DESIGN §2.7.3 «ободок»), CPU: sky × .35
+    uVestGlow: { value: 0.035 }, // the vest's own read: more in dim daylight (squall, overcast)
   };
   mat.userData.uniforms = u;
   mat.onBeforeCompile = (sh) => {
@@ -192,6 +201,8 @@ export function createPersonMaterial(look) {
         uniform vec3 uTape;
         uniform float uWet;
         uniform float uStrobeGain;
+        uniform vec3 uRim;
+        uniform float uVestGlow;
         varying float vSvPart;
         varying vec4 vSvFx;
         varying float vSvDis;
@@ -227,8 +238,10 @@ export function createPersonMaterial(look) {
         if (abs(vSvPart - 6.0) < 0.5) totalEmissiveRadiance += vec3(uStrobeGain) * vSvFx.y + vec3(0.04);
         // skin: a breath of warmth (DESIGN §2.7.3: кожа — emissive ×0.08)
         if (abs(vSvPart - 1.0) < 0.5) totalEmissiveRadiance += diffuseColor.rgb * 0.08;
-        // the vest's fluorescent orange holds a little light of its own (readability at dusk)
-        if (abs(vSvPart - 7.0) < 0.5) totalEmissiveRadiance += diffuseColor.rgb * 0.035;`,
+        // the vest's fluorescent orange holds a little light of its own (readability at dusk, in squalls)
+        if (abs(vSvPart - 7.0) < 0.5) totalEmissiveRadiance += diffuseColor.rgb * uVestGlow;
+        // day rim: the sky catching the silhouette, so people separate from the water
+        totalEmissiveRadiance += uRim * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);`,
       );
   };
   mat.customProgramCacheKey = () => 'survivors-person-v1';
@@ -384,6 +397,7 @@ export class Crowd {
     this.aPose = mk('iPose', 4);
     this.aLook = mk('iLook', 4);
     this.aFx = mk('iFx', 4);
+    this.attrs = [this.aArms, this.aPose, this.aLook, this.aFx];
 
     this.material = createPersonMaterial(look);
     this.mesh = new THREE.InstancedMesh(g, this.material, max);
@@ -411,11 +425,11 @@ export class Crowd {
     this.keyline.count = 0;
 
     this.n = 0;
+    this.extras = true;
   }
 
   setQuality(q) {
-    this.ghost.visible = q !== 'low';
-    this.keyline.visible = q !== 'low';
+    this.extras = q !== 'low'; // underwater bodies + keylines from medium up (DESIGN §8.2)
   }
 
   begin() {
@@ -444,11 +458,13 @@ export class Crowd {
     this.mesh.count = n;
     this.ghost.count = n;
     this.keyline.count = n;
+    this.mesh.visible = n > 0;
+    this.ghost.visible = this.keyline.visible = n > 0 && this.extras;
     if (!n) return;
     this.mesh.instanceMatrix.clearUpdateRanges();
     this.mesh.instanceMatrix.addUpdateRange(0, n * 16);
     this.mesh.instanceMatrix.needsUpdate = true;
-    for (const a of [this.aArms, this.aPose, this.aLook, this.aFx]) {
+    for (const a of this.attrs) {
       a.clearUpdateRanges();
       a.addUpdateRange(0, n * 4);
       a.needsUpdate = true;

@@ -104,7 +104,8 @@ export const C = {
   lostBuoy: '#8E979C',
 };
 export const SKIN = ['#E8C3A0', '#D9A07A', '#B57A55', '#6B4430'];
-export const HOOD = ['#1F2A33', '#7A1E1E', '#2E4A2A', '#2A2F36'];
+export const HOOD = ['#1F2A33', '#7A1E1E', '#2E4A2A', '#2A2F36', /* no hood — wet hair: */ '#4A3424', '#7A6048', '#8E8A84'];
+export const HOOD_COUNT = 4; // the first entries are hoods, the rest hair (a lighter head reads as a person from above)
 // clothes under the vest (sleeves, torso) and trousers — cold, desaturated (pillar 1: people are the
 // only warm thing, and the vest carries that)
 export const JACKET = ['#26303B', '#3A3F44', '#4A2626', '#2F4436', '#46403A', '#1E2630'];

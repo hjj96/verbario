@@ -109,10 +109,11 @@ export class BriefingScreen extends Screen {
     // forecast strip (WMO symbols)
     const steps = [{ at: 0, to: def.weather?.start || 'calm' }, ...(def.weather?.script || [])];
     this.fcEl.innerHTML = endless
-      ? `<div class="fc-step">${WMO.calm}<span class="fc-t">08:00</span><span class="fc-l">штиль</span></div><div class="fc-arrow">→</div><div class="fc-step">${WMO.storm}<span class="fc-t">по обстановке</span><span class="fc-l">ухудшение к вечеру</span></div><div class="fc-arrow">→</div><div class="fc-step">${WMO.nightStorm}<span class="fc-t">15:00</span><span class="fc-l">ночь</span></div>`
+      ? `<div class="fc-step">${WMO.calm}<span class="fc-t">08:00</span><span class="fc-l">штиль</span></div><div class="fc-arrow">→</div><div class="fc-step bad">${WMO.storm}<span class="fc-t">днём</span><span class="fc-l">шторм</span></div><div class="fc-arrow">→</div><div class="fc-step bad">${WMO.nightStorm}<span class="fc-t">к ночи</span><span class="fc-l">ночной шторм</span></div>`
       : steps
           .map((s, i) => `${i ? '<div class="fc-arrow">→</div>' : ''}<div class="fc-step${PRESET_SEVERITY[s.to] >= 3 ? ' bad' : ''}">${WMO[s.to] || ''}<span class="fc-t">${i ? `+${mss(s.at)}` : 'сейчас'}</span><span class="fc-l">${esc((PRESET_LABEL[s.to] || s.to).toLowerCase())}</span></div>`)
           .join('');
+    this.fcEl.classList.toggle('many', !endless && steps.length > 3);
     this.craft.innerHTML = `<span class="cr-ico">${HELI}</span><b>«Чайка-07»</b> · топливо 100${NBSP}% · мест 6 · трос 30${NBSP}м<span class="cr-crew">экипаж: Гордеев, Семёныч, Костя</span>${def.par ? `<span class="cr-par">пар ${mss(def.par)}</span>` : ''}`;
     // «Смена»: the top table
     const hs = endless && Array.isArray(mis.highscores) ? mis.highscores : [];

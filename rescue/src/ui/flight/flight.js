@@ -32,6 +32,11 @@ export class FlightHud {
     this.radar = new Radar(this);
     this.node.appendChild(this.radar.node);
     this.toasts = new Toasts(hud, this.node);
+    this._toastH = 0;
+    this.toasts.onHeight = (px) => {
+      this._toastH = px;
+      if (this.L.toastRect) this.L.toastRect.h = px ? px + 16 : 0;
+    };
     this.warnings = new Warnings(hud, this.node);
     this.winch = new WinchPanel(this, this.node);
     this.hints = new Hints(this, this.node);
@@ -45,6 +50,7 @@ export class FlightHud {
     this._t12 = new Ticker(12);
     this._t10 = new Ticker(10);
     this._t4 = new Ticker(4);
+    this._t1 = new Ticker(1);
     this._glitchT = 0;
     this._fpsN = 0;
     this._fpsT = 0;
@@ -64,6 +70,9 @@ export class FlightHud {
     L.hs = hs;
     L.safe = SAFE;
     const tw = Math.min(420 * hs, W * 0.36);
+    const rs0 = Math.round(208 * hs);
+    const tTop = SAFE + rs0 + 14 * hs;
+    L.toastRect = { x: W - SAFE - 300 * hs - 10, y: tTop - 8, w: 300 * hs + SAFE + 10, h: this._toastH ? this._toastH + 16 : 0 };
     L.tape = { x: W / 2 - tw / 2, y: SAFE, w: tw, h: 26 * hs };
     const rs = Math.round(208 * hs);
     L.radar = { x: W - SAFE - rs, y: SAFE, size: rs };
@@ -77,6 +86,7 @@ export class FlightHud {
       { x: L.radar.x - 8, y: 0, w: W - L.radar.x + 8, h: L.radar.y + rs + 8 }, // radar
       { x: L.tape.x - 30, y: 0, w: L.tape.w + 60, h: 96 * hs }, // compass + mission strip
       { x: 0, y: L.bar.y - 12, w: W, h: H - L.bar.y + 12 }, // bottom bar
+      L.toastRect, // toast column (height kept current by Toasts.onHeight)
     ];
     this.overlay.resize(W, H);
     this.radar.resize(rs);
@@ -86,6 +96,9 @@ export class FlightHud {
     this.panels.tcBox.style.top = `${SAFE + L.tape.h + 22 * hs}px`;
     this.toasts.col.style.top = `${L.radar.y + rs + 14 * hs}px`;
     this.map.resize(W, H);
+    this.panels._barK = 0; // re-measure the bottom bar at the new size / scale
+    this.panels.bar.style.removeProperty('--hs');
+    if (this.visible) this.panels.fitBar();
   }
 
   setVisible(on) {
@@ -260,6 +273,7 @@ export class FlightHud {
     const paused = ctx.mode === 'paused';
     this.model.update(dt);
     if (this._t4.tick(dt)) this._palette();
+    if (this._t1.tick(dt)) this.panels.fitBar();
     if (this._glitchT > 0) {
       this._glitchT -= dt;
       if (this._glitchT <= 0) setClass(this.node, 'glitch', false);

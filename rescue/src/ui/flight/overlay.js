@@ -7,6 +7,7 @@
 import { fitCanvas } from '../common/dom.js';
 import { distU, deg3, clamp01, smooth, easeOutBack, num1, groupOf, NBSP } from '../common/fmt.js';
 import { isOpen, isSpotted, isPinged } from './model.js';
+import { font, MONO, HEAD } from '../common/fonts.js';
 
 const TAU = Math.PI * 2;
 const DASH_A = [5, 5];
@@ -17,8 +18,6 @@ const EDGE_MAX = 8;
 const EDGE_MARGIN = 56;
 const MERGE_PX = 26;
 
-const FONT_MONO = '"JetBrains Mono", ui-monospace, "DejaVu Sans Mono", monospace';
-const FONT_HEAD = 'Oswald, Impact, "Arial Narrow", "Roboto Condensed", sans-serif';
 
 // Group footprint (m) for bracket size.
 const FOOT = { swimmer: 1.6, injured: 1.6, raft: 3.6, hull: 4.2, container: 5.5, deck: 9, wreck: 16, plane: 9 };
@@ -133,7 +132,7 @@ export class Overlay {
       g.fillStyle = pal.info;
       g.fill();
       g.globalAlpha = 0.75;
-      g.font = `500 ${Math.round(10 * hs)}px ${FONT_MONO}`;
+      g.font = font(500, 10 * hs, MONO);
       g.fillStyle = pal.info;
       g.textAlign = 'center';
       g.fillText('РАЙОН ПОИСКА', p.x, p.y - r - 9 * hs);
@@ -195,7 +194,7 @@ export class Overlay {
       // ▲ glyph + label
       g.globalAlpha = 1;
       this._glyph(g, 'hazard', p.x, p.y - Math.max(10 * hs, inner) - 10 * hs, 7 * hs);
-      g.font = `600 ${Math.round(10.5 * hs)}px ${FONT_MONO}`;
+      g.font = font(600, 10.5 * hs, MONO);
       g.fillStyle = pal.hazard;
       g.textAlign = 'center';
       const label = hz.label || (hz.type === 'whirlpool' ? 'ВОДОВОРОТ' : hz.type === 'hail' ? 'ГРАД' : hz.type === 'downburst' ? 'ШКВАЛ' : 'ОПАСНОСТЬ');
@@ -254,7 +253,7 @@ export class Overlay {
     // label at the crest point nearest the heli
     const H = Math.round(hz.height || c?.height || 14);
     const t = Math.max(0, Math.round(eta));
-    g.font = `600 ${Math.round(11 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 11 * hs, MONO);
     g.fillStyle = pal.hazard;
     g.textAlign = 'center';
     g.globalAlpha = blink;
@@ -295,7 +294,7 @@ export class Overlay {
         g.globalAlpha = 1;
       }
       // name + distance under the circle
-      g.font = `600 ${Math.round(10.5 * hs)}px ${FONT_MONO}`;
+      g.font = font(600, 10.5 * hs, MONO);
       g.fillStyle = pal.nav;
       g.textAlign = 'center';
       const name = this._padName(pad);
@@ -305,14 +304,15 @@ export class Overlay {
       // landing cue
       if (landed) {
         g.fillStyle = pal.ok;
-        g.font = `600 ${Math.round(11 * hs)}px ${FONT_HEAD}`;
+        g.font = font(600, 11 * hs, HEAD);
         g.fillText('НА ПЛОЩАДКЕ', p.x, p.y - r - 12 * hs);
-      } else if (dist < 60 && m.alt < 30) {
-        g.font = `600 ${Math.round(12 * hs)}px ${FONT_HEAD}`;
+      } else if (dist < 60 && m.hy - (pad.position.y || 0) < 30) {
+        // (height above the DECK: the rig's pad is 32 m up, the ship's 9 m)
+        g.font = font(600, 12 * hs, HEAD);
         g.fillStyle = pal.fg;
         g.fillText('ПОСАДКА', p.x, p.y - r - 24 * hs);
         const vy = m.vy;
-        g.font = `600 ${Math.round(11 * hs)}px ${FONT_MONO}`;
+        g.font = font(600, 11 * hs, MONO);
         if (Math.abs(vy) < 1.5) {
           g.fillStyle = pal.ok;
           g.fillText('✓ мягко', p.x, p.y - r - 10 * hs);
@@ -391,10 +391,10 @@ export class Overlay {
       }
       g.globalAlpha = fade;
       g.fillStyle = pal.rescue;
-      g.font = `700 ${Math.round(15 * hs)}px ${FONT_HEAD}`;
+      g.font = font(700, 15 * hs, HEAD);
       g.textAlign = 'center';
       g.fillText('?', p.x, p.y);
-      g.font = `600 ${Math.round(10 * hs)}px ${FONT_MONO}`;
+      g.font = font(600, 10 * hs, MONO);
       const lab = s.kind === 'rocket' ? 'РАКЕТА' : s.kind === 'smoke' ? 'ДЫМ' : s.kind === 'mirror' ? 'ЗЕРКАЛО' : s.kind === 'strobe' ? 'СТРОБ' : 'СИГНАЛ';
       g.fillText(lab, p.x, p.y - R - 9 * hs);
       g.fillStyle = pal.dim;
@@ -424,7 +424,7 @@ export class Overlay {
       g.moveTo(p.x, p.y - 5 * hs);
       g.lineTo(p.x, p.y - 14 * hs);
       g.stroke();
-      g.font = `600 ${Math.round(10 * hs)}px ${FONT_MONO}`;
+      g.font = font(600, 10 * hs, MONO);
       g.textAlign = 'center';
       g.fillText('ПОТЕРЯН', p.x, p.y + 15 * hs);
     }
@@ -524,18 +524,18 @@ export class Overlay {
       if (age < 4.5) {
         const a = age < 4 ? 1 : 1 - (age - 4) / 0.5;
         g.globalAlpha = a;
-        g.font = `600 ${Math.round(11 * hs)}px ${FONT_HEAD}`;
+        g.font = font(600, 11 * hs, HEAD);
         let cap = this._caps.get(s);
         if (!cap || cap.n !== n) this._caps.set(s, (cap = { n, text: `${groupOf(s.type).flir} · ${n}` }));
         cap = cap.text;
         g.fillText(cap, p.x + hsz + 6 * hs, p.y - hsz + 2 * hs);
         g.globalAlpha = 1;
       } else if (n > 1) {
-        g.font = `600 ${Math.round(11 * hs)}px ${FONT_MONO}`;
-        g.fillText(`×${n}`, p.x + hsz + 4 * hs, p.y - hsz + 2 * hs);
+        g.font = font(600, 11 * hs, MONO);
+        g.fillText(TIMES[n] || `×${n}`, p.x + hsz + 4 * hs, p.y - hsz + 2 * hs);
       }
       if (sel && dist > 30) {
-        g.font = `500 ${Math.round(10 * hs)}px ${FONT_MONO}`;
+        g.font = font(500, 10 * hs, MONO);
         g.fillStyle = pal.dim;
         g.fillText(distU(dist), p.x + hsz + 4 * hs, p.y + hsz - 2 * hs);
       }
@@ -575,8 +575,9 @@ export class Overlay {
     const cx = m.sx;
     const cy = m.sy;
     // idle dimming: 3 s without events → 45 %
-    const mv = ctx.input?.move ? ctx.input.move() : null;
-    if ((mv && Math.hypot(mv.x, mv.y) > 0.2) || (h?.winch?.state && h.winch.state !== 'stowed')) m.activity = 0;
+    const inp = ctx.input;
+    const mv = inp?.axis ? Math.hypot(inp.axis('moveX'), inp.axis('moveY')) : 0; // axis(): no allocation
+    if (mv > 0.2 || (h?.winch?.state && h.winch.state !== 'stowed')) m.activity = 0;
     const ringA = 1 - 0.55 * smooth(3, 4, m.activity);
 
     g.globalAlpha = ringA;
@@ -598,7 +599,7 @@ export class Overlay {
       g.lineTo(cx + sx * (R + l * hs), cy + sy * (R + l * hs));
     }
     g.stroke();
-    g.font = `600 ${Math.round(10 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 10 * hs, MONO);
     g.fillStyle = pal.fg;
     g.textAlign = 'center';
     g.globalAlpha = 0.6 * ringA;
@@ -674,7 +675,7 @@ export class Overlay {
       }
       const lx = cx + Math.sin(up) * (R + 50 * hs);
       const ly = cy - Math.cos(up) * (R + 50 * hs);
-      g.font = `600 ${Math.round(12 * hs)}px ${FONT_HEAD}`;
+      g.font = font(600, 12 * hs, HEAD);
       g.fillStyle = this.pal.warn;
       g.textAlign = 'center';
       if (gu.eta > 0) g.fillText(`ПОРЫВ ${Math.ceil(gu.eta)}`, lx, ly);
@@ -716,7 +717,7 @@ export class Overlay {
     g.beginPath();
     g.arc(lx, ly, 5 * hs, 0, TAU);
     g.stroke();
-    g.font = `500 ${Math.round(9 * hs)}px ${FONT_MONO}`;
+    g.font = font(500, 9 * hs, MONO);
     g.fillStyle = this.pal.dim;
     g.textAlign = 'left';
     g.fillText('3С', lx + 8 * hs, ly);
@@ -770,7 +771,7 @@ export class Overlay {
     const gx = cx + sx * (R + 20 * hs);
     const gy = cy + sy * (R + 20 * hs);
     this._glyph(g, kind, gx, gy, 6 * hs);
-    g.font = `600 ${Math.round(10.5 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 10.5 * hs, MONO);
     g.fillStyle = col;
     g.textAlign = sx > 0.3 ? 'left' : sx < -0.3 ? 'right' : 'center';
     const tx = gx + (sx > 0.3 ? 11 * hs : sx < -0.3 ? -11 * hs : 0);
@@ -794,7 +795,7 @@ export class Overlay {
       g.beginPath();
       g.arc(cx, cy, R + 6 * hs + age * 6 * hs, a0, a0 + half * 2);
       g.stroke();
-      g.font = `600 ${Math.round(10.5 * hs)}px ${FONT_HEAD}`;
+      g.font = font(600, 10.5 * hs, HEAD);
       g.fillStyle = this.pal.rescue;
       g.textAlign = 'center';
       g.fillText('СВИСТОК', cx + Math.sin(b) * (R + 24 * hs + age * 6 * hs), cy - Math.cos(b) * (R + 24 * hs + age * 6 * hs));
@@ -843,7 +844,7 @@ export class Overlay {
     g.arc(cx, cy, R - 4 * hs + run * 14 * hs, -Math.PI / 2, -Math.PI / 2 + TAU * f);
     g.stroke();
     g.globalAlpha = 1;
-    g.font = `600 ${Math.round(10 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 10 * hs, MONO);
     g.fillStyle = this.pal.nav;
     g.textAlign = 'center';
     g.fillText(`ЗАПРАВКА ${Math.round(f * 100)}${NBSP}%`, cx, cy + R - 16 * hs);
@@ -929,12 +930,20 @@ export class Overlay {
     for (let i = 0; i < rects.length; i++) {
       const r = rects[i];
       if (e.ax > r.x && e.ax < r.x + r.w && e.ay > r.y && e.ay < r.y + r.h) {
-        // push out along the cheaper axis, toward the screen centre
-        const dl = e.ax - r.x;
-        const dr = r.x + r.w - e.ax;
-        const dt = e.ay - r.y;
-        const db = r.y + r.h - e.ay;
+        // push out along the cheaper axis — only toward the screen centre (indicators then gather in
+        // one column beside the panel and merge, instead of lining up in the gap between two panels)
+        // and never past the screen edge
+        const pad = 22;
+        const W = this.W;
+        const H = this.H;
+        const cx = W / 2;
+        const cy = H / 2;
+        const dl = r.x - 4 >= pad && cx < e.ax ? e.ax - r.x : Infinity;
+        const dr = r.x + r.w + 4 <= W - pad && cx > e.ax ? r.x + r.w - e.ax : Infinity;
+        const dt = r.y - 4 >= pad && cy < e.ay ? e.ay - r.y : Infinity;
+        const db = r.y + r.h + 4 <= H - pad && cy > e.ay ? r.y + r.h - e.ay : Infinity;
         const m = Math.min(dl, dr, dt, db);
+        if (m === Infinity) continue;
         if (m === dl) e.ax = r.x - 4;
         else if (m === dr) e.ax = r.x + r.w + 4;
         else if (m === dt) e.ay = r.y - 4;
@@ -976,12 +985,12 @@ export class Overlay {
     // label inward
     const lx = e.ax - Math.cos(ang) * 16 * hs;
     const ly = e.ay - Math.sin(ang) * 16 * hs;
-    g.font = `600 ${Math.round(10.5 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 10.5 * hs, MONO);
     g.textAlign = Math.cos(ang) > 0.35 ? 'right' : Math.cos(ang) < -0.35 ? 'left' : 'center';
     const dy = Math.abs(Math.cos(ang)) <= 0.35 ? (Math.sin(ang) < 0 ? 8 * hs : -8 * hs) : 0;
     g.fillStyle = col;
     if (count > 1) {
-      g.fillText(`×${count}`, lx, ly + dy - 6 * hs);
+      g.fillText(TIMES[count] || `×${count}`, lx, ly + dy - 6 * hs);
       g.fillStyle = pal.dim;
       g.fillText(distU(e.dist), lx, ly + dy + 7 * hs);
     } else {
@@ -1013,7 +1022,7 @@ export class Overlay {
       g.beginPath();
       g.arc(x, y, r, 0, TAU);
       g.stroke();
-      g.font = `700 ${Math.round(r * 1.3)}px ${FONT_HEAD}`;
+      g.font = font(700, r * 1.3, HEAD);
       g.textAlign = 'center';
       g.fillText('H', x, y + 0.5);
     } else if (kind === 'hazard') {
@@ -1033,7 +1042,7 @@ export class Overlay {
       g.arc(x, y, r, 0, TAU);
       g.stroke();
       g.setLineDash(NO_DASH);
-      g.font = `700 ${Math.round(r * 1.5)}px ${FONT_HEAD}`;
+      g.font = font(700, r * 1.5, HEAD);
       g.textAlign = 'center';
       g.fillText('?', x, y + 0.5);
     } else {
@@ -1084,7 +1093,7 @@ export class Overlay {
     g.fillStyle = pal.fg;
     g.textAlign = 'center';
     const start = Math.ceil((hdg - span) / 5) * 5;
-    g.font = `600 ${Math.round(11 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 11 * hs, MONO);
     for (let d = start; d <= hdg + span; d += 5) {
       const off = d - hdg;
       const x = cx + off * ppd;
@@ -1093,11 +1102,11 @@ export class Overlay {
       if (dd % 45 === 0) {
         g.globalAlpha = fade;
         const lab = dd === 0 ? 'С' : dd === 90 ? 'В' : dd === 180 ? 'Ю' : dd === 270 ? 'З' : dd === 45 ? 'СВ' : dd === 135 ? 'ЮВ' : dd === 225 ? 'ЮЗ' : 'СЗ';
-        g.font = `${dd % 90 === 0 ? 700 : 600} ${Math.round((dd % 90 === 0 ? 13 : 10.5) * hs)}px ${dd % 90 === 0 ? FONT_HEAD : FONT_MONO}`;
+        g.font = dd % 90 === 0 ? font(700, 13 * hs, HEAD) : font(600, 10.5 * hs, MONO);
         g.fillText(lab, x, yBase - 1);
       } else if (dd % 15 === 0) {
         g.globalAlpha = fade * 0.75;
-        g.font = `500 ${Math.round(9 * hs)}px ${FONT_MONO}`;
+        g.font = font(500, 9 * hs, MONO);
         g.fillText(String(dd).padStart(3, '0'), x, yBase - 1);
       } else {
         g.globalAlpha = fade * 0.55;
@@ -1126,14 +1135,14 @@ export class Overlay {
     g.lineTo(cx, r.y + 5 * hs);
     g.lineTo(cx + 5 * hs, r.y);
     g.stroke();
-    g.font = `600 ${Math.round(9 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 9 * hs, MONO);
     g.fillStyle = pal.dim;
     g.textAlign = 'left';
     g.fillText('‹', r.x - 10 * hs, yBase);
     g.textAlign = 'right';
     g.fillText('›', r.x + r.w + 10 * hs, yBase);
     // heading readout under the tape
-    g.font = `600 ${Math.round(11 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 11 * hs, MONO);
     g.fillStyle = pal.fg;
     g.textAlign = 'center';
     g.fillText(deg3(hdg), cx, r.y + r.h + 7 * hs);
@@ -1188,13 +1197,13 @@ export class Overlay {
     g.fillStyle = pal.ok;
     g.fillRect(r.x, Y(25), r.w, Y(12) - Y(25));
     g.globalAlpha = pulse;
-    g.font = `600 ${Math.round(9.5 * hs)}px ${FONT_MONO}`;
+    g.font = font(600, 9.5 * hs, MONO);
     g.fillStyle = pal.ok;
     g.textAlign = 'left';
-    g.fillText('ЛЕБ.', r.x + r.w + 6 * hs, (Y(25) + Y(12)) / 2);
+    g.fillText('ЛЕБ.', r.x + r.w + 12 * hs, (Y(25) + Y(12)) / 2); // right of the target chevron
     g.globalAlpha = 1;
     // preset ticks 15 / 40 / 90 + ceiling
-    g.font = `500 ${Math.round(8.5 * hs)}px ${FONT_MONO}`;
+    g.font = font(500, 8.5 * hs, MONO);
     g.fillStyle = pal.dim;
     g.strokeStyle = pal.dim;
     g.beginPath();
@@ -1224,7 +1233,7 @@ export class Overlay {
       g.globalAlpha = 0.6 + 0.4 * Math.sin(m.time * 10);
       g.fillRect(r.x - 6 * hs, Y(rog) - 2 * hs, r.w + 12 * hs, 4 * hs);
       g.globalAlpha = 1;
-      g.font = `600 ${Math.round(9.5 * hs)}px ${FONT_MONO}`;
+      g.font = font(600, 9.5 * hs, MONO);
       g.fillStyle = pal.danger;
       g.textAlign = 'right';
       g.fillText(`ВАЛ ${Math.round(rog)}`, r.x - 8 * hs, Y(rog));
@@ -1435,8 +1444,8 @@ export class Overlay {
       const ang = Math.atan2(-bz, -bx); // from basket toward target (screen)
       const since = m.time - m.patter.t;
       const pulse = since < 1.2 ? 1 - since / 1.2 : 0;
-      const ax = cx + Math.cos(ang) * (R + 14 * hs);
-      const ay = cy + Math.sin(ang) * (R + 14 * hs);
+      const ax = cx + Math.cos(ang) * (R + 10 * hs);
+      const ay = cy + Math.sin(ang) * (R + 10 * hs);
       g.fillStyle = pal.warn;
       g.globalAlpha = vis * (0.65 + 0.35 * pulse);
       const s = (7 + 3 * pulse) * hs;
@@ -1447,7 +1456,95 @@ export class Overlay {
       g.closePath();
       g.fill();
     }
+    g.globalAlpha = vis;
+    this._waveWindow(g, P, hs, oy, dt, bk && w.state !== 'stowed' ? bk : null);
     g.globalAlpha = 1;
+  }
+
+  // [NICE] «Окно волны» (DESIGN §7.4): the sea height under the basket for the next 4 s, troughs
+  // hatched, the basket bottom as a dashed line — when to dip, when to wait. Sampled at 15 Hz.
+  _waveWindow(g, P, hs, oy, dt, basket) {
+    const ocean = this.ctx.ocean;
+    if (!ocean?.heightAt) return;
+    const m = this.m;
+    const wave = this.wave || (this.wave = { t: 1, h: new Float32Array(WAVE_N), x: 0, z: 0, by: 0, ok: false });
+    wave.t += dt;
+    if (wave.t >= 1 / 15) {
+      wave.t = 0;
+      const x = basket ? basket.x : m.hx;
+      const z = basket ? basket.z : m.hz;
+      let sum = 0;
+      for (let i = 0; i < WAVE_N; i++) {
+        const y = ocean.heightAt(x, z, (i / (WAVE_N - 1)) * 4);
+        wave.h[i] = Number.isFinite(y) ? y : 0;
+        sum += wave.h[i];
+      }
+      wave.mean = sum / WAVE_N;
+      wave.by = basket ? basket.y - 0.3 : NaN; // basket bottom
+      wave.ok = true;
+    }
+    if (!wave.ok) return;
+    const x0 = P.x + 192 * hs;
+    const x1 = P.x + 368 * hs;
+    const y0 = P.y + 94 * hs + oy;
+    const hh = 16 * hs;
+    const mid = y0 + hh / 2;
+    let amp = 0.8;
+    for (let i = 0; i < WAVE_N; i++) amp = Math.max(amp, Math.abs(wave.h[i] - wave.mean));
+    const k = (hh / 2) / (amp * 1.15);
+    const X = (i) => x0 + ((x1 - x0) * i) / (WAVE_N - 1);
+    const Yv = (y) => mid - (y - wave.mean) * k;
+    const pal = this.pal;
+    // troughs hatched (clip to the area under the mean line and above the curve)
+    g.save();
+    g.beginPath();
+    g.moveTo(X(0), mid);
+    for (let i = 0; i < WAVE_N; i++) g.lineTo(X(i), Math.max(mid, Yv(wave.h[i])));
+    g.lineTo(X(WAVE_N - 1), mid);
+    g.closePath();
+    g.clip();
+    g.strokeStyle = pal.info;
+    g.globalAlpha *= 0.55;
+    g.lineWidth = 1;
+    g.beginPath();
+    for (let x = x0 - hh; x < x1; x += 4 * hs) {
+      g.moveTo(x, y0 + hh);
+      g.lineTo(x + hh, y0);
+    }
+    g.stroke();
+    g.restore();
+    // the surface curve
+    g.strokeStyle = pal.info;
+    g.lineWidth = 1.3 * hs;
+    g.beginPath();
+    for (let i = 0; i < WAVE_N; i++) {
+      if (i === 0) g.moveTo(X(i), Yv(wave.h[i]));
+      else g.lineTo(X(i), Yv(wave.h[i]));
+    }
+    g.stroke();
+    // basket bottom (only when it is within the window's range)
+    const yb = Yv(wave.by);
+    if (basket && Number.isFinite(yb) && yb > y0 - 4 * hs && yb < y0 + hh + 4 * hs) {
+      g.strokeStyle = pal.fg;
+      g.lineWidth = 1;
+      g.setLineDash(DASH_B);
+      g.beginPath();
+      g.moveTo(x0, yb);
+      g.lineTo(x1, yb);
+      g.stroke();
+      g.setLineDash(NO_DASH);
+    }
+    // «now» tick + label
+    g.strokeStyle = pal.dim;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x0, y0 - 2 * hs);
+    g.lineTo(x0, y0 + hh + 2 * hs);
+    g.stroke();
+    g.font = font(600, 8 * hs, MONO);
+    g.fillStyle = pal.dim;
+    g.textAlign = 'right';
+    g.fillText('ВОЛНА · 4 С', x1, y0 - 5 * hs);
   }
 
   // ============================================================================================
@@ -1473,11 +1570,11 @@ export class Overlay {
       const a = 1 - smooth(1.2, 1.8, age);
       g.globalAlpha = a;
       g.textAlign = 'center';
-      g.font = `600 ${Math.round(20 * hs)}px ${FONT_HEAD}`;
+      g.font = font(600, 20 * hs, HEAD);
       g.fillStyle = p.neg ? this.pal.danger : p.color || this.pal.ok;
       g.fillText(p.text, x, y - rise);
       if (p.sub) {
-        g.font = `600 ${Math.round(9.5 * hs)}px ${FONT_MONO}`;
+        g.font = font(600, 9.5 * hs, MONO);
         g.fillStyle = this.pal.fg;
         g.fillText(p.sub, x, y - rise + 15 * hs);
       }
@@ -1524,7 +1621,7 @@ export class Overlay {
       g.lineTo(x - b, y + b);
       g.lineTo(x - b, y + b - k);
       g.stroke();
-      g.font = `600 ${Math.round(10 * hs)}px ${FONT_HEAD}`;
+      g.font = font(600, 10 * hs, HEAD);
       g.fillStyle = pal.rescue;
       g.textAlign = 'center';
       g.fillText('ЦЕЛЬ', x, y + b + 10 * hs);
@@ -1533,3 +1630,5 @@ export class Overlay {
 }
 
 const TICKS = [15, 40, 90, 120];
+const WAVE_N = 32; // wave-window samples over 4 s
+const TIMES = Array.from({ length: 64 }, (_, i) => `×${i}`); // «×3» labels without per-frame strings

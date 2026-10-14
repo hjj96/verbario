@@ -11,6 +11,12 @@ export class Toasts {
     this.hud = hud;
     this.col = el('div.hud-toasts', { parent });
     this.items = []; // { node, key, t, hold, count, countEl, out }
+    this.onHeight = null; // (px) → FlightHud keeps edge indicators off the column
+  }
+
+  // One layout read per change (not per frame): the column height for the overlay's avoid list.
+  _measure() {
+    this.onHeight?.(this.items.length ? this.col.offsetHeight : 0);
   }
 
   /**
@@ -52,7 +58,10 @@ export class Toasts {
     const it = { node, key, t: 0, t0: now, hold: (opts.hold || 3.5) + Math.max(0, chars - 40) * 0.04, count: 1, countEl, out: false };
     this.col.appendChild(node);
     this.items.push(it);
-    requestAnimationFrame(() => node.classList.add('in'));
+    requestAnimationFrame(() => {
+      node.classList.add('in');
+      this._measure();
+    });
     // ≤ 4: the oldest leaves early
     const live = this.items.filter((x) => !x.out);
     if (live.length > MAX) this._remove(live[0]);
@@ -68,6 +77,7 @@ export class Toasts {
       it.node.remove();
       const i = this.items.indexOf(it);
       if (i >= 0) this.items.splice(i, 1);
+      this._measure();
     }, 240);
   }
 

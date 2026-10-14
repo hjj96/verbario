@@ -12,7 +12,7 @@
 //   aMat  = (kind, flex)  kind: 0 plain, 1 retro tape, 2 lamp, 3 windows, 4 chemlight, 5 nav/always-on
 //   iCraft  = (tape lit, lamp, flutter amplitude, lights)  iCraft2 = (dissolve, chem, phase, roughness+)
 import * as THREE from 'three';
-import { mergeParts, rod, shipHull, hullDeck } from './geo.js';
+import { mergeParts, rod, limb, shipHull, hullDeck } from './geo.js';
 import { PERSON_SCALE, C } from './tables.js';
 
 const K_PLAIN = 0, K_TAPE = 1, K_LAMP = 2, K_WIN = 3, K_CHEM = 4, K_NAV = 5;
@@ -39,9 +39,9 @@ export function raftGeometry() {
   const band = new THREE.CylinderGeometry(R + tube * 0.96, R + tube * 0.96, 0.07 * S, 6, 1, true, Math.PI / 6);
   P.push(part(band, C.raftStripe, K_PLAIN, 0, { position: [0, 0.1 * S + tube * 1.85, 0] }));
   // grab line (lifeline) around the outside
-  const line = new THREE.TorusGeometry(R + tube * 1.15, 0.012 * S, 3, 18);
+  const line = new THREE.TorusGeometry(R + tube * 1.12, 0.01 * S, 3, 18);
   line.rotateX(Math.PI / 2);
-  P.push(part(line, '#B8B8B0', K_PLAIN, 0, { position: [0, 0.1 * S + tube, 0] }));
+  P.push(part(line, '#5E5A50', K_PLAIN, 0, { position: [0, 0.1 * S + tube * 0.9, 0] }));
   // floor (dark) and four yellow ballast pockets underneath (seen when the raft is capsized)
   P.push(part(new THREE.CylinderGeometry(R, R, 0.05 * S, 6, 1, false, Math.PI / 6), '#2A2A2A', K_PLAIN, 0, { position: [0, RAFT.floorY, 0] }));
   for (let i = 0; i < 4; i++) {
@@ -144,6 +144,68 @@ export function capsizedHullGeometry(style = 'boat') {
   }
   const g = mergeParts(P, { aMat: 2 });
   g.userData = { L, B, keelY: keel + lift, yacht };
+  return g;
+}
+
+// The boat's name on a capsized hull (DESIGN §2.10 «МАРИЯ»): painted on both bottom flanks amidships,
+// upside down now that she floats keel up, in the capsized frame of capsizedHullGeometry(). The two
+// strips are bent onto the hull section station by station so they hug the curve. UV: text space.
+export function hullNameGeometry(style = 'boat') {
+  const yacht = style === 'yacht';
+  const L = yacht ? 10.5 : 9.2;
+  const B = yacht ? 3.4 : 3.0;
+  const keel = yacht ? 0.95 : 1.05;
+  const bowStart = yacht ? 0.5 : 0.58;
+  const sternTaper = yacht ? 0.75 : 0.7;
+  const lift = yacht ? -0.25 : -0.32;
+  // same half-beam / depth profile as geo.shipHull()
+  const prof = (k) => {
+    if (k > bowStart) {
+      const t = (k - bowStart) / (1 - bowStart);
+      return Math.sqrt(Math.max(0, 1 - t * t * 1.02)) * 0.5 * B;
+    }
+    const t = k / bowStart;
+    return (sternTaper + (1 - sternTaper) * Math.sin(Math.min(1, t * 1.6) * Math.PI * 0.5)) * 0.5 * B;
+  };
+  const kdAt = (k) => keel * (0.75 + 0.25 * Math.sin(Math.min(1, k * 1.15) * Math.PI));
+  const len = yacht ? 2.1 : 1.9; // text length along the hull
+  const zc = L / 2 - 0.38 * L; // a little aft of amidships, where the section is constant
+  const pos = [];
+  const uv = [];
+  const nrm = [];
+  for (const side of [1, -1]) {
+    const pl = new THREE.PlaneGeometry(1, 1, 10, 1).toNonIndexed();
+    const P = pl.attributes.position.array;
+    const U = pl.attributes.uv.array;
+    for (let i = 0; i < P.length / 3; i++) {
+      const u = P[i * 3];
+      const v = P[i * 3 + 1] + 0.5;
+      // seen from outside, the text runs bow→stern on the port side and stern→bow to starboard
+      const z = zc - side * u * len;
+      const k = (L / 2 - z) / L;
+      const w = prof(k);
+      const kd = kdAt(k);
+      // upright frame: bottom slope from P1 (deep, near the keel) to P2 (towards the chine)
+      const ax = 0.45 * w, ay = -0.82 * kd, bx = 0.82 * w, by = -0.45 * kd;
+      const t = 0.18 + 0.64 * v;
+      let nx = by - ay;
+      let ny = -(bx - ax);
+      const nl = Math.hypot(nx, ny);
+      nx /= nl;
+      ny /= nl;
+      const x = side * (ax + (bx - ax) * t + nx * 0.03);
+      const y = ay + (by - ay) * t + ny * 0.03;
+      // capsize (π about Z) and float like the hull
+      pos.push(-x, -y + lift, z);
+      nrm.push(-side * nx, -ny, 0);
+      uv.push(U[i * 2], U[i * 2 + 1]);
+    }
+    pl.dispose();
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   return g;
 }
 
@@ -321,7 +383,7 @@ export function lostBuoyGeometry() {
 
 // Debris: several shapes in one geometry; the vertex shader keeps only the instance's kind (aMat.y =
 // kind id, iCraft2.w = wanted kind) — one draw call for every piece of flotsam.
-export const DEBRIS_KINDS = ['ring', 'float', 'can', 'plank', 'cooler', 'drogue'];
+export const DEBRIS_KINDS = ['ring', 'float', 'can', 'plank', 'cooler', 'drogue', 'cat', 'dog'];
 export function debrisGeometry() {
   const P = [];
   const kind = (k) => DEBRIS_KINDS.indexOf(k) + 1;
@@ -334,12 +396,44 @@ export function debrisGeometry() {
   P.push({ geometry: new THREE.BoxGeometry(0.3, 0.08, 2.0), color: '#6B4A2E', attrs: { aMat: [0, kind('plank')] } });
   P.push({ geometry: new THREE.BoxGeometry(0.6, 0.35, 0.42), color: '#E4E6E2', attrs: { aMat: [0, kind('cooler')] } });
   P.push({ geometry: new THREE.ConeGeometry(0.28, 0.5, 8, 1, true), color: '#FF6A13', attrs: { aMat: [0, kind('drogue')] }, rotation: [Math.PI / 2, 0, 0] });
+  // pets (DESIGN §4 #27, NICE), sitting, facing +Z, origin at the paws, perceptual ×1.5 like people
+  const pet = (k, parts) => {
+    for (const q of parts) {
+      q.attrs = { aMat: [0, kind(k)] };
+      q.position = q.position ? q.position.map((v) => v * S) : [0, 0, 0];
+      q.scale = (q.scale || [1, 1, 1]).map((v) => v * S);
+      P.push(q);
+    }
+  };
+  const CAT = '#C8742E'; // ginger: reads on a blue container at night
+  pet('cat', [
+    { geometry: new THREE.SphereGeometry(0.11, 8, 6), color: CAT, position: [0, 0.12, -0.02], scale: [1, 1.15, 1.25] },
+    { geometry: new THREE.SphereGeometry(0.055, 6, 5), color: '#F0E6D6', position: [0, 0.16, 0.08] }, // white bib
+    { geometry: new THREE.SphereGeometry(0.07, 8, 6), color: CAT, position: [0, 0.29, 0.07] },
+    { geometry: new THREE.ConeGeometry(0.026, 0.06, 4), color: CAT, position: [-0.038, 0.355, 0.06] },
+    { geometry: new THREE.ConeGeometry(0.026, 0.06, 4), color: CAT, position: [0.038, 0.355, 0.06] },
+    { geometry: limb([0, 0.03, -0.12], [0.12, 0.02, -0.2], 0.018, 4), color: CAT },
+    { geometry: limb([0.12, 0.02, -0.2], [0.17, 0.06, -0.08], 0.016, 4), color: CAT },
+  ]);
+  const DOG = '#8A5A32';
+  pet('dog', [
+    { geometry: new THREE.SphereGeometry(0.15, 8, 6), color: DOG, position: [0, 0.2, -0.04], scale: [1, 1.05, 1.45] },
+    { geometry: new THREE.SphereGeometry(0.1, 8, 6), color: DOG, position: [0, 0.4, 0.14] },
+    { geometry: new THREE.BoxGeometry(0.07, 0.07, 0.11), color: '#3A2618', position: [0, 0.38, 0.25] },
+    { geometry: new THREE.SphereGeometry(0.05, 6, 4), color: '#4A2E1A', position: [-0.085, 0.42, 0.12], scale: [0.5, 1.2, 0.9] },
+    { geometry: new THREE.SphereGeometry(0.05, 6, 4), color: '#4A2E1A', position: [0.085, 0.42, 0.12], scale: [0.5, 1.2, 0.9] },
+    { geometry: limb([-0.06, 0.2, 0.1], [-0.06, 0.02, 0.13], 0.03, 4), color: DOG },
+    { geometry: limb([0.06, 0.2, 0.1], [0.06, 0.02, 0.13], 0.03, 4), color: DOG },
+    { geometry: new THREE.BoxGeometry(0.17, 0.03, 0.05), color: '#B3261E', position: [0, 0.32, 0.12] }, // collar
+    { geometry: limb([0, 0.12, -0.24], [0, 0.26, -0.36], 0.022, 4), color: DOG },
+  ]);
   return mergeParts(P, { aMat: 2 });
 }
 
 // ------------------------------------------------------------------------------------------------
 // Shared material patch for every craft batch.
-export function createCraftMaterial(look, { side = THREE.FrontSide, roughness = 0.7, debris = false } = {}) {
+export function createCraftMaterial(look, opts = {}) {
+  const { side = THREE.FrontSide, roughness = 0.7, debris = false } = opts;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness, metalness: 0, side });
   const u = {
     uTime: look.uniforms.uTime,
@@ -347,6 +441,7 @@ export function createCraftMaterial(look, { side = THREE.FrontSide, roughness = 
     uTape: { value: new THREE.Color(C.tape) },
     uChem: { value: new THREE.Color(C.chem) },
     uWin: { value: new THREE.Color('#FFC98A') },
+    uRim: opts.rim || { value: new THREE.Color(0, 0, 0) }, // shared day rim light (survivors sets it)
   };
   mat.userData.uniforms = u;
   mat.onBeforeCompile = (sh) => {
@@ -388,6 +483,7 @@ export function createCraftMaterial(look, { side = THREE.FrontSide, roughness = 
         uniform vec3 uTape;
         uniform vec3 uChem;
         uniform vec3 uWin;
+        uniform vec3 uRim;
         varying vec2 vCrMat;
         varying vec4 vCr;
         varying vec4 vCr2;
@@ -414,9 +510,10 @@ export function createCraftMaterial(look, { side = THREE.FrontSide, roughness = 
       .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
+        totalEmissiveRadiance += uRim * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
         ${debris ? '' : `
         int ck = int(vCrMat.x + 0.5);
-        if (ck == 1) totalEmissiveRadiance += uTape * 6.0 * vCr.x;
+        if (ck == 1) totalEmissiveRadiance += uTape * 3.5 * vCr.x; // canopy patches: big, keep the orange readable
         else if (ck == 2) totalEmissiveRadiance += vec3(1.0, 0.98, 0.95) * (0.3 + 18.0 * vCr.y);
         else if (ck == 3) totalEmissiveRadiance += uWin * 2.2 * vCr.w;
         else if (ck == 4) totalEmissiveRadiance += uChem * (0.4 + 3.5 * vCr2.y);
@@ -439,6 +536,7 @@ export class CraftBatch {
     };
     this.a1 = mk('iCraft');
     this.a2 = mk('iCraft2');
+    this.attrs = [this.a1, this.a2];
     this.mesh = new THREE.InstancedMesh(geometry, material, max);
     this.mesh.name = `survivors.${name}`;
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -451,6 +549,7 @@ export class CraftBatch {
       this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     }
     this.keyline = null;
+    this.keylineOn = true; // quality switch (survivors._applyQuality)
     if (keyline) {
       this.keyline = new THREE.InstancedMesh(geometry, keyline, max);
       this.keyline.name = `survivors.${name}.keyline`;
@@ -482,13 +581,18 @@ export class CraftBatch {
   end() {
     const n = this.n;
     this.mesh.count = n;
-    if (this.keyline) this.keyline.count = n;
+    // empty batches skip the draw (and the shadow pass) entirely
+    this.mesh.visible = n > 0;
+    if (this.keyline) {
+      this.keyline.count = n;
+      this.keyline.visible = n > 0 && this.keylineOn;
+    }
     if (!n) return;
     const im = this.mesh.instanceMatrix;
     im.clearUpdateRanges();
     im.addUpdateRange(0, n * 16);
     im.needsUpdate = true;
-    for (const a of [this.a1, this.a2]) {
+    for (const a of this.attrs) {
       a.clearUpdateRanges();
       a.addUpdateRange(0, n * 4);
       a.needsUpdate = true;

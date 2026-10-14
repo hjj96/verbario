@@ -73,6 +73,7 @@ export class Carrier {
     this.bubbleT = 0;
     this.creakT = 0;
     this.oilT = 0;
+    this.oilN = 0;
     this.warned = false;
   }
 
@@ -146,6 +147,34 @@ export class Carrier {
     return out.set(lx, ly, lz).applyMatrix4(this.matrix);
   }
 
+  // Structures (barge, ferry, rig lower deck): world height of the deck under (x, z), or −Infinity
+  // when the point is off the deck. Heel and trim are included (the deck plane through the matrix).
+  deckHeightAt(x, z) {
+    let hx;
+    let hz;
+    switch (this.kind) {
+      case 'rig': hx = 7; hz = 7; break; // the world draws the rig; people stand inside ~7 m of the point
+      case 'barge': hx = 5; hz = 17; break;
+      case 'wreck': hx = 5.4; hz = 25; break;
+      default: return -Infinity;
+    }
+    const st = this.stand || [0, this.deckY, 0];
+    const dx = x - this.x;
+    const dz = z - this.z;
+    const cs = Math.cos(this.yaw);
+    const sn = Math.sin(this.yaw);
+    // world → carrier frame (inverse of the yaw rotation used by pose())
+    let lx = dx * cs - dz * sn;
+    let lz = dx * sn + dz * cs;
+    if (this.kind === 'rig') {
+      lx -= st[0];
+      lz -= st[2];
+    }
+    if (Math.abs(lx) > hx || Math.abs(lz) > hz) return -Infinity;
+    if (this.kind === 'rig') return this.y + st[1];
+    return this.toWorld(lx, this.deckY, lz, _v).y;
+  }
+
   // ----------------------------------------------------------------------------------------------
   // Local slot (person origin) for the i-th person of n aboard. Returns [x, y, z, legFold, sitYaw].
   // People origins are "floating reference points" (see crowd.js): standing → feet = origin + FEET_Y.
@@ -183,6 +212,25 @@ export class Carrier {
         const jx = (((i * 37) % 11) / 11 - 0.5) * 0.5;
         const jz = (((i * 53) % 7) / 7 - 0.5) * 0.5;
         return set5(out, st[0] + (c - (Math.min(n, cols) - 1) / 2) * 1.5 + jx, st[1] - FEET_Y, st[2] + r * 1.6 + jz, 0, 0);
+      }
+      default:
+        return set5(out, 0, 0, 0, 0, 0);
+    }
+  }
+
+  // Where a pet sits on this craft (local [x, y, z, yaw]); `far` = the other end (the cat that
+  // refused the first basket). Pets' origin is at the paws.
+  petSlot(far, out) {
+    const f = far ? -1 : 1;
+    switch (this.kind) {
+      case 'raft': return set5(out, 0.02 * RAFT.R, RAFT.floorY + 0.03, (far ? 0.2 : 0.9) * RAFT.R, 0, 0);
+      case 'hull': return set5(out, 0, (this.style === 'yacht' ? 0.55 : 0.68) + 0.02, -3.1 * f, far ? Math.PI : 0, 0);
+      case 'container': return set5(out, 0.7 * f, CONT.freeboard + 0.03, -2.7 * f, far ? Math.PI : 0, 0);
+      case 'barge':
+      case 'wreck':
+      case 'rig': {
+        const st = this.stand || [0, this.deckY, 0];
+        return set5(out, st[0] + 1.6 * f, st[1], st[2] - 1.2, 0, 0);
       }
       default:
         return set5(out, 0, 0, 0, 0, 0);

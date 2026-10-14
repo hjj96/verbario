@@ -114,6 +114,26 @@ export class Panels {
     this._hullN = -1;
   }
 
+  // The bottom bar is laid out for 1920 px; on narrower screens shrink it (a local --hs) until it fits.
+  // Reads layout, so it runs only on resize / settings changes and once a second (content can grow:
+  // a stretcher seat, more consumables).
+  fitBar() {
+    const bar = this.bar;
+    const hs = this.flight.L.hs || 1;
+    const k0 = this._barK || 1;
+    const avail = bar.clientWidth;
+    if (!avail) return;
+    // natural width at k = 1: the cells never shrink below their content (nowrap)
+    let sum = 0;
+    const n = bar.children.length;
+    for (let i = 0; i < n; i++) sum += bar.children[i].offsetWidth;
+    const need = (sum + Math.max(0, n - 1) * 18 * hs * k0) / k0;
+    const k = Math.max(0.6, Math.min(1, (avail - 4) / Math.max(1, need)));
+    if (Math.abs(k - k0) < 0.01) return;
+    this._barK = k;
+    bar.style.setProperty('--hs', (hs * k).toFixed(3));
+  }
+
   showChapter(title) {
     if (!title) return;
     this.chapterEl.textContent = title;

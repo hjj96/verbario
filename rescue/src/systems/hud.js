@@ -67,6 +67,10 @@ export class Hud {
     // between two input polls, and a menu must never swallow a key press.
     this._kbBuf = new Set();
     this._kbHeld = new Set();
+    // Actions whose press was already taken from the raw keydown buffer: the polled input state may
+    // report the same press one frame later (keydown landed after input.poll()) — it must not
+    // activate a second menu item on the screen that just opened. Cleared on key release.
+    this._consumed = new Set();
     this._onKey = (e) => {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       for (const name of Object.keys(BINDINGS.buttons)) {
@@ -77,16 +81,24 @@ export class Hud {
       }
     };
     this._onKeyUp = (e) => {
-      for (const name of Object.keys(BINDINGS.buttons)) if (BINDINGS.buttons[name].includes(e.code)) this._kbHeld.delete(name);
+      for (const name of Object.keys(BINDINGS.buttons)) {
+        if (!BINDINGS.buttons[name].includes(e.code)) continue;
+        this._kbHeld.delete(name);
+        this._consumed.delete(name);
+      }
     };
     window.addEventListener('keydown', this._onKey);
     window.addEventListener('keyup', this._onKeyUp);
-    window.addEventListener('blur', () => this._kbHeld.clear());
+    window.addEventListener('blur', () => {
+      this._kbHeld.clear();
+      this._consumed.clear();
+    });
   }
 
   async init() {
     const ctx = this.ctx;
-    const auto = !!ctx.params?.has?.('autostart');
+    // ?autostart and ?nohud (clean screenshots) skip the boot gates: an invisible gate would block input
+    const auto = !!ctx.params?.has?.('autostart') || this.nohud;
     this._gates.flash = !auto && !ctx.settings?.get('seenFlashWarning');
     this._gates.press = !auto;
     this.applyPaletteCss();
@@ -130,11 +142,24 @@ export class Hud {
   }
 
   rawDown(name) {
+    if (this._consumed.has(name)) return false; // held through a screen change: ignore until released
     return !!this.ctx.input?.buttons?.get?.(name) || this._kbBuf.has(name) || this._kbHeld.has(name);
   }
 
   rawPressed(name) {
-    return !!this.ctx.input?.rawPressed?.(name) || this._kbBuf.has(name);
+    if (this._kbBuf.has(name)) {
+      this._consumed.add(name);
+      return true;
+    }
+    return !!this.ctx.input?.rawPressed?.(name) && !this._consumed.has(name);
+  }
+
+  // A screen change swallows every key that is down right now: the press that opened a screen must
+  // not also act on it (at a low frame rate the polled state can lag the keydown by a frame).
+  _swallow() {
+    for (const n of this._kbHeld) this._consumed.add(n);
+    for (const n of this._kbBuf) this._consumed.add(n);
+    this._kbBuf.clear();
   }
 
   setKeyboardNav(on) {
@@ -199,6 +224,7 @@ export class Hud {
 
   // Replace the whole stack with one screen (mode changes).
   setRoot(name, opts = {}, transition = true) {
+    this._swallow();
     const old = this.stack.slice();
     this.stack.length = 0;
     const next = name ? this._get(name) : null;
@@ -210,6 +236,7 @@ export class Hud {
   go(name, opts = {}) {
     const next = this._get(name);
     if (!next) return;
+    this._swallow();
     const top = this.stack[this.stack.length - 1];
     this.stack.push({ name, screen: next });
     if (next.overlay) {
@@ -223,6 +250,7 @@ export class Hud {
   back() {
     const top = this.stack.pop();
     if (!top) return;
+    this._swallow();
     this._holdBackFrame = (this.ctx.time?.frame ?? 0) + 1;
     const under = this.stack[this.stack.length - 1];
     if (top.screen.overlay) {
@@ -329,7 +357,7 @@ export class Hud {
       top.screen.handleInput?.(uiDt);
     }
     for (const e of this.stack) e.screen.update?.(uiDt, e === top);
-    if (this.flight.visible) {
+    if (this.flight.visible && !this.nohud) {
       try {
         this.flight.update(dt);
       } catch (err) {

@@ -7,12 +7,11 @@
 import { fitCanvas } from '../common/dom.js';
 import { clamp01, smooth } from '../common/fmt.js';
 import { isOpen, isSpotted, isPinged } from './model.js';
+import { font, MONO, HEAD } from '../common/fonts.js';
 
 const TAU = Math.PI * 2;
 const RANGES = [600, 1200, 2400];
 const RANGE_TXT = ['600 М', '1,2 КМ', '2,4 КМ'];
-const FONT_MONO = '"JetBrains Mono", ui-monospace, "DejaVu Sans Mono", monospace';
-const FONT_HEAD = 'Oswald, Impact, "Arial Narrow", sans-serif';
 const TRAIL = 60;
 const DASH = [2, 3];
 const NO_DASH = [];
@@ -91,7 +90,7 @@ export class Radar {
     g.moveTo(c, c - R);
     g.lineTo(c, c + R);
     g.stroke();
-    g.font = `700 11px ${FONT_HEAD}`;
+    g.font = font(700, 11, HEAD);
     g.fillStyle = pal.fg;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
@@ -351,7 +350,7 @@ export class Radar {
       g.fill();
     }
     // range label
-    g.font = `600 10px ${FONT_MONO}`;
+    g.font = font(600, 10, MONO);
     g.fillStyle = pal.dim;
     g.fillText(RANGE_TXT[this.rangeI], c, c + R - 10);
   }
@@ -374,10 +373,10 @@ export class Radar {
     }
     g.restore();
     g.globalAlpha = 0.6 + 0.4 * Math.sin(this.m.time * 10);
-    g.font = `600 11px ${FONT_HEAD}`;
+    g.font = font(600, 11, HEAD);
     g.fillStyle = pal.warn;
     g.fillText('РЛС', c, c - 8);
-    g.font = `600 9px ${FONT_MONO}`;
+    g.font = font(600, 9, MONO);
     g.fillText('ПЕРЕЗАГРУЗКА', c, c + 8);
     g.globalAlpha = 1;
   }
@@ -452,7 +451,7 @@ export class Radar {
       g.beginPath();
       g.arc(x, y, r + 0.5, 0, TAU);
       g.stroke();
-      g.font = `700 7px ${FONT_HEAD}`;
+      g.font = font(700, 7, HEAD);
       g.fillText('H', x, y + 0.5);
     } else if (kind === 'hazard') {
       g.fillStyle = pal.hazard;
@@ -499,7 +498,7 @@ export class Radar {
       g.stroke();
       g.setLineDash(NO_DASH);
       g.fillStyle = pal.rescue;
-      g.font = `700 8px ${FONT_HEAD}`;
+      g.font = font(700, 8, HEAD);
       g.fillText('?', x, y + 0.5);
     }
     g.globalAlpha = a;

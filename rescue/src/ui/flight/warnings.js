@@ -8,8 +8,16 @@ import { NBSP, distU } from '../common/fmt.js';
 
 const POLL = 0.1;
 
+// Landing approach: inside a pad's circle (+ margin) and slow — deck furniture is expected there.
+function nearPadSlow(m) {
+  const pad = m.home;
+  if (!pad?.position || m.speed > 6) return false;
+  return m.homeDist < (pad.radius || 10) + 6;
+}
+
 // id → { prio, level }
 const DEFS = {
+  autorot: { prio: 11, level: 'danger' },
   rogue: { prio: 10, level: 'danger' },
   hull: { prio: 9, level: 'danger' },
   spout: { prio: 8, level: 'danger' },
@@ -114,6 +122,7 @@ export class Warnings {
     const alt = m.alt;
     const nearPad = m.home && m.homeDist < 45;
     this._cond('low', alt < 6 && m.vy < -0.5 && !h.landed && !nearPad && h.alive !== false, 'МАЛАЯ ВЫСОТА', alt < 2 ? 'ВВЕРХ!' : `${Math.max(0, Math.round(alt))}${NBSP}М`, 'danger');
+    this._cond('autorot', !!h.autorotation && h.alive !== false, 'АВТОРОТАЦИЯ', 'двигатель встал — плавно на воду или на палубу', 'danger');
     const hull = h.hull ?? 1;
     this._cond('hull', hull < 0.25 && h.alive !== false, 'КОРПУС · КРИТИЧЕСКОЕ', `${Math.round(hull * 100)}${NBSP}% · ремонт только на маяке`, 'danger');
     const fuel = h.fuel ?? 1;
@@ -122,14 +131,24 @@ export class Warnings {
     const w = h.winch;
     this._cond('tension', !!w && ((w.tension || 0) > 0.05), 'НАТЯЖЕНИЕ ТРОСА', 'сбавьте скорость — трос выберется сам', 'caution');
     this._cond('overheat', (h.overheat || 0) > 0, 'ПЕРЕГРЕВ', `форсаж недоступен · ${Math.ceil(h.overheat)}${NBSP}с`, 'caution');
-    // obstacles within 40 m (horizontal) and below their top + 10 m
+    // Obstacles: only those the skids are actually below (top) AND that the heli is closing on —
+    // time to contact < 3 s, or nearly touching. The ship's superstructure and the rig's modules sit
+    // within 40 m of their pads, so a plain distance test would shout during every landing.
     let obst = null;
     let od = Infinity;
     const obs = ctx.world?.obstacles;
-    if (obs) for (let i = 0; i < obs.length; i++) {
+    const skidY = m.hy - 1.6;
+    if (obs && !nearPadSlow(m)) for (let i = 0; i < obs.length; i++) {
       const o = obs[i];
-      const d = Math.hypot(o.x - m.hx, o.z - m.hz) - (o.radius || 0);
-      if (d < 40 && m.hy < (o.top || 0) + 10 && d < od) {
+      if (!o || skidY >= (o.top ?? Infinity) + 1) continue;
+      const dx = o.x - m.hx;
+      const dz = o.z - m.hz;
+      const dc = Math.hypot(dx, dz) || 1;
+      const d = dc - (o.radius || 0);
+      if (d > 45) continue;
+      const closing = (m.vx * dx + m.vz * dz) / dc; // m/s toward the obstacle
+      const hit = d < 2.5 || (closing > 1.5 && d / closing < 3);
+      if (hit && d < od) {
         od = d;
         obst = o;
       }

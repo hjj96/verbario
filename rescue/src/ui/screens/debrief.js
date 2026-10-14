@@ -113,6 +113,8 @@ export class DebriefScreen extends Screen {
     this.t = 0;
     this.skip = false;
     this.done = false;
+    // the key press that skipped the cinematic must not also skip the logbook animation
+    this._armedAt = performance.now() + 400;
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -392,6 +394,7 @@ export class DebriefScreen extends Screen {
 
   handleInput() {
     if (!this.visible || this.phase !== 'logbook' || this.done) return;
+    if (performance.now() < (this._armedAt || 0)) return;
     if (this.hud.rawPressed('confirm') || this.hud.rawPressed('winch') || this.hud.rawPressed('back')) this._finishAll();
   }
 
