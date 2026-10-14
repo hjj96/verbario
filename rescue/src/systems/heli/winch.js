@@ -288,6 +288,11 @@ export class Winch {
     let y = ctx.ocean?.heightAt ? ctx.ocean.heightAt(x, z) : 0;
     const pad = ctx.world?.padAt?.(x, z);
     if (pad && pad.position) y = Math.max(y, pad.position.y);
+    // Decks people stand on (barge, sinking ferry, rig lower deck) wherever the basket is — not only
+    // under the current target: a basket swinging off the target must still land on the deck, and
+    // the height window counts from the deck (DESIGN §3.5 «на конструкции»).
+    const deck = ctx.survivors?.deckAt ? ctx.survivors.deckAt(x, z) : -Infinity;
+    if (deck > y) y = deck;
     const t = this.pub.target || this.pub.load;
     if (t && t.position && (t.type === 'deck' || t.type === 'wreck')) {
       const d = Math.hypot(t.position.x - x, t.position.z - z);

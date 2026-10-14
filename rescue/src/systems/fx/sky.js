@@ -60,6 +60,7 @@ uniform vec3 uLit, uShade, uCloudLitCol;
 uniform vec4 uCloudFlash[3];
 uniform vec3 uHeliNdc; // ndc xy, cutout radius (ndc units)
 uniform vec2 uWindDirN;
+uniform float uNightAlpha; // alpha multiplier at night (1 by day)
 varying vec2 vUv;
 varying vec2 vLocal;
 varying vec3 vW;
@@ -88,6 +89,10 @@ void main() {
   float dens = smoothstep(thr, thr + 0.24, cl * (0.75 + 0.25 * edge)) * edge;
   if (dens < 0.004) discard;
   float alpha = dens * 0.35 * smoothstep(0.0, 0.3, pres);
+  // at night the layer is all but invisible (never black ink stains over lit water) until a flash
+  // or lightning inside it reveals it
+  float flashK = clamp(dot(uAirFlash, vec3(0.333)) * 1.5, 0.0, 1.0);
+  alpha *= mix(uNightAlpha, 1.0, flashK);
 
   // keep the heli readable: cut to ≤ .2 around it when the cloud is between camera and heli
   vec2 ndc = gl_FragCoord.xy / uResolution * 2.0 - 1.0;
@@ -100,7 +105,7 @@ void main() {
 
   // tops lit by the sun / sky; denser = brighter (more light scattered back up)
   vec3 col = mix(uShade, uLit, smoothstep(0.1, 0.9, dens * 0.8 + n3 * 0.3));
-  col += uAirFlash * 0.9 * (0.4 + 0.6 * dens);
+  col += uAirFlash * 0.6 * (0.4 + 0.6 * dens);
   // in-cloud lightning: spots of #6A7BA8 glowing from inside
   for (int i = 0; i < 3; i++) {
     vec4 cf = uCloudFlash[i];
@@ -162,6 +167,7 @@ export class Scud {
         uCloudFlash: { value: this.cloudFlash },
         uHeliNdc: { value: new THREE.Vector3(0, 0, 0.25) },
         uWindDirN: { value: new THREE.Vector2(1, 0) },
+        uNightAlpha: { value: 1 },
       },
       vertexShader: SCUD_VERT,
       fragmentShader: SCUD_FRAG,
@@ -218,8 +224,15 @@ export class Scud {
       lit.g += p.sun.g * k;
       lit.b += p.sun.b * k;
     }
-    if (p.fogColor) lit.lerp(p.fogColor, 0.2);
+    if (p.fogColor) {
+      lit.lerp(p.fogColor, 0.2);
+      // moonlit tops never darker than the haze around them
+      lit.r = Math.max(lit.r, p.fogColor.r * 1.3);
+      lit.g = Math.max(lit.g, p.fogColor.g * 1.3);
+      lit.b = Math.max(lit.b, p.fogColor.b * 1.3);
+    }
     lit.multiplyScalar(0.85 + 0.15 * (1 - night));
+    u.uNightAlpha.value = 1 - 0.5 * smooth(0.3, 0.9, night);
     u.uLit.value.copy(lit);
     u.uShade.value.copy(lit).multiplyScalar(0.5);
     if (p.deep) u.uShade.value.lerp(p.deep, 0.15);

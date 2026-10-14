@@ -97,7 +97,18 @@ export class CameraRig {
       this.motion.trauma = 0;
       this._endSlowMo();
     });
-    on('mission:start', () => this.cinematicBars(3.2));
+    // Letterbox moments (DESIGN §2.8 item 7): mission start ≈ 2.4 s, chapter titles, the first hazard
+    // reveal; debrief = cinematic mode. Nothing else may hold the bars during play. ?autostart (tests,
+    // dev) skips the opening bars — there is no title/briefing to transition from.
+    on('mission:start', () => {
+      const auto = !this._autoStarted && ctx.params?.has?.('autostart');
+      this._autoStarted = true;
+      if (!auto) this.cinematicBars(2.4);
+    });
+    on('mission:chapter', () => {
+      // the opening chapter coincides with the mission-start bars
+      if ((ctx.mission?.elapsed ?? 0) > 1.5) this.cinematicBars(3);
+    });
     on('hazard:warning', () => {
       if (this._firstHazard) {
         this._firstHazard = false;

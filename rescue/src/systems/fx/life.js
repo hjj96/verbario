@@ -1,7 +1,8 @@
 // Life at sea (DESIGN §2.11, §3.10 «Чайки», §4 #32 #42):
 //
 //  Gulls [SHOULD]   V-meshes #F4F4F0 with dark wing tips, cast shadows. 3–5 birds circle at ~20 m over
-//                   every HIDDEN survivor group (survivors.list, state 'hidden') in calm / overcast /
+//                   every survivor group nobody has found yet (survivors.list: state 'hidden', or
+//                   'drifting' = a rocket / EPIRB gave only an approximate fix) in calm / overcast /
 //                   clearing — a silent hint. They leave DOWNWIND ~60 s before a storm (weather.forecast)
 //                   and come back after it («всё кончилось»), scatter from a low heli, flee hazards,
 //                   keep their noses into the wind. One ambient flock wanders on the title / debrief.

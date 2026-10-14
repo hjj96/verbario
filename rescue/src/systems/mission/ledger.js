@@ -103,7 +103,10 @@ export class Ledger {
     this._hullPrev = h?.hull ?? 1;
     if (h?.position) this._lastPos.copy(h.position);
     this._lastPreset = null;
-    this.weatherTick();
+    // Only the preset here: launch() runs in the same frame as mission:setup, before weather.update
+    // has refreshed windSpeed/gust from the new preset (they still hold the title cycle's storm —
+    // the logbook then read «ветер 24 м/с, 9 баллов · штиль»). The 2 Hz tick samples wind from now on.
+    this.weatherTick(false);
     this._pushTrack();
   }
 
@@ -283,11 +286,11 @@ export class Ledger {
   }
 
   // 1–2 Hz: worst wind and the presets flown through (logbook weather line).
-  weatherTick() {
+  weatherTick(sampleWind = true) {
     const w = this.ctx.weather?.state;
     if (!w) return;
     const wind = (w.windSpeed || 0) + (w.gust || 0);
-    if (wind > this.stats.maxWind) {
+    if (sampleWind && wind > this.stats.maxWind) {
       this.stats.maxWind = wind;
       if (Number.isFinite(w.windFrom)) this.stats.maxWindFrom = w.windFrom;
       else if (w.windDir) this.stats.maxWindFrom = windFromDeg(w.windDir.x, w.windDir.y);

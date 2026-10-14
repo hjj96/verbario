@@ -21,8 +21,9 @@
 //     tornado: {satellites [{position, coreRadius}], green}
 //   forceAt(): out.x / out.z are accelerations (m/s²); out.y is a vertical AIR SPEED (m/s) — heli adds it to
 //   its commanded climb rate (core updraft +6 m/s, downburst −5 m/s, flare plume +4 m/s).
-//   spawn(type, opts) also takes {stage, mature, life, x, z, heading|headingDeg, speed, radius, duration,
-//   eta|telegraph, fromDeg|dir, height, offset, target:'heli'}; dissipate(hazard); hazardsNear(x, z, r).
+//   spawn(type, opts) also takes {stage, mature, life, x, z, vx, vz (fixed drift), heading|headingDeg, speed,
+//   radius, duration, eta|telegraph, fromDeg|dir, height, offset, target:'heli'}; dissipate(hazard);
+//   hazardsNear(x, z, r); mediaGain (light calibration multiplier for funnels / collars / spray, default 1).
 // Extra events: hazard:stage {hazard, stage}, hazard:pass {hazard, clearance} (crest under the heli),
 //   hazard:crest {hazard, survivor, x, z, height} (crest over a floating group: rafts may capsize),
 //   hazard:engulf {hazard, survivor} (5 s in a whirlpool core: lost).

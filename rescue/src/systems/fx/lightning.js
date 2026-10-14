@@ -441,7 +441,7 @@ export class LightningFx {
       if (ci < this.cloudFlash.length) {
         const c = this.cloudFlash[ci++];
         if (s.kind === 'spider') c.set(s.x, s.z, s.extent * 0.75, Math.min(1.2, I * 1.2));
-        else c.set(s.cx, s.cz, 80, Math.min(1, I * 0.8));
+        else c.set(s.cx, s.cz, 55, Math.min(1, I * 0.4)); // a glow around the channel, never a white-out over it
       }
     }
   }
