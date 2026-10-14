@@ -1,5 +1,5 @@
 // Rigging: the small animated bits of the world in ONE instanced draw call (+ its shadow): windsock
-// segments (catalogue #31: 6-segment chain following weather.windAt), the «Арктур» signalman's arms
+// segments (catalogue #31: 4-segment fabric cone following weather.windAt), the «Арктур» signalman's arms
 // and glowing wands (#44), the ship's rotating radar bar. Every instance is a tapered stick
 // (radius 1 → 0.86, height 1 along +Y from its base); colours > 1 glow (prop material encoding).
 import * as THREE from 'three';
@@ -53,14 +53,15 @@ export class Rigging {
 }
 
 // --------------------------------------------------------------------------------------------
-// Windsock: 6 tapered segments, orange/white stripes (#FF5A1F / #F4F1EA). Fully streams at
-// ~8 m/s (real socks: 15 kt), hangs limp in a calm; the tail droops first and flutters harder,
-// flutter frequency grows with the wind. Exaggerated ×1.5 for the top-down camera.
-const ORANGE = new THREE.Color('#FF5A1F');
-const WHITE = new THREE.Color('#F4F1EA');
-const SEGS = 6;
-const SOCK_LEN = 5.4;
-const R0 = 0.52;
+// Windsock: a fabric cone of 4 tapered sag segments in weathered orange / off-white (#C8452E /
+// #E8E2D8). Fully streams at ~8 m/s (real socks: 15 kt) with only a slight tail sag, bellies and
+// droops progressively in lighter air, hangs limp and half-collapsed in a calm; the cloth breathes
+// (radius ripple) and the tail flutters harder, faster with the wind. ×1.5 for the top-down camera.
+const ORANGE = new THREE.Color('#C8452E');
+const WHITE = new THREE.Color('#E8E2D8');
+const SEGS = 4;
+const SOCK_LEN = 5.2;
+const R0 = 0.5;
 
 export class Windsock {
   constructor(seed = 0) {
@@ -96,8 +97,10 @@ export class Windsock {
     const fq = 2.2 + 0.35 * speed;
     for (let i = 0; i < SEGS; i++) {
       const f = i / (SEGS - 1);
-      // droop below the horizontal: limp sock hangs (≈80°), full sock sags a few degrees at the tail
-      let droop = (1 - e) * (1.25 + 0.12 * i) + e * (0.04 + 0.05 * i * i * 0.2);
+      // droop below the horizontal: limp sock hangs (≈80°); in moderate air the cloth sags more
+      // with every segment (a curve, not a stiff cone); a full sock sags a few degrees at the tail
+      const mid = e * (1 - e) * 4;
+      let droop = (1 - e) * (1.2 + 0.14 * i) + e * (0.05 + 0.04 * i * i) + mid * 0.22 * i;
       const flAmp = (0.03 + 0.11 * f) * (0.25 + 0.75 * e) * (0.5 + 0.5 * Math.min(1, speed / 14));
       droop += flAmp * Math.sin(t * fq * 1.3 + this.phase + i * 0.9);
       const yaw = flAmp * 1.4 * Math.sin(t * fq + this.phase * 2.1 + i * 0.7);
@@ -108,8 +111,9 @@ export class Windsock {
         .addScaledVector(side, cd * Math.sin(yaw));
       seg.y = -Math.sin(Math.min(1.5, droop));
       seg.normalize();
-      const r = R0 * (1 - 0.1 * i);
-      rig.push(a.x, a.y, a.z, seg, segLen * 1.02, r, i % 2 ? WHITE : ORANGE);
+      const breathe = 1 + (0.05 + 0.05 * f) * e * Math.sin(t * fq * 2.1 + this.phase + i * 1.7);
+      const r = R0 * (1 - 0.17 * i) * (0.62 + 0.38 * e) * breathe;
+      rig.push(a.x, a.y, a.z, seg, segLen * 1.04, r, i % 2 ? WHITE : ORANGE);
       a.addScaledVector(seg, segLen);
     }
   }
