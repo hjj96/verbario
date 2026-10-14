@@ -120,7 +120,7 @@ export function rockTexture() {
 // ------------------------------------------------------------------------------------------------
 const PALETTE = {
   cGranL: '#8A8884',
-  cGranD: '#454549',
+  cGranD: '#525256',
   cGranP: '#8C7A72',
   cQuartz: '#BDB8AE',
   cLichG: '#9EA095',
@@ -316,7 +316,7 @@ export function createTerrainMaterial(look, shared, { name = 'terrain', lq = fal
         float damp = (1.0 - smoothstep(surge + 0.3, surge + 1.6, yW)) * 0.55;
         float wet = max(max(wetSea, damp), uWet * (1.0 - 0.35 * cm));
         float pud = uWet * smoothstep(0.6, 0.82, tCav) * smoothstep(0.93, 0.985, up) * (1.0 - 0.6 * cm);
-        alb *= 1.0 - 0.42 * wet * (1.0 - 0.4 * cm);
+        alb *= 1.0 - 0.3 * wet * (1.0 - 0.4 * cm); // wet granite darkens ~30 %, never to black
         alb *= 1.0 - 0.35 * pud;
         diffuseColor.rgb = alb;`,
       )

@@ -398,33 +398,42 @@ function makeSampler(G) {
   };
 }
 
-// Collision columns for a landmass (world.obstacles are vertical cylinders): one per grid cell
-// whose rock rises above `min`, fitted round the high samples (centroid + farthest sample).
-export function terrainColumns(sampler, { x0, z0, x1, z1 }, { cell = 7, min = 2.5, sub = 1 } = {}) {
-  const out = [];
-  for (let cz = z0; cz < z1; cz += cell) {
-    for (let cx = x0; cx < x1; cx += cell) {
-      let n = 0, sx = 0, sz = 0, top = -Infinity;
-      for (let z = cz + sub * 0.5; z < cz + cell; z += sub) {
-        for (let x = cx + sub * 0.5; x < cx + cell; x += sub) {
-          const h = sampler.heightAt(x, z);
-          if (h < min) continue;
-          n++;
-          sx += x;
-          sz += z;
-          if (h > top) top = h;
-        }
+// Collision columns for a landmass (world.obstacles are vertical cylinders): one per square cell
+// whose rock rises above `min`, fitted round the grid vertices above it (centroid + farthest).
+export function terrainColumns(sampler, { x0, z0, x1, z1 }, { cell = 7, min = 2.5 } = {}) {
+  const G = sampler.grid;
+  const ncx = Math.ceil((x1 - x0) / cell), ncz = Math.ceil((z1 - z0) / cell);
+  const N = ncx * ncz;
+  const n = new Uint32Array(N), sx = new Float64Array(N), sz = new Float64Array(N), top = new Float32Array(N).fill(-1e9);
+  const cellOf = (x, z) => {
+    const ci = Math.floor((x - x0) / cell), cj = Math.floor((z - z0) / cell);
+    return ci < 0 || cj < 0 || ci >= ncx || cj >= ncz ? -1 : cj * ncx + ci;
+  };
+  const each = (fn) => {
+    for (let j = 0; j < G.nz; j++) {
+      const z = G.z0 + j * G.step;
+      for (let i = 0; i < G.nx; i++) {
+        const h = G.H[j * G.nx + i];
+        if (h < min) continue;
+        const x = G.x0 + i * G.step;
+        const c = cellOf(x, z);
+        if (c >= 0) fn(c, x, z, h);
       }
-      if (!n) continue;
-      const mx = sx / n, mz = sz / n;
-      let rad = 0;
-      for (let z = cz + sub * 0.5; z < cz + cell; z += sub) {
-        for (let x = cx + sub * 0.5; x < cx + cell; x += sub) {
-          if (sampler.heightAt(x, z) >= min) rad = Math.max(rad, Math.hypot(x - mx, z - mz));
-        }
-      }
-      out.push({ x: mx, z: mz, radius: rad + sub * 0.5, top: top + 0.3 });
     }
+  };
+  each((c, x, z, h) => {
+    n[c]++;
+    sx[c] += x;
+    sz[c] += z;
+    if (h > top[c]) top[c] = h;
+  });
+  const rad = new Float32Array(N);
+  each((c, x, z) => {
+    rad[c] = Math.max(rad[c], Math.hypot(x - sx[c] / n[c], z - sz[c] / n[c]));
+  });
+  const out = [];
+  for (let c = 0; c < N; c++) {
+    if (n[c]) out.push({ x: sx[c] / n[c], z: sz[c] / n[c], radius: rad[c] + G.step * 0.5, top: top[c] + 0.3 });
   }
   return out;
 }
