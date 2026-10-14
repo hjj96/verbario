@@ -95,7 +95,8 @@ const FRAG_MAIN = /* glsl */ `
   // 3. grime gathering low, toward the sea / base
   float h = vWxPos.y - uWxB.w;
   float low = 1.0 - smoothstep( 0.0, 3.5, h );
-  diffuseColor.rgb = mix( diffuseColor.rgb, uWxGrime, low * uWxA.z * ( 0.45 + 0.55 * n1.b ) );
+  float n0 = wxTri( vWxPos + 41.7, n, 0.025 * sc ).r; // large, smooth stain field (no cellular spots)
+  diffuseColor.rgb = mix( diffuseColor.rgb, uWxGrime, low * uWxA.z * ( 0.45 + 0.55 * n0 ) );
   // 4. ragged waterline: algae below ~0.3 m, salt crust above to ~1.3 m
   float rag = ( n2.b - 0.5 ) * 0.5;
   float algae = ( 1.0 - smoothstep( 0.15, 0.45, h + rag ) ) * step( -3.0, h );
@@ -104,7 +105,7 @@ const FRAG_MAIN = /* glsl */ `
   diffuseColor.rgb = mix( diffuseColor.rgb, uWxSalt, salt * uWxA.w * 0.4 );
   // 5. decks: low-frequency stains + worn centre paths
   float horiz = smoothstep( 0.75, 0.95, n.y );
-  diffuseColor.rgb *= 1.0 - horiz * uWxB.y * smoothstep( 0.35, 0.8, n1.b ) * 0.35;
+  diffuseColor.rgb *= 1.0 - horiz * uWxB.y * smoothstep( 0.45, 0.85, n0 * 0.7 + n1.r * 0.3 ) * 0.35;
   // 6. rain wetness darkens, roughness drops (water-polished decks most)
   diffuseColor.rgb *= 1.0 - 0.12 * uWxWet;
   roughnessFactor = clamp( roughnessFactor + ( n2.r - 0.5 ) * 2.0 * uWxB.x - uWxWet * ( 0.12 + 0.2 * horiz ) + algae * uWxA.w * 0.1, 0.04, 1.0 );

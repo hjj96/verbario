@@ -317,9 +317,13 @@ float lookFronts(vec2 xz) {
   return s;
 }
 // Cloud cover 0..1 for cloud shadows (multiply light by mix(1.0, 0.72, cover * presetCloudiness)).
+// Two scales + domain warp: no lattice banding. Same maths as look.cloudAt() on the CPU.
 float lookCloud(vec2 xz) {
-  float r = texture2D(uAtlas, (xz - uWindOffset * ${CLOUD_DRIFT.toFixed(3)}) * ${CLOUD_SCALE.toFixed(5)} + vec2(0.37, 0.61)).r;
-  return smoothstep(0.45, 0.7, r);
+  vec2 uv = (xz - uWindOffset * ${CLOUD_DRIFT.toFixed(3)}) * ${CLOUD_SCALE.toFixed(5)} + vec2(0.37, 0.61);
+  vec2 w = vec2(texture2D(uAtlas, uv * 0.53 + vec2(0.11, 0.29)).r, texture2D(uAtlas, uv * 0.53 + vec2(0.47, 0.83)).r) - 0.5;
+  uv += w * 0.18;
+  float r = 0.65 * texture2D(uAtlas, uv).r + 0.35 * texture2D(uAtlas, uv * 2.31 + vec2(0.23, 0.71)).r;
+  return smoothstep(0.44, 0.66, r);
 }
 `;
 
@@ -484,9 +488,16 @@ export class Look {
 
   cloudAt(x, z) {
     const o = this.uniforms.uWindOffset.value;
-    const r = this.sampleAtlas((x - o.x * CLOUD_DRIFT) * CLOUD_SCALE + 0.37, (z - o.y * CLOUD_DRIFT) * CLOUD_SCALE + 0.61, 0);
-    return smooth(0.45, 0.7, r);
+    let u = (x - o.x * CLOUD_DRIFT) * CLOUD_SCALE + 0.37;
+    let v = (z - o.y * CLOUD_DRIFT) * CLOUD_SCALE + 0.61;
+    const wx = this.sampleAtlas(u * 0.53 + 0.11, v * 0.53 + 0.29, 0) - 0.5;
+    const wz = this.sampleAtlas(u * 0.53 + 0.47, v * 0.53 + 0.83, 0) - 0.5;
+    u += wx * 0.18;
+    v += wz * 0.18;
+    const r = 0.65 * this.sampleAtlas(u, v, 0) + 0.35 * this.sampleAtlas(u * 2.31 + 0.23, v * 2.31 + 0.71, 0);
+    return smooth(0.44, 0.66, r);
   }
+
 
   // --- material helpers -----------------------------------------------------------------------------
   // Inverted-hull keyline with constant screen thickness. Add as a second mesh sharing the geometry
