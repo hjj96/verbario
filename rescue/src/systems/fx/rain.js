@@ -109,8 +109,9 @@ void main() {
     float vis;
     if (uLocalA.w < 1.5) vis = smoothstep(0.02, 0.35, cone);
     else vis = 1.0 - smoothstep(0.25, 1.0, length(head - uLocalA.xyz) / uLocalB.x);
-    vA = (0.22 + 0.2 * aSeed2.z) * vis * uLocalB.w * (1.0 - 0.9 * fog);
-    vC = uRainCol * (vec3(1.0, 0.945, 0.855) * cone * 6.0 * (0.35 + 0.65 * sp) + fxPointLights(head) * 0.6 + uAirFlash * 4.0);
+    // individual tracers, not a white ball: sparse bright glints + dimmer streaks
+    vA = (0.12 + 0.16 * aSeed2.z) * vis * uLocalB.w * (1.0 - 0.9 * fog);
+    vC = uRainCol * (vec3(1.0, 0.945, 0.855) * cone * 6.0 * (0.25 + 0.75 * sp) + fxPointLights(head) * 0.6 + uAirFlash * 4.0);
   }
 }
 `;
@@ -289,7 +290,7 @@ export class Rain {
 
   setCounts(rain, motes) {
     this.geometry.instanceCount = Math.min(this.max, rain);
-    this.local.geometry.instanceCount = Math.min(LOCAL_MAX, Math.round(rain * 0.18));
+    this.local.geometry.instanceCount = Math.min(LOCAL_MAX, Math.round(rain * 0.13));
     this.localLight.geometry.instanceCount = Math.min(LOCAL_MAX, Math.round(rain * 0.12));
     this.motes.geometry.instanceCount = Math.min(this.maxMotes, motes);
     this.motes.userData.allowed = motes > 0;

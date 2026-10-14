@@ -25,6 +25,7 @@ uniform vec3 uLight;
 varying vec2 vQ;
 varying float vA;
 varying vec3 vC;
+varying float vSeed;
 float h1(float n) { return fract(sin(n) * 43758.5453); }
 void main() {
   int s = int(aG.x + 0.5);
@@ -68,26 +69,32 @@ void main() {
   vec2 perp = vec2(-sdir.y, sdir.x);
   vec4 c = position.y > 0.0 ? ch : ct;
   float pxPerM = projectionMatrix[1][1] * hr.y / max(c.w, 0.5);
-  float wpx = max(1.6, 0.9 * pxPerM);
+  // a fine brush stroke: ~0.35 m wide at the head, thinning to a hair at the tail
+  float wpx = max(2.0, 0.5 * pxPerM) * (position.y > 0.0 ? 1.0 : 0.5);
   c.xy += perp * position.x * wpx * 0.5 / hr * c.w;
   gl_Position = c;
   vQ = position.xy;
+  vSeed = fract(sd * 0.137);
   float env = smoothstep(0.0, 0.2, ph) * (1.0 - smoothstep(0.6, 1.0, ph));
   float fog = fxFog(ph3);
   // DESIGN α .12 is the average over a stroke's life; the peak is brighter so the telegraph reads
-  vA = 0.24 * F2.x * env * (1.0 - fog) * (0.7 + 0.6 * rH);
+  vA = 0.3 * F2.x * env * (1.0 - fog) * (0.7 + 0.6 * rH);
   vC = uLight + uAirFlash * 1.5;
 }
 `;
 const FRAG = /* glsl */ `
+${LOOK_GLSL_UNIFORMS}
 varying vec2 vQ;
 varying float vA;
 varying vec3 vC;
+varying float vSeed;
 void main() {
-  float across = exp(-vQ.x * vQ.x * 3.0);
+  float across = 1.0 - vQ.x * vQ.x;
   float along = sin(3.14159 * (vQ.y * 0.5 + 0.5));
-  // a dry-brush stroke: brighter head, ragged tail
-  float stroke = mix(0.55, 1.0, vQ.y * 0.5 + 0.5);
+  // a dry-brush stroke: brighter head, ragged broken tail
+  float u = vQ.y * 0.5 + 0.5;
+  float rag = texture2D(uAtlas, vec2(u * 0.35 + vSeed * 7.0, vSeed * 3.0 + vQ.x * 0.02)).r;
+  float stroke = mix(0.45, 1.0, u) * smoothstep(0.12 + 0.3 * (1.0 - u), 0.55, rag + 0.25 * u);
   gl_FragColor = vec4(vC, vA * across * along * stroke);
   ${FINISH}
 }

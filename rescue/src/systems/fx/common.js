@@ -11,11 +11,11 @@ export const QUALITY = {
   },
   medium: {
     rain: 5000, motes: 160, downwash: 350, crest: 150, crestProbes: 15, splash: 320, smoke: 460, glow: 520,
-    scud: 8, fogLayers: 2, gulls: 16, seaSmoke: true, dolphins: 4, jelly: 40,
+    scud: 8, fogLayers: 2, gulls: 16, seaSmoke: true, dolphins: 4, jelly: 70,
   },
   high: {
     rain: 9000, motes: 320, downwash: 600, crest: 300, crestProbes: 30, splash: 420, smoke: 720, glow: 900,
-    scud: 14, fogLayers: 3, gulls: 24, seaSmoke: true, dolphins: 5, jelly: 70,
+    scud: 14, fogLayers: 3, gulls: 24, seaSmoke: true, dolphins: 5, jelly: 120,
   },
 };
 export const qualityOf = (settings) => (QUALITY[settings?.get?.('quality')] ? settings.get('quality') : 'high');

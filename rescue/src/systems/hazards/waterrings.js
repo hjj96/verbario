@@ -35,8 +35,8 @@ void main() {
   vec4 R = uRing[slot];
   float q = vQ.x;
   float line = exp(-pow(q / 0.75, 2.0));
-  float halo = exp(-pow(q / 3.2, 2.0)) * 0.32;
-  float fill = smoothstep(-0.34 * R.x, -0.02 * R.x, q) * step(q, 0.0) * 0.1; // faint charged zone inside
+  float halo = exp(-pow(q / 3.2, 2.0)) * 0.22;
+  float fill = smoothstep(-0.34 * R.x, -0.02 * R.x, q) * step(q, 0.0) * 0.06; // faint charged zone inside
   // electric crackle: angular dashes re-rolled 18 times a second
   float tick = floor(uHzTime * 18.0);
   float h = texture2D(uAtlas, vec2(vQ.y * 9.0 + tick * 0.137, tick * 0.071)).a;

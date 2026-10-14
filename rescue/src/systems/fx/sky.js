@@ -14,7 +14,7 @@
 //  Sea smoke       from Beaufort 9: a plane at ~1.5 m with noise stretched along the wind, α .25.
 //  [SHOULD]
 import * as THREE from 'three';
-import { LOOK_GLSL_UNIFORMS } from '../../core/look.js';
+import { LOOK_GLSL_UNIFORMS, LOOK_GLSL_FUNCS } from '../../core/look.js';
 import { AIR_GLSL, FOG_PARS, FINISH, COLORS, fogUniforms, quadGeometry, rng32, smooth, clamp01 } from './common.js';
 
 const SCUD_TILE = 480; // m — wrap tile around the camera focus (14 quads ≈ 2× coverage, 4 ≈ 0.6×)
@@ -83,8 +83,9 @@ void main() {
   float n3 = texture2D(uAtlas, q * 0.052 + vec2(0.0, evo * 3.0)).r;
   float cl = n1 * 0.62 + n3 * 0.3 + (1.0 - n2) * 0.2;
   float edge = 1.0 - smoothstep(0.4, 1.0, r);
-  float thr = mix(0.74, 0.53, pres);
-  float dens = smoothstep(thr, thr + 0.24, cl * (0.6 + 0.4 * edge)) * edge;
+  // cl ≈ 0.58 ± 0.1: storm (pres 1) covers about half of every quad, overcast leaves thin wisps
+  float thr = mix(0.70, 0.45, pres);
+  float dens = smoothstep(thr, thr + 0.24, cl * (0.75 + 0.25 * edge)) * edge;
   if (dens < 0.004) discard;
   float alpha = dens * 0.35 * smoothstep(0.0, 0.3, pres);
 
@@ -131,7 +132,7 @@ export class Scud {
       const gz = (i * 0.754877 + 0.31) % 1;
       a[i * 4] = (gx + (r() - 0.5) * 0.18 + 1) % 1;
       a[i * 4 + 1] = (gz + (r() - 0.5) * 0.18 + 1) % 1;
-      a[i * 4 + 2] = 90 + 110 * r();
+      a[i * 4 + 2] = 100 + 120 * r();
       a[i * 4 + 3] = 60 + 25 * r();
       b[i * 4] = r() * Math.PI * 2;
       b[i * 4 + 1] = r();
@@ -248,6 +249,7 @@ void main() {
 const LAYER_FRAG = /* glsl */ `
 ${FOG_PARS}
 ${LOOK_GLSL_UNIFORMS}
+${LOOK_GLSL_FUNCS}
 ${AIR_GLSL}
 uniform float uAlpha, uSeed, uMode, uScale;
 uniform vec3 uCol;
@@ -277,13 +279,17 @@ void main() {
     float rim = exp(-pow((dl - 1.25 * R) / (0.35 * R), 2.0)) * 0.35;
     a = mix(a, a * hole + rim * a, uHole.w);
   } else {
-    // sea smoke: streaks along the wind
+    // sea smoke (spindrift): a low haze torn into long soft streaks along the wind, densest in the
+    // gusts (the same cat's-paw field that pushes the heli) — a veil, never distinct white rods
     vec2 w = uWindDir;
-    vec2 uv = vec2(dot(p - uOff, w), dot(p, vec2(-w.y, w.x)));
-    float n1 = texture2D(uAtlas, vec2(uv.x * 0.004, uv.y * 0.045) + uSeed).r;
-    float n2 = texture2D(uAtlas, vec2(uv.x * 0.011, uv.y * 0.11) - uSeed).r;
-    float big = texture2D(uAtlas, p * 0.0021 + vec2(uSeed * 0.3, 0.1)).r; // gusty patches
-    a = smoothstep(0.66, 0.95, n1 * 0.7 + n2 * 0.45) * smoothstep(0.3, 0.7, big);
+    vec2 rel = p - uOff;
+    vec2 uv = vec2(dot(rel, w), dot(rel, vec2(-w.y, w.x)));
+    float n1 = texture2D(uAtlas, vec2(uv.x * 0.0032, uv.y * 0.024) + uSeed).r;
+    float n2 = texture2D(uAtlas, vec2(uv.x * 0.0085, uv.y * 0.06) - uSeed).r;
+    float fine = texture2D(uAtlas, vec2(uv.x * 0.021, uv.y * 0.15) + uSeed * 2.0).g;
+    float streak = smoothstep(0.38, 0.88, n1 * 0.62 + n2 * 0.5);
+    float gust = 0.35 + 0.65 * lookGust(p) + 0.04 * lookFronts(p);
+    a = streak * (0.6 + 0.4 * fine) * clamp(gust, 0.0, 1.0);
   }
   a *= uAlpha;
   float fog = fxFog(vW);

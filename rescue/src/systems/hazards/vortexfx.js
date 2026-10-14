@@ -149,33 +149,42 @@ void main() {
   float r01 = vP.x;
   float th = vP.y;
   float spin = vP.w;
-  float lr = log(max(r01, 0.03));
-  // log-spiral frame rotating with the vortex: arms wind inward towards the funnel
-  float sp = th - spin * (2.4 * lr + vP.z);
-  float arm = 0.5 + 0.5 * cos(3.0 * sp + 0.6 * sin(3.0 * lr));
-  // broad cloud masses + billows in spiral-wound coordinates (they turn rigidly with the vortex)
-  vec2 q = vec2(cos(sp), sin(sp)) * r01;
-  float n1 = texture2D(uAtlas, q * 0.9 + vec2(vI.w, 0.37)).r;
-  float n2 = texture2D(uAtlas, q * 2.4 + vec2(0.13, vI.w * 2.0) - uHzTime * 0.004).r;
-  float cell = texture2D(uAtlas, q * 1.7 + vec2(vI.w * 3.0, 0.21)).g;
-  float puff = 1.0 - smoothstep(0.12, 0.8, cell);
-  float dens = 0.34 * arm + 0.34 * n1 + 0.14 * n2 + 0.26 * puff;
-  // ragged rim, thick core (wall cloud), grows from the centre while forming
-  float rim = 1.0 - smoothstep(0.6, 1.0, r01 + (n1 - 0.5) * 0.35 + (puff - 0.5) * 0.12);
   float form = vI.z;
-  float grow = 1.0 - smoothstep(form * 1.1 - 0.2, form * 1.1, r01);
-  float a = (0.22 + 0.78 * smoothstep(0.34, 0.78, dens)) * rim;
-  a = max(a, (1.0 - smoothstep(0.05, 0.3, r01)) * smoothstep(0.2, 0.7, form));
-  a *= grow * vI.x * 0.75;
+  // Twirl: the inner cloud has turned further than the rim, so isotropic fbm is wound into spiral bands
+  // (sampled in the rotating frame — the whole mass turns rigidly with the vortex).
+  float ang = th - spin * (2.4 * pow(1.0 - r01, 1.5) + vP.z);
+  vec2 q = vec2(cos(ang), sin(ang)) * r01;
+  float n1 = texture2D(uAtlas, q * 0.42 + vec2(vI.w, 0.37)).r;
+  float n2 = texture2D(uAtlas, q * 1.15 + vec2(0.13, vI.w * 2.0) + n1 * 0.35 - uHzTime * 0.002).r;
+  float n3 = texture2D(uAtlas, q * 2.9 + vec2(vI.w * 1.7, 0.71) + n2 * 0.25).r;
+  float puff = 1.0 - smoothstep(0.08, 0.85, texture2D(uAtlas, q * 0.75 + vec2(vI.w * 3.0, 0.21) + n1 * 0.12).g);
+  // two soft log-spiral arms winding in towards the funnel (DESIGN «лог-спиральный fbm-диск»)
+  float lr = log(max(r01, 0.05));
+  float arm = 0.5 + 0.5 * cos(2.0 * (th - spin * (1.25 * lr + vP.z)) + 2.5 * (n1 - 0.5));
+  float dens = (0.44 * n1 + 0.26 * n2 + 0.12 * n3 + 0.26 * puff) * (0.72 + 0.5 * arm);
+  dens += 0.38 * exp(-pow(r01 / 0.3, 2.0)); // the wall cloud around the throat
+  // ragged rim; grows outward from the centre while forming
+  // (the tornado's wall cloud is huge: dense round the funnel, thinning early so the sea still reads)
+  float rim = 1.0 - smoothstep(mix(0.45, 0.25, vI.y), 1.0, r01 + (n1 - 0.5) * 0.5);
+  float grow = 1.0 - smoothstep(form * 1.15 - 0.35, form * 1.15, r01);
+  // never a lid over the play: people and rafts under the cloud must still read (pillar 8), so the
+  // wall cloud is dense only round the throat and thins outward
+  float a = smoothstep(0.24, 0.85, dens) * rim * grow * vI.x * mix(0.62, 0.46, vI.y) * (0.65 + 0.35 * exp(-pow(r01 / 0.45, 2.0)));
+  // the throat: the funnel leaves the cloud through a ragged opening — seen from above we look down it
+  // (the tornado's wedge is ~60 m across at the cloud base, so its throat is proportionally wider)
+  float thr = mix(1.0, 2.3, vI.y);
+  a *= mix(1.0, smoothstep(0.045 * thr, 0.12 * thr, r01 + (n2 - 0.5) * 0.05), smoothstep(0.6, 1.0, form));
   if (a <= 0.003) discard;
-  // cloud tops seen from above: thick billows catch the light, the gaps between them sit in shade
-  float lit = smoothstep(0.3, 0.85, dens) * (0.55 + 0.45 * puff);
+  // cloud tops seen from above: thick billows catch the sky, thin edges show the dark underside,
+  // the throat where the funnel leaves the cloud is the darkest spot
+  float lit = 0.3 + 0.7 * smoothstep(0.25, 0.8, dens) * (0.7 + 0.3 * puff);
+  float throat = exp(-pow(r01 / (0.09 * mix(1.0, 2.3, vI.y)), 2.0));
   vec3 alb = mix(uDark, uLight, lit);
   alb = mix(alb, uPale * mix(0.6, 1.0, lit), uClear * (1.0 - vI.y));
-  alb *= mix(1.0, 0.5, vI.y);
+  alb *= mix(1.0, 0.4, vI.y) * (1.0 - 0.6 * throat);
   // in-cloud lightning lights the collar from inside, unevenly
   float inner = 1.0 + 2.0 * uFlash + 2.5 * uFlash * n1;
-  vec3 col = alb * hzAirLight(vW, 0.85) * 1.5 * inner + alb * uAirFlash * (0.8 + 1.4 * puff);
+  vec3 col = alb * hzAirLight(vW, 0.6 + 0.4 * lit) * 1.35 * inner + alb * uAirFlash * (0.8 + 1.4 * puff);
   a *= hzHeliHole(vClip, vW, 0.0);
   a *= smoothstep(8.0, 40.0, distance(cameraPosition, vW));
   col = mix(col, hzFogColor(col), hzFog(vW));
@@ -213,10 +222,13 @@ void main() {
   float sp = vP.y - vP.w * (1.8 * lr + vP.z);
   float n = texture2D(uAtlas, vec2(sp / 6.2831853 * 3.0 + vI.y, lr * 0.4 - uHzTime * 0.01)).r;
   float n2 = texture2D(uAtlas, vec2(sp / 6.2831853 * 5.0, lr * 0.8 + vI.y)).r;
-  float disc = 1.0 - smoothstep(0.42, 1.0, r01 + (n - 0.5) * 0.35);
-  float k = clamp(disc * vI.x * (0.62 + 0.5 * n2), 0.0, 1.0);
-  // diffuse ×0.6 under the cloud (DESIGN §2.12 stage 1); fogged sea is left alone
-  float m = mix(1.0, 0.6, k * (1.0 - hzFog(vW)));
+  float disc = 1.0 - smoothstep(0.3, 1.0, r01 + (n - 0.5) * 0.35);
+  // two shadow arms winding in, so the rotation reads on the water long before the funnel exists
+  float arm = 0.5 + 0.5 * cos(2.0 * sp + 2.0 * (n - 0.5));
+  float k = clamp(disc * vI.x * (0.72 + 0.28 * arm) * (0.9 + 0.25 * n2), 0.0, 1.0);
+  // the cloud's shade on the sea (DESIGN: diffuse ×0.6 — taken deeper, the storm sea is already dark);
+  // fogged sea is left alone
+  float m = mix(1.0, 0.22, k * (1.0 - hzFog(vW)));
   gl_FragColor = vec4(vec3(m), 1.0);
 }
 `;
@@ -251,8 +263,8 @@ void main() {
   float ang = base + V2.x * om * age;
   vec3 p = vec3(V.x + cos(ang) * rr, 0.3 * uShadowY + V2.z * age * (0.7 + 0.6 * sp.y), V.y + sin(ang) * rr);
   p.xz += uWind * 0.3 * age;
-  float size = mix(1.3, 5.2, pow(a01, 0.7)) * mix(0.7, 1.3, sp.y) * sqrt(scale);
-  float alpha = 0.3 * V.w * smoothstep(0.0, 0.14, a01) * (1.0 - smoothstep(0.55, 1.0, a01));
+  float size = mix(1.1, 4.6, pow(a01, 0.7)) * mix(0.7, 1.3, sp.y) * sqrt(scale);
+  float alpha = 0.18 * V.w * smoothstep(0.0, 0.14, a01) * (1.0 - smoothstep(0.55, 1.0, a01));
   vec4 mv = viewMatrix * vec4(p, 1.0);
   mv.xyz += normalize(-mv.xyz) * size * 0.6; // soft-particle push: do not slice the waves
   float rot = sp.x * 40.0 + age * 0.8;
@@ -280,7 +292,8 @@ void main() {
   vec2 o = vec2(vSeed * 7.0, vSeed * 3.3);
   float n = texture2D(uAtlas, vUv * 0.3 + o).r;
   float dots = smoothstep(0.8, 0.97, texture2D(uAtlas, vUv * 0.9 + o * 1.7).a);
-  float body = pow(1.0 - r2, 1.5) * (0.35 + 0.9 * n);
+  // wispy, not a solid puff: hundreds of these overlap when the column is seen from above
+  float body = pow(1.0 - r2, 2.2) * smoothstep(0.2, 0.85, n) * 1.2;
   float a = vCol.a * (body + dots * (1.0 - r2) * 0.8);
   vec3 col = mix(vCol.rgb, hzFogColor(vCol.rgb), vFog);
   gl_FragColor = vec4(col, clamp(a * (1.0 - 0.7 * vFog), 0.0, 1.0));

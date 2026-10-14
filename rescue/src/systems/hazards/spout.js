@@ -210,17 +210,17 @@ export class Spout {
     let shadow = 1, collarA = 0.95, form = 1, oceanS = 1, reach = 1, spray = 1, force = 1, thin = 0, cut = 0, alpha = 1;
     switch (this.stage) {
       case 1:
-        shadow = easeInOut(p);
-        collarA = 0.55 * easeInOut(p);
-        form = 0.45 * p;
+        shadow = smooth(0, 0.45, p); // the dark spot is the first thing anyone sees: it comes fast
+        collarA = 0.7 * easeInOut(Math.min(1, p * 1.4));
+        form = 0.2 + 0.4 * p;
         oceanS = 0.3 * p;
         reach = 0;
         spray = 0;
         force = 0;
         break;
       case 2:
-        collarA = 0.55 + 0.3 * p;
-        form = 0.45 + 0.35 * p;
+        collarA = 0.7 + 0.15 * p;
+        form = 0.6 + 0.2 * p;
         oceanS = 0.3 + 0.32 * p;
         reach = 0.12 * easeInOut(p);
         spray = 0;

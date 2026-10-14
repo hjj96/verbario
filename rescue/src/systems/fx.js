@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import { QUALITY, COLORS, qualityOf, createAirUniforms, toColor, isOrange, lum, smooth, clamp01, strokeEnvelope, softEnvelope } from './fx/common.js';
 import { LightPool } from './fx/lightpool.js';
-import { ParticlePool, F_SWIRL, F_STRETCH, F_TWINKLE, F_BIO } from './fx/particles.js';
+import { ParticlePool, F_SWIRL, F_STRETCH, F_TWINKLE, F_BIO, F_TURB, F_FLOAT } from './fx/particles.js';
 import { Rain } from './fx/rain.js';
 import { LightningFx } from './fx/lightning.js';
 import { Scud, AirLayers } from './fx/sky.js';
@@ -39,12 +39,12 @@ const P = {
   crest: { drag: 0.7, accY: -3.5, wind: 0.75, flags: F_STRETCH, emissive: 0, spin: 0.3 },
   droplet: { drag: 0.6, accY: -9.8, wind: 0.3, flags: 0, emissive: 0, spin: 0.8 },
   mist: { drag: 1.2, accY: -0.5, wind: 0.7, flags: 0, emissive: 0, spin: 0.3 },
-  signalSmoke: { drag: 0.8, accY: 1.2, wind: 0.8, flags: 0, emissive: 0, spin: 0.25 },
-  damageSmoke: { drag: 1.1, accY: 0.7, wind: 1.0, flags: F_SWIRL, emissive: 0, spin: 0.5 },
-  smoke: { drag: 0.9, accY: 0.9, wind: 0.85, flags: F_SWIRL, emissive: 0, spin: 0.35 },
+  signalSmoke: { drag: 0.8, accY: 1.2, wind: 0.8, flags: F_TURB, emissive: 0, spin: 0.25 },
+  damageSmoke: { drag: 1.1, accY: 0.7, wind: 1.0, flags: F_SWIRL | F_TURB, emissive: 0, spin: 0.5 },
+  smoke: { drag: 0.9, accY: 0.9, wind: 0.85, flags: F_SWIRL | F_TURB, emissive: 0, spin: 0.35 },
   steam: { drag: 0.9, accY: 2.4, wind: 0.7, flags: 0, emissive: 0, spin: 0.4 },
   spark: { drag: 0.8, accY: -9.8, wind: 0.2, flags: F_STRETCH | F_TWINKLE, emissive: 1, spin: 0 },
-  bio: { drag: 1.6, accY: -5, wind: 0.4, flags: F_TWINKLE | F_BIO, emissive: 1, spin: 0 },
+  bio: { drag: 1.6, accY: -3, wind: 0.4, flags: F_TWINKLE | F_BIO | F_FLOAT, emissive: 1, spin: 0 }, // skims the surface
   hail: { drag: 0.4, accY: -9.8, wind: 0.2, flags: 0, emissive: 0, spin: 0 },
 };
 
@@ -106,7 +106,7 @@ export class Effects {
     this._c2 = new THREE.Color();
     this._col = new THREE.Color();
     this._sprayCol = new THREE.Color(COLORS.spray);
-    this._bioCol = new THREE.Color(COLORS.bio).multiplyScalar(2.6);
+    this._bioCol = new THREE.Color(COLORS.bio).multiplyScalar(4);
     this._steamCol = new THREE.Color(COLORS.steam);
     this._starCol = new THREE.Color('#FFFFFF');
     this._haloCol = new THREE.Color(COLORS.boltHalo);
@@ -266,7 +266,8 @@ export class Effects {
     const t = this.t;
     slot.budget = Math.min(3, slot.budget + (t - slot.lastT) * maxRate);
     slot.lastT = t;
-    slot.acc += Math.max(0, Number(amount) || 0);
+    // signal smoke: fewer, bigger puffs read as billows instead of a smooth tube
+    slot.acc += Math.max(0, Number(amount) || 0) * (kind === 'signal' ? 0.6 : 1);
     const pool = this.pools.smoke;
     let guard = 8;
     while (slot.acc >= 1 && slot.budget >= 1 && guard-- > 0) {
@@ -306,12 +307,13 @@ export class Effects {
     const j = () => (Math.random() - 0.5);
     if (kind === 'signal') {
       // survivor's orange day smoke: the best wind indicator in the game (DESIGN §2.10)
+      // dense saturated orange at the canister, billowing out into a wide pale plume downwind
       const s0 = opts?.size?.[0] ?? 0.9;
       const s1 = opts?.size?.[1] ?? 10;
       const v = 0.9 + 0.2 * Math.random();
-      pool.emit(t, x + j() * 0.4, y + 0.3, z + j() * 0.4, j() * 0.6, opts?.rise ?? 1.5, j() * 0.6,
-        opts?.life ?? 9 + 4 * Math.random(), s0, s1 * (0.75 + 0.5 * Math.random()),
-        this._c.copy(this._orange).lerp(c, 0.5).multiplyScalar(v), opts?.alpha ?? 0.5, this._orangeEnd, P.signalSmoke);
+      pool.emit(t, x + j() * 0.4, y + 0.3, z + j() * 0.4, j() * 1.3, opts?.rise ?? 1.5, j() * 1.3,
+        opts?.life ?? 9 + 4 * Math.random(), s0, s1 * (0.8 + 0.5 * Math.random()),
+        this._c.copy(this._orange).lerp(c, 0.5).multiplyScalar(v), opts?.alpha ?? 0.42, this._orangeEnd, P.signalSmoke);
     } else if (kind === 'damage') {
       // exhaust smoke: inherits a little of the heli's motion, then the downwash takes it
       const h = this.heli;
@@ -428,9 +430,11 @@ export class Effects {
         0.5, 2.2, this._sprayCol, 0.5, this._sprayCol, P.droplet);
     }
     this.sparks(x, sea + 0.5, z, '#DCE6FF', 16);
-    const h = this.acquireLight(COLORS.boltHalo, 0, 70);
-    h.position.set(x, sea + 5, z);
-    this.timedLights.push({ handle: h, t: 0, life: reduced ? 0.75 : 0.36, peak: 5000 * k * Math.min(1.3, strength), reduced });
+    // 0.3 s ground glow from the pool: lights the water around the impact without burning it white
+    // (the global flash already lifts the whole frame)
+    const h = this.acquireLight(COLORS.boltHalo, 0, 90);
+    h.position.set(x, sea + 8, z);
+    this.timedLights.push({ handle: h, t: 0, life: reduced ? 0.75 : 0.36, peak: 2200 * k * Math.min(1.3, strength), reduced });
   }
 
   spider(x, z, strength = 0.7) {
@@ -688,12 +692,12 @@ export class Effects {
       sp.emit(t, dw.x + cx * r, sea + 0.25, dw.z + cz * r, cx * v, 1.2 + 2.8 * Math.random() * s, cz * v,
         0.8 + 0.6 * Math.random(), sz, 2.6 + 0.6 * Math.random(), this._sprayCol, (0.3 + 0.25 * Math.random()) * (0.4 + 0.6 * s), this._sprayCol, P.dwSpray);
       if (bio > 0.01) {
-        this._acc.bio += 0.45 * bio;
+        this._acc.bio += 0.75 * bio;
         if (this._acc.bio >= 1) {
           this._acc.bio -= 1;
           const vb = v * (0.6 + 0.4 * Math.random());
           this.pools.glow.emit(t, dw.x + cx * r, sea + 0.2, dw.z + cz * r, cx * vb, 0.6 + 2 * Math.random(), cz * vb,
-            0.5 + 0.6 * Math.random(), 0.16, 0.1, this._bioCol, 0.9, this._bioCol, P.bio);
+            0.5 + 0.6 * Math.random(), 0.42, 0.2, this._bioCol, 0.9, this._bioCol, P.bio);
         }
       }
     }
@@ -710,7 +714,7 @@ export class Effects {
       const a = Math.random() * Math.PI * 2;
       const s = v * (0.3 + 0.7 * Math.random());
       this.pools.glow.emit(this.t, x, y + 0.2, z, Math.cos(a) * s, 0.5 + 2 * Math.random(), Math.sin(a) * s,
-        0.5 + 0.7 * Math.random(), 0.16, 0.1, this._bioCol, 0.9, this._bioCol, P.bio);
+        0.5 + 0.7 * Math.random(), 0.42, 0.2, this._bioCol, 0.9, this._bioCol, P.bio);
     }
   }
 
@@ -785,7 +789,7 @@ export class Effects {
         continue;
       }
       const e = s.reduced ? softEnvelope(s.t) : strokeEnvelope(s.t);
-      this.glows.add(s.x, s.y, s.z, 1.4, this._starCol, 6 * e * s.I, 16, this._haloCol, 0.9 * e * s.I, 1, 0.4);
+      this.glows.add(s.x, s.y, s.z, 1.4, this._starCol, 6 * e * s.I, 10, this._haloCol, 0.6 * e * s.I, 1, 0.4);
     }
     for (let i = this.timedLights.length - 1; i >= 0; i--) {
       const l = this.timedLights[i];

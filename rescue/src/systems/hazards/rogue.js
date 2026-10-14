@@ -66,7 +66,7 @@ void main() {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
-  float life = mix(1.5, 2.9, sp.z);
+  float life = mix(1.2, 2.4, sp.z);
   float tt = uHzTime + sp.x * life * 11.0;
   float age = mod(tt, life);
   float cyc = floor(tt / life);
@@ -80,15 +80,15 @@ void main() {
   // torn off the lip and carried by the wind: with the wind behind the wave the sheet flies ahead of
   // the crest and hangs over the dark front face (the best contrast), against it it trails behind
   float sd = rgStream(C.y);
-  float rel = sd * mix(2.0, 9.0, sp.z) * (0.6 + 0.4 * env);
+  float rel = sd * mix(1.5, 6.5, sp.z) * (0.6 + 0.4 * env);
   float ue = 0.1 * B.y + rel * age;
   vec2 xz = rgPoint(A, ue, v);
   float up = mix(4.0, 10.0, sp.y) * (0.55 + 0.45 * env);
   float y = H * 0.95 + up * age - 4.0 * age * age + 0.6;
   y = max(y, H * rgProfile(ue, B.y) * env + 0.8);
   vec3 p = vec3(xz.x, y, xz.y);
-  float size = mix(1.6, 8.5, pow(a01, 0.6)) * mix(0.7, 1.35, sp.x) * (0.6 + 0.4 * clamp(B.x / 14.0, 0.5, 1.5));
-  float alpha = 0.36 * B.w * smoothstep(0.08, 0.35, env) * smoothstep(0.0, 0.1, a01) * (1.0 - smoothstep(0.45, 1.0, a01));
+  float size = mix(1.1, 5.8, pow(a01, 0.6)) * mix(0.7, 1.3, sp.x) * (0.6 + 0.4 * clamp(B.x / 14.0, 0.5, 1.5));
+  float alpha = 0.24 * B.w * smoothstep(0.08, 0.35, env) * smoothstep(0.0, 0.1, a01) * (1.0 - smoothstep(0.45, 1.0, a01));
   vec4 mv = viewMatrix * vec4(p, 1.0);
   mv.xyz += normalize(-mv.xyz) * size * 0.5;
   float rot = sp.x * 33.0 + age;
@@ -98,7 +98,7 @@ void main() {
   gl_Position = projectionMatrix * mv;
   vUv = c;
   // spray scatters forward: brighter than the foam it was torn from under the same grey sky
-  vec3 light = hzAirLight(p, 0.8) * 1.7 + uAirFlash * 2.0;
+  vec3 light = hzAirLight(p, 0.8) * 0.8 + uAirFlash * 2.0;
   vCol = vec4(uSprayCol * light, alpha);
   vSeed = fract(sp.x * 17.3 + cyc * 0.29);
   vFog = hzFog(p);
@@ -117,7 +117,8 @@ void main() {
   vec2 o = vec2(vSeed * 5.0, vSeed * 2.7);
   float n = texture2D(uAtlas, vUv * 0.32 + o).r;
   float dots = smoothstep(0.78, 0.97, texture2D(uAtlas, vUv * 0.85 + o * 1.3).a);
-  float a = vCol.a * (pow(1.0 - r2, 1.4) * (0.35 + 0.9 * n) + dots * (1.0 - r2));
+  // torn spume: streaky wisps and droplets, never a fog bank over the crest the ocean draws
+  float a = vCol.a * (pow(1.0 - r2, 2.0) * smoothstep(0.25, 0.85, n) * 1.3 + dots * (1.0 - r2));
   vec3 col = mix(vCol.rgb, hzFogColor(vCol.rgb), vFog);
   gl_FragColor = vec4(col, clamp(a * (1.0 - 0.7 * vFog), 0.0, 1.0));
   ${FINISH}
@@ -169,11 +170,11 @@ void main() {
   // streaks along the travel direction, streaming backward off the lip
   float n1 = texture2D(uLace, vec2(vV.x * 0.012, back * 0.05 + uHzTime * 0.35)).r;
   float n2 = texture2D(uAtlas, vec2(vV.x * 0.004 + 0.3, back * 0.02 + uHzTime * 0.12)).r;
-  float streak = smoothstep(0.25, 0.75, 0.55 * n1 + 0.45 * n2);
+  float streak = smoothstep(0.42, 0.8, 0.55 * n1 + 0.45 * n2);
   float a = smoothstep(0.1, 0.45, vV.z) * smoothstep(0.0, 0.12, b01) * pow(1.0 - clamp(b01, 0.0, 1.0), 1.3);
-  a *= (0.25 + 0.75 * streak) * 0.62 * vV.w;
+  a *= (0.1 + 0.9 * streak) * 0.4 * vV.w;
   if (a <= 0.003) discard;
-  vec3 col = uFoamCol * (hzAirLight(vW, 0.9) * 1.4 + uAirFlash * 1.6);
+  vec3 col = uFoamCol * (hzAirLight(vW, 0.9) * 0.75 + uAirFlash * 1.6);
   a *= hzHeliHole(vClip, vW, 0.4);
   col = mix(col, hzFogColor(col), hzFog(vW));
   gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
@@ -389,12 +390,14 @@ export class Rogue {
     return this.height * this.visual * f.env * (prof - 0.35 * Math.exp(-sk * sk));
   }
 
-  // Surface drift: strong push in the wave front (~40 m sweep for a 14 m crest), pull towards the suction.
+  // Surface drift: a push along the travel direction under the crest (≈ 8 m for a 14 m wave) and a pull
+  // towards the suction trough ahead of it. Survivors add their own scripted 40 m carry when the crest
+  // lifts a group (survivors.js ROGUE_SWEEP), so this stays the gentle part: flotsam, dye, everything else.
   addFlow(x, z, out) {
     const f = this.frame(x, z, this._f2 || (this._f2 = {}));
     if (f.env < 0.01 || f.ue < -4 * this.width || f.ue > 4 * this.width) return;
     const W = this.width;
-    const U = 9.0 * Math.sqrt(this.height / 14) * f.env * this.visual;
+    const U = 3.0 * Math.sqrt(this.height / 14) * f.env * this.visual;
     const bump = sech2(f.ue / (f.ue > 0 ? 0.55 * W : 1.3 * W));
     const sk = (f.ue - 1.6 * W) / (0.9 * W);
     const s = U * (bump - 0.22 * Math.exp(-sk * sk));
@@ -433,7 +436,7 @@ export class Rogue {
     this.velocity.set(this.dir.x * this.speed, 0, this.dir.y * this.speed);
 
     if (env.playing && hz.heliAlive) this._telegraph(f);
-    if (env.playing && hz.heliAlive) this._impact(f);
+    if (env.playing && hz.heliAlive && !hz.heliLanded) this._impact(f); // a parked heli rides its deck
     this._sweep();
 
     // crest passed far beyond the heli → let the ocean turn it into the lace scar

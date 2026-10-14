@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { COLORS, clamp01, metres, NBSP } from './common.js';
 
-const RING_COL = new THREE.Color(COLORS.charge).multiplyScalar(1.6);
+const RING_COL = new THREE.Color(COLORS.charge).multiplyScalar(1.1);
 const FLASH_COL = new THREE.Color(COLORS.chargeCore);
 const HIT_DAMAGE = 0.2;
 const EMP_TIME = 4;
@@ -105,7 +105,7 @@ export class Charges {
           const f = reduce ? 0.8 : 2 + 4 * prog;
           c.phase = (c.phase || 0) + f * dt;
           const pulse = reduce ? 0.5 + 0.5 * Math.sin(c.phase * Math.PI * 2) : Math.pow(0.5 + 0.5 * Math.sin(c.phase * Math.PI * 2), 1.5);
-          r.a = clamp01(c.t / 0.25) * (0.55 + 1.1 * prog) * (reduce ? 0.7 : 1);
+          r.a = clamp01(c.t / 0.25) * (0.4 + 0.75 * prog) * (reduce ? 0.7 : 1);
           r.b = pulse;
           r.c = reduce ? 0 : 0.35 + 0.65 * prog;
           r.color.copy(RING_COL);

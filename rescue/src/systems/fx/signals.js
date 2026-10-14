@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { LOOK_GLSL_UNIFORMS } from '../../core/look.js';
 import { AIR_GLSL, FOG_PARS, FINISH, COLORS, fogUniforms, quadGeometry, smooth, toColor } from './common.js';
-import { F_TWINKLE, F_STRETCH } from './particles.js';
+import { F_TWINKLE, F_STRETCH, F_TURB } from './particles.js';
 
 const MAX_GLOWS = 32;
 const MAX_RINGS = 4;
@@ -253,7 +253,7 @@ export class Rings {
 
 // --------------------------------------------------------------------------------------------------
 // Presets for the particles the signals emit (constant objects, no allocation).
-const P_FLARE_SMOKE = { drag: 0.9, accY: 0.7, wind: 0.8, flags: 0, emissive: 0, spin: 0.4 };
+const P_FLARE_SMOKE = { drag: 0.9, accY: 0.7, wind: 0.8, flags: F_TURB, emissive: 0, spin: 0.4 };
 const P_EMBER = { drag: 1.2, accY: -3.5, wind: 0.4, flags: F_TWINKLE | F_STRETCH, emissive: 1, spin: 0 };
 const P_TRAIL = { drag: 0.6, accY: 0.4, wind: 0.6, flags: 0, emissive: 0, spin: 0.3 };
 
@@ -456,12 +456,15 @@ export class Signals {
         r.sx = sx;
         r.sz = sz;
         if (dt > 0 && end > 0.05) {
-          r.trailAcc += dt * 3;
+          // a thin continuous wisp under the parachute (dense enough not to read as a dotted line in a gale)
+          const wl2 = Math.hypot(wind.x, wind.y);
+          r.trailAcc += dt * (4 + 0.6 * wl2);
           while (r.trailAcc >= 1) {
             r.trailAcc -= 1;
+            const back = Math.random() * 0.25;
             fx.pools.smoke.emit(
-              t, r.x + sx, r.y - 0.6, r.z + sz, 0, -0.3, 0,
-              4 + Math.random() * 2, 0.7, 4, this.cTrail, 0.22, this.cSmokeEnd, P_TRAIL,
+              t, r.x + sx - wind.x * back, r.y - 0.6, r.z + sz - wind.y * back, 0, -0.3, 0,
+              3.5 + Math.random() * 2, 0.9, 4.5, this.cTrail, 0.13, this.cSmokeEnd, P_TRAIL,
             );
           }
         }

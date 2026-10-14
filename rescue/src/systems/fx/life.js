@@ -15,6 +15,8 @@ import { LOOK_GLSL_UNIFORMS } from '../../core/look.js';
 import { AIR_GLSL, FOG_PARS, FINISH, COLORS, fogUniforms, quadGeometry, rng32, smooth, clamp01 } from './common.js';
 
 const GULL_PRESETS = new Set(['calm', 'overcast', 'clearing']);
+// Not found yet: 'hidden', or 'drifting' (a rocket / EPIRB gave an approximate fix, nobody has seen them).
+const unseen = (s) => s.state === 'hidden' || (s.state === 'drifting' && !s.spotted);
 const HINGE = 0.08;
 
 // ---------------------------------------------------------------------------------------------------
@@ -296,7 +298,7 @@ export class Gulls {
       if (f.state === 'leave') continue;
       if (f.anchor) {
         const s = f.anchor;
-        if (!list || !list.includes(s) || s.state !== 'hidden') this._leave(f, f.cx, f.cz);
+        if (!list || !list.includes(s) || !unseen(s)) this._leave(f, f.cx, f.cz);
         else ids.add(s);
       } else if (!ambientMode || !this.allowed) this._leave(f, f.cx - wind.x, f.cz - wind.y);
       else ids.add('ambient');
@@ -306,7 +308,7 @@ export class Gulls {
     this._returning = false;
     if (Array.isArray(list)) {
       for (const s of list) {
-        if (!s || s.state !== 'hidden' || !s.position || ids.has(s)) continue;
+        if (!s || !unseen(s) || !s.position || ids.has(s)) continue;
         const n = 3 + (((s.id ?? 0) * 7 + 3) % 3);
         if (!this._spawnFlock(s, s.position.x, s.position.z, n, wind, far).birds.length) {
           this.flocks.pop();
@@ -562,16 +564,20 @@ void main() {
   float L = 240.0;
   vec2 rel = mod(aJ.xy * L + uDrift - focus + 0.5 * L, L) - 0.5 * L;
   vec3 p = vec3(focus.x + rel.x, uSeaLevel - 0.05, focus.y + rel.y);
-  if (aJ.w > uJellyAmt) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
-  float pulse = 0.5 + 0.5 * sin(uFxTime * (1.4 + aJ.z) + aJ.w * 40.0);
-  float size = 0.9 + 0.6 * aJ.z;
+  // they drift in blooms, not as an even sprinkle: a slow noise mask over the sea
+  float bloom = smoothstep(0.48, 0.72, texture2D(uAtlas, p.xz * 0.0035 + vec2(0.31, 0.77)).r);
+  if (aJ.w > uJellyAmt || bloom < 0.02) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  // a bell contracting at ~1 Hz; the light swells on the contraction
+  float ph = uFxTime * (5.0 + 2.5 * aJ.z) + aJ.w * 40.0;
+  float pulse = pow(0.5 + 0.5 * sin(ph), 3.0);
+  float size = (0.55 + 0.55 * aJ.z) * (0.9 - 0.12 * pulse);
   vec4 mv = viewMatrix * vec4(p, 1.0);
-  mv.xy += position.xy * size * (0.85 + 0.15 * pulse);
+  mv.xy += position.xy * size;
   gl_Position = projectionMatrix * mv;
   vQ = position.xy;
   vec3 teal = vec3(0.035, 0.75, 1.0);
   vec3 violet = vec3(0.45, 0.25, 1.0);
-  vC = mix(teal, violet, step(0.7, fract(aJ.w * 9.1))) * (0.25 + 0.75 * pulse * pulse) * 0.9 * (1.0 - fxFog(p))
+  vC = mix(teal, violet, step(0.75, fract(aJ.w * 9.1))) * (0.12 + 0.5 * pulse) * bloom * (1.0 - fxFog(p))
      * (1.0 - smoothstep(0.35, 0.5, max(abs(rel.x), abs(rel.y)) / L));
 }
 `;
@@ -581,7 +587,8 @@ varying vec3 vC;
 void main() {
   float r2 = dot(vQ, vQ);
   if (r2 > 1.0) discard;
-  float a = exp(-r2 * 3.0) * 0.8 + exp(-abs(sqrt(r2) - 0.55) * 18.0) * 0.35;
+  // seen through a little water: a soft core and a faint rim of the bell
+  float a = exp(-r2 * 4.0) * 0.7 + exp(-abs(sqrt(r2) - 0.6) * 14.0) * 0.3;
   gl_FragColor = vec4(vC * a, 1.0);
   ${FINISH}
 }

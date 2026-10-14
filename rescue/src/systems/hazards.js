@@ -89,6 +89,7 @@ export class Hazards {
     this._hailOut = 0;
     this._debrisCd = 0;
     this._hailDmg = { acc: 0, t: 0 };
+    this.mediaGain = 1; // light calibration of hazard media (funnel, collar, spray) — tuning hook
     this._fallbackSt = { palette: {}, windDir: new THREE.Vector2(1, 0), windSpeed: 0, night: 0, flash: 0, intensity: 0, waveHeight: 0.5 };
 
     const ev = ctx.events;
@@ -247,14 +248,22 @@ export class Hazards {
   }
 
   // Rogue-wave part of the sea height (m). INFO ONLY: ocean.heightAt already includes it.
+  // While a rogue is running this is the ocean's own feature height (exactly what is drawn, Lagrangian
+  // inversion included); the analytic crest is the fallback for a stub ocean.
   waveLiftAt(x, z) {
     let s = 0;
+    let any = false;
     const list = this.list;
     for (let i = 0; i < list.length; i++) {
       const h = list[i];
-      if (h.type === 'rogue' && h.alive) s += h.lift(x, z);
+      if (h.type === 'rogue' && h.alive) {
+        any = true;
+        s += h.lift(x, z);
+      }
     }
-    return s;
+    if (!any) return 0;
+    const o = this.ocean;
+    return o && typeof o.featureHeightAt === 'function' ? o.featureHeightAt(x, z) : s;
   }
 
   dangerAt(x, z, altitude = 20) {
@@ -627,11 +636,11 @@ export class Hazards {
         // one warning per approach: «СМЕРЧ · 550 М» (caution), or straight to danger when already close
         h.warned600 = true;
         h.warned300 = near;
-        this.warn({ type: h.type, hazard: h, eta: h.eta, distance: d, stage: near ? 'near' : 'approach', level: d < 300 ? 'danger' : 'caution', text: `${h.label} · ${metres(d)}` });
+        this.warn({ type: h.type, hazard: h, eta: h.eta, distance: d, stage: near ? 'near' : 'approach', level: d < 300 ? 'danger' : 'caution', text: `${h.label} · ${d < 75 ? 'РЯДОМ' : metres(d)}` });
       } else if (h.warned600 && d > 800) h.warned600 = false;
       if (!h.warned300 && near) {
         h.warned300 = true;
-        this.warn({ type: h.type, hazard: h, eta: h.eta, distance: d, stage: 'near', level: 'danger', text: `${h.label} · ${metres(d)}` });
+        this.warn({ type: h.type, hazard: h, eta: h.eta, distance: d, stage: 'near', level: 'danger', text: `${h.label} · ${d < 75 ? 'РЯДОМ' : metres(d)}` });
       } else if (h.warned300 && d > 450) h.warned300 = false;
     }
     // core: thrust ×0.4 (heli reads coreRadius/stage), +updraft (forceAt), 6 %/s (tornado 10 %/s)
@@ -758,17 +767,27 @@ export class Hazards {
     this.uniforms.uQuality.value = QUALITY_K[this.ctx.settings.get('quality')] ?? 1;
   }
 
-  // Light on hazard media (same calibration as fx's scattering media), flash, beam, heli screen hole.
+  // Light on hazard media (spray, condensation, cloud): the palette's ambient + sun, normalised so that a
+  // daytime storm still shows the funnels in their nominal greys (DESIGN pillar 8 «читаемо в худшем
+  // кадре»): dark daytime presets are lifted up to ×3.2, bright ones are left alone, night is not lifted
+  // (there the searchlight, the flash and a faint floor carry the read).
   _updateUniforms(st) {
     const u = this.uniforms;
     const p = st.palette || {};
     const night = clamp01(Number(st.night) || 0);
-    if (p.ambient && p.ambient.isColor) u.uAirAmb.value.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 2.2);
-    else u.uAirAmb.value.setRGB(0.45, 0.5, 0.52);
+    const amb = u.uAirAmb.value;
+    const sun = u.uAirSun.value;
+    if (p.ambient && p.ambient.isColor) amb.copy(p.ambient).multiplyScalar((p.ambientIntensity ?? 0.6) * 2.2);
+    else amb.setRGB(0.45, 0.5, 0.52);
     const sd = st.sunDirVisual || st.sunDir;
     const sunY = sd ? Math.max(0, sd.y) : 0.6;
-    if (p.sun && p.sun.isColor) u.uAirSun.value.copy(p.sun).multiplyScalar((p.sunIntensity ?? 1) * (0.25 + 0.75 * sunY) * 1.1);
-    else u.uAirSun.value.setRGB(0.5, 0.48, 0.45);
+    if (p.sun && p.sun.isColor) sun.copy(p.sun).multiplyScalar((p.sunIntensity ?? 1) * (0.25 + 0.75 * sunY) * 1.1);
+    else sun.setRGB(0.5, 0.48, 0.45);
+    const lum = 0.2126 * (amb.r + 0.6 * sun.r) + 0.7152 * (amb.g + 0.6 * sun.g) + 0.0722 * (amb.b + 0.6 * sun.b);
+    const lift = 1 + (Math.min(3.2, Math.max(1, 1.1 / Math.max(lum, 1e-3))) - 1) * (1 - smooth(0.35, 0.8, night));
+    const g = lift * this.mediaGain;
+    amb.multiplyScalar(g);
+    sun.multiplyScalar(g);
     if (sd) u.uAirSunDir.value.copy(sd);
     const flash = clamp01(Number(st.flash) || 0);
     if (st.flashColor && st.flashColor.isColor) u.uAirFlash.value.copy(st.flashColor).multiplyScalar(flash);

@@ -410,7 +410,9 @@ export class LightningFx {
         reveal = Math.min(1, t / 0.035);
         if (s.reduced) I = softEnvelope(t) * 0.3;
         else {
-          I = t < 0.035 ? 0.35 : strokeEnvelope(t - 0.035);
+          // in phase with weather's flash envelope (same strokes at 0 / 110 / 230 ms): a bolt that lags
+          // the global flash goes dim exactly when the whole sea lights up and vanishes in it
+          I = strokeEnvelope(t);
           branch = Math.exp(-Math.max(0, t - 0.035) * 22);
         }
       } else {
@@ -429,7 +431,7 @@ export class LightningFx {
       // a shapeless white cloud — ×6 keeps a crisp spear with a strong glow. The 6 m halo is a soft
       // gaussian that must not saturate (it would read as a solid band).
       const coreGain = s.kind === 'bolt' ? 8 : 3;
-      const haloGain = s.kind === 'bolt' ? 0.5 : 0.35;
+      const haloGain = s.kind === 'bolt' ? 0.32 : 0.35;
       cu.uI.value = I * coreGain;
       hu.uI.value = I * haloGain;
       cu.uBranchI.value = hu.uBranchI.value = branch;

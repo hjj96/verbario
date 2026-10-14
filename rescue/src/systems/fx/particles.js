@@ -20,6 +20,7 @@ export const F_STRETCH = 2; // stretched along the screen-space velocity
 export const F_TWINKLE = 4; // glow flicker
 export const F_FLOAT = 8; // never sinks below the sea surface (drifting smoke at the water line)
 export const F_BIO = 16; // bioluminescent: only visible at night, teal
+export const F_TURB = 32; // smoke turbulence: the plume meanders (puffs born together drift together)
 
 const ATTRS = ['iA', 'iB', 'iC', 'iD', 'iE', 'iF'];
 
@@ -69,6 +70,13 @@ void main() {
     p.xz = uDownwash.xy + d;
     p.y -= 4.5 * s * age;
     p.y = max(p.y, uSeaLevel + 0.4 + 0.35 * uHs);
+  }
+  if (hasFlag(flags, ${F_TURB.toFixed(1)})) {
+    // coherent meander: the noise phase follows the birth time, so neighbouring puffs share it and
+    // the plume snakes and widens instead of growing as a straight tube
+    vec2 nuv = iA.xz * 0.013 + vec2(iA.w * 0.045, -iA.w * 0.031);
+    vec2 nn = vec2(texture2D(uAtlas, nuv).r, texture2D(uAtlas, nuv + vec2(0.37, 0.71)).r) - 0.5;
+    p.xz += nn * pow(age, 1.25) * 1.6;
   }
   if (hasFlag(flags, ${F_FLOAT.toFixed(1)})) p.y = max(p.y, uSeaLevel + 0.25 + 0.3 * uHs);
 
@@ -139,16 +147,17 @@ const FRAG = {
     if (r > 1.0) discard;
     vec2 o = vec2(vSeed * 5.0, vSeed * 2.1);
     vec2 drift = vec2(0.05, 0.11) * vAge;
-    float n = texture2D(uAtlas, vUv * 0.32 + o + drift).r;
-    float n2 = texture2D(uAtlas, vUv * 0.75 + o * 1.3 - drift).g;
-    float shape = 1.0 - smoothstep(0.15, 1.0, r);
-    // older puffs get torn into wisps
-    float erosion = smoothstep(0.2 + 0.55 * vAge, 0.7 + 0.3 * vAge, n * 0.9 + shape * 0.5);
-    float dens = shape * erosion * (0.65 + 0.7 * (1.0 - n2)) * (1.0 - 0.45 * vAge);
-    // fake volume: the sun-facing side of the puff is brighter
+    // billows (3–4 per puff) + finer detail; older puffs get torn into wisps at the edges
+    float n = texture2D(uAtlas, vUv * 0.45 + o + drift).r;
+    float n2 = texture2D(uAtlas, vUv * 1.15 + o * 1.3 - drift).r;
+    float billow = n * 0.65 + n2 * 0.35;
+    float shape = 1.0 - smoothstep(0.1, 1.0, r);
+    float erosion = smoothstep(0.18 + 0.48 * vAge, 0.6 + 0.3 * vAge, billow * 0.85 + shape * 0.55);
+    float dens = shape * erosion * (1.0 - 0.35 * vAge);
+    // fake volume: the sun-facing side of the puff is brighter, thin billows darker (self-shadow)
     vec3 nrm = normalize(vec3(vUv, sqrt(max(0.0, 1.0 - r * r))));
     float lit = 0.72 + 0.4 * clamp(dot(nrm.xy, normalize(vSun + 1e-4)) * length(vSun), -1.0, 1.0);
-    vec3 col = vCol.rgb * lit * (0.85 + 0.3 * n);
+    vec3 col = vCol.rgb * lit * (0.72 + 0.45 * billow);
     col = mix(col, fogColorOr(col), vFog);
     gl_FragColor = vec4(col, clamp(vCol.a * dens * (1.0 - 0.6 * vFog), 0.0, 1.0));
   `,
@@ -180,9 +189,9 @@ vec3 fogColorOr(vec3 c) {
 
 // Per-kind material defaults.
 const KIND = {
-  spray: { blending: THREE.NormalBlending, fadeIn: 0.05, fadeOut: 0.55, growth: 0.6, push: 0.6, beam: 4.0, light: 0.5, sun: 0.5 },
-  smoke: { blending: THREE.NormalBlending, fadeIn: 0.05, fadeOut: 0.3, growth: 0.5, push: 0.5, beam: 2.0, light: 0.6, sun: 0.55 },
-  glow: { blending: THREE.AdditiveBlending, fadeIn: 0.02, fadeOut: 0.5, growth: 1.0, push: 0.2, beam: 0.0, light: 0.0, sun: 0.0 },
+  spray: { blending: THREE.NormalBlending, stretch: 0.14, fadeIn: 0.05, fadeOut: 0.55, growth: 0.6, push: 0.6, beam: 4.0, light: 0.5, sun: 0.5 },
+  smoke: { blending: THREE.NormalBlending, stretch: 0.06, fadeIn: 0.05, fadeOut: 0.45, growth: 0.5, push: 0.5, beam: 2.0, light: 0.6, sun: 0.55 },
+  glow: { blending: THREE.AdditiveBlending, stretch: 0.06, fadeIn: 0.02, fadeOut: 0.5, growth: 1.0, push: 0.2, beam: 0.0, light: 0.0, sun: 0.0 },
 };
 
 export class ParticlePool {
@@ -222,7 +231,7 @@ export class ParticlePool {
         uFadeIn: { value: K.fadeIn },
         uFadeOut: { value: K.fadeOut },
         uGrowth: { value: K.growth },
-        uStretch: { value: 0.06 },
+        uStretch: { value: K.stretch },
         uBeamGain: { value: K.beam },
         uLightGain: { value: K.light },
         uSunGain: { value: K.sun },
@@ -278,15 +287,24 @@ export class ParticlePool {
     this.emitted++;
   }
 
-  // Upload the slots written this frame (one contiguous range; a wrap-around marks the whole span).
+  // Upload the slots written since the last upload as one contiguous range (a wrap-around marks the
+  // whole span). The renderer clears `updateRanges` once it has uploaded them, so updates that were
+  // never rendered (a hidden pool, a fast-forwarding test) merge into the pending range instead of
+  // overwriting it.
   flush() {
     if (this.dirtyHi < 0) return;
-    const start = this.dirtyLo * 4;
-    const count = (this.dirtyHi - this.dirtyLo + 1) * 4;
+    let lo = this.dirtyLo;
+    let hi = this.dirtyHi;
+    const pending = this.geometry.attributes.iA.updateRanges;
+    if (pending.length) {
+      const s0 = pending[0].start / 4;
+      lo = Math.min(lo, s0);
+      hi = Math.max(hi, s0 + pending[0].count / 4 - 1);
+    }
     for (const a of ATTRS) {
       const attr = this.geometry.attributes[a];
       attr.clearUpdateRanges();
-      attr.addUpdateRange(start, count);
+      attr.addUpdateRange(lo * 4, (hi - lo + 1) * 4);
       attr.needsUpdate = true;
     }
     this.dirtyLo = Infinity;
