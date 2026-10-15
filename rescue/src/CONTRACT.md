@@ -26,6 +26,11 @@ Game design (what to build and why) lives in `../DESIGN.md`. If the two disagree
   directional with shadows, hemisphere), heli 2 (searchlight SpotLight, belly/beacon PointLight),
   fx 4 pooled PointLights (flares, lightning ground glow, fires) via `fx.acquireLight()`, world 2
   (lighthouse beam SpotLight, ship deck PointLight). Everything else that glows = emissive materials + bloom.
+* **Shader warm-up** (`core/warmup.js`, DESIGN §8.1): after the first frame, after every `mission:setup` and
+  after a quality change, `main.js` pre-compiles **every material in the scene graph, hidden ones included**
+  (`compileAsync` + one frame with hidden objects shown, so shadow-depth programs build too). So create effect
+  materials/meshes up front (pooled, `visible = false` or instance `count = 0`) and attach them to the scene;
+  a material first created or a `defines` value first set at spawn time compiles on that frame (a stall).
 * Shadows: only the weather sun casts shadows (shadow camera follows the heli, ~250 m box). Heli,
   ships, rig, survivors' rafts `castShadow = true`; ocean `receiveShadow = true`.
 
@@ -68,6 +73,7 @@ class SomeSystem {
 | `mode` / `setMode(m)` | `'title' | 'briefing' | 'play' | 'paused' | 'debrief'`. **Only `mission` calls `setMode`.** Emits `game:mode {from,to}` |
 | `timeScale` | slow-mo hook (mission/cameraRig may set briefly, e.g. 0.3 for a dramatic moment) |
 | `debug`, `params` | `?debug` flag, URL params (e.g. `?mission=3`, `?weather=storm`, `?quality=low`) |
+| `warmup` | read-only shader warm-up state `'due'|'compiling'|'render'|'idle'` (tests wait for `'idle'`) |
 | systems | `weather, ocean, world, hazards, heli, survivors, fx, cameraRig, radio, mission, audio, hud, post` |
 
 ### Input actions (`core/input.js`, bindings by `event.code`, never Ctrl)

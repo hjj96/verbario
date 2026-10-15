@@ -275,7 +275,7 @@ export class World {
       for (const o of rig.obstacles) this.obstacles.push(o);
     }
 
-    // Rocks (fog pinnacles, reefs): one merged mesh, obstacles, surf. A boat aground gets a low
+    // Rocks (fog pinnacles, reefs): a mesh per rock, obstacles, surf. A boat aground gets a low
     // drying ledge under its bow (heading convention: forward = (sin h, −cos h)).
     const ledges = (props.boats || []).filter((b) => b.aground).map((b) => {
       const h = b.heading || 0;
@@ -298,12 +298,12 @@ export class World {
     this._updateShoals(true);
   }
 
-  // Rocks (fog pinnacles, reefs, «Кошки»): granite heightfields merged into one mesh + boulders
-  // (world/landforms.js); obstacles keep the defined radius/height, surf rings hug the coastline.
+  // Rocks (fog pinnacles, reefs, «Кошки»): one granite heightfield + boulders per rock, culled per
+  // rock (world/landforms.js); obstacles keep the defined radius/height, surf rings hug the coastline.
   _buildRocks(list, seed) {
     if (!list.length) return;
     this.rockField = createRockField(this, list, seed, this.ctx.settings.get('quality'));
-    this.rocks = this.rockField.terrain;
+    this.rocks = this.rockField.group;
     this.root.add(this.rockField.group);
     for (const o of this.rockField.obstacles) this.obstacles.push(o);
     this._shoals.push(...this.rockField.shoals);

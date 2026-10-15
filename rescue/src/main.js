@@ -6,6 +6,7 @@ import { Input } from './core/input.js';
 import { createRng, createNoise2D } from './core/math.js';
 import { Settings } from './core/settings.js';
 import { Look } from './core/look.js';
+import { compileScene, renderHidden } from './core/warmup.js';
 import * as Stubs from './core/stubs.js';
 
 // Update order matters: producers of state run before consumers.
@@ -147,10 +148,41 @@ async function boot() {
     for (const key of order) ctx[key].resize?.(w, h);
   };
   window.addEventListener('resize', onResize);
-  settings.onChange(() => onResize());
+
+  // Shader warm-up (DESIGN §8.1, see core/warmup.js): 'due' → 'compiling' (async, off the main thread where
+  // KHR_parallel_shader_compile exists) → 'render' (one frame with hidden objects shown) → 'idle'.
+  // Runs after the first frame (weather has baked scene.environment, which keys the lit programs) and again
+  // whenever a mission setup or a quality change brings new objects or shader variants.
+  let warm = 'due';
+  const offscreen = !(ctx.post instanceof Stubs.PostFX); // the composer draws the scene into a linear target
+  const startWarmup = () => {
+    warm = 'compiling';
+    Promise.resolve()
+      .then(() => compileScene(renderer, scene, camera, { offscreen }))
+      .catch((err) => console.warn('[boot] shader warm-up failed', err))
+      .then(() => {
+        if (warm === 'compiling') warm = 'render'; // a setup during the compile re-queued it ('due')
+      });
+  };
+  Object.defineProperty(ctx, 'warmup', { get: () => warm, enumerable: true }); // tests: wait for 'idle'
+  ctx.events.on('mission:setup', () => (warm = 'due'));
+  settings.onChange((key) => {
+    onResize();
+    if (key === 'quality') warm = 'due';
+  });
 
   ctx.events.emit('game:ready', {});
   document.body.classList.add('ready');
+
+  const render = (dt) => {
+    try {
+      if (ctx.post && ctx.post.render) ctx.post.render(dt);
+      else renderer.render(scene, camera);
+    } catch (err) {
+      console.error('[loop] render failed', err);
+      renderer.render(scene, camera);
+    }
+  };
 
   let last = performance.now();
   const failed = new Set();
@@ -181,13 +213,13 @@ async function boot() {
       }
     }
 
-    try {
-      if (ctx.post && ctx.post.render) ctx.post.render(realDt);
-      else renderer.render(scene, camera);
-    } catch (err) {
-      console.error('[loop] render failed', err);
-      renderer.render(scene, camera);
+    // The warm-up frame is drawn before the real one, so only the real frame reaches the screen.
+    if (warm === 'render') {
+      warm = 'idle';
+      renderHidden(scene, () => render(0));
     }
+    render(realDt);
+    if (warm === 'due') startWarmup();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

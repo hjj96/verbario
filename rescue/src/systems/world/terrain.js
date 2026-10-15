@@ -251,7 +251,10 @@ export function makeHeightFn(def) {
 // Grid sampling → mesh + sampler.
 //   opts.cover(x, z, h, ny, cav, shel) → 0..1 ground-cover weight; opts.bird(x, z, h, hmax) → 0..1
 //   opts.scaleTo: rescale the land part so the summit is exactly this high (rocks keep their H)
-export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover = null, bird = null, scaleTo = 0, height = null, skirt = 0, skirtDepth = -10 } = {}) {
+//   opts.shadowStride: also append a coarse shadow-only copy (every n-th grid line) after the fine
+//   triangles — geometry.drawRange covers the fine part, geometry.userData.shadowRange the coarse one
+//   (see shadowLod below)
+export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover = null, bird = null, scaleTo = 0, height = null, skirt = 0, skirtDepth = -10, shadowStride = 0 } = {}) {
   const fn = height || makeHeightFn(def);
   const nx = Math.max(2, Math.ceil((x1 - x0) / step) + 1);
   const nz = Math.max(2, Math.ceil((z1 - z0) / step) + 1);
@@ -362,7 +365,43 @@ export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover 
       else idx.push(A, C, Bv, Bv, C, D);
     }
   }
-  const pos = new Float32Array(used * 3), nrm = new Float32Array(used * 3), ter = new Float32Array(used * 4);
+  const fineCount = idx.length;
+  // shadow LOD: cells of `shadowStride` grid steps over the land above the waterline. Corner heights
+  // are min-pooled over the neighbouring fine vertices so the proxy stays under the rendered surface
+  // (no false self-shadowing); it gets its own vertices (only position matters to the depth pass).
+  const cpos = [];
+  if (shadowStride > 1) {
+    const s = shadowStride, rp = Math.ceil(s / 2);
+    const cx = Math.ceil((nx - 1) / s) + 1, cz = Math.ceil((nz - 1) / s) + 1;
+    const cmap = new Int32Array(cx * cz).fill(-1);
+    const gi = (I) => Math.min(I * s, nx - 1), gj = (J) => Math.min(J * s, nz - 1);
+    const cv = (I, J) => {
+      const k = J * cx + I;
+      if (cmap[k] < 0) {
+        const i = gi(I), j = gj(J);
+        let h = Infinity;
+        for (let jj = Math.max(0, j - rp); jj <= Math.min(nz - 1, j + rp); jj++) for (let ii = Math.max(0, i - rp); ii <= Math.min(nx - 1, i + rp); ii++) h = Math.min(h, H[jj * nx + ii]);
+        cmap[k] = used + cpos.length / 3;
+        cpos.push(x0 + i * step, h, z0 + j * step);
+      }
+      return cmap[k];
+    };
+    for (let J = 0; J < cz - 1; J++) {
+      for (let I = 0; I < cx - 1; I++) {
+        let hm = -Infinity;
+        for (let j = gj(J); j <= gj(J + 1); j++) for (let i = gi(I); i <= gi(I + 1); i++) hm = Math.max(hm, H[j * nx + i]);
+        if (hm < -0.5) continue; // under the sea surface: nothing to shade
+        const A = cv(I, J), Bv = cv(I + 1, J), C = cv(I, J + 1), D = cv(I + 1, J + 1);
+        const ha = cpos[(A - used) * 3 + 1], hb = cpos[(Bv - used) * 3 + 1], hc = cpos[(C - used) * 3 + 1], hd = cpos[(D - used) * 3 + 1];
+        if (Math.abs(ha - hd) < Math.abs(hb - hc)) idx.push(A, C, D, A, D, Bv);
+        else idx.push(A, C, Bv, Bv, C, D);
+      }
+    }
+  }
+  const nv = used + cpos.length / 3;
+  const pos = new Float32Array(nv * 3), nrm = new Float32Array(nv * 3), ter = new Float32Array(nv * 4);
+  pos.set(cpos, used * 3);
+  for (let k = used; k < nv; k++) nrm[k * 3 + 1] = 1;
   for (let id = 0; id < N; id++) {
     const k = remap[id];
     if (k < 0) continue;
@@ -382,13 +421,26 @@ export function buildTerrain(def, { x0, z0, x1, z1, step = 1, cut = -2.2, cover 
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
   g.setAttribute('aTerr', new THREE.BufferAttribute(ter, 4));
-  g.setIndex(used > 65535 ? new THREE.BufferAttribute(new Uint32Array(idx), 1) : new THREE.BufferAttribute(new Uint16Array(idx), 1));
+  g.setIndex(nv > 65535 ? new THREE.BufferAttribute(new Uint32Array(idx), 1) : new THREE.BufferAttribute(new Uint16Array(idx), 1));
   g.computeBoundingSphere();
   g.computeBoundingBox();
+  g.setDrawRange(0, fineCount);
+  if (idx.length > fineCount) g.userData.shadowRange = [fineCount, idx.length - fineCount];
 
   const sampler = makeSampler({ x0, z0, nx, nz, step, H, NY, COV, SHL, CAV });
   sampler.hmax = hmax;
-  return { geometry: g, sampler, triangles: idx.length / 3 };
+  return { geometry: g, sampler, triangles: fineCount / 3 };
+}
+
+// Draw a buildTerrain mesh's coarse range in the shadow pass only (three calls onBeforeShadow right
+// before the depth draw and reads drawRange at draw time); the main pass keeps the fine range.
+export function shadowLod(mesh) {
+  const g = mesh.geometry, r = g.userData.shadowRange;
+  if (!r) return mesh;
+  const fine = g.drawRange.count;
+  mesh.onBeforeShadow = () => g.setDrawRange(r[0], r[1]);
+  mesh.onAfterShadow = () => g.setDrawRange(0, fine);
+  return mesh;
 }
 
 function boxBlur(src, nx, nz, r) {

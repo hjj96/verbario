@@ -5,13 +5,17 @@
 // flats below keep every structure seated: pad plinth, tower plinth, keeper's house, shed, fuel
 // station, radio mast + guy anchors, walkway steps, jetty root, and the jetty channel stays wet.
 import * as THREE from 'three';
-import { buildTerrain, coverRule, fitShoals, sstep, hash01, boulderGeometry, scatterBoulders, terrainColumns } from './terrain.js';
+import { buildTerrain, coverRule, fitShoals, sstep, hash01, boulderGeometry, scatterBoulders, terrainColumns, shadowLod } from './terrain.js';
 import { createTerrainMaterial, terrainUniforms } from './terrainMaterial.js';
 import { Vegetation } from './vegetation.js';
 import { rng } from './geo.js';
 
-// Grid spacing per quality tier (m): crisp at 100 m, cheap on low.
-export const TERRAIN_STEP = { high: 0.62, medium: 0.85, low: 1.3 };
+// Grid spacing per quality tier (m): crisp at 100 m, cheap on low. High stays at 0.8: the island and
+// its three rocks share the 400k-triangle frame with the sea round the home base.
+export const TERRAIN_STEP = { high: 0.8, medium: 0.85, low: 1.3 };
+// Shadow casters use a coarse copy of each landmass (~1.8 m cells; terrain.js shadowLod): the cast
+// shadow on the sea and the crags' self-shadowing read the same at a fraction of the triangles.
+const shadowStride = (step) => Math.max(2, Math.round(1.8 / step));
 
 // ------------------------------------------------------------------------------------------------
 // «Скалистый»
@@ -134,7 +138,7 @@ export function buildIslandTerrain(quality = 'high') {
   };
   const step = TERRAIN_STEP[quality] || TERRAIN_STEP.high;
   const t0 = performance.now();
-  const T = buildTerrain(def, { ...ISLAND_BOUNDS, step, cover, cut: -1.4, skirt: 9, skirtDepth: -10 });
+  const T = buildTerrain(def, { ...ISLAND_BOUNDS, step, cover, cut: -1.4, skirt: 9, skirtDepth: -10, shadowStride: shadowStride(step) });
   T.ms = performance.now() - t0;
   T.def = def;
   T.shoals = fitShoals(T.sampler, 4, { minR: 6, margin: 2 });
@@ -205,7 +209,7 @@ export function buildRockTerrain(rk, seed, quality = 'high') {
   // bird rocks: guano-whitened crowns and ledges on the stacks
   const birdK = 0.85 * D.spire; // only the stacks hold seabird colonies
   const bird = (x, z, h, hmax) => birdK * sstep(0.45, 0.9, h / Math.max(1, hmax));
-  const T = buildTerrain(D.def, { ...D.bounds, step, cover, bird, cut: -1.4, scaleTo: D.H, skirt: 7, skirtDepth: -10 });
+  const T = buildTerrain(D.def, { ...D.bounds, step, cover, bird, cut: -1.4, scaleTo: D.H, skirt: 7, skirtDepth: -10, shadowStride: shadowStride(step) });
   T.shoals = fitShoals(T.sampler, 1, { minR: 2, margin: 1.5 });
   T.rock = D;
   T.def = D.def;
@@ -220,9 +224,9 @@ export function terrainMaterial(W, quality) {
 }
 const BOULDER_SEG = { high: [12, 9], medium: [10, 7], low: [8, 6] };
 const BOULDERS = { high: 1, medium: 0.75, low: 0.45 };
-function boulderMesh(W, list, quality, name) {
+function boulderMesh(W, list, quality, name, shared = null) {
   const [ws, hs] = BOULDER_SEG[quality] || BOULDER_SEG.high;
-  const geo = boulderGeometry(7, ws, hs);
+  const geo = shared || boulderGeometry(7, ws, hs);
   const mesh = new THREE.InstancedMesh(geo, terrainMaterial(W, quality), Math.max(1, list.length));
   mesh.name = name;
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
@@ -247,7 +251,7 @@ function boulderCount(mesh, q) {
 function tris(mesh) {
   if (!mesh || !mesh.visible) return 0;
   const g = mesh.geometry;
-  const n = (g.index ? g.index.count : g.attributes.position.count) / 3;
+  const n = Math.min(g.index ? g.index.count : g.attributes.position.count, g.drawRange.count) / 3;
   return mesh.isInstancedMesh ? n * mesh.count : n;
 }
 
@@ -261,10 +265,10 @@ export function createIsland(W, quality = 'high') {
   terrain.name = 'island-terrain';
   terrain.castShadow = true;
   terrain.receiveShadow = true;
-  group.add(terrain);
+  group.add(shadowLod(terrain));
   const r = rng(T.def.seed);
   const bl = scatterBoulders(T.sampler, r, { ...ISLAND_BOUNDS, count: 46, erratics: 6, avoid: (x, z) => islandClear(x, z, 1.5) });
-  const boulders = boulderMesh(W, bl, 'high', 'island-boulders');
+  const boulders = boulderMesh(W, bl, quality, 'island-boulders');
   group.add(boulders);
   const veg = new Vegetation(W.look, W.shared, T.sampler, { quality, seed: T.def.seed + 1, bounds: ISLAND_BOUNDS, clear: islandClear, pathDist });
   group.add(veg.group);
@@ -299,19 +303,21 @@ export function createIsland(W, quality = 'high') {
   return land;
 }
 
-// Props rocks: every rock's heightfield merged into one mesh + one boulder mesh.
+// Props rocks: one terrain mesh + one boulder mesh per rock (shared material), so the main and
+// shadow passes cull every rock on its own — the field spans the whole mission area.
 export function createRockField(W, list, seed, quality = 'high') {
   const r = rng(seed * 31 + 5);
   const group = new THREE.Group();
   group.name = 'rocks';
-  const geos = [];
   const obstacles = [];
   const shoals = [];
-  const bl = [];
+  const rocks = [];
+  const mat = terrainMaterial(W, quality);
+  const [ws, hs] = BOULDER_SEG[quality] || BOULDER_SEG.high;
+  const bgeo = boulderGeometry(7, ws, hs); // one shape for every rock's boulders
   for (const rk of list) {
     const s0 = Math.floor(r() * 1000) + 1;
     const T = buildRockTerrain(rk, s0, quality);
-    geos.push(T.geometry);
     const R = T.rock.R, H = T.rock.H;
     // collision: columns fitted to the rendered rock (crag, buttresses, shoulders above 2.5 m)
     for (const o of terrainColumns(T.sampler, T.rock.bounds, { cell: Math.max(5, Math.min(9, R * 0.4)), min: 2.5 })) {
@@ -320,66 +326,44 @@ export function createRockField(W, list, seed, quality = 'high') {
     for (const sh of T.shoals) shoals.push(sh);
     const br = rng(s0 + 77);
     const b = T.rock.bounds;
-    bl.push(...scatterBoulders(T.sampler, br, { ...b, count: Math.round(4 + R * 0.25), erratics: H / R < 0.8 ? 2 : 0 }));
+    const bl = scatterBoulders(T.sampler, br, { ...b, count: Math.round(4 + R * 0.25), erratics: H / R < 0.8 ? 2 : 0 });
+    const terrain = new THREE.Mesh(T.geometry, mat);
+    terrain.name = 'rock-terrain';
+    terrain.castShadow = true;
+    terrain.receiveShadow = true;
+    group.add(shadowLod(terrain));
+    const boulders = bl.length ? boulderMesh(W, bl, quality, 'rock-boulders', bgeo) : null;
+    if (boulders) group.add(boulders);
+    rocks.push({ terrain, boulders });
   }
-  const geo = mergeTerrain(geos);
-  for (const g of geos) g.dispose();
-  const mat = terrainMaterial(W, quality);
-  const terrain = new THREE.Mesh(geo, mat);
-  terrain.name = 'world-rocks';
-  terrain.castShadow = true;
-  terrain.receiveShadow = true;
-  group.add(terrain);
-  const boulders = boulderMesh(W, bl, 'high', 'rock-boulders');
-  group.add(boulders);
   const field = {
     group,
-    terrain,
-    boulders,
+    rocks,
     obstacles,
     shoals,
     setQuality(q) {
-      boulderCount(boulders, q);
+      for (const rk of rocks) boulderCount(rk.boulders, q);
     },
     stats() {
-      return { terrain: tris(terrain), boulders: tris(boulders), draws: 2 };
+      let terrain = 0, boulders = 0, draws = 0;
+      for (const rk of rocks) {
+        terrain += tris(rk.terrain);
+        boulders += tris(rk.boulders);
+        draws += rk.boulders ? 2 : 1;
+      }
+      return { terrain, boulders, draws };
     },
     dispose() {
       group.removeFromParent();
-      geo.dispose();
-      boulders.geometry.dispose();
-      boulders.dispose?.();
+      for (const rk of rocks) {
+        rk.terrain.geometry.dispose();
+        rk.boulders?.dispose?.();
+      }
+      bgeo.dispose();
     },
   };
   field.setQuality(quality);
   return field;
-}
-
-function mergeTerrain(geos) {
-  let nv = 0, ni = 0;
-  for (const g of geos) {
-    nv += g.attributes.position.count;
-    ni += g.index.count;
-  }
-  const pos = new Float32Array(nv * 3), nrm = new Float32Array(nv * 3), ter = new Float32Array(nv * 4);
-  const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
-  let ov = 0, oi = 0;
-  for (const g of geos) {
-    pos.set(g.attributes.position.array, ov * 3);
-    nrm.set(g.attributes.normal.array, ov * 3);
-    ter.set(g.attributes.aTerr.array, ov * 4);
-    const src = g.index.array;
-    for (let i = 0; i < src.length; i++) idx[oi + i] = src[i] + ov;
-    ov += g.attributes.position.count;
-    oi += src.length;
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
-  g.setAttribute('aTerr', new THREE.BufferAttribute(ter, 4));
-  g.setIndex(new THREE.BufferAttribute(idx, 1));
-  g.computeBoundingSphere();
-  return g;
 }
 
 // Per-frame / settings hooks for the world.

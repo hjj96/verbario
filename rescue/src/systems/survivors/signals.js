@@ -17,12 +17,16 @@ const _p = new THREE.Vector3();
 
 const num = (v, d) => (v === true ? Math.max(1, d) : Number.isFinite(v) ? v : d);
 
-export function initSignals(s, entry, rng) {
+// script: the mission's def.script; a group whose rocket is a scripted beat (DESIGN §3.16 onboarding)
+// holds its own rockets until that beat has fired, so the staging is not pre-empted.
+export function initSignals(s, entry, rng, script = null) {
   const d = entry.signals || {};
   const t = s.type;
+  const tag = entry.tag;
   s.sig = {
     rockets: num(d.rockets, t === 'raft' ? 2 : 0),
     rocketT: -1,
+    rocketHold: tag != null && Array.isArray(script) && script.some((b) => b && b.do === 'rocket' && b.tag === tag),
     fired: 0,
     smoke: d.smoke ? num(d.smoke, 1) : 0,
     smokeBurn: 0,
@@ -83,13 +87,12 @@ export class SignalDesk {
     if (!play || !heli) return;
 
     // --- red parachute rockets ---------------------------------------------------------------------
-    const heard = d < SIG.hearRotor;
-    if (unseen && sig.rockets > 0 && heard) {
+    const heard = env.rotorHeard && d < SIG.hearRotor;
+    if (unseen && sig.rockets > 0 && heard && !sig.rocketHold) {
       if (sig.rocketT < 0) sig.rocketT = 2 + rng.next() * 3; // reaction time after the first rotor sound
       sig.rocketT -= dt;
       if (sig.rocketT <= 0) {
         this.fire(s, 'rocket', env);
-        sig.rocketT = SIG.rocketGap[0] + rng.next() * (SIG.rocketGap[1] - SIG.rocketGap[0]);
       }
     } else if (!heard && sig.fired === 0) sig.rocketT = -1;
 
@@ -122,7 +125,7 @@ export class SignalDesk {
     }
 
     // --- dye: released when they hear the rotor -------------------------------------------------------------
-    if (sig.dye && sig.dyeT < 0 && d < SIG.dyeHear) this.fire(s, 'dye', env);
+    if (sig.dye && sig.dyeT < 0 && env.rotorHeard && d < SIG.dyeHear) this.fire(s, 'dye', env);
 
     // --- mirror flashes (sunny presets) ------------------------------------------------------------------------
     if (sig.mirror && env.sunny && d < SIG.mirrorRange && d > 30 && s.health > 0.15) {
@@ -156,6 +159,9 @@ export class SignalDesk {
         if (sig.rockets <= 0 && !scripted) return false;
         sig.rockets = Math.max(0, sig.rockets - 1);
         sig.fired++;
+        if (scripted) sig.rocketHold = false;
+        // the next one no sooner than 30–45 s, scripted or not
+        sig.rocketT = SIG.rocketGap[0] + rng.next() * (SIG.rocketGap[1] - SIG.rocketGap[0]);
         _p.set(p.x, (s.deckY ?? p.y) + 1.2, p.z);
         ctx.fx?.burst?.('rocket', _p, { color: '#FF3A22' });
         const e = SIG.rocketError;

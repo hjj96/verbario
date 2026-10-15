@@ -360,7 +360,11 @@ export class FlightModel {
     const oz = this.landOffset.y;
     p.x = pad.position.x + ox * c - oz * s;
     p.z = pad.position.z + ox * s + oz * c;
+    // The commanded altitude rides with the heaving deck, so only an explicit climb (lift, preset,
+    // autoTakeoff) puts it above the skids — never the deck dropping away under a stale crest value.
+    const y0 = p.y;
     p.y = pad.position.y + SKID;
+    h.altTarget += p.y - y0;
     this.heading = wrapAngle(this.landHeading + (ph - this.landPadHeading));
     this.padVel(pad, this.v);
     this.yawRate = 0;

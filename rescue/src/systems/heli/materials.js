@@ -274,7 +274,9 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, 
         // per-frame shutter sweep of each blade (trails the blade, which moves toward +θ)
         float rel = mod(uBlade - th, seg);
         float sweep = (1.0 - smoothstep(0.0, uArc, rel)) * (1.0 - 0.45 * rel / max(uArc, 1e-3));
-        float aG = mix(0.17, 0.25, smoothstep(0.2, 0.95, r)) * (0.86 + 0.28 * streak) + 0.05 * ghost + 0.03 * sweep;
+        // A 4-blade main rotor has solidity ~0.07-0.1: the blurred disc veils the sea by that much, flat
+        // in r (blade chord is constant, so coverage does not grow toward the tip), not a dark lid.
+        float aG = 0.075 * (0.86 + 0.28 * streak) + 0.035 * ghost + 0.03 * sweep;
         if (uHull.x > 0.0) {
           // disc-local +y = nose. Cabin (wide) → tail boom (narrow) → beyond the nose: open disc.
           float hw = mix(uHull.y, uHull.x, smoothstep(uHull.w - 0.12, uHull.w + 0.08, vP.y));
@@ -285,7 +287,8 @@ export function createRotorMaterial(look, { blades = 5, bladeHalfWidth = 0.033, 
         float d = abs(mod(th - uBlade + 0.5 * seg, seg) - 0.5 * seg) * r;
         float blade = (1.0 - smoothstep(uBladeW * 0.75, uBladeW * 1.25, d)) * smoothstep(0.07, 0.13, r);
         float a = mix(aG, 0.92 * blade, uSharp);
-        a *= smoothstep(uInner, uInner + 0.06, r) * (1.0 - smoothstep(0.93, 1.0, r) * (1.0 - 0.9 * uSharp));
+        // blurred tip path has no hard rim: fade the outer ~14% (the frozen blades keep their crisp tips)
+        a *= smoothstep(uInner, uInner + 0.06, r) * (1.0 - smoothstep(mix(0.86, 0.93, uSharp), 1.0, r) * (1.0 - 0.9 * uSharp));
         vec3 alb = uDiscColor;
         vec3 col = alb * irr + uSkyCol * F * (0.8 + 0.3 * streak) + uSunCol * sheen * 0.012 * (1.0 - uSharp);
         // tip paint: soft band, visible only inside the 5 shutter smears; crisp on frozen blades

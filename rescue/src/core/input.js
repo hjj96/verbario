@@ -53,6 +53,7 @@ export class Input {
     this.prevButtons = new Map();
     this.buttons = new Map(); // action -> bool (this frame)
     this.axesValues = { moveX: 0, moveY: 0, lift: 0, aimX: 0, aimY: 0 };
+    this._stick = { x: 0, y: 0 }; // scratch for the gamepad stick curve (poll() allocates nothing)
     this.mouseButtons = new Set(); // 'Mouse0' | 'Mouse2' (only presses that started on the game canvas)
     this.virtualAxes = {}; // set by touch UI
     this.virtualButtons = {}; // set by touch UI
@@ -136,23 +137,30 @@ export class Input {
     }
     // Gamepad sticks: radial dead zone 0.14, response curve 0.55m + 0.45m³ (DESIGN §3.2).
     if (pad) {
-      const stick = (ix, iy, nx, ny, invertY) => {
+      const s = this._stick;
+      const stick = (ix, iy) => {
         const x = pad.axes[ix] || 0;
-        const y = (pad.axes[iy] || 0) * (invertY ? -1 : 1);
+        const y = -(pad.axes[iy] || 0); // pad Y is +1 down; ours is +1 = north/screen up
         const m = Math.hypot(x, y);
-        if (m < 0.14) return false;
+        if (m < 0.14) return null;
         const mm = Math.min(1, (m - 0.14) / 0.86);
         const k = (0.55 * mm + 0.45 * mm * mm * mm) / m;
-        this.axesValues[nx] = clamp(x * k, -1, 1);
-        this.axesValues[ny] = clamp(y * k, -1, 1);
-        return true;
+        s.x = clamp(x * k, -1, 1);
+        s.y = clamp(y * k, -1, 1);
+        return s;
       };
+      // Stick and movement keys combine: the stronger one wins, so a stray held key (Ctrl, Shift boost, a keyup
+      // lost behind Cmd) never freezes the stick. Touch controls, when active, own movement.
       const vm = this.virtualAxes.moveX || this.virtualAxes.moveY;
-      if (!vm && !this.keys.size) stick(PAD.axes.moveX, PAD.axes.moveY, 'moveX', 'moveY', true);
-      if (!stick(PAD.axes.aimX, PAD.axes.aimY, 'aimX', 'aimY', true)) {
-        this.axesValues.aimX = 0;
-        this.axesValues.aimY = 0;
+      const mv = !vm && stick(PAD.axes.moveX, PAD.axes.moveY);
+      const av = this.axesValues;
+      if (mv && Math.hypot(mv.x, mv.y) > Math.hypot(av.moveX, av.moveY)) {
+        av.moveX = mv.x;
+        av.moveY = mv.y;
       }
+      const aim = stick(PAD.axes.aimX, PAD.axes.aimY);
+      av.aimX = aim ? aim.x : 0;
+      av.aimY = aim ? aim.y : 0;
     } else {
       this.axesValues.aimX = this.virtualAxes.aimX || 0;
       this.axesValues.aimY = this.virtualAxes.aimY || 0;

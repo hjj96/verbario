@@ -119,6 +119,11 @@ export class Radio {
     this.busyUntil = this.clock;
   }
 
+  // Withdraw a still-waiting line (it lost its moment, e.g. «можно лететь» once airborne).
+  cancel(id) {
+    for (let i = this.queue.length - 1; i >= 0; i--) if (this.queue[i].id === id) this._unqueue(i, 'cancelled');
+  }
+
   stats() {
     return { queued: this.queue.length, said: this.history.length, speaking: this.speaking, silence: this.silence, clock: this.clock };
   }
@@ -141,17 +146,7 @@ export class Radio {
     if (!q.length) return;
     const now = this.clock;
     // stale lines leave the queue (their cooldown is restored so they may come back later)
-    for (let i = q.length - 1; i >= 0; i--) {
-      const it = q[i];
-      if (now - it.t > it.maxAge) {
-        q.splice(i, 1);
-        if (it.id) {
-          if (it.prevCool === undefined) this._cool.delete(it.id);
-          else this._cool.set(it.id, it.prevCool);
-        }
-        this._drop(it.id, 'stale');
-      }
-    }
+    for (let i = q.length - 1; i >= 0; i--) if (now - q[i].t > q[i].maxAge) this._unqueue(i, 'stale');
     // best due line: highest priority, then oldest
     let best = null;
     for (const it of q) {
@@ -191,6 +186,16 @@ export class Radio {
     this.history.push({ t: Math.round(this.clock * 10) / 10, id: item.id, speaker: item.speaker, name: item.name, channel: item.channel, priority: item.priority, text: item.text });
     if (this.history.length > HISTORY) this.history.shift();
     this.ctx.events.emit('radio:line', payload);
+  }
+
+  // remove queue[i] unsaid; its cooldown is restored so the line may come back later
+  _unqueue(i, reason) {
+    const it = this.queue.splice(i, 1)[0];
+    if (it.id) {
+      if (it.prevCool === undefined) this._cool.delete(it.id);
+      else this._cool.set(it.id, it.prevCool);
+    }
+    this._drop(it.id, reason);
   }
 
   _drop(id, reason) {

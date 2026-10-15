@@ -5,7 +5,8 @@
 // count p_thunder), weather:charge (p_stelmo), hazard:warning (d_spout, p_spout_near, d_rogue),
 // hazard:near-miss (p_near_miss), hazard:hit (p_emp), heli:* (bingo, damage, winch, capture, slip, snag,
 // cabin full, raft, loudspeaker, land, crash), survivor:* (spotted, signal, shout, downwash, boarded,
-// lost, pet), fx:gulls (w_gulls), mission:complete / mission:failed (d_success / d_fail).
+// lost, pet), fx:gulls (w_gulls), mission:complete / mission:failed (d_success or
+// d_success_partial when people were lost / d_fail), heli:takeoff withdraws an unsaid w_ready.
 // Polling (every frame, allocation-free): winch patter «вперёд три… вправо два… стоп» (≤ 1 per 1.2 s),
 // basket in the water, swing, ship-deck approach, leaving the search area, nightfall, green sky,
 // St. Elmo's fire, EMP, and idle chatter after 60 s of silence.
@@ -77,8 +78,9 @@ export class RadioTriggers {
         R.line('d_start', { square: d.square || squareOf(d.x || 0, d.z || 0), count: d.countWords || countWords(d.count || 1) });
         R.line('d_datum', { dir: d.dir || 'к северу', dist: d.distWords || distWords(d.dist || 400) });
       }
-      R.line('w_ready');
+      if (ctx.heli?.landed) R.line('w_ready'); // pre-flight: not on airborne starts
     });
+    on('heli:takeoff', () => R.cancel('w_ready'));
 
     // ---- weather ----------------------------------------------------------------------------------
     on('weather:preset', (p) => {
@@ -247,7 +249,7 @@ export class RadioTriggers {
     });
 
     // ---- mission end -------------------------------------------------------------------------------
-    on('mission:complete', () => R.line('d_success'));
+    on('mission:complete', (p) => R.line(p?.stats?.lost > 0 ? 'd_success_partial' : 'd_success'));
     on('mission:failed', (p) => {
       if (p.reason === 'abort' || p.reason === 'time' || p.reason === 'lost') R.line('d_fail');
     });

@@ -60,6 +60,7 @@ export class Mission {
     this._focusV = new THREE.Vector3();
     this._triggers = new Set();
     this._script = [];
+    this._followers = [];
     this._slowT = 0;
     this._slowLeft = 0;
     this._slowValue = 1;
@@ -339,6 +340,7 @@ export class Mission {
     if (this.def.objectives.timeLimit) this.timeLeft = Math.max(0, this.def.objectives.timeLimit - this.elapsed);
 
     this.ledger.poll(dt);
+    this._followCraft();
     this._runScript();
     this._checkRocketFallback();
     this._updateChapters();
@@ -429,6 +431,12 @@ export class Mission {
     this._script = [];
     for (const e of def.script || []) this._script.push({ ...e, fired: false, armedAt: null });
     for (const e of def.radio || []) this._script.push({ ...e, do: 'radio', fired: false, armedAt: null });
+    // Late entries with `from: <tag>` surface beside that group's craft at their authored offset.
+    this._followers = [];
+    for (const e of def.survivors || []) {
+      const src = e.from && e.at > 0 ? def.survivors.find((o) => o.tag === e.from) : null;
+      if (src) this._followers.push({ e, carrier: null, dx: e.x - src.x, dz: e.z - src.z });
+    }
     this.objectives = buildObjectives(this, def);
     this.onboarding.reset(def);
     if (!def.endless) this.shift.calls.length = 0;
@@ -497,6 +505,30 @@ export class Mission {
   // ===============================================================================================
   _trigger(name) {
     this._triggers.add(name);
+  }
+
+  // A pending entry with `from` (the injured under «Гидролог-2», the trawlerman washed off «Вайгач»)
+  // follows its craft while that drifts, so survivors.spawn() puts it beside the craft, not where the
+  // craft was at the start. The craft is remembered: it keeps drifting after its own people are gone.
+  _followCraft() {
+    const list = this.ctx.survivors?.list;
+    if (!list || !this._followers.length) return;
+    for (const f of this._followers) {
+      const e = f.e;
+      if (this.elapsed > e.at) continue;
+      const src = list.find((s) => s && s.tag === e.from);
+      if (src?.carrier) f.carrier = src.carrier;
+      const p = f.carrier || src?.position;
+      if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.z)) continue;
+      const x = p.x + f.dx;
+      const z = p.z + f.dz;
+      if (e.datum) {
+        e.datum.x += x - e.x;
+        e.datum.z += z - e.z;
+      }
+      e.x = x;
+      e.z = z;
+    }
   }
 
   _runScript() {

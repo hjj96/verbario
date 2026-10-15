@@ -41,6 +41,7 @@ export const LINES = {
   d_refuel: { s: 'dispatch', p: 1, cd: 150, age: 30, t: 'Принято, Чайка. Заправляйтесь.' },
   d_cat: { s: 'dispatch', p: 1, age: 60, t: 'Чайка, повторите, сколько на борту. …Четверо и кот? Принято, кот засчитан.' },
   d_success: { s: 'dispatch', p: 3, cd: 30, age: 30, t: 'Чайка, Берег. Все найдены. Хорошая работа. Возвращайтесь — чайник уже кипит.' },
+  d_success_partial: { s: 'dispatch', p: 3, cd: 30, age: 30, t: 'Принято, Чайка. Кого могли — забрали. Возвращайтесь.' }, // complete, stats.lost > 0
   d_fail: { s: 'dispatch', p: 3, cd: 30, age: 30, t: 'Чайка, Берег. Поиск передаём катерам. Возвращайтесь.' },
   d_crash: { s: 'dispatch', p: 3, cd: 30, age: 30, t: 'Чайка ноль-седьмой, Берег, ответьте… Чайка, приём…' },
 
@@ -65,7 +66,9 @@ export const LINES = {
   p_thunder: { s: 'pilot', p: 1, cd: 300, age: 3, t: '{count}… {km} до грозы.' },
 
   // ---- бортоператор Семёныч, СПУ ---------------------------------------------------------------------
-  w_ready: { s: 'winchman', p: 1, age: 45, t: 'Чай в термосе, трос смазан, Костя трезвый. Можно лететь.' },
+  // p 2 (DESIGN says 1): a flavour line waits for 12 s of silence, which the opening briefing never leaves
+  // before takeoff; as gameplay it follows d_datum. Only queued on the pad, withdrawn on heli:takeoff.
+  w_ready: { s: 'winchman', p: 2, age: 15, t: 'Чай в термосе, трос смазан, Костя трезвый. Можно лететь.' },
   w_hover: { s: 'winchman', p: 2, cd: 45, age: 3, t: 'Висим. Трос пошёл…' },
   w_patter: { s: 'winchman', p: 2, cd: 0, age: 0.6, t: '{text}' },
   w_water: { s: 'winchman', p: 2, cd: 20, age: 2, t: 'Корзина в воде.' },

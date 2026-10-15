@@ -8,7 +8,9 @@
 //   weather.windFrom (deg the wind blows FROM), weather.script[].{windShift, chapter},
 //   world.pads[].{route, speed} (looped patrol, `drift` is the constant-velocity fallback),
 //   survivors[].{tag, primary (the dispatcher's d_start/d_datum incident), label, theme, since (min in
-//                water before the call), lead, pet, name, height, heading, sinkTime, fallbackType, color},
+//                water before the call), lead, pet, name, height, heading, sinkTime, fallbackType, color,
+//                from (with `at`: the entry surfaces beside that tag's craft, keeping its authored offset
+//                as the craft drifts — mission.js)},
 //   hazards[].{repeat, until, heights, fromDeg, target:'heli', telegraph, name},
 //   script: [{at | after+delay(+latest), do:'rocket'|'gust'|'focus'|'chapter'|'radio', …}],
 //   radio:  [{at | after+delay, speaker, name, channel, text, priority, id}],
@@ -362,7 +364,7 @@ export const CAMPAIGN = [
     theme: 'trawler',
     tags: ['wave', 'storm', 'trawler'],
     brief:
-      '12:20. Последний закат перед полярной ночью: солнце едва поднялось над горизонтом — и уже садится. Траулер «Вайгач» получил пробоину и тонет в двадцати милях к северу. Шестнадцать человек: шестеро ещё на палубе, остальные на плотах и в воде.\n\n' +
+      '12:20. Последний закат перед полярной ночью: солнце едва поднялось над горизонтом — и уже садится. Траулер «Вайгач» получил пробоину и тонет в двадцати милях к северу. Шестнадцать человек: шестеро ещё на палубе, с ними раненый тралмейстер, остальные на плотах и в воде.\n\n' +
       'Пока светло, море обманчиво спокойное. Через две минуты с запада придёт шторм, через семь — ночь. В зыби аномальные волны: после четвёртой минуты они будут приходить раз в минуту.\n\n' +
       'И ещё. Наблюдатели «Арктура» говорят о большой волне — метров двадцать. Её услышат за пятнадцать секунд до того, как увидят.',
     area: { radius: 1700 },
@@ -377,7 +379,8 @@ export const CAMPAIGN = [
       { tag: 'vaygach', primary: true, type: 'wreck', fallbackType: 'deck', x: -380, z: -430, count: 6, height: 7, hidden: false, name: 'Вайгач', heading: 200 * DEG, sinkTime: 540, since: 20, label: 'траулер «Вайгач»' },
       { tag: 'sw-1', type: 'swimmer', x: -430, z: -520, count: 1, hidden: true, datumRadius: 100, since: 10, label: 'смыло с палубы', signals: { whistle: true, mirror: true } },
       { tag: 'raft-a', type: 'raft', x: 330, z: -880, count: 4, hidden: true, datumRadius: 220, since: 25, label: 'плот №1 «Вайгача»', signals: { rockets: 2, epirb: true } },
-      { tag: 'injured', type: 'injured', x: 610, z: -420, count: 1, hidden: true, datumRadius: 180, since: 25, label: 'раненый тралмейстер', signals: { mirror: true } },
+      // washed over the side as the player arrives: 95 s of warmth (6 °C) in the calm before the storm
+      { tag: 'injured', type: 'injured', x: -360, z: -425, count: 1, at: 45, from: 'vaygach', hidden: false, since: 0, label: 'раненый тралмейстер', signals: { mirror: true } },
       { tag: 'sw-2', type: 'swimmer', x: -560, z: -700, count: 1, at: 200, hidden: true, datumRadius: 120, since: 0, label: 'прыгнул с кормы', signals: { whistle: true, strobe: true } },
     ],
     hazards: [
@@ -393,6 +396,7 @@ export const CAMPAIGN = [
     script: [{ at: 466, do: 'chapter', text: 'ДЕВЯТЫЙ ВАЛ' }],
     radio: [
       { at: 5, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', priority: 2, text: 'Чайка, Берег. «Вайгач» передаёт: оставляют судно. Шестнадцать человек. Солнце сядет через двадцать минут — дальше только прожектор.' },
+      { at: 46, speaker: 'ship', name: 'ВАЙГАЧ', channel: 'ext', id: 'sh_mob', priority: 3, text: 'Чайка, «Вайгач»! Тралмейстера смыло за борт — он ранен, сам не выплывет. Он у нас под бортом!' },
       { at: 128, speaker: 'winchman', name: 'БОРТОПЕРАТОР', channel: 'ics', id: 'w_gulls', priority: 1, text: 'Чайки снялись все разом. Не к добру.' },
       { at: 462, speaker: 'pilot', name: 'ВТОРОЙ ПИЛОТ', channel: 'ics', priority: 3, text: 'Командир… посмотри на запад. Это не волна. Это стена.' },
       { at: 520, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', priority: 2, text: 'Чайка, Берег! Чайка, ответьте… Вижу вас на радаре. Слава богу. Работайте.' },
@@ -414,8 +418,8 @@ export const CAMPAIGN = [
     tags: ['storm', 'eye'],
     brief:
       '11:30. Полярный циклон «Ксения». Ветер тридцать метров в секунду, вдоль берега идёт торнадо. Центр циклона пройдёт над районом около полудня: у вас будет минута тишины, а потом ветер ударит с другой стороны.\n\n' +
-      'Три точки. Научный бот «Гидролог-2» перевернулся: трое на днище, один ранен. Плот с исследовательского судна «Профессор Зубов» — шестеро. Баржа «Печора» сидит на банке: шестеро на палубе, ещё двоих смыло, один из них ранен.\n\n' +
-      'Раненых — только на носилках и только когда машина стоит. Лучшее окно для носилок — глаз. После него все ваши рефлексы удержания будут наоборот.',
+      'Три точки. Научный бот «Гидролог-2» перевернулся: трое на днище, четвёртый, раненый, — в воздушном пузыре под корпусом. Плот с исследовательского судна «Профессор Зубов» — шестеро. Баржа «Печора» сидит на банке: шестеро на палубе, одного смыло; шкипер со сломанной ногой — в рубке, а её заливает.\n\n' +
+      'Обоих раненых вынесет в воду как раз к глазу, а в ледяной воде раненый долго не протянет. Носилки — только когда машина стоит: глаз и есть ваше окно. После него все рефлексы удержания будут наоборот.',
     area: { radius: 1700 },
     weather: {
       start: 'storm',
@@ -432,11 +436,12 @@ export const CAMPAIGN = [
     },
     heli: { pad: 0 },
     survivors: [
-      { tag: 'gidrolog', type: 'hull', x: 380, z: -440, count: 3, hidden: true, datumRadius: 180, name: 'Гидролог-2', since: 30, label: 'бот «Гидролог-2»', signals: { epirb: true, rockets: 1 } },
-      { tag: 'gidrolog-inj', type: 'injured', x: 420, z: -410, count: 1, hidden: true, datumRadius: 180, since: 30, label: 'раненый с «Гидролога-2»' },
+      { tag: 'gidrolog', type: 'hull', x: 380, z: -440, count: 3, hidden: true, datumRadius: 180, name: 'Гидролог-2', since: 30, label: 'бот «Гидролог-2»', signals: { epirb: true, rockets: 1 }, sinkTime: 330 },
+      // the two injured reach the water around the eye (DESIGN §3.14 «Глаз — окно для носилок»): ~97 s each
+      { tag: 'gidrolog-inj', type: 'injured', x: 388, z: -434, count: 1, at: 332, from: 'gidrolog', hidden: false, since: 30, label: 'раненый с «Гидролога-2»' },
       { tag: 'zubov', type: 'raft', x: -820, z: -360, count: 6, hidden: true, datumRadius: 250, since: 40, label: 'плот «Профессора Зубова»', signals: { rockets: 3, epirb: true } },
       { tag: 'pechora', type: 'deck', x: 560, z: 640, height: 6, count: 6, hidden: false, name: 'Печора', theme: 'barge', since: 60, label: 'баржа «Печора»' },
-      { tag: 'pechora-inj', type: 'injured', x: 610, z: 700, count: 1, hidden: true, datumRadius: 120, theme: 'barge', since: 15, label: 'смыт с «Печоры», ранен' },
+      { tag: 'pechora-inj', type: 'injured', x: 610, z: 700, count: 1, at: 290, hidden: false, theme: 'barge', since: 0, label: 'шкипер «Печоры», ранен' },
       { tag: 'pechora-sw', type: 'swimmer', x: 500, z: 600, count: 1, hidden: true, datumRadius: 120, theme: 'barge', since: 15, label: 'смыт с «Печоры»', signals: { whistle: true, strobe: true } },
     ],
     hazards: [
@@ -452,7 +457,9 @@ export const CAMPAIGN = [
     script: [],
     radio: [
       { at: 5, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', priority: 2, text: 'Чайка, Берег. Торнадо идёт вдоль берега на северо-восток. От воронки — дальше трёхсот метров. Глаз будет у вас через пять минут.' },
+      { at: 291, speaker: 'ship', name: 'ПЕЧОРА', channel: 'ext', id: 'sh_skipper', priority: 3, text: 'Чайка, «Печора»! Рубку залило, шкипера вынесло за борт — он ранен, в воде у баржи!' },
       { at: 302, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', id: 'd_eye', priority: 3, text: 'Чайка, вы в глазе. У вас минута, не больше. Потом ветер развернётся.' },
+      { at: 334, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', id: 'd_gidrolog', priority: 3, text: 'Чайка, Берег. «Гидролог» затонул, у его буя всплыл человек — раненый, из-под корпуса!' },
       { at: 343, speaker: 'pilot', name: 'ВТОРОЙ ПИЛОТ', channel: 'ics', priority: 3, text: 'Ветер разворачивается… Держи, держи — сейчас ударит с юга!' },
       { at: 786, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', id: 'd_clear', priority: 1, text: 'Фронт уходит на восток. Над вашим районом прояснение.' },
     ],

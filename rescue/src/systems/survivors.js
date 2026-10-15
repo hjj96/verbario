@@ -101,7 +101,7 @@ export class Survivors {
       t: 0, dt: 0, play: false, night: 0, preset: 'calm', intensity: 0, fogBlind: false, fog: 0,
       windX: 0, windZ: 0, windSpeed: 0, windDirX: 1, windDirZ: 0, windAngle: 0, Hs: 0.5, sunny: false,
       base: 260, altBonus: 1, reduceFlashes: false,
-      heliAlive: false, hx: 0, hy: 40, hz: 0, alt: 40, dwR: 9, dwS: 0,
+      heliAlive: false, rotorHeard: false, hx: 0, hy: 40, hz: 0, alt: 40, dwR: 9, dwS: 0,
       wState: 'stowed', bx: 0, by: 0, bz: 0, bH: 99, bWet: false, wLoad: null,
       ghostLight: new THREE.Color(0.4, 0.45, 0.5), foam: new THREE.Color('#E8EEEC'),
     };
@@ -146,6 +146,8 @@ export class Survivors {
     const nightAmb = (this.nightAmb = { value: new THREE.Color(0, 0, 0) }); // moonlit hemi floor (ghostUniforms)
     const skyFill = (this.skyFill = { value: new THREE.Color(0, 0, 0) }); // overcast sky-dome fill (albedo ×)
     const base = { rim, nightAmb, skyFill };
+    // dark rusty steel structures (barge, trawler wreck) get the full dome under dark skies (ghostUniforms)
+    const steelFill = (this.steelFill = { value: new THREE.Color(0, 0, 0) });
     const raftMat = createCraftMaterial(look, { ...base, glow: this.crowd.material.userData.uniforms.uVestGlow, side: THREE.DoubleSide, roughness: 0.72, lampLift: 0.62, wear: { breakup: 0.07, streaks: 0, grime: 0.12, waterline: 0.55, roughBreakup: 0.1, deckWear: 0.1, scale: 1.6 } }); // lamp-lit canopy stays orange
     const hullMat = createCraftMaterial(look, { ...base, roughness: 0.62, wear: { ...WEAR.heavy, streaks: 0.25, scale: 1.3 }, foul: true });
     const contMat = createCraftMaterial(look, { ...base, roughness: 0.7, wear: { ...WEAR.heavy, streaks: 0.6, waterline: 0.55, scale: 1.25 } });
@@ -153,8 +155,8 @@ export class Survivors {
     const debrisMat = createCraftMaterial(look, { ...base, roughness: 0.6, debris: true, wear: WEAR.light });
     this._bigMats = {
       ferry: createCraftMaterial(look, { ...base, roughness: 0.6, wear: { ...WEAR.medium, scale: 0.8 } }),
-      trawler: createCraftMaterial(look, { ...base, roughness: 0.66, wear: { ...WEAR.heavy, scale: 0.85 } }),
-      barge: createCraftMaterial(look, { ...base, roughness: 0.7, wear: { ...WEAR.heavy, streaks: 0.7, scale: 0.8 } }),
+      trawler: createCraftMaterial(look, { ...base, skyFill: steelFill, roughness: 0.66, wear: { ...WEAR.heavy, scale: 0.85 } }),
+      barge: createCraftMaterial(look, { ...base, skyFill: steelFill, roughness: 0.7, wear: { ...WEAR.heavy, streaks: 0.7, scale: 0.8 } }),
     };
     this.batches = {
       raft: new CraftBatch('rafts', raftGeometry(), raftMat, 16, { castShadow: true }),
@@ -284,7 +286,7 @@ export class Survivors {
     // people (the mission's manifest when it has one, so cabin and logbook agree)
     const recs = Array.isArray(entry.people) && entry.people.length >= count ? entry.people : makeFallbackPeople((this.def?.seed ?? 1) * 97 + s.id, type, count);
     for (let i = 0; i < count; i++) s.people.push(this._makePerson(recs[i] || recs[0], s, i));
-    initSignals(s, entry, this.rng);
+    initSignals(s, entry, this.rng, this.def?.script);
     this._makeCarrier(s, entry);
     s.position.y = s.deckY ?? ctx.ocean?.heightAt?.(s.position.x, s.position.z) ?? 0;
     s.height = s.deckY ?? 0;
@@ -623,6 +625,9 @@ export class Survivors {
     // heli
     const h = ctx.heli;
     env.heliAlive = !!(h && h.position && h.alive !== false);
+    // survivors only take a flying heli for a search: an aircraft sitting on its pad (or a dead rotor)
+    // does not trigger rockets or dye, otherwise every group within 700 m of the base fires at 0:03
+    env.rotorHeard = env.heliAlive && !h.landed && (h.rotorRPM ?? 1) > 0.8;
     if (h && h.position) {
       env.hx = h.position.x;
       env.hy = h.position.y;
@@ -1818,10 +1823,16 @@ export class Survivors {
     // under a heavy overcast the whole sky dome lights the decks; the hemisphere alone leaves a rusty
     // barge or a wet steel deck darker than the sea around it (a black brick) — add the missing dome
     // (the ocean mirrors the sky at full radiance; a Lambert hemisphere gives props only ambient/π)
-    // (storms only: in fog the ferry must melt into the white, not glow out of it)
-    const dome = day * smooth(1.25, 0.5, lightLevel) * clamp01(env.intensity * 1.5) * (1 - 0.8 * env.fog) * (pal?.ambientIntensity ?? 0.6) * 2.0;
+    // (storms only: in fog the ferry must melt into the white, not glow out of it). A storm's own gloom
+    // (night ≈ .35) and rain haze (fog ≈ .45) are still daylight under a dome: only real night and real
+    // fog switch the fill off, otherwise the storm got less dome than overcast and the barge sank below the sea
+    const dome = smooth(0.9, 0.4, env.night) * smooth(1.25, 0.5, lightLevel) * clamp01(env.intensity * 1.5) * (1 - 0.8 * smooth(0.5, 0.9, env.fog)) * (pal?.ambientIntensity ?? 0.6) * 2.0;
     if (pal?.ambient?.isColor) this.skyFill.value.copy(pal.ambient).multiplyScalar(dome);
     else this.skyFill.value.setRGB(0.12, 0.14, 0.15).multiplyScalar(dome);
+    // big dark-steel hulls have no fluorescent fabric or foam collar of their own read: under a storm sky
+    // (no sun term left) only the dome lights them, so they take ~2.6× the small-craft fill there —
+    // the barge deck stays ≈1.4× the storm sea's luminance, as in overcast (gain ≈ 1 by overcast)
+    this.steelFill.value.copy(this.skyFill.value).multiplyScalar(1 + 1.6 * smooth(0.95, 0.55, lightLevel));
     // ≥ 0.05: the vest keeps its #FF5A00 hue under the warm sunset / storm hemisphere instead of going red
     this.crowd.material.userData.uniforms.uVestGlow.value = 0.05 + day * (0.16 * clamp01(1 - lightLevel) + 0.32 * clamp01(env.intensity || 0)); // fluorescent pigment pops under storm cloud (DESIGN §2.1: vest L ≈ 0.55)
   }
