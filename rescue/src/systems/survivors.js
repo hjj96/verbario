@@ -2108,14 +2108,46 @@ export class Survivors {
   }
 
   // ---- checkpoint restore (mission.js, DESIGN §3.9 «каждая посадка — чекпоинт») ---------------------
+  // snapCarrier(c) / snapSignals(s): plain data for mission._takeCheckpoint — a carrier's drift, pose and
+  // drama (with the survivor type that builds it again), a group's signal stocks and clocks.
+  snapCarrier(c) {
+    const k = {
+      type: c.kind === 'hull' ? (c.style === 'plane' ? 'plane' : 'hull') : c.kind === 'barge' || c.kind === 'rig' ? 'deck' : c.kind,
+      kind: c.kind,
+      dropped: !!c.dropped,
+    };
+    for (const key of ['x', 'z', 'yaw', 'age', 'flood', 'capsized', 'flip', 'flipT', 'sink', 'sinking', 'sinkAt', 'roll', 'pitch', 'baseRoll', 'inflate', 'emptyT', 'dissolve', 'warned', 'lampDead', 'tipT', 'oilN']) {
+      const v = c[key];
+      if (typeof v === 'boolean' || Number.isFinite(v)) k[key] = v;
+    }
+    if (c.anchor) k.anchor = { x: c.anchor.x, z: c.anchor.z };
+    if (c.color) k.color = c.color.getHex();
+    if (c.debris?.length) k.debris = c.debris.map((d) => ({ ...d }));
+    return k;
+  }
+
+  snapSignals(s) {
+    const sig = s.sig || {};
+    const k = {};
+    for (const key of ['rockets', 'rocketT', 'rocketHold', 'fired', 'smoke', 'smokeBurn', 'flares', 'flareBurn', 'whistle', 'dye', 'dyeT', 'dyeStampT', 'mirror', 'epirb', 'epirbT', 'strobe']) {
+      const v = sig[key];
+      if (typeof v === 'boolean' || Number.isFinite(v)) k[key] = v;
+    }
+    return k;
+  }
+
   // Called right after mission:setup + mission:start: the groups spawned from the def make way for the
-  // snapshot's. cp = { elapsed, rescued, lost, lostMarkers: [{x, z}], groups: [{entry (a def.survivors
-  // object), type, x, z, people: [records], health, spotted, age, pet, datum {x, z, radius} | null,
-  // carrier {x, z, yaw, age, flood, capsized, flip, anchor {x, z}} | null}], bottleTaken }. Entries due
-  // later stay pending. The op 9★ bottle (re-placed by mission:setup) stays afloat unless it had already
-  // been fished out before the checkpoint.
+  // snapshot's. cp = { elapsed, rescued, lost, lostMarkers: [{x, z}], bottleTaken,
+  //   carriers: [free carriers — dropped rafts and emptied craft drifting on: snapCarrier() + entry (the def
+  //              object that built it, or null)],
+  //   groups: [{entry (a def.survivors object), type, x, z, people: [records], health, spotted, age, pet,
+  //             datum {x, z, radius} | null, carrier (snapCarrier() of their own craft) | null,
+  //             raft (index into carriers: the dropped raft they climbed into) | null, sig (snapSignals())}] }.
+  // Entries due later stay pending. Returns { carriers }: the live carriers made from cp.carriers (same
+  // order, null where none could be made) so the mission can re-point what follows a craft. The op 9★
+  // bottle (re-placed by mission:setup) stays afloat unless it had already been fished out.
   restoreCheckpoint(cp) {
-    if (!cp) return;
+    if (!cp) return null;
     const t = Number(cp.elapsed) || 0;
     const later = (this.def?.survivors || []).filter((e) => e && (e.at || 0) > t);
     const b = this.bottle;
@@ -2129,6 +2161,7 @@ export class Survivors {
     this.elapsed = t;
     for (const e of later) this.pending.push(e);
     this.pending.sort((a, b) => a.at - b.at);
+    const free = (cp.carriers || []).map((k) => this._cpCarrier(k));
     for (const g of cp.groups || []) {
       const e = g.entry || {};
       const people = (g.people || []).filter(Boolean);
@@ -2146,16 +2179,54 @@ export class Survivors {
         s.spotted = true;
         s.state = 'spotted';
       }
-      const c = s.carrier;
-      const k = g.carrier;
-      if (c && k) {
-        for (const key of ['x', 'z', 'yaw', 'age', 'flood', 'capsized', 'flip']) if (k[key] !== undefined) c[key] = k[key];
-        if (k.anchor && c.anchor) c.anchor.set(k.anchor.x, 0, k.anchor.z);
+      const raft = g.raft != null ? free[g.raft] : null;
+      if (raft && raft.dropped && !s.carrier) {
+        // back aboard the raft the crew dropped them (quietly: no splash, no «на плоту» call)
+        s.carrier = raft;
+        raft.riders.push(s);
+        raft.emptyT = 0;
+        s.position.set(raft.x, raft.y, raft.z);
+      } else if (s.carrier && g.carrier) this._cpPose(s.carrier, g.carrier);
+      if (g.sig) {
+        // spent rockets, smoke and flares stay spent; a scripted rocket already fired no longer holds the rest
+        Object.assign(s.sig, g.sig);
+        s.sig.flareObj = s.sig.flareBurn > 0 && this.ctx.fx?.flare ? this.ctx.fx.flare(s.position.x, s.position.z, { life: s.sig.flareBurn, held: true }) : null;
+        if (!s.sig.flareObj) s.sig.flareBurn = 0;
       }
       this._syncObject(s);
     }
     this.rescuedTotal = cp.rescued || 0;
     this.lostTotal = cp.lost || 0;
     for (const m of cp.lostMarkers || []) this.lostMarkers.push({ x: m.x, z: m.z, y: 0, t: this.ctx.time.t - 10, s: null, phase: this.rng.next() * 10, nrm: new THREE.Vector3(0, 1, 0) });
+    return { carriers: free };
+  }
+
+  // A free carrier from its snapshot: a dropped raft, or a craft built from its def entry like the group's
+  // own (hull name, wreck model, container paint) and then let go.
+  _cpCarrier(k) {
+    if (!k) return null;
+    let c = null;
+    if (k.dropped) {
+      c = new Carrier('raft', k.x, k.z, { dropped: true, phase: this.rng.next() * 100 });
+      this.carriers.push(c);
+    } else {
+      const ghost = { type: k.type, position: new THREE.Vector3(k.x, 0, k.z), velocity: new THREE.Vector3() };
+      this._makeCarrier(ghost, k.entry || {});
+      c = ghost.carrier;
+      if (!c) return null;
+      c.owner = null;
+    }
+    this._cpPose(c, k);
+    return c;
+  }
+
+  _cpPose(c, k) {
+    for (const key of ['x', 'z', 'yaw', 'age', 'flood', 'capsized', 'flip', 'flipT', 'sink', 'sinking', 'sinkAt', 'roll', 'pitch', 'baseRoll', 'inflate', 'emptyT', 'dissolve', 'warned', 'lampDead', 'tipT', 'oilN']) {
+      if (k[key] !== undefined) c[key] = k[key];
+    }
+    if (k.anchor && c.anchor) c.anchor.set(k.anchor.x, 0, k.anchor.z);
+    if (k.color != null && c.color) c.color.setHex(k.color);
+    if (k.debris && c.debris) c.debris = k.debris.map((d) => ({ ...d }));
+    if (this.ctx.ocean?.heightAt) c.pose(this.env, this.ctx.ocean, 0);
   }
 }

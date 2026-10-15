@@ -696,20 +696,67 @@ export class Weather {
   }
 
   // ---- checkpoint restore (mission.js, DESIGN §3.9) ----------------------------------------------
-  // Jump the mission weather script to `t` s of play (called right after mission:start): every entry
-  // already due is applied with its wind shift; one still in transition continues with the time it has
-  // left, the others land instantly.
-  restoreCheckpoint(t) {
+  // checkpointState(): the transition in flight at a landing (its clock, rain onset and the front's track)
+  // and the barometer, for restoreCheckpoint() to resume the blend exactly where it was.
+  checkpointState() {
+    const tr = this.tr;
+    const st = this.state;
+    const f = st.front;
+    return {
+      preset: st.preset,
+      scriptIdx: this.scriptIdx,
+      tr: { active: tr.active, t: tr.t, over: tr.over, wavesDown: tr.wavesDown, rainUp: tr.rainUp, rainStart: tr.rainStart, frontEnd: tr.frontEnd },
+      front: f.active ? { t: f.t, ox: f.origin.x, oz: f.origin.y, dx: f.dir.x, dz: f.dir.y } : null,
+      pressure: st.pressure,
+      wet: st.wet,
+    };
+  }
+
+  // Jump the mission weather script to `t` s of play (called right after mission:start). Every entry already
+  // due is applied with its wind shift; the earlier ones land instantly, the latest keeps its full duration
+  // and resumes at the progress it had: from `snap` (checkpointState() at the landing) when it describes
+  // that same transition, else advanced by the t − at already elapsed. A blend is never restarted from 0 %.
+  restoreCheckpoint(t, snap = null) {
     if (this.forced || !(t > 0)) return;
     this.scriptT = t;
-    while (this.scriptIdx < this.script.length && this.script[this.scriptIdx].at <= t) {
-      const s = this.script[this.scriptIdx++];
+    const due = [];
+    while (this.scriptIdx < this.script.length && this.script[this.scriptIdx].at <= t) due.push(this.script[this.scriptIdx++]);
+    const same = snap && snap.preset && snap.scriptIdx === this.scriptIdx ? snap : null;
+    due.forEach((s, i) => {
       const opts = {};
       if (s.windFrom !== undefined) opts.windFrom = s.windFrom;
       else if (s.windShift) opts.windFrom = this._windTo / DEG - 180 + s.windShift;
-      this.setPreset(s.to, Math.max(0, s.at + (s.over ?? 30) - t), opts);
+      const last = i === due.length - 1;
+      const run = last && !(same && same.preset === s.to && !same.tr.active);
+      this.setPreset(s.to, run ? s.over ?? 30 : 0, opts);
       this._eye = !!s.eye;
+      if (run) this._resumeTransition(t - s.at, same && same.preset === s.to ? same : null);
+    });
+    if (same) {
+      if (Number.isFinite(same.pressure)) this.state.pressure = same.pressure;
+      if (Number.isFinite(same.wet)) this.state.wet = same.wet;
     }
+  }
+
+  _resumeTransition(elapsed, snap) {
+    const tr = this.tr;
+    const front = this.state.front;
+    if (!tr.active) return;
+    if (snap && snap.tr.active) {
+      Object.assign(tr, snap.tr);
+      front.active = !!snap.front;
+      if (snap.front) {
+        front.t = snap.front.t;
+        front.origin.set(snap.front.ox, snap.front.oz);
+        front.dir.set(snap.front.dx, snap.front.dz);
+      }
+    } else {
+      const e = Math.max(0, elapsed);
+      tr.t = e;
+      if (front.active) front.t = e;
+      if (tr.rainUp && !front.active && e >= 0.1 * tr.over) tr.rainStart = 0.1 * tr.over;
+    }
+    this.state.transition.t = tr.t;
   }
 }
 
