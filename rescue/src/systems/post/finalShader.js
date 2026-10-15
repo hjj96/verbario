@@ -9,6 +9,11 @@
 //   6. luminance grain reseeded at 24 Hz (+ chroma noise at night)
 //   7. letterbox 2.39:1
 //   8. triangular dither ±1/255
+// Depth-pass extras (all off = zero cost apart from uniform branches):
+//   * photo mode: tilt-shift DOF (golden-angle disk blur around a focus line, bright taps weigh
+//     more → soft bokeh) and grade presets («Хроника», «Ч/Б», «Плёнка») after the base grade
+//   * thermal / FLIR (post/thermal.js): white-hot monochrome built from the frame's local contrast
+//     + the layer-2 heat target, reticle, scanline, fixed-pattern noise, boot flicker
 // Input: the OutputPass result (ACES + sRGB already applied). Colour uniforms are sRGB values.
 import * as THREE from 'three';
 
@@ -54,6 +59,23 @@ uniform float uSeed;
 uniform float uLetterbox;
 uniform float uDayToe;
 uniform float uFloor;
+// photo mode
+uniform float uDof;           // max blur radius, device px (0 = off)
+uniform float uDofFocus;      // focus line, screen v (0 bottom → 1 top)
+uniform float uDofBand;       // half-width of the sharp band, screen v
+uniform float uDofTaps;       // 12 / 20 / 32 by quality
+uniform float uLookMix;       // grade preset weight
+uniform float uLookSat;
+uniform float uLookContrast;
+uniform float uLookFade;
+uniform vec3 uLookShadow;
+uniform vec3 uLookHigh;
+// thermal
+uniform sampler2D tHeat;
+uniform float uThermal;       // 0..1 FLIR image weight
+uniform float uThermBoot;     // boot glitch envelope 0..1
+uniform float uThermFlick;    // brightness flicker (boot)
+uniform float uThermT;        // real time, s
 varying vec2 vUv;
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
@@ -149,6 +171,28 @@ void main() {
   col.g = texture2D(tDiffuse, uv).g;
   col.b = texture2D(tDiffuse, uv - caOff).b;
 
+  // photo mode: tilt-shift depth of field around a horizontal focus line
+  if (uDof > 0.01) {
+    float k = smoothstep(uDofBand, uDofBand + 0.3, abs(uv.y - uDofFocus));
+    float rad = uDof * k;
+    if (rad > 0.5) {
+      vec3 acc = vec3(0.0);
+      float wsum = 0.0;
+      for (int i = 0; i < 32; i++) {
+        if (float(i) >= uDofTaps) break;
+        float fi = float(i) + 0.5;
+        float r = sqrt(fi / uDofTaps) * rad;
+        float a = fi * 2.39996323;
+        vec3 sm = texture2D(tDiffuse, uv + vec2(cos(a), sin(a)) * r / uRes).rgb;
+        float lw = luma(sm);
+        float w = 1.0 + 6.0 * lw * lw * lw;
+        acc += sm * w;
+        wsum += w;
+      }
+      col = mix(col, acc / wsum, smoothstep(0.5, 2.0, rad));
+    }
+  }
+
   // vortex: radial smear toward the centre + grey veil
   if (uVortex > 0.001) {
     vec3 acc = col;
@@ -184,6 +228,63 @@ void main() {
     // dried salt: sparse crystalline specks clumped in blotches toward the edges
     float speck = step(1.0 - 0.16 * uSalt * blot * edge, hash12(floor(gl_FragCoord.xy / (1.5 * uPxScale)) + 91.7));
     col = mix(col, vec3(0.86, 0.88, 0.86), speck * 0.35 + blot * edge * uSalt * 0.06);
+  }
+
+  // ---- thermal / FLIR (white-hot) -----------------------------------------------------------
+  vec3 tcol = vec3(0.0);
+  if (uThermal > 0.001) {
+    vec2 uvT = uv;
+    float boot = uThermBoot;
+    if (boot > 0.001) {
+      // torn rows while the sensor boots
+      float row = floor(vUv.y * 48.0);
+      float rs = hash12(vec2(row, floor(uThermT * 24.0)));
+      uvT.x += (rs - 0.5) * 0.08 * boot * step(0.72, hash12(vec2(row * 1.7, floor(uThermT * 30.0))));
+    }
+    vec3 sc = boot > 0.001 ? texture2D(tDiffuse, uvT).rgb : col;
+    // detail enhancement: local contrast against a 4-tap ring → day/night/fog/flash all share one AGC
+    vec2 dp = 5.0 * uPxScale / uRes;
+    float Lc = luma(sc);
+    float Ln = 0.25 * (luma(texture2D(tDiffuse, uvT + vec2(dp.x, 0.0)).rgb) + luma(texture2D(tDiffuse, uvT - vec2(dp.x, 0.0)).rgb)
+                     + luma(texture2D(tDiffuse, uvT + vec2(0.0, dp.y)).rgb) + luma(texture2D(tDiffuse, uvT - vec2(0.0, dp.y)).rgb));
+    float rel = clamp((Lc - Ln) / (Ln + 0.05), -0.7, 0.7);
+    // cold sea: dark, low contrast, a touch colder toward the top (grazing reflection of the sky)
+    float v = 0.125 + 0.11 * rel + 0.045 * Lc / (Lc + 0.35) - 0.04 * (vUv.y - 0.5);
+    // heat: crisp core + soft bloom from the mip chain + a faint dark halo (bolometer DDE artefact)
+    float h0 = texture2D(tHeat, uvT).r;
+    float h1 = textureLod(tHeat, uvT, 1.5).r;
+    float h2 = textureLod(tHeat, uvT, 3.0).r;
+    float h3 = textureLod(tHeat, uvT, 4.5).r;
+    float core = max(h0, h1 * 0.85);
+    float glow = 0.25 * h1 + 0.45 * h2 + 0.55 * h3;
+    v -= 0.1 * max(0.0, h3 - h1 * 1.5);
+    v = mix(v, 0.78 + 0.2 * core, smoothstep(0.03, 0.55, core));
+    v += 0.4 * glow * (1.0 - 0.6 * core);
+    // sensor: fixed-pattern column noise, scanlines, a slow rolling band, heavy lens vignette
+    vec2 fc = gl_FragCoord.xy / uPxScale;
+    v += 0.012 * (hash12(vec2(floor(fc.x * 0.5), 7.0)) - 0.5);
+    v *= 1.0 - 0.05 * step(0.5, fract(fc.y * 0.5));
+    v *= 1.0 + 0.025 * smoothstep(0.85, 1.0, sin(vUv.y * 3.0 - uThermT * 0.7));
+    v *= 1.0 - 0.42 * er * er;
+    // boot: NUC shutter grey + snow
+    float snow = hash12(fc + fract(uThermT * 13.7) * 311.0);
+    v = mix(v, 0.3 + 0.35 * snow, boot * boot * 0.85);
+    v *= uThermFlick;
+    // reticle (screen centre = the FLIR ball's line of sight): crosshair with a gap, corner brackets
+    vec2 pc = (gl_FragCoord.xy - 0.5 * uRes) / uPxScale;
+    vec2 q = abs(pc);
+    float lw = 0.7;
+    float ret = (1.0 - smoothstep(lw, lw + 1.0, q.y)) * step(12.0, q.x) * step(q.x, 54.0)
+              + (1.0 - smoothstep(lw, lw + 1.0, q.x)) * step(12.0, q.y) * step(q.y, 54.0);
+    vec2 B = vec2(0.3 * uRes.x, 0.3 * uRes.y) / uPxScale;
+    float arm = 26.0;
+    ret += (1.0 - smoothstep(lw, lw + 1.0, abs(q.x - B.x))) * step(B.y - arm, q.y) * step(q.y, B.y);
+    ret += (1.0 - smoothstep(lw, lw + 1.0, abs(q.y - B.y))) * step(B.x - arm, q.x) * step(q.x, B.x);
+    // range ticks under the centre
+    float tick = step(abs(mod(pc.x + 4.0, 24.0) - 4.0), lw) * step(-B.y + 6.0, pc.y) * step(pc.y, -B.y + 12.0) * step(q.x, 120.0);
+    ret = clamp(ret + tick, 0.0, 1.0) * (1.0 - boot);
+    v = mix(v, v > 0.6 ? 0.08 : 0.92, ret * 0.6);
+    tcol = vec3(clamp(v, 0.0, 1.0));
   }
 
   // ---- 3. pulses ----------------------------------------------------------------------------
@@ -241,12 +342,26 @@ void main() {
     float lift = uDayToe * (1.0 - smoothstep(0.0, 0.2, lt));
     col *= (lt + lift) / max(lt, 0.02);
   }
+  // photo-mode grade presets («Хроника», «Ч/Б», «Плёнка»)
+  if (uLookMix > 0.001) {
+    vec3 c = col;
+    c = mix(vec3(luma(c)), c, uLookSat);
+    c = clamp((c - 0.42) * uLookContrast + 0.42, 0.0, 1.0);
+    c *= mix(uLookShadow, uLookHigh, smoothstep(0.05, 0.8, luma(c)));
+    c = uLookFade + c * (1.0 - uLookFade);
+    col = mix(col, c, uLookMix);
+  }
+  // thermal replaces the graded picture; damage / hull / fuel edges stay on top
+  if (uThermal > 0.001) {
+    col = mix(col, tcol, uThermal);
+    col = mix(col, uEdge.rgb, clamp(uEdge.a * edgeMask, 0.0, 1.0) * uThermal);
+  }
   // ---- 6. grain: luminance, 24 Hz reseed; chroma noise at night -------------------------------
   vec2 gp = floor(gl_FragCoord.xy / uPxScale);
   float n = hash12(gp + vec2(uSeed * 37.0, uSeed * 17.0)) + hash12(gp + vec2(uSeed * 11.0 + 5.3, uSeed * 23.0 + 1.7)) - 1.0;
   l = luma(col);
   col += n * uGrain * mix(1.0, 0.4, smoothstep(0.5, 1.0, l));
-  col += (vec3(hash12(gp + uSeed + 1.1), hash12(gp + uSeed + 2.3), hash12(gp + uSeed + 3.7)) - 0.5) * 0.024 * uNight;
+  col += (vec3(hash12(gp + uSeed + 1.1), hash12(gp + uSeed + 2.3), hash12(gp + uSeed + 3.7)) - 0.5) * 0.024 * uNight * (1.0 - uThermal);
 
   // ---- 7. letterbox 2.39:1 ------------------------------------------------------------------
   float bar = 0.5 * max(0.0, 1.0 - aspect / 2.39) * uLetterbox;
@@ -297,6 +412,21 @@ export function createFinalMaterial(dropsTexture) {
       uLetterbox: { value: 0 },
       uDayToe: { value: 0 },
       uFloor: { value: 0.008 },
+      uDof: { value: 0 },
+      uDofFocus: { value: 0.5 },
+      uDofBand: { value: 0.08 },
+      uDofTaps: { value: 24 },
+      uLookMix: { value: 0 },
+      uLookSat: { value: 1 },
+      uLookContrast: { value: 1 },
+      uLookFade: { value: 0 },
+      uLookShadow: { value: v3(1, 1, 1) },
+      uLookHigh: { value: v3(1, 1, 1) },
+      tHeat: { value: null },
+      uThermal: { value: 0 },
+      uThermBoot: { value: 0 },
+      uThermFlick: { value: 1 },
+      uThermT: { value: 0 },
     },
     vertexShader: VERT,
     fragmentShader: FRAG,
