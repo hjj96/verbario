@@ -466,7 +466,7 @@ export class World {
     for (const b of this.boats) b.update(dt, env);
     this.floaters.update(dt, env);
     this._wakes(env);
-    updateLandforms(env);
+    updateLandforms(env, this.ctx.weather?.state?.palette);
 
     // ship pads: live tilt / heading
     for (const pad of this.pads) {

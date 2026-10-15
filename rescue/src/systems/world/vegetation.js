@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { LOOK_GLSL_UNIFORMS, LOOK_GLSL_FUNCS } from '../../core/look.js';
 import { rng } from './geo.js';
-import { fbm2 } from './terrain.js';
+import { fbm2, shadowLod } from './terrain.js';
 
 export const VEG_COUNTS = {
   high: { spruce: 64, shrub: 300, tuft: 340 },
@@ -183,6 +183,7 @@ function spruceGeometry(seed = 5) {
   const r = rng(seed);
   const B = new Builder();
   const NW = 12, NB = 5, SEG = 3;
+  const cards = []; // branch params, re-emitted below as the shadow LOD
   for (let i = 0; i < NW; i++) {
     const t = i / (NW - 1);
     const y = 0.05 + 0.84 * t;
@@ -196,9 +197,14 @@ function spruceGeometry(seed = 5) {
       const wd = L * (0.62 + 0.15 * r());
       const droop = 0.5 + 0.25 * r();
       const ph = r();
+      cards.push([i, y, L, frond, dx, dz, px, pz, roll, wd, droop, ph]);
+    }
+  }
+  const frondCards = (seg) => {
+    for (const [i, y, L, frond, dx, dz, px, pz, roll, wd, droop, ph] of cards) {
       const base = B.p.length / 3;
-      for (let k = 0; k <= SEG; k++) {
-        const s = k / SEG;
+      for (let k = 0; k <= seg; k++) {
+        const s = k / seg;
         const cx = dx * L * s, cz = dz * L * s;
         const cy = y + L * (0.22 * s - droop * s * s);
         // card spans ±wd/2 across, rolled about the branch, following the droop
@@ -208,12 +214,13 @@ function spruceGeometry(seed = 5) {
         B.v(cx - hx, cy - hy, cz - hz, nx, ny, nz, u, 0.75, y, s, ph, i);
         B.v(cx + hx, cy + hy, cz + hz, nx, ny, nz, u, 1.0, y, s, ph, i);
       }
-      for (let k = 0; k < SEG; k++) {
+      for (let k = 0; k < seg; k++) {
         const a = base + k * 2;
         B.i.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
       }
     }
-  }
+  };
+  frondCards(SEG);
   // leader: two crossed narrow vertical cards → the sharp tip
   for (let c = 0; c < 2; c++) {
     const ax = c ? 0 : 1, az = c ? 1 : 0;
@@ -239,7 +246,14 @@ function spruceGeometry(seed = 5) {
     const a = tb + k * 2;
     B.i.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
   }
-  return B.build();
+  // shadow LOD (terrain.js shadowLod): the same fronds as straight one-segment cards (the drooping
+  // card arches above its chord, so the stand-in never shadows its own lit side) — 120 vs 374 tris
+  const fine = B.i.length;
+  frondCards(1);
+  const g = B.build();
+  g.setDrawRange(0, fine);
+  g.userData.shadowRange = [fine, B.i.length - fine];
+  return g;
 }
 
 function shrubGeometry(seed = 9) {
@@ -487,6 +501,7 @@ export class Vegetation {
       mesh.name = `veg-${kind}`;
       mesh.customDepthMaterial = depth;
       mesh.castShadow = kind !== 'tuft';
+      shadowLod(mesh);
       mesh.receiveShadow = true;
       const inst = new Float32Array(Math.max(1, list.length) * 2);
       list.forEach((it, i) => {
@@ -543,7 +558,7 @@ export class Vegetation {
 
   get triangles() {
     let t = 0;
-    for (const mesh of Object.values(this.meshes)) t += (mesh.geometry.index.count / 3) * mesh.count;
+    for (const mesh of Object.values(this.meshes)) t += (Math.min(mesh.geometry.index.count, mesh.geometry.drawRange.count) / 3) * mesh.count;
     return t;
   }
 

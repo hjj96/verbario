@@ -592,8 +592,28 @@ export function fitShoals(sampler, count, { minR = 4, margin = 1.5, level = 0.15
 
 // ------------------------------------------------------------------------------------------------
 // Boulder: smooth displaced sphere (seam-free normals from the implicit surface's gradient).
-// Unit size ~1, flattened, bottom tucked under; aTerr = (0, cavity, 0, 0).
-export function boulderGeometry(seed = 1, wSeg = 14, hSeg = 10) {
+// Unit size ~1, flattened, bottom tucked under; aTerr = (0, cavity, 0, 0). A coarse copy (8 × 5,
+// inscribed in the fine one) follows as the shadow LOD: geometry.userData.shadowRange, see shadowLod.
+export function boulderGeometry(seed = 1, wSeg = 14, hSeg = 10, lod = true) {
+  if (lod && (wSeg > 8 || hSeg > 5)) {
+    const fine = boulderGeometry(seed, wSeg, hSeg, false), coarse = boulderGeometry(seed, Math.min(8, wSeg), Math.min(5, hSeg), false);
+    const nv = fine.attributes.position.count, ni = fine.index.count, ci = coarse.index.count;
+    for (const k of Object.keys(fine.attributes)) {
+      const a = fine.attributes[k], b = coarse.attributes[k];
+      const arr = new Float32Array(a.array.length + b.array.length);
+      arr.set(a.array);
+      arr.set(b.array, a.array.length);
+      fine.setAttribute(k, new THREE.BufferAttribute(arr, a.itemSize));
+    }
+    const idx = new Uint32Array(ni + ci);
+    idx.set(fine.index.array);
+    for (let i = 0; i < ci; i++) idx[ni + i] = coarse.index.array[i] + nv;
+    fine.setIndex(new THREE.BufferAttribute(idx, 1));
+    fine.setDrawRange(0, ni);
+    fine.userData.shadowRange = [ni, ci];
+    coarse.dispose();
+    return fine;
+  }
   const g = new THREE.SphereGeometry(1, wSeg, hSeg);
   const pos = g.attributes.position;
   const sy = 0.62;

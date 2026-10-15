@@ -108,6 +108,13 @@ export class Panels {
     this.keysEl = el('div.hud-keys', { parent: P });
     this.keys = new HtmlSlot(this.keysEl);
 
+    // Screen rects of the background-less text panels (meteo, mission strip, bottom bar, key hints):
+    // the overlay fades world-anchored markers under them so a label never prints over HUD text.
+    // Mutated in place by measureText() (layout read: on resize, on a strip text change, at 1 Hz).
+    this._textEls = [this.tl, this.tcBox, this.bar, this.keysEl];
+    this.textRects = this._textEls.map(() => ({ x: 0, y: 0, w: 0, h: 0 }));
+    this.stripRect = this.textRects[1];
+
     this._hullPrev = 10;
     this._hullBlink = new Array(10).fill(0);
     this._fuelN = -1;
@@ -125,13 +132,39 @@ export class Panels {
     if (!avail) return;
     // natural width at k = 1: the cells never shrink below their content (nowrap)
     let sum = 0;
-    const n = bar.children.length;
-    for (let i = 0; i < n; i++) sum += bar.children[i].offsetWidth;
+    let n = 0;
+    for (const c of bar.children) {
+      const w = c.offsetWidth;
+      sum += w;
+      if (w) n++; // hidden cells take no flex gap
+    }
     const need = (sum + Math.max(0, n - 1) * 18 * hs * k0) / k0;
-    const k = Math.max(0.6, Math.min(1, (avail - 4) / Math.max(1, need)));
+    // a portrait phone wraps the bar into two rows (CSS .portrait): fit half the length per row
+    const rows = this.flight.node.classList.contains('portrait') ? 2 : 1;
+    const k = Math.max(rows > 1 ? 0.7 : 0.6, Math.min(1, (avail * rows - 4 - (rows - 1) * 60) / Math.max(1, need)));
     if (Math.abs(k - k0) < 0.01) return;
+    this._setBarK(k);
+    // the 1 px borders and 2 px segment gaps do not scale: settle the rest against the real overflow
+    for (let i = 0; i < 3 && rows === 1 && this._barK > 0.6 && bar.scrollWidth > avail + 1; i++) {
+      this._setBarK(Math.max(0.6, this._barK * ((avail - 4) / bar.scrollWidth)));
+    }
+  }
+
+  _setBarK(k) {
     this._barK = k;
-    bar.style.setProperty('--hs', (hs * k).toFixed(3));
+    this.bar.style.setProperty('--hs', ((this.flight.L.hs || 1) * k).toFixed(3));
+  }
+
+  measureText() {
+    for (let i = 0; i < this._textEls.length; i++) {
+      const n = this._textEls[i];
+      const r = this.textRects[i];
+      const b = n.getBoundingClientRect(); // display: none (narrow screens) → 0 × 0, skipped
+      r.x = b.left;
+      r.y = b.top;
+      r.w = b.width;
+      r.h = b.height;
+    }
   }
 
   showChapter(title) {
@@ -187,9 +220,10 @@ export class Panels {
       strip = `СПАСЕНО ${st.rescued || 0}/${total} · ПОТЕРЯНО ${st.lost || 0} · ${mis.timeLeft != null ? `ОСТАЛОСЬ ${mmss(mis.timeLeft)}` : mmss(m.missionT)}`;
     }
     this.strip.set(strip);
-    this.task.set(mis.task || '');
+    let moved = this.task.set(mis.task || '');
     const gh = mis.goldenHour;
-    this.gold.set(Number.isFinite(gh) ? `♥ ЗОЛОТОЙ ЧАС ${mss(gh)}` : '');
+    moved = this.gold.set(Number.isFinite(gh) ? `♥ ЗОЛОТОЙ ЧАС ${mss(gh)}` : '') || moved;
+    if (moved) this._remeasure = true;
     setClass(this.goldEl, 'on', Number.isFinite(gh));
     setClass(this.goldEl, 'urgent', Number.isFinite(gh) && gh < 30);
 
@@ -284,6 +318,11 @@ export class Panels {
       this._dev = dev;
       const list = KEYS[dev] || KEYS.keyboard;
       this.keys.set(list.map(([k, t]) => `<span>${keycap(k)}${t}</span>`).join(''));
+      this._remeasure = true;
+    }
+    if (this._remeasure) {
+      this._remeasure = false;
+      this.measureText();
     }
   }
 }

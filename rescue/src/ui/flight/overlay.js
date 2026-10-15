@@ -91,8 +91,8 @@ export class Overlay {
     g.lineCap = 'round';
     g.lineJoin = 'round';
     g.textBaseline = 'middle';
-    g.shadowColor = 'rgba(0,0,0,0.6)';
-    g.shadowBlur = 4 * this.dpr;
+    g.shadowColor = this.pal.haze ? this.pal.shadow : 'rgba(0,0,0,0.6)'; // pale fog: a darker halo
+    g.shadowBlur = (4 - this.pal.haze) * this.dpr;
 
     this.edgeN = 0;
     this._datums(g, hs);
@@ -102,6 +102,7 @@ export class Overlay {
     this._lost(g, hs);
     this._people(g, hs);
     this._ring(g, hs);
+    this._underText(g);
     this._edges(g, hs);
     this._tape(g, L.tape, hs);
     this._altimeter(g, L.alt, hs);
@@ -109,6 +110,23 @@ export class Overlay {
     this._popups(g, hs);
     this._crosshair(g, hs);
     g.shadowBlur = 0;
+  }
+
+  // World-anchored markers (pad cues, names, distances) and the heli ring's wedges that slide under the
+  // background-less HUD text (meteo, mission strip, bottom bar, key hints) fade out there — soft-edged, so the HUD line stays
+  // readable instead of two texts printing over each other. Screen-anchored layers draw after this.
+  _underText(g) {
+    const rects = this.flight.panels.textRects;
+    g.save();
+    g.globalCompositeOperation = 'destination-out';
+    g.fillStyle = 'rgba(0,0,0,0.85)';
+    g.shadowColor = 'rgba(0,0,0,0.85)';
+    g.shadowBlur = 10 * this.dpr;
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i];
+      if (r.w > 0) g.fillRect(r.x - 4, r.y - 2, r.w + 8, r.h + 4);
+    }
+    g.restore();
   }
 
   // ============================================================================================

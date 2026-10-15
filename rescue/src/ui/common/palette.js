@@ -65,20 +65,27 @@ export class HudPalette {
     this.danger = BASE.danger;
     this.shadow = 'rgba(0,0,0,0.65)';
     this.night = 0; // 0..1 amber amount (quantised)
+    this.haze = 0; // 0..1 bright-scene legibility boost (quantised)
     this.colorblind = false;
     this.version = 0; // bumps when anything changes (cached backgrounds redraw)
   }
 
   // night: 0..1 (weather.state.night), quantised to 10 steps so CSS/caches update rarely.
-  apply(night, colorblind) {
+  // haze: 0..1 how bright and flat the scene behind the HUD is (thick daylight fog): the light,
+  // semi-transparent «dim»/«faint» text vanishes over a pale grey frame, so it gains opacity and a
+  // tighter dark halo, and the panels get a soft scrim (CSS --haze) — quantised the same way.
+  apply(night, colorblind, haze = 0) {
     const n = Math.round(Math.max(0, Math.min(1, (night - 0.55) / 0.15)) * 10) / 10;
-    if (n === this.night && colorblind === this.colorblind) return false;
+    const z = Math.round(Math.max(0, Math.min(1, haze)) * 10) / 10;
+    if (n === this.night && colorblind === this.colorblind && z === this.haze) return false;
     this.night = n;
     this.colorblind = colorblind;
+    this.haze = z;
     const fg = mixHex(BASE.fg, NIGHT_AMBER, n);
     this.fg = fg;
-    this.dim = rgba(fg, 0.45);
-    this.faint = rgba(fg, 0.22);
+    this.dim = rgba(fg, 0.45 + 0.4 * z);
+    this.faint = rgba(fg, 0.22 + 0.3 * z);
+    this.shadow = `rgba(0,0,0,${0.65 + 0.25 * z})`;
     this.wind = mixHex(BASE.wind, NIGHT_AMBER, n * 0.55);
     this.info = mixHex(BASE.info, NIGHT_AMBER, n * 0.4);
     const C = colorblind ? COLORBLIND : BASE;
@@ -100,6 +107,9 @@ export class HudPalette {
       '--hazard': this.hazard,
       '--wind': this.wind,
       '--info': this.info,
+      '--haze': String(this.haze),
+      // tight dark halo first (reads over a pale frame), then the soft documentary glow
+      '--tsh': this.haze ? `0 0 1px rgba(4,10,14,${0.9 * this.haze}), 0 0 3px rgba(4,10,14,${0.7 * this.haze}), 0 0 6px rgba(0,0,0,.65)` : '0 0 6px rgba(0, 0, 0, .65)',
     };
   }
 }

@@ -491,9 +491,9 @@ export class AirLayers {
     else col.setRGB(0.5, 0.52, 0.52);
     if (p.sun) col.lerp(p.sun, 0.06 * (1 - (st.night ?? 0)));
 
-    // downwash hole below 25 m
+    // downwash hole: fades only once the airframe is clear above the top layer (22 m)
     const alt = heli.alt;
-    const holeK = heli.alive ? (1 - smooth(18, 26, alt)) * clamp01(heli.rpm ?? 1) : 0;
+    const holeK = heli.alive ? (1 - smooth(26, 32, alt)) * clamp01(heli.rpm ?? 1) : 0;
     const R = 9 + 0.35 * Math.max(0, alt);
 
     for (let i = 0; i < 3; i++) {
@@ -505,8 +505,9 @@ export class AirLayers {
       u.uCenter.value.set(cx, cz);
       u.uAlpha.value = LAYER_ALPHA[i] * presence;
       u.uCol.value.copy(col).multiplyScalar(1 + 0.05 * i);
-      // the hole reaches through the layers below the rotor (upper layers only when the heli is above them)
-      const reach = heli.y > LAYER_HEIGHTS[i] + 2 ? 1 : 0.25;
+      // the hole reaches through the layers below the rotor and any layer the airframe sits in
+      // (fuselage ≈ 2 m below the root, rotor ≈ 3 m above); layers well above the rotor only thin
+      const reach = 1 - 0.75 * smooth(4, 8, LAYER_HEIGHTS[i] - heli.y);
       u.uHole.value.set(heli.x, heli.z, R, holeK * reach);
     }
 

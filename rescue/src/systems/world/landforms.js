@@ -9,10 +9,11 @@ import { buildTerrain, coverRule, fitShoals, sstep, hash01, boulderGeometry, sca
 import { createTerrainMaterial, terrainUniforms } from './terrainMaterial.js';
 import { Vegetation } from './vegetation.js';
 import { rng } from './geo.js';
+import { smoothstep } from '../../core/math.js';
 
-// Grid spacing per quality tier (m): crisp at 100 m, cheap on low. High stays at 0.8: the island and
+// Grid spacing per quality tier (m): crisp at 100 m, cheap on low. High stays at 0.85: the island and
 // its three rocks share the 400k-triangle frame with the sea round the home base.
-export const TERRAIN_STEP = { high: 0.8, medium: 0.85, low: 1.3 };
+export const TERRAIN_STEP = { high: 0.85, medium: 0.95, low: 1.3 };
 // Shadow casters use a coarse copy of each landmass (~1.8 m cells; terrain.js shadowLod): the cast
 // shadow on the sea and the crags' self-shadowing read the same at a fraction of the triangles.
 const shadowStride = (step) => Math.max(2, Math.round(1.8 / step));
@@ -222,7 +223,7 @@ export function terrainMaterial(W, quality) {
   if (!W.mats.terrain) W.mats.terrain = createTerrainMaterial(W.look, W.shared, { lq: quality === 'low' });
   return W.mats.terrain;
 }
-const BOULDER_SEG = { high: [12, 9], medium: [10, 7], low: [8, 6] };
+const BOULDER_SEG = { high: [10, 7], medium: [9, 6], low: [8, 6] }; // 0.5–2.6 m boulders seen from ≥ 40 m
 const BOULDERS = { high: 1, medium: 0.75, low: 0.45 };
 function boulderMesh(W, list, quality, name, shared = null) {
   const [ws, hs] = BOULDER_SEG[quality] || BOULDER_SEG.high;
@@ -243,7 +244,7 @@ function boulderMesh(W, list, quality, name, shared = null) {
   mesh.computeBoundingSphere();
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  return mesh;
+  return shadowLod(mesh);
 }
 function boulderCount(mesh, q) {
   if (mesh) mesh.count = Math.round(mesh.userData.full * (BOULDERS[q] ?? 1));
@@ -367,8 +368,20 @@ export function createRockField(W, list, seed, quality = 'high') {
 }
 
 // Per-frame / settings hooks for the world.
-export function updateLandforms(env) {
+// Flat-light sky fill (terrainMaterial uTFill): in a storm the weak sky light (hemisphere + sun ≈ 0.18
+// vs 0.75 overcast) leaves wet granite darker than the foam-streaked sea — a black hole from the drone.
+// Real rock under a uniform sky stays a mid-dark grey brighter than the water, so below a sky-light
+// floor the terrain gets a fill in the sky-ambient hue; it fades with the night (night presets keep
+// their moonlit rim) and is zero from overcast up.
+const lum = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+export function updateLandforms(env, pal) {
   terrainUniforms.uSwell.value = env.Hs ?? 0.5;
+  const fill = terrainUniforms.uTFill.value;
+  const a = pal?.ambient, s = pal?.sun;
+  if (!a?.isColor || !s?.isColor) return fill.setRGB(0, 0, 0);
+  const sky = lum(a) * (pal.ambientIntensity ?? 1) + 0.5 * lum(s) * (pal.sunIntensity ?? 1);
+  const k = 1.1 * smoothstep(0.45, 0.15, sky) * (1 - env.night);
+  fill.copy(a).multiplyScalar(k / Math.max(0.02, lum(a)));
 }
 export function landformsQuality(W, q) {
   const m = W.mats.terrain;

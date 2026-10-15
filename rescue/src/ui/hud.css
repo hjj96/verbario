@@ -31,6 +31,7 @@
   --f-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   --f-text: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --tsh: 0 0 6px rgba(0, 0, 0, .65);
+  --haze: 0;
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -76,6 +77,22 @@ body.hud-mode-play #game { cursor: none; }
   text-shadow: var(--tsh);
 }
 .hud-flight.on { opacity: 1; visibility: visible; }
+/* Bright-scene scrims (daylight fog, palette --haze 0..1): a graduated dark filter along the top and
+   bottom edges, like an ND grad on the escort camera — gives the meteo block, mission strip, key hints
+   and bottom bar a dark ground to read against when the whole frame turns pale grey. */
+.hud-flight::before, .hud-flight::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--haze, 0);
+  transition: opacity 1.2s ease;
+}
+.hud-flight::before { top: 0; height: calc(150px * var(--hs)); background: linear-gradient(rgba(6, 14, 20, .55), rgba(6, 14, 20, .4) 60%, rgba(6, 14, 20, 0)); }
+.hud-flight::after { bottom: 0; height: calc(130px * var(--hs)); background: linear-gradient(rgba(6, 14, 20, 0), rgba(6, 14, 20, .3) 45%, rgba(6, 14, 20, .5)); }
+.mayday-hud.menu-open .hud-flight::before, .mayday-hud.menu-open .hud-flight::after { opacity: 0; }
 .mayday-hud.night .hud-flight.on { opacity: .82; }
 /* Under a menu (pause, settings) only the viewfinder corners stay — the paper owns the screen. */
 .mayday-hud.menu-open .hud-flight.on > :not(.hud-vf) { opacity: 0; transition: opacity .2s; }
@@ -1034,3 +1051,18 @@ body.hud-mode-play #game { cursor: none; }
 @media (max-height: 640px) {
   .bd-cols { grid-template-columns: 1fr; }
 }
+
+/* Phone-size viewports (FlightHud.layout sets .compact under 900 × 500 and .portrait for a narrow
+   upright frame; it also sizes the radar, the compass tape and --tl-max). Same register, tighter set. */
+.hud-flight.compact .hud-tl { font-size: calc(10px * var(--hs)); letter-spacing: .08em; max-width: var(--tl-max); }
+.hud-flight.compact .rec-cam { display: none; }
+.hud-flight.compact .hud-pill.on { display: table; margin: 2px 0 0; } /* forecast chip on its own line */
+.hud-flight.compact .hud-strip { width: max-content; max-width: calc(100vw - 48px); white-space: normal; }
+.hud-flight.compact .hb-modes .mode { display: none; } /* status chips go; the consumables count stays */
+.hud-flight.compact .cons { margin-left: 0; }
+.hud-flight.compact .hud-subs { width: min(420px, 46vw); max-height: 32vh; overflow: hidden; justify-content: flex-end; }
+.hud-flight.portrait .hud-met { white-space: normal; }
+.hud-flight.portrait .hud-bottom { flex-wrap: wrap; height: auto; gap: calc(4px * var(--hs)) calc(14px * var(--hs)); }
+.hud-flight.portrait .segs i { width: calc(3.5px * var(--hs)); }
+.hud-flight.portrait .segs-10 i { width: calc(5.5px * var(--hs)); }
+.hud-flight.portrait .hud-subs { width: max(200px, calc(100vw - 188px)); bottom: calc(24px + 62px * var(--hs) + 14px); }

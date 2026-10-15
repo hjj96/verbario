@@ -9,11 +9,12 @@
 // beam (8 s per turn) = additive volumetric cones + the world's one SpotLight sweeping the sea;
 // translucent in fog; windsock on the pad; foghorn every 30 s in fog.
 import * as THREE from 'three';
-import { bake, p, member, beam, railParts, latticeParts, shadeVerts, fbm3, worn, UNIT, SURF, emit } from './geo.js';
+import { bake, thinNoShadow, p, member, beam, railParts, latticeParts, shadeVerts, fbm3, worn, UNIT, SURF, emit } from './geo.js';
 import { CH, createPropMaterial, beamGeometry, setGlow } from './materials.js';
 import { paintHelideck, decalTexture } from './decals.js';
 import { Windsock } from './rigging.js';
 import { createIsland } from './landforms.js';
+import { shadowLod } from './terrain.js';
 import { setTerrainGlow } from './terrainMaterial.js';
 import { clamp, smoothstep } from '../../core/math.js';
 
@@ -52,6 +53,9 @@ const C = {
 };
 const _c = new THREE.Color();
 const shade = (hex, k) => new THREE.Color(hex).multiplyScalar(k);
+const noShadow = (part) => ((part.shadow = false), part);
+// light-spill colours, parsed once (update() runs every frame)
+const GLOW = { lamp: new THREE.Color('#FFE2B0'), flood: new THREE.Color('#FFE6B0'), window: new THREE.Color('#FFC98A'), nav: new THREE.Color('#12FF6E') };
 const fract = (v) => v - Math.floor(v);
 
 // Tower band: open tapered cylinder with baked weathering — rust runs below the gallery and each
@@ -114,7 +118,7 @@ export class Lighthouse {
     this.land = createIsland(W, W.ctx.settings.get?.('quality') || 'high');
     this.group.add(this.land.group);
 
-    this.mesh = new THREE.Mesh(bake(W.look, this._parts()), this.material);
+    this.mesh = shadowLod(new THREE.Mesh(bake(W.look, thinNoShadow(this._parts())), this.material));
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
     this.group.add(this.mesh);
@@ -215,7 +219,11 @@ export class Lighthouse {
     const y0 = 10.5, y1 = 36;
     const rAt = (y) => 4.3 - ((y - y0) / (y1 - y0)) * 1.25;
     P.push(on(p(UNIT.cyl32, C.concreteDark, [tx, 6.5, tz], [5.4, 8, 5.4], null, SURF.concreteStained), 9.6));
-    P.push(vc(baseCourse(4.6, 4.45, 2.2, 1.9), SURF.concreteStained, [tx, y0 - 0.2 + 1.1, tz], y0));
+    // the finely tessellated base course and banded shaft (vertex-colour weathering) cast their
+    // shadow through two 24-sided stand-ins (bake shadow LOD)
+    P.push(noShadow(vc(baseCourse(4.6, 4.45, 2.2), SURF.concreteStained, [tx, y0 - 0.2 + 1.1, tz], y0)));
+    P.push({ ...p(new THREE.CylinderGeometry(4.45, 4.6, 2.2, 24, 1, true), C.white, [tx, y0 - 0.2 + 1.1, tz]), shadow: 'only' });
+    P.push({ ...p(new THREE.CylinderGeometry(rAt(y1), rAt(y0), y1 - y0, 24, 1, true), C.white, [tx, (y0 + y1) / 2, tz]), shadow: 'only' });
     P.push(p(new THREE.RingGeometry(rAt(y0 + 2), 4.52, 48, 1).rotateX(-Math.PI / 2), '#8F8C83', [tx, y0 + 2.01, tz], 1, null, SURF.concrete));
     const windows = [{ y: 17.5, th: 1.15 }, { y: 23, th: 1.85 }, { y: 28.5, th: 0.95 }];
     const bands = [
@@ -227,8 +235,8 @@ export class Lighthouse {
       [33.2, y1, C.red],
     ];
     bands.forEach(([a, b, col], i) => {
-      P.push(vc(towerBand(a, b, col, y0, y1, rAt, windows), worn(SURF.paint, 0.5, 0.66 + (i % 3) * 0.04), [tx, (a + b) / 2, tz], y0));
-      if (i) P.push(p(new THREE.CylinderGeometry(rAt(a) + 0.03, rAt(a) + 0.03, 0.07, 48, 1, true), shade(bands[i - 1][2], 0.86), [tx, a, tz], 1, null, SURF.paintFaded));
+      P.push(noShadow(vc(towerBand(a, b, col, y0, y1, rAt, windows), worn(SURF.paint, 0.5, 0.66 + (i % 3) * 0.04), [tx, (a + b) / 2, tz], y0)));
+      if (i) P.push(noShadow(p(new THREE.CylinderGeometry(rAt(a) + 0.03, rAt(a) + 0.03, 0.07, 48, 1, true), shade(bands[i - 1][2], 0.86), [tx, a, tz], 1, null, SURF.paintFaded)));
     });
     const onShaft = (th, y, off, size, color, surf) => {
       const r = rAt(y) + off;
@@ -644,17 +652,17 @@ export class Lighthouse {
     // daylight: the lamp is off behind its lens (a faint glint only); lit: a modest steady core that
     // flares only while a beam swings across the viewer (one dominant light per frame, §2.1)
     W.channels[CH.LANTERN] = Math.max(W.channels[CH.LANTERN], 0.03 + on * (0.4 + 1.5 * flash));
-    setGlow(this.material, 0, TOWER.x, LANTERN_Y, TOWER.z, 5, W._col.set('#FFE2B0'), on * (0.45 + 0.9 * flash));
-    setGlow(this.material, 1, 0, DECK_Y + 3, 0, 13, W._col.set('#FFE6B0'), 0.22 * W.channels[CH.PADLIGHT]);
+    setGlow(this.material, 0, TOWER.x, LANTERN_Y, TOWER.z, 5, GLOW.lamp, on * (0.45 + 0.9 * flash));
+    setGlow(this.material, 1, 0, DECK_Y + 3, 0, 13, GLOW.flood, 0.22 * W.channels[CH.PADLIGHT]);
     // base floods at the tower foot: the light dies out ~10 m up, so the upper shaft stays dim and
     // the lantern remains the one bright point of the island
-    setGlow(this.material, 2, TOWER.x, 10.5, TOWER.z + 5.5, 6.5, W._col.set('#FFE2B0'), 0.6 * W.channels[CH.PADLIGHT]);
+    setGlow(this.material, 2, TOWER.x, 10.5, TOWER.z + 5.5, 6.5, GLOW.lamp, 0.6 * W.channels[CH.PADLIGHT]);
     // the same floods / windows spill onto the rock round them (terrain material, world space)
     const pl = W.channels[CH.PADLIGHT];
-    setTerrainGlow(0, this.x, DECK_Y, this.z, 21, W._col.set('#FFE6B0'), 0.9 * pl);
-    setTerrainGlow(1, this.x + TOWER.x, 12, this.z + TOWER.z + 3, 12, W._col.set('#FFE2B0'), 0.8 * pl);
-    setTerrainGlow(2, this.x + 13, 10, this.z - 22.5, 7, W._col.set('#FFC98A'), 0.45 * W.channels[CH.WINDOWS]);
-    setTerrainGlow(3, this.x + this.jettyHead[0], 3, this.z + this.jettyHead[1], 7, W._col.set('#12FF6E'), 0.3 * W.channels[CH.NAV]);
+    setTerrainGlow(0, this.x, DECK_Y, this.z, 21, GLOW.flood, 0.9 * pl);
+    setTerrainGlow(1, this.x + TOWER.x, 12, this.z + TOWER.z + 3, 12, GLOW.lamp, 0.8 * pl);
+    setTerrainGlow(2, this.x + 13, 10, this.z - 22.5, 7, GLOW.window, 0.45 * W.channels[CH.WINDOWS]);
+    setTerrainGlow(3, this.x + this.jettyHead[0], 3, this.z + this.jettyHead[1], 7, GLOW.nav, 0.3 * W.channels[CH.NAV]);
 
     // SpotLight: sweep the sea with whichever beam faces the heli; the swap happens at zero.
     const spot = W.lights.spot;

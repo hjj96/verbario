@@ -135,8 +135,32 @@ export function beam(a, b, w, h, color, surf = SURF.steel) {
 // --------------------------------------------------------------------------------------------
 // bake(): look.merge + aSurf + per-vertex colours for parts that bring their own (part.vcol) +
 // decal uv remap (part.uvRect = [u0, v0, u1, v1]).
+// Shadow LOD: part.shadow === false keeps a part out of the shadow pass (dense detail whose cast
+// shadow a coarse stand-in already gives), part.shadow === 'only' draws it in the shadow pass only
+// (that stand-in). The parts are then ordered [main only | both | shadow only]; drawRange covers the
+// main pass and geometry.userData.shadowRange the shadow pass (terrain.js shadowLod swaps them).
 const _tint = new THREE.Color();
+const _ts = new THREE.Vector3(), _tp = new THREE.Vector3(), _tq = new THREE.Quaternion(), _tb = new THREE.Vector3();
+// Sticks thinner than d across (braces, seams, mullions, glazing bars) leave the shadow pass: below
+// one shadow-map texel (250 m / 2048 ≈ 0.12 m on high) they only alias into broken dashes.
+export function thinNoShadow(parts, d = 0.09) {
+  for (const q of parts) {
+    if (q.shadow !== undefined) continue;
+    const g = q.geometry;
+    if (!g.boundingBox) g.computeBoundingBox();
+    g.boundingBox.getSize(_tb);
+    if (q.matrix) q.matrix.decompose(_tp, _tq, _ts);
+    else if (q.scale === undefined) _ts.set(1, 1, 1);
+    else if (typeof q.scale === 'number') _ts.setScalar(q.scale);
+    else _ts.set(...q.scale);
+    const e = [_tb.x * Math.abs(_ts.x), _tb.y * Math.abs(_ts.y), _tb.z * Math.abs(_ts.z)].sort((a, b) => a - b);
+    if (e[1] < d) q.shadow = false;
+  }
+  return parts;
+}
 export function bake(look, parts) {
+  const main = parts.filter((q) => q.shadow === false), only = parts.filter((q) => q.shadow === 'only');
+  if (main.length || only.length) parts = [...main, ...parts.filter((q) => q.shadow !== false && q.shadow !== 'only'), ...only];
   for (const part of parts) ensureUv(part.geometry);
   const geo = look.merge(parts);
   const n = geo.attributes.position.count;
@@ -189,6 +213,12 @@ export function bake(look, parts) {
     off += cnt;
   }
   geo.setAttribute('aSurf', new THREE.BufferAttribute(surf, 4));
+  if (main.length || only.length) {
+    const verts = (list) => list.reduce((s, q) => s + (q.geometry.index ? q.geometry.index.count : q.geometry.attributes.position.count), 0);
+    const n0 = verts(main), n2 = verts(only);
+    geo.setDrawRange(0, n - n2);
+    geo.userData.shadowRange = [n0, n - n0];
+  }
   return geo;
 }
 

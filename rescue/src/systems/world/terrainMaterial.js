@@ -141,6 +141,7 @@ const PALETTE = {
 const GLOWS = 4;
 export const terrainUniforms = {
   uSwell: { value: 0.5 },
+  uTFill: { value: new THREE.Color(0, 0, 0) }, // flat-light sky fill (world.js, from the weather palette)
   uTGlow: { value: Array.from({ length: GLOWS }, () => new THREE.Vector4(0, -1e4, 0, 1)) },
   uTGlowCol: { value: Array.from({ length: GLOWS }, () => new THREE.Color(0, 0, 0)) },
 };
@@ -160,6 +161,7 @@ export function createTerrainMaterial(look, shared, { name = 'terrain', lq = fal
     uCloudK: shared.uCloudK,
     uRock: { value: rockTexture() },
     uSwell: terrainUniforms.uSwell,
+    uTFill: terrainUniforms.uTFill,
     uTGlow: terrainUniforms.uTGlow,
     uTGlowCol: terrainUniforms.uTGlowCol,
   };
@@ -206,6 +208,7 @@ export function createTerrainMaterial(look, shared, { name = 'terrain', lq = fal
         uniform float uCloudK;
         uniform sampler2D uRock;
         uniform float uSwell;
+        uniform vec3 uTFill;
         uniform vec4 uTGlow[${GLOWS}];
         uniform vec3 uTGlowCol[${GLOWS}];
         uniform vec3 ${Object.keys(PALETTE).join(', ')};
@@ -356,6 +359,7 @@ export function createTerrainMaterial(look, shared, { name = 'terrain', lq = fal
         float terrCloud = mix(1.0, 0.72, lookCloud(vTW.xz) * uCloudK);
         reflectedLight.directDiffuse *= terrCloud;
         reflectedLight.directSpecular *= terrCloud;
+        reflectedLight.indirectDiffuse += diffuseColor.rgb * uTFill * (0.55 + 0.45 * up);
         reflectedLight.indirectDiffuse *= ao;
         reflectedLight.indirectSpecular *= mix(1.0, ao, 0.7);`,
       );

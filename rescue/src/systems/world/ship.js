@@ -64,6 +64,9 @@ const _q = new THREE.Quaternion();
 const _v2 = new THREE.Vector2();
 const RADAR_COL = new THREE.Color('#2A2E33');
 const ARM_COL = new THREE.Color('#FF7A1A');
+const FLOOD_COL = new THREE.Color('#FFE2B0'); // light-spill colours, parsed once (update() runs every frame)
+const DECK_COL = new THREE.Color('#FFE6B0');
+const WHITE = new THREE.Color('#FFFFFF');
 const WAND_COL = new THREE.Color(1 + 3.6, 1 + 0.75, 1 + 0.05); // > 1 → glows (prop material)
 
 export class Ship {
@@ -606,9 +609,9 @@ export class Ship {
     // cones: visible when the floods are on and the air carries water
     W.mats.flood.uniforms.uIntensity.value = W.channels[CH.FLOOD];
     W.mats.flood.uniforms.uDensity.value = 0.03 + 0.16 * env.rain + 0.22 * env.fogK + 0.05 * this.slamFx;
-    setGlow(this.material, 0, 0, this.hull.deckAt(-18) + 0.5, -18, 8, W._col.set('#FFE2B0'), 0.18 * W.channels[CH.FLOOD]);
-    setGlow(this.material, 1, 0, 24.6, -3, 1.4, W._col.set('#FFFFFF'), 0.6 * W.channels[CH.NAV]);
-    setGlow(this.material, 2, 0, DECK_Y + 1, DECK_Z, 12, W._col.set('#FFE6B0'), 0.07 * W.channels[CH.FLOOD]);
+    setGlow(this.material, 0, 0, this.hull.deckAt(-18) + 0.5, -18, 8, FLOOD_COL, 0.18 * W.channels[CH.FLOOD]);
+    setGlow(this.material, 1, 0, 24.6, -3, 1.4, WHITE, 0.6 * W.channels[CH.NAV]);
+    setGlow(this.material, 2, 0, DECK_Y + 1, DECK_Z, 12, DECK_COL, 0.07 * W.channels[CH.FLOOD]);
 
     // --- horn when the heli comes within 300 m -------------------------------------------------
     const hp = env.heliPos;

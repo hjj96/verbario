@@ -69,22 +69,36 @@ export class FlightHud {
     L.H = H;
     L.hs = hs;
     L.safe = SAFE;
-    const tw = Math.min(420 * hs, W * 0.36);
-    const rs0 = Math.round(208 * hs);
-    const tTop = SAFE + rs0 + 14 * hs;
-    L.toastRect = { x: W - SAFE - 300 * hs - 10, y: tTop - 8, w: 300 * hs + SAFE + 10, h: this._toastH ? this._toastH + 16 : 0 };
-    L.tape = { x: W / 2 - tw / 2, y: SAFE, w: tw, h: 26 * hs };
-    const rs = Math.round(208 * hs);
+    // Phone-size viewports (DESIGN §7.3 is laid out for 1920 × 1080): a smaller radar, tighter text,
+    // and in portrait the compass + mission strip move down under the meteo block / radar instead of
+    // sharing the top row with them (CSS .compact / .portrait do the text side).
+    const compact = W < 900 || H < 500;
+    const portrait = compact && H > W && W < 700;
+    setClass(this.node, 'compact', compact);
+    setClass(this.node, 'portrait', portrait);
+    const rs = compact ? Math.round(Math.max(96, Math.min(208 * hs, Math.min(W, H) * 0.3))) : Math.round(208 * hs);
+    const tw = portrait ? Math.min(420 * hs, W * 0.6) : Math.min(420 * hs, W * (compact ? 0.3 : 0.36));
+    const tlMax = portrait ? W - 2 * SAFE - rs - 12 : 360 * hs;
+    this.node.style.setProperty('--tl-max', `${Math.round(tlMax)}px`);
+    const tapeY = portrait ? SAFE + Math.max(rs, 112 * hs) + 10 : SAFE;
+    L.tape = { x: W / 2 - tw / 2, y: tapeY, w: tw, h: 26 * hs };
     L.radar = { x: W - SAFE - rs, y: SAFE, size: rs };
-    L.bar = { y: H - SAFE - 34 * hs, h: 34 * hs };
-    L.alt = { x: SAFE + 66 * hs, y: Math.round(H * 0.47 - 70 * hs), w: 8 * hs, h: 140 * hs };
+    const stripTop = tapeY + L.tape.h + 22 * hs;
+    const tTop = portrait ? stripTop + 64 * hs : SAFE + rs + 14 * hs;
+    const tcw = Math.min(300 * hs, W - 2 * SAFE);
+    L.toastRect = { x: W - SAFE - tcw - 10, y: tTop - 8, w: tcw + SAFE + 10, h: this._toastH ? this._toastH + 16 : 0 };
+    const barH = (portrait ? 2 * 34 * 0.8 + 6 : 34) * hs; // portrait: the bar wraps into two rows
+    L.bar = { y: H - SAFE - barH, h: barH };
+    const ah = compact ? Math.min(140 * hs, H * 0.3) : 140 * hs;
+    L.alt = { x: SAFE + 66 * hs, y: Math.round(H * 0.47 - ah / 2), w: 8 * hs, h: ah };
     const pw = 380 * hs;
     const ph = 156 * hs;
     L.winchPanel = { x: Math.round(W / 2 - pw / 2), y: Math.round(L.bar.y - 18 * hs - ph), w: pw, h: ph };
     L.avoid = [
-      { x: 0, y: 0, w: 360 * hs, h: 130 * hs }, // REC + meteo
+      { x: 0, y: 0, w: tlMax + SAFE, h: (portrait ? 140 : 130) * hs }, // REC + meteo
       { x: L.radar.x - 8, y: 0, w: W - L.radar.x + 8, h: L.radar.y + rs + 8 }, // radar
-      { x: L.tape.x - 30, y: 0, w: L.tape.w + 60, h: 96 * hs }, // compass + mission strip
+      portrait ? { x: L.tape.x - 30, y: tapeY - 8, w: L.tape.w + 60, h: stripTop - tapeY + 58 * hs } : { x: L.tape.x - 30, y: 0, w: L.tape.w + 60, h: 96 * hs }, // compass + mission strip
+      this.panels.stripRect, // the strip as laid out (a long task line is wider / lower than the above)
       { x: 0, y: L.bar.y - 12, w: W, h: H - L.bar.y + 12 }, // bottom bar
       L.toastRect, // toast column (height kept current by Toasts.onHeight)
     ];
@@ -93,12 +107,15 @@ export class FlightHud {
     Object.assign(this.radar.node.style, { left: `${L.radar.x}px`, top: `${L.radar.y}px`, width: `${rs}px`, height: `${rs}px` });
     Object.assign(this.winch.node.style, { left: `${L.winchPanel.x}px`, top: `${L.winchPanel.y}px`, width: `${pw}px`, height: `${ph}px` });
     Object.assign(this.panels.altBox.style, { left: `${SAFE}px`, top: `${L.alt.y + L.alt.h / 2}px`, width: `${L.alt.x - SAFE - 12 * hs}px` });
-    this.panels.tcBox.style.top = `${SAFE + L.tape.h + 22 * hs}px`;
-    this.toasts.col.style.top = `${L.radar.y + rs + 14 * hs}px`;
+    this.panels.tcBox.style.top = `${stripTop}px`;
+    Object.assign(this.toasts.col.style, { top: `${tTop}px`, width: `${tcw}px` });
+    // radio subtitles: in a short landscape frame they start right of the altimeter column
+    this.subs.box.style.left = compact && !portrait ? `${Math.round(L.alt.x + 44 * hs)}px` : '';
     this.map.resize(W, H);
     this.panels._barK = 0; // re-measure the bottom bar at the new size / scale
     this.panels.bar.style.removeProperty('--hs');
     if (this.visible) this.panels.fitBar();
+    this.panels._remeasure = true;
   }
 
   setVisible(on) {
@@ -274,7 +291,10 @@ export class FlightHud {
     const paused = ctx.mode === 'paused';
     this.model.update(dt);
     if (this._t4.tick(dt)) this._palette();
-    if (this._t1.tick(dt)) this.panels.fitBar();
+    if (this._t1.tick(dt)) {
+      this.panels.fitBar();
+      this.panels.measureText();
+    }
     if (this._glitchT > 0) {
       this._glitchT -= dt;
       if (this._glitchT <= 0) setClass(this.node, 'glitch', false);
@@ -331,10 +351,16 @@ export class FlightHud {
 
   _palette() {
     const ctx = this.ctx;
-    const night = ctx.weather?.state?.night ?? 0;
+    const ws = ctx.weather?.state;
+    const night = ws?.night ?? 0;
     const cb = !!ctx.settings?.get('colorblindMarkers');
     const pal = this.hud.palette;
-    if (pal.apply(night, cb)) this.hud.applyPaletteCss();
+    // haze: thick fog (the frame is mostly fog colour) × how light that fog renders (linear luminance ×
+    // exposure: ≈ 0.48 in the daylight «fog» preset, ≈ 0.1 in a night or storm murk) — DESIGN §7.3
+    const fc = ws?.palette?.fogColor;
+    const lum = fc ? (0.2126 * fc.r + 0.7152 * fc.g + 0.0722 * fc.b) * (ws.palette.exposure ?? 1) : 0;
+    const haze = clamp01(((ws?.fog ?? 0) - 0.35) / 0.4) * clamp01((lum - 0.12) / 0.2);
+    if (pal.apply(night, cb, haze)) this.hud.applyPaletteCss();
     setClass(this.hud.root, 'night', night > 0.6);
   }
 
