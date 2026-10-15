@@ -190,7 +190,7 @@ export class RadioTriggers {
       else if (s && s.panic) R.line('k_calm');
     });
     on('heli:slip', () => R.line('w_slip'));
-    on('heli:snag', () => R.line('w_snag'));
+    on('heli:snag', (p) => R.line(p?.reason === 'debris' ? 'w_snag_debris' : 'w_snag'));
     on('heli:cabin-full', () => R.line('w_full'));
     on('heli:raft-throw', () => R.line('w_raft'));
     on('heli:raft-drop', () => R.line('w_raft'));

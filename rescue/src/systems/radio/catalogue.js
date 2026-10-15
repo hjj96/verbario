@@ -78,6 +78,7 @@ export const LINES = {
   w_swing: { s: 'winchman', p: 2, cd: 40, age: 2, t: 'Раскачка! Не дёргай машину!' },
   w_slip: { s: 'winchman', p: 3, cd: 10, age: 3, t: 'Сорвался! Опускаю ещё раз.' },
   w_snag: { s: 'winchman', p: 3, cd: 10, age: 3, t: 'Трос захлестнуло волной! Освобождаю…' },
+  w_snag_debris: { s: 'winchman', p: 3, cd: 10, age: 3, t: 'Трос зацепило за обломки! Стоп лебёдка, освобождаю…' },
   w_full: { s: 'winchman', p: 2, cd: 90, age: 4, t: 'Всё, кабина полная, как маршрутка в час пик.' },
   w_raft: { s: 'winchman', p: 2, cd: 30, age: 3, t: 'Плот пошёл! Пусть гребут к нему.' },
   w_horn: { s: 'winchman', p: 2, cd: 5, age: 1.5, fx: 'megaphone', t: 'Внимание! Оставайтесь на месте! Мы вас видим!' },
