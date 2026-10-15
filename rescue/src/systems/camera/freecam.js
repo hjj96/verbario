@@ -16,7 +16,8 @@ const SEA_REACH = 700; // m — the top-of-frame ray must hit the sea within thi
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 export class FreeCam {
-  constructor() {
+  constructor(ctx) {
+    this.ctx = ctx;
     this.pivot = new THREE.Vector3(); // target
     this.yaw = 0;
     this.pitch = 60 * DEG; // angle of the view axis below the horizon
@@ -28,6 +29,16 @@ export class FreeCam {
     this.position = new THREE.Vector3();
     this._mx = 0;
     this._my = 0;
+    // The wheel is ours while the photo mode is up: a capture listener stops it before input.js
+    // sees it (heli would otherwise consume it as an altitude change and move its target).
+    this._wheel = 0;
+    if (typeof window !== 'undefined') {
+      window.addEventListener('wheel', (e) => {
+        if (!this.ctx?.photo?.active) return;
+        this._wheel += Math.sign(e.deltaY);
+        e.stopPropagation();
+      }, { capture: true, passive: true });
+    }
   }
 
   // Start from the current camera pose looking at `look`.
@@ -45,6 +56,7 @@ export class FreeCam {
     this._dist = this.dist;
     this._mx = mouse?.x ?? 0;
     this._my = mouse?.y ?? 0;
+    this._wheel = 0;
   }
 
   _pad() {
@@ -102,7 +114,8 @@ export class FreeCam {
     this.pivot.y = clamp(this.pivot.y + (A.lift || 0) * Math.max(10, this.dist * 0.5) * dt, 0, 300);
 
     // --- zoom: wheel, pad LB/RB ----------------------------------------------------------------------
-    const wheel = input?.consumeWheel ? input.consumeWheel() : 0;
+    const wheel = this._wheel;
+    this._wheel = 0;
     if (wheel) this.dist *= Math.pow(1.12, clamp(wheel, -4, 4));
     const zIn = pad?.buttons?.[5]?.pressed ? 1 : 0;
     const zOut = pad?.buttons?.[4]?.pressed ? 1 : 0;

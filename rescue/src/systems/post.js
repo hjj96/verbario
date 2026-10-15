@@ -145,7 +145,10 @@ export class PostFX {
       if (e.to !== 'play' && e.to !== 'paused') this.thermal.toggle(false);
     });
     ev.on('mission:setup', () => {
-      this.photo.exit();
+      if (this.photo.active) {
+        this.photo.exit();
+        ctx.timeScale = 1; // a new mission never inherits a slow-mo saved at photo entry
+      }
       this.thermal.active = false;
       this.thermal.mix = 0;
       this.thermal.boot = 0;
@@ -337,7 +340,9 @@ export class PostFX {
     // white-hot bolt (which peaks in that same frame) had nothing to stand out against. Half the
     // boost at night keeps the silver sea and lets the spear read.
     const night = st?.night || 0;
-    const exposure = (pal?.exposure ?? 1) * (1 + 2.4 * flash * (1 - 0.5 * night)) * afterMul * this.photo.exposureMul();
+    // (the FLIR view has its own AGC: no flash boost, so a strike can't clip its detail away)
+    const visFlash = flash * (1 - this.thermal.mix);
+    const exposure = (pal?.exposure ?? 1) * (1 + 2.4 * visFlash * (1 - 0.5 * night)) * afterMul * this.photo.exposureMul();
     ctx.renderer.toneMappingExposure = exposure;
 
     // --- bloom ----------------------------------------------------------------------------------

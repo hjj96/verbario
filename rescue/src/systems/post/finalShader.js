@@ -249,7 +249,7 @@ void main() {
                      + luma(texture2D(tDiffuse, uvT + vec2(0.0, dp.y)).rgb) + luma(texture2D(tDiffuse, uvT - vec2(0.0, dp.y)).rgb));
     float rel = clamp((Lc - Ln) / (Ln + 0.05), -0.7, 0.7);
     // cold sea: dark, low contrast, a touch colder toward the top (grazing reflection of the sky)
-    float v = 0.26 + 0.3 * rel + 0.07 * Lc / (Lc + 0.35) - 0.06 * (vUv.y - 0.5);
+    float v = 0.26 + 0.26 * rel + 0.07 * Lc / (Lc + 0.35) - 0.06 * (vUv.y - 0.5);
     // heat: crisp core (dilated a little so a head in the water still reads) + a soft two-ring
     // bloom (6 + 8 taps of the low-res heat target) + a faint dark halo (bolometer DDE artefact)
     float h0 = texture2D(tHeat, uvT).r;

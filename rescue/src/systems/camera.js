@@ -54,7 +54,7 @@ export class CameraRig {
     this.heliScreenVelocity = new THREE.Vector2(); // NDC units / s (post: lens rivulets)
 
     this.motion = new CameraMotion(4242);
-    this.freecam = new FreeCam();
+    this.freecam = new FreeCam(ctx);
     this._photo = false;
     this._fv = new THREE.Vector2();
     this._hv = 0;
