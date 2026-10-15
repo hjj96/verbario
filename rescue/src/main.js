@@ -6,6 +6,7 @@ import { Input } from './core/input.js';
 import { createRng, createNoise2D } from './core/math.js';
 import { Settings } from './core/settings.js';
 import { Look } from './core/look.js';
+import { Haptics } from './core/haptics.js';
 import { compileScene, renderHidden } from './core/warmup.js';
 import * as Stubs from './core/stubs.js';
 
@@ -171,6 +172,7 @@ async function boot() {
     if (key === 'quality') warm = 'due';
   });
 
+  ctx.haptics = new Haptics(ctx); // gamepad rumble from game events
   ctx.events.emit('game:ready', {});
   document.body.classList.add('ready');
 
