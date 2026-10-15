@@ -39,6 +39,10 @@ function heartbeat(t, health) {
   return Math.min(1, a + b);
 }
 
+// Thumbs-up at the door when a person comes aboard (DESIGN §4 #25): a 24-unit line icon, built once.
+let THUMB = null;
+const thumbPath = () => (THUMB ||= new Path2D('M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3'));
+
 export class Overlay {
   constructor(flight) {
     this.flight = flight;
@@ -66,6 +70,7 @@ export class Overlay {
     this.hover = null; // survivor under the crosshair
     this._names = new WeakMap(); // pad → «МАЯК «СКАЛИСТЫЙ»» (never written onto other systems' objects)
     this._caps = new WeakMap(); // survivor group → FLIR caption
+    this.thumbT = -99; // model time of the last heli:pickup (thumbs-up at the door)
   }
 
   resize(W, H) {
@@ -108,6 +113,7 @@ export class Overlay {
     this._altimeter(g, L.alt, hs);
     if (this.flight.winch.visible > 0.01) this._winch(g, L.winchPanel, hs, dt);
     this._popups(g, hs);
+    this._thumb(g, hs);
     this._crosshair(g, hs);
     g.shadowBlur = 0;
   }
@@ -1611,6 +1617,38 @@ export class Overlay {
         g.fillText(p.sub, x, y - rise + 15 * hs);
       }
     }
+    g.globalAlpha = 1;
+  }
+
+  // «Палец вверх» at the door (DESIGN §4 #25): the winchman's signal that the person is in — a small
+  // badge beside the hoist (heli.hoistWorld projected) pops in, drifts up a little and fades by 1.8 s.
+  _thumb(g, hs) {
+    const age = this.m.time - this.thumbT;
+    if (age < 0 || age > 1.8) return;
+    const w = this.ctx.heli?.hoistWorld;
+    if (!w) return;
+    const q = this.m.project(w.x, w.y, w.z, this._p);
+    if (!q.onScreen) return;
+    const k = easeOutBack(Math.min(1, age / 0.3));
+    const R = 12 * hs * Math.max(0.01, k);
+    const x = q.x + 22 * hs;
+    const y = q.y - 22 * hs - age * 6 * hs;
+    g.globalAlpha = 1 - smooth(1.3, 1.8, age);
+    g.beginPath();
+    g.arc(x, y, R, 0, Math.PI * 2);
+    g.fillStyle = 'rgba(6, 14, 20, 0.6)';
+    g.fill();
+    g.lineWidth = 1.5;
+    g.strokeStyle = this.pal.ok;
+    g.stroke();
+    const s = (R * 1.25) / 24;
+    g.save();
+    g.translate(x, y);
+    g.scale(s, s);
+    g.translate(-11.5, -12);
+    g.lineWidth = 2.2;
+    g.stroke(thumbPath());
+    g.restore();
     g.globalAlpha = 1;
   }
 

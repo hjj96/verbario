@@ -2106,4 +2106,47 @@ export class Survivors {
   _pickable(s) {
     return s && s.state !== 'rescued' && s.state !== 'lost' && s.state !== 'winching' && !s.attached && s.people.length > 0;
   }
+
+  // ---- checkpoint restore (mission.js, DESIGN §3.9 «каждая посадка — чекпоинт») ---------------------
+  // Called right after mission:setup + mission:start: the groups spawned from the def make way for the
+  // snapshot's. cp = { elapsed, rescued, lost, lostMarkers: [{x, z}], groups: [{entry (a def.survivors
+  // object), type, x, z, people: [records], health, spotted, age, pet, datum {x, z, radius} | null,
+  // carrier {x, z, yaw, age, flood, capsized, flip, anchor {x, z}} | null}] }. Entries due later stay pending.
+  restoreCheckpoint(cp) {
+    if (!cp) return;
+    const t = Number(cp.elapsed) || 0;
+    const later = (this.def?.survivors || []).filter((e) => e && (e.at || 0) > t);
+    this.clear();
+    this.elapsed = t;
+    for (const e of later) this.pending.push(e);
+    this.pending.sort((a, b) => a.at - b.at);
+    for (const g of cp.groups || []) {
+      const e = g.entry || {};
+      const people = (g.people || []).filter(Boolean);
+      if (!people.length) continue;
+      const s = this.spawn({
+        ...e, type: g.type || e.type, x: g.x, z: g.z, count: people.length, people, at: 0, hidden: !g.spotted,
+        pet: g.pet ? e.pet : null, datum: g.datum ? { x: g.datum.x, z: g.datum.z } : null, datumRadius: g.datum?.radius ?? e.datumRadius,
+      });
+      s.tag = e.tag ?? s.tag;
+      s.def = e;
+      s.health = s.warmth = clamp01(g.health ?? 1);
+      s.critical = s.health <= CRITICAL;
+      s.age = g.age || 0;
+      if (g.spotted && !s.spotted) {
+        s.spotted = true;
+        s.state = 'spotted';
+      }
+      const c = s.carrier;
+      const k = g.carrier;
+      if (c && k) {
+        for (const key of ['x', 'z', 'yaw', 'age', 'flood', 'capsized', 'flip']) if (k[key] !== undefined) c[key] = k[key];
+        if (k.anchor && c.anchor) c.anchor.set(k.anchor.x, 0, k.anchor.z);
+      }
+      this._syncObject(s);
+    }
+    this.rescuedTotal = cp.rescued || 0;
+    this.lostTotal = cp.lost || 0;
+    for (const m of cp.lostMarkers || []) this.lostMarkers.push({ x: m.x, z: m.z, y: 0, t: this.ctx.time.t - 10, s: null, phase: this.rng.next() * 10, nrm: new THREE.Vector3(0, 1, 0) });
+  }
 }

@@ -19,8 +19,8 @@ const REST = new THREE.Vector3(0.8, -0.6, 0).normalize(); // arm rest direction 
 const X = new THREE.Vector3(1, 0, 0);
 
 // Crew-local frame: origin on the cabin floor at the door sill, +x outward (starboard), +y up, +z aft.
-const ORIGIN = new THREE.Vector3(1.0, -0.86, -0.95); // in the airframe body frame
-const SCALE = 1.25;
+const ORIGIN = new THREE.Vector3(1.12, -0.9, -0.9); // in the airframe body frame
+const SCALE = 1.4; // figures are drawn ~1.4× like the rescue swimmer so they read from the drone
 const SHOULDER_AIM = new THREE.Vector3(0.2, 0.92, 0.19); // pointing (aft) shoulder
 const NECK = new THREE.Vector3(0.27, 1.0, 0);
 
@@ -68,6 +68,7 @@ export class Crewman {
     ap.push({ geometry: new THREE.SphereGeometry(0.068, 7, 5), color: SUIT });
     ap.push({ geometry: tube([0.34, 0, 0], [0.64, 0, 0], 0.06, 0.052, 7), color: SUIT });
     ap.push({ geometry: new THREE.BoxGeometry(0.06, 0.07, 0.065), position: [0.36, 0.03, 0], color: TAPE }); // elbow tape
+    ap.push({ geometry: tube([0.52, 0, 0], [0.58, 0, 0], 0.058, 0.056, 7), color: TAPE }); // cuff tape
     ap.push({ geometry: new THREE.SphereGeometry(0.062, 7, 5), position: [0.68, 0, 0], color: GLOVE });
     ap.push({ geometry: tube([0.68, 0, 0], [0.8, 0, 0], 0.022, 0.018, 4), color: GLOVE }); // index finger
     this.arm = new THREE.Mesh(look.merge(ap), mat);

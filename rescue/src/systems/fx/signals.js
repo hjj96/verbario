@@ -270,6 +270,12 @@ const MAX_ROCKETS = 4;
 const FLARE_LIFE = 40;
 const ROCKET_RISE = 2.5;
 const ROCKET_DESCENT = 25;
+// «Ракета у объектива» (DESIGN §2.15 #17 [NICE]): now and then a survivor's rocket climbs to just
+// below the escort drone and its red star drifts past the lens under the parachute, the scud around it
+// pulsing red. Chance per launch (more at night), at most one per LENS_COOLDOWN s.
+const LENS_COOLDOWN = 150;
+const LENS_RANGE = 320; // m from the camera to the launch point
+const LENS_DIST = 30; // m in front of the lens where the star tops out
 
 export class Signals {
   // fx: Effects (pools, lights, glows, ocean access)
@@ -281,8 +287,25 @@ export class Signals {
     }
     this.rockets = [];
     for (let i = 0; i < MAX_ROCKETS; i++) {
-      this.rockets.push({ alive: false, x: 0, y: 0, z: 0, x0: 0, y0: 0, z0: 0, px: 0, py: 0, pz: 0, sx: 0, sz: 0, t: 0, light: null, trailAcc: 0, seed: 0, color: new THREE.Color(COLORS.rocket) });
+      this.rockets.push({ alive: false, x: 0, y: 0, z: 0, x0: 0, y0: 0, z0: 0, px: 0, py: 0, pz: 0, sx: 0, sz: 0, t: 0, light: null, trailAcc: 0, seed: 0, color: new THREE.Color(COLORS.rocket), lens: false, ax: 0, ay: 0, az: 0, top: 80 });
     }
+    this.lensCd = 45; // not in the first minutes of a sortie
+    this.lensCount = 0; // read-only stat
+    this._night = 0;
+    this._v = new THREE.Vector3();
+    this._fwd = new THREE.Vector3();
+
+    // Thermal heat sources (CONTRACT «Depth pass additions»): one sphere per burning flare / rocket
+    // star on render layer 2 ONLY — invisible to the normal camera, white-hot in the FLIR pass.
+    const heat = new THREE.InstancedMesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshBasicMaterial({ color: '#FFFFFF' }), MAX_FLARES + MAX_ROCKETS);
+    heat.name = 'fx.heat';
+    heat.layers.set(2);
+    heat.frustumCulled = false;
+    heat.count = 0;
+    heat.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.heat = heat;
+    this._hm = new THREE.Matrix4();
+    fx.ctx.scene?.add?.(heat);
     this.cFlare = new THREE.Color(COLORS.flare);
     this.cFlareCore = new THREE.Color(COLORS.flareCore);
     this.cFlareLight = new THREE.Color(COLORS.flareLight);
@@ -291,6 +314,7 @@ export class Signals {
     this.cSmokeDay = new THREE.Color('#DDBDB4'); // by day the flare's red shows in its own smoke
     this.cEmber = new THREE.Color('#FF7A3A').multiplyScalar(7);
     this.cRocketCore = new THREE.Color('#FFE6DA');
+    this.cLensCore = new THREE.Color();
     this.cTrail = new THREE.Color('#E8E4E0');
     this.cTmp = new THREE.Color();
   }
@@ -337,9 +361,39 @@ export class Signals {
     r.seed = Math.random() * 100;
     r.trailAcc = 0;
     toColor(opts.color ?? COLORS.rocket, r.color);
+    r.top = r.y0 + 80;
+    r.lens = false;
+    if (opts.lens !== false) this._lens(r, opts.lens === true);
     r.light = this.fx.acquireLight(r.color, 0, 210);
     this.fx.sparks(x, r.y0 + 0.5, z, '#FFB070', 10);
     return r;
+  }
+
+  // Maybe turn this launch into the «rocket at the lens» moment: aim the motor at a point ~30 m in
+  // front of the camera (slightly upwind, so the parachute drifts the star across the frame).
+  _lens(r, force) {
+    const ctx = this.fx.ctx;
+    const cam = ctx.camera;
+    if (!cam) return;
+    if (!force) {
+      if (this.lensCd > 0 || ctx.mode !== 'play' || ctx.cameraRig?.mode === 'cinematic') return;
+      if (Math.random() > 0.2 + 0.4 * this._night) return;
+    }
+    cam.updateMatrixWorld();
+    const C = cam.getWorldPosition(this._v);
+    if (!force && Math.hypot(C.x - r.x0, C.z - r.z0) > LENS_RANGE) return;
+    const f = cam.getWorldDirection(this._fwd);
+    const w = this.fx.wind || { x: 0, y: 0 };
+    const wl = Math.hypot(w.x, w.y) || 1;
+    const side = (Math.random() - 0.5) * 10;
+    r.ax = C.x + f.x * LENS_DIST - (w.x / wl) * 9 - (w.y / wl) * side;
+    r.az = C.z + f.z * LENS_DIST - (w.y / wl) * 9 + (w.x / wl) * side;
+    r.ay = C.y + f.y * LENS_DIST;
+    if (!(r.ay - r.y0 > 40) || !Number.isFinite(r.ax + r.ay + r.az)) return;
+    r.lens = true;
+    r.top = r.ay;
+    this.lensCd = LENS_COOLDOWN;
+    this.lensCount++;
   }
 
   clear() {
@@ -368,6 +422,10 @@ export class Signals {
     // daylight: every light pool / halo is scaled by (1 − .85·daylight) (DESIGN §2.10 by day)
     const day = 1 - Math.min(1, Math.max(0, night));
     const dayK = 1 - 0.85 * day;
+    this._night = Math.min(1, Math.max(0, night));
+    if (dt > 0) this.lensCd = Math.max(0, this.lensCd - dt);
+    const heat = this.heat;
+    let nh = 0;
 
     for (const f of this.flares) {
       if (!f.alive) continue;
@@ -405,6 +463,7 @@ export class Signals {
       // core + halo: by day a small hot core and red-tinted smoke, not a haloed orb on a sunlit sea
       glows.add(f.x, f.y + 0.35, f.z, 0.5, this.cFlareCore, 7 * I * (0.45 + 0.55 * night), 6.5 * (1 - 0.75 * day), this.cFlare, 1.2 * I * (0.6 + 0.4 * night) * dayK, 0);
       ocean?.addGlint?.(f.x, f.z, 6, 1.8 * I * dayK, this.cFlare);
+      if (nh < heat.instanceMatrix.count && I > 0.05) heat.setMatrixAt(nh++, this._hm.makeScale(0.8, 0.8, 0.8).setPosition(f.x, f.y + 0.4, f.z));
       if (dt > 0) {
         // smoke lit red by its own light, trailing with the wind
         f.smokeAcc += dt * 7 * end;
@@ -443,9 +502,17 @@ export class Signals {
       let I;
       if (r.t < ROCKET_RISE) {
         const k = r.t / ROCKET_RISE;
-        r.y = r.y0 + 80 * (1 - (1 - k) * (1 - k));
-        r.x = r.x0 + wind.x * 0.15 * r.t;
-        r.z = r.z0 + wind.y * 0.15 * r.t;
+        const e = 1 - (1 - k) * (1 - k);
+        if (r.lens) {
+          // a long slanted climb towards the lens
+          r.y = r.y0 + (r.ay - r.y0) * e;
+          r.x = r.x0 + (r.ax - r.x0) * e;
+          r.z = r.z0 + (r.az - r.z0) * e;
+        } else {
+          r.y = r.y0 + 80 * e;
+          r.x = r.x0 + wind.x * 0.15 * r.t;
+          r.z = r.z0 + wind.y * 0.15 * r.t;
+        }
         I = 0.35 + 0.25 * k;
         // the motor's trail: a thin continuous wisp — puffs are spread along the path travelled this
         // frame (at a low frame rate they clumped into a line of identical balls)
@@ -471,7 +538,7 @@ export class Signals {
       } else {
         const td = r.t - ROCKET_RISE;
         // parachute: 2 m/s down, drifting with the wind, swaying at 0.5 Hz
-        r.y = r.y0 + 80 - 2 * td;
+        r.y = r.top - 2 * td;
         r.x += wind.x * 0.9 * dt;
         r.z += wind.y * 0.9 * dt;
         const wl = Math.hypot(wind.x, wind.y) || 1;
@@ -508,13 +575,25 @@ export class Signals {
       r.pz = pz;
       // the parachute star only colours the sea / cloud at night or dusk; by day it is a bright point
       const seaK = 0.03 + 0.97 * smooth(0.15, 0.6, night);
+      // at the lens the star breathes slowly, so the scud it lights pulses red; its halo is kept
+      // small and soft so it never floods the frame
+      const lensUp = r.lens && r.t >= ROCKET_RISE;
+      const pulse = lensUp ? 0.62 + 0.38 * Math.sin(2 * Math.PI * 0.75 * (r.t - ROCKET_RISE) + 1.2) : 1;
       if (r.light) {
         r.light.position.set(px, r.y, pz);
-        r.light.set((r.t < ROCKET_RISE ? 500 : 4200) * I * seaK);
+        r.light.set((r.t < ROCKET_RISE ? 500 : 4200) * I * pulse * seaK);
       }
       const core = (r.t < ROCKET_RISE ? 4 : 9) * (0.5 + 0.5 * night);
-      glows.add(px, r.y, pz, r.t < ROCKET_RISE ? 0.5 : 1.0, this.cRocketCore, core * I, (r.t < ROCKET_RISE ? 5 : 16) * (1 - 0.75 * day), r.color, (r.t < ROCKET_RISE ? 1 : 3) * I * dayK, r.t < ROCKET_RISE || day > 0.5 ? 0 : 1, t * 0.3);
+      // close to the lens the burning star reads as what it is — a red flare, not a white sun
+      const haloS = lensUp ? 8 : r.t < ROCKET_RISE ? 5 : 16;
+      const haloI = lensUp ? 1.8 * (0.7 + 0.3 * pulse) : r.t < ROCKET_RISE ? 1 : 3;
+      const coreC = lensUp ? this.cLensCore.copy(this.cRocketCore).lerp(r.color, 0.6) : this.cRocketCore;
+      glows.add(px, r.y, pz, r.t < ROCKET_RISE ? 0.5 : lensUp ? 0.7 : 1.0, coreC, core * I * (lensUp ? 0.4 : 1), haloS * (1 - (lensUp ? 0.6 : 0.75) * day), r.color, haloI * I * Math.max(dayK, lensUp ? 0.5 : 0), r.t < ROCKET_RISE || day > 0.5 ? 0 : 1, t * 0.3);
+      if (nh < heat.instanceMatrix.count) heat.setMatrixAt(nh++, this._hm.makeScale(0.6, 0.6, 0.6).setPosition(px, r.y, pz));
       if (r.t >= ROCKET_RISE) ocean?.addGlint?.(px, pz, 20, 1.1 * I * seaK, r.color);
     }
+    heat.count = nh;
+    heat.visible = nh > 0;
+    if (nh) heat.instanceMatrix.needsUpdate = true;
   }
 }

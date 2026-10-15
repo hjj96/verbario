@@ -9,6 +9,15 @@
 // Dynamic resolution (§8.2): 1 s mean frame > 18 ms → render scale −0.05, < 13 ms → +0.05, within
 // 0.67–1 / 0.75–1 / 0.8–1 (low / medium / high); internal pixels capped at 1080p; high drops MSAA
 // 4 → 2 when still over budget at the minimum scale. `?dynres=0` disables it (screenshots, tests).
+//
+// Depth pass (CONTRACT «Depth pass additions»):
+//   * thermal / FLIR — `post.thermal` (post/thermal.js): action `thermal` (T, R3) toggles
+//     `post.thermal.active` in play; one low-res layer-2 heat pass before the composer, FinalPass
+//     turns the frame white-hot. Off on every mode change away from play/pause and on mission:setup.
+//   * photo mode — `ctx.photo` (post/photo.js): action `photo` (V, L3) in play enters/leaves it,
+//     Backspace / pad B leaves it (Esc pauses → leaves it too). While active: ctx.timeScale = 0,
+//     gameplay input off, the rig flies a free camera (camera.js), FinalPass gets tilt-shift DOF,
+//     exposure, grade presets and its own letterbox; Enter / pad A saves a PNG of the clean frame.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -23,6 +32,8 @@ const smoothstep01 = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 import { LensDrops, GRID_X, GRID_Y } from './post/drops.js';
+import { ThermalView } from './post/thermal.js';
+import { PhotoMode } from './post/photo.js';
 
 const SAMPLES = { low: 0, medium: 2, high: 4 };
 const MIN_SCALE = { low: 0.67, medium: 0.75, high: 0.8 };
@@ -89,6 +100,11 @@ export class PostFX {
     this.composer.addPass(this.final);
     this.bloom.enabled = this.quality !== 'low';
 
+    // Depth pass: FLIR view + photo mode
+    this.thermal = new ThermalView(ctx, this.quality);
+    this.finalMaterial.uniforms.tHeat.value = this.thermal.rt.texture;
+    this.photo = new PhotoMode(ctx);
+
     // Pulses (DESIGN §2.8 FinalPass step 3).
     this.pulses = { damage: 0, caKick: 0, caHold: 0, vortex: 0, flash: 0, after: 0, pause: 0, salt: 0, sprayCd: 0 };
     this.realT = 0;
@@ -123,6 +139,17 @@ export class PostFX {
     ev.on('hazard:hit', (e = {}) => {
       if (e.type === 'lightning') this.pulse('strike', 1);
       if (e.type === 'rogue') this.pulse('spray', 1.2);
+    });
+    ev.on('game:mode', (e = {}) => {
+      if (e.to !== 'play') this.photo.exit();
+      if (e.to !== 'play' && e.to !== 'paused') this.thermal.toggle(false);
+    });
+    ev.on('mission:setup', () => {
+      this.photo.exit();
+      this.thermal.active = false;
+      this.thermal.mix = 0;
+      this.thermal.boot = 0;
+      this.thermal.prewarm();
     });
     ctx.settings.onChange?.((k) => {
       if (k === 'quality') this._applyQuality(ctx.settings.get('quality'));
@@ -182,6 +209,7 @@ export class PostFX {
     u.uRes.value.copy(this._size);
     u.uPxScale.value = Math.max(1, prBase);
     this.drops.setAspect(this._size.x, this._size.y);
+    this.thermal.setSize(w * pr, h * pr);
     this.stats.pixelRatio = pr;
     this.stats.scale = this.scale;
   }
@@ -192,6 +220,7 @@ export class PostFX {
     this.quality = q;
     this.bloom.enabled = q !== 'low';
     this.bloom.setScale(BLOOM_SCALE[q] ?? 1);
+    this.thermal.setQuality(q);
     this.scale = 1;
     this._setSamples(SAMPLES[q] ?? 4);
     if (q === 'low') this.drops.clear();
@@ -219,7 +248,7 @@ export class PostFX {
     this._acc = 0;
     this._n = 0;
     this.stats.frameMs = ms;
-    if (!this.dynamicResolution || this.ctx.mode === 'paused') return;
+    if (!this.dynamicResolution || this.ctx.mode === 'paused' || this.photo.active) return;
     const min = MIN_SCALE[this.quality] ?? 0.8;
     let next = this.scale;
     if (ms > 18) next = Math.max(min, this.scale - 0.05);
@@ -275,7 +304,19 @@ export class PostFX {
     const p = this.pulses;
     const u = this.finalMaterial.uniforms;
     const paused = ctx.mode === 'paused';
-    const gdt = paused ? 0 : dt;
+
+    // --- depth pass: thermal / photo toggles (post runs after mission, so Esc→pause already landed) ---
+    const input = ctx.input;
+    if (ctx.mode === 'play' && input?.rawPressed) {
+      if (input.rawPressed('thermal')) this.thermal.toggle();
+      const flying = (ctx.mission?.state ?? 'play') === 'play';
+      if (input.rawPressed('photo') && (flying || this.photo.active)) this.photo.toggle();
+      else if (this.photo.active && input.rawPressed('back')) this.photo.exit();
+    }
+    const photo = this.photo.active;
+    if (photo) this.photo.update(dt);
+    this.thermal.update(dt);
+    const gdt = paused || photo ? 0 : dt;
 
     // --- pulses ---------------------------------------------------------------------------------
     p.damage = Math.max(0, p.damage - dt * (reduce ? 1.1 : 1.7));
@@ -296,7 +337,7 @@ export class PostFX {
     // white-hot bolt (which peaks in that same frame) had nothing to stand out against. Half the
     // boost at night keeps the silver sea and lets the spear read.
     const night = st?.night || 0;
-    const exposure = (pal?.exposure ?? 1) * (1 + 2.4 * flash * (1 - 0.5 * night)) * afterMul;
+    const exposure = (pal?.exposure ?? 1) * (1 + 2.4 * flash * (1 - 0.5 * night)) * afterMul * this.photo.exposureMul();
     ctx.renderer.toneMappingExposure = exposure;
 
     // --- bloom ----------------------------------------------------------------------------------
@@ -334,7 +375,16 @@ export class PostFX {
     u.uSatMul.value = (1 - 0.65 * flash) * (1 - 0.3 * p.damage) * (1 - 0.6 * p.pause);
     u.uBright.value = 1 - 0.35 * p.pause;
     u.uVortex.value = p.vortex;
-    u.uLetterbox.value = clamp(ctx.cameraRig?.letterbox || 0, 0, 1);
+    u.uLetterbox.value = photo ? this.photo.letterboxMix : clamp(ctx.cameraRig?.letterbox || 0, 0, 1);
+
+    // photo options (DOF, grade preset) and the FLIR view
+    const extraGrain = this.photo.apply(u, this.quality, this._size.y);
+    const th = this.thermal;
+    u.uThermal.value = th.mix;
+    u.uThermBoot.value = th.boot;
+    u.uThermFlick.value = th.flick;
+    u.uThermT.value = this.realT;
+    u.uGrain.value = (P?.grain ?? 0.03) * (1 - th.mix) + 0.032 * th.mix + extraGrain;
 
     // grain reseeded at 24 Hz
     this.seedT += dt;
@@ -417,12 +467,14 @@ export class PostFX {
 
   render(dt) {
     const c = this.composer;
+    this.thermal.render(this.ctx.renderer, this.ctx.scene, this.ctx.camera);
     // keep the scene pass on the MSAA target, display passes on the plain one
     c.readBuffer = this.rtScene;
     c.writeBuffer = this.rtPost;
     c.renderTarget1 = this.rtScene;
     c.renderTarget2 = this.rtPost;
     c.render(dt);
+    if (this.photo.saveRequested) this.photo.capture(this.ctx.renderer.domElement);
   }
 }
 

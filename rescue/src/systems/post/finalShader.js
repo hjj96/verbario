@@ -249,23 +249,34 @@ void main() {
                      + luma(texture2D(tDiffuse, uvT + vec2(0.0, dp.y)).rgb) + luma(texture2D(tDiffuse, uvT - vec2(0.0, dp.y)).rgb));
     float rel = clamp((Lc - Ln) / (Ln + 0.05), -0.7, 0.7);
     // cold sea: dark, low contrast, a touch colder toward the top (grazing reflection of the sky)
-    float v = 0.125 + 0.11 * rel + 0.045 * Lc / (Lc + 0.35) - 0.04 * (vUv.y - 0.5);
-    // heat: crisp core + soft bloom from the mip chain + a faint dark halo (bolometer DDE artefact)
+    float v = 0.26 + 0.3 * rel + 0.07 * Lc / (Lc + 0.35) - 0.06 * (vUv.y - 0.5);
+    // heat: crisp core (dilated a little so a head in the water still reads) + a soft two-ring
+    // bloom (6 + 8 taps of the low-res heat target) + a faint dark halo (bolometer DDE artefact)
     float h0 = texture2D(tHeat, uvT).r;
-    float h1 = textureLod(tHeat, uvT, 1.5).r;
-    float h2 = textureLod(tHeat, uvT, 3.0).r;
-    float h3 = textureLod(tHeat, uvT, 4.5).r;
-    float core = max(h0, h1 * 0.85);
-    float glow = 0.25 * h1 + 0.45 * h2 + 0.55 * h3;
-    v -= 0.1 * max(0.0, h3 - h1 * 1.5);
-    v = mix(v, 0.78 + 0.2 * core, smoothstep(0.03, 0.55, core));
-    v += 0.4 * glow * (1.0 - 0.6 * core);
+    vec2 hr = vec2(uRes.y / uRes.x, 1.0);
+    float g1 = 0.0;
+    float g2 = 0.0;
+    for (int i = 0; i < 6; i++) {
+      float a = float(i) * 1.0471976 + 0.4;
+      g1 += texture2D(tHeat, uvT + vec2(cos(a), sin(a)) * hr * 0.007).r;
+    }
+    for (int i = 0; i < 8; i++) {
+      float a = float(i) * 0.7853982 + 0.1;
+      g2 += texture2D(tHeat, uvT + vec2(cos(a), sin(a)) * hr * 0.02).r;
+    }
+    g1 /= 6.0;
+    g2 /= 8.0;
+    float core = max(h0, min(1.0, g1 * 1.5) * 0.8);
+    float glow = 0.45 * g1 + 0.55 * g2;
+    v -= 0.12 * max(0.0, g2 - g1 * 1.5);
+    v = mix(v, 0.8 + 0.19 * core, smoothstep(0.03, 0.5, core));
+    v += 0.45 * glow * (1.0 - 0.6 * core);
     // sensor: fixed-pattern column noise, scanlines, a slow rolling band, heavy lens vignette
     vec2 fc = gl_FragCoord.xy / uPxScale;
     v += 0.012 * (hash12(vec2(floor(fc.x * 0.5), 7.0)) - 0.5);
     v *= 1.0 - 0.05 * step(0.5, fract(fc.y * 0.5));
     v *= 1.0 + 0.025 * smoothstep(0.85, 1.0, sin(vUv.y * 3.0 - uThermT * 0.7));
-    v *= 1.0 - 0.42 * er * er;
+    v *= 1.0 - 0.36 * er * er;
     // boot: NUC shutter grey + snow
     float snow = hash12(fc + fract(uThermT * 13.7) * 311.0);
     v = mix(v, 0.3 + 0.35 * snow, boot * boot * 0.85);

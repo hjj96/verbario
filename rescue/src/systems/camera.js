@@ -8,9 +8,13 @@
 // cinematic : debrief — rise to 400 m, full letterbox.
 // + handheld drift, trauma shake (event-driven), FOV punches, ≤ 1-per-mission slow-mo moments,
 //   letterbox 0..1 animated over 0.8 s (post/hud draw the bars). Never shows the horizon.
+// photo     : while ctx.photo.active (post/photo.js owns the toggle) a free camera (camera/freecam.js)
+//             starts from the current framing; follow springs, timers and slow-mo are frozen and the
+//             rig snaps back to the follow framing on exit.
 import * as THREE from 'three';
 import { clamp } from '../core/math.js';
 import { CameraMotion } from './camera/shake.js';
+import { FreeCam } from './camera/freecam.js';
 
 const DEG = Math.PI / 180;
 const BASE_FOV = 40;
@@ -50,6 +54,8 @@ export class CameraRig {
     this.heliScreenVelocity = new THREE.Vector2(); // NDC units / s (post: lens rivulets)
 
     this.motion = new CameraMotion(4242);
+    this.freecam = new FreeCam();
+    this._photo = false;
     this._fv = new THREE.Vector2();
     this._hv = 0;
     this._tilt = 14 * DEG;
@@ -266,10 +272,48 @@ export class CameraRig {
     this.reveal = this._revealHold > 0;
   }
 
+  // Photo mode: free camera; keep the fields other systems read (focusPoint, height, heliScreen) live.
+  _photoUpdate(dt) {
+    const ctx = this.ctx;
+    const cam = ctx.camera;
+    const fc = this.freecam;
+    if (!this._photo) {
+      this._photo = true;
+      fc.begin(cam, this._look, ctx.input?.mouse);
+    }
+    const o = fc.update(dt, ctx, BASE_FOV, ctx.mission?.def?.area?.radius || 1500);
+    cam.position.copy(o);
+    cam.up.set(0, 1, 0);
+    cam.lookAt(fc.p);
+    if (Math.abs(cam.fov - BASE_FOV) > 1e-3) {
+      cam.fov = BASE_FOV;
+      cam.updateProjectionMatrix();
+    }
+    cam.updateMatrixWorld();
+    this.fov = BASE_FOV;
+    this.focusPoint.set(fc.p.x, 0, fc.p.z);
+    this.height = o.y;
+    this.tiltDeg = 90 - fc._pitch / DEG;
+    this.viewHeight = 2 * fc._dist * Math.tan((BASE_FOV / 2) * DEG);
+    this.trauma = 0;
+    if (ctx.heli?.position) {
+      this.worldToScreen(ctx.heli.position, this.heliScreen);
+      this.heliScreenVelocity.set(0, 0);
+    }
+  }
+
   // ----------------------------------------------------------------------------------------------
   update(dt) {
     const ctx = this.ctx;
     if (!(dt > 0)) dt = 0;
+    if (ctx.photo?.active) {
+      this._photoUpdate(dt);
+      return;
+    }
+    if (this._photo) {
+      this._photo = false;
+      this._snap = true; // cut straight back to the follow framing
+    }
     this._t += dt;
     const cam = ctx.camera;
     const h = ctx.heli;

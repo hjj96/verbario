@@ -6,9 +6,15 @@
 import { el, TextSlot, HtmlSlot, setClass, StyleSlot } from '../common/dom.js';
 import { NBSP, num0, num1, mmss, mss, timecode, deg3, visU, ballsU, beaufortOf, windFromDeg, PRESET_SHORT, clamp01 } from '../common/fmt.js';
 import { keycap } from '../common/icons.js';
+import { keyLabel } from '../common/keys.js';
+import { currentKeys } from '../../core/input.js';
 
+// Keyboard hints follow the player's key rebinding (settings `bindings`): an action the player rebound
+// shows its first key, the rest keep the default caps.
+const KB_HINTS = [['winch', 'Пробел', 'лебёдка'], ['searchlight', 'L', 'прожектор'], ['flare', 'G', 'фальшфейер'], ['horn', 'H', 'рупор'], ['map', 'Tab', 'карта']];
+const kbHints = (ov) => [...KB_HINTS.map(([id, def, t]) => [Array.isArray(ov?.[id]) && ov[id].length ? keyLabel(currentKeys(id)[0]) : def, t]), ['Esc', 'пауза']];
 const KEYS = {
-  keyboard: [['Пробел', 'лебёдка'], ['L', 'прожектор'], ['G', 'фальшфейер'], ['H', 'рупор'], ['Tab', 'карта'], ['Esc', 'пауза']],
+  keyboard: kbHints(null),
   gamepad: [['A', 'лебёдка'], ['X', 'прожектор'], ['B', 'фальшфейер'], ['Y', 'рупор'], ['View', 'карта'], ['Start', 'пауза']],
   touch: [],
 };
@@ -316,7 +322,7 @@ export class Panels {
     const dev = ctx.input?.lastDevice || 'keyboard';
     if (dev !== this._dev) {
       this._dev = dev;
-      const list = KEYS[dev] || KEYS.keyboard;
+      const list = dev === 'keyboard' ? kbHints(ctx.settings?.get('bindings')) : KEYS[dev] || KEYS.keyboard;
       this.keys.set(list.map(([k, t]) => `<span>${keycap(k)}${t}</span>`).join(''));
       this._remeasure = true;
     }

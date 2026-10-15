@@ -108,6 +108,16 @@ body.hud-mode-play #game { cursor: none; }
 .hud-vf .vf-bl { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
 .hud-vf .vf-br { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
 
+/* touch, portrait: «Поверните устройство» gate over everything */
+.hud-rotate { position: absolute; inset: 0; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; background: rgba(5, 10, 14, .94); color: var(--title); pointer-events: auto; }
+.hud-rotate.on { display: flex; }
+.rot-icon { color: var(--orange); }
+.rot-icon svg { animation: rot-turn 2.4s ease-in-out infinite; }
+@keyframes rot-turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+.reduce-motion .rot-icon svg { animation: none; transform: rotate(-90deg); }
+.rot-title { font: 600 26px/1.1 var(--f-head); letter-spacing: .2em; }
+.rot-text { max-width: 280px; font: 400 calc(14px * var(--ts)) / 1.45 var(--f-text); color: rgba(244, 241, 234, .7); }
+
 /* photo mode (ctx.photo.active): the whole HUD steps aside */
 .mayday-hud { transition: opacity .25s; }
 .mayday-hud.photo { opacity: 0; }
@@ -877,7 +887,7 @@ body.hud-mode-play #game { cursor: none; }
 .pc-fc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 400 12.5px/1.4 var(--f-text); }
 .pc-fc span { display: inline-flex; align-items: center; gap: 3px; }
 .fc-arr { color: rgba(18, 33, 43, .45); font-family: var(--f-mono); }
-.pc-log { font: 400 12px/1.4 var(--f-text); max-height: calc(176px * var(--ts)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(18, 33, 43, .35) transparent; padding-right: 4px; }
+.pc-log { font: 400 12px/1.4 var(--f-text); max-height: min(calc(176px * var(--ts)), 26vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(18, 33, 43, .35) transparent; padding-right: 4px; }
 .pc-log div { padding: 3px 0; border-bottom: 1px dashed rgba(18, 33, 43, .2); }
 .pc-log .t { font: 500 9.5px/1 var(--f-mono); color: rgba(18, 33, 43, .5); margin-right: 6px; letter-spacing: .04em; }
 .pause-item .pi-sub { margin-left: 12px; font: 500 calc(11px * var(--ts)) / 1 var(--f-mono); letter-spacing: .08em; color: rgba(244, 241, 234, .45); vertical-align: middle; }
@@ -928,7 +938,26 @@ body.hud-mode-play #game { cursor: none; }
 .ctl-th { font: 600 10px/1 var(--f-mono); letter-spacing: .2em; text-transform: uppercase; border-bottom: 1.5px solid var(--ink); }
 .ctl-notes { margin-top: 10px; font: 400 calc(12.5px * var(--ts)) / 1.45 var(--f-text); color: rgba(18, 33, 43, .8); }
 .ctl-notes p { margin: 0 0 5px; }
-.ctl-sheet .set-foot { justify-content: flex-end; }
+.ctl-sheet .set-foot { justify-content: space-between; }
+.ctl-sheet .ctl-table { flex: 1 1 auto; scrollbar-width: thin; }
+.ctl-row.ctl-bind { cursor: pointer; padding: 3px 6px; }
+.ctl-row.ctl-bind.is-focus { background: rgba(255, 90, 31, .1); box-shadow: inset 3px 0 0 var(--orange); }
+.kbd-nav .ctl-row.ctl-bind.is-focus { outline: none; }
+.ctl-keys { display: inline-flex; gap: 6px; }
+.ctl-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 74px; height: 26px; padding: 0 6px; border: 1px dashed rgba(18, 33, 43, .3); cursor: pointer; }
+.ctl-slot em { font: 500 12px/1 var(--f-mono); color: rgba(18, 33, 43, .4); font-style: normal; }
+.ctl-slot:hover { border-color: var(--ink); }
+.ctl-row.is-focus .ctl-slot.sel { border: 1.5px solid var(--orange); background: rgba(255, 255, 255, .45); }
+.ctl-slot.listening { border: 1.5px solid var(--orange); background: rgba(255, 90, 31, .14); animation: ctl-listen 1s ease-in-out infinite; }
+.ctl-slot.listening i { font: italic 500 11px/1 var(--f-text); color: var(--ink); white-space: nowrap; }
+@keyframes ctl-listen { 50% { background: rgba(255, 90, 31, .04); } }
+.reduce-motion .ctl-slot.listening { animation: none; }
+.ctl-fixed { color: rgba(18, 33, 43, .7); }
+.ctl-status { margin-top: 8px; min-height: 1.4em; font: 500 calc(11.5px * var(--ts)) / 1.4 var(--f-mono); letter-spacing: .04em; color: rgba(18, 33, 43, .6); }
+.ctl-status.msg { color: var(--stamp); }
+.ctl-status.listen { color: var(--ink); font-weight: 600; }
+@media (max-height: 700px) { .ctl-notes p:first-child { display: none; } }
+.set-row.set-link .set-val { min-width: 0; letter-spacing: .14em; }
 
 /* --- confirm -------------------------------------------------------------------------------------- */
 /* bottle note (survivor:bottle): water-stained notepaper, folded once, an old hand */

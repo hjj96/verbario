@@ -205,6 +205,7 @@ export class FlightHud {
     });
     on('heli:pickup', ({ person }) => {
       this.winch.onPickup();
+      this.overlay.thumbT = m.time; // thumbs-up at the door (DESIGN §4 #25)
       T('ЧЕЛОВЕК НА БОРТУ', this._personLine(person), { kind: 'ok' });
     });
     on('heli:cabin-full', () => T('САЛОН ЗАПОЛНЕН', 'на площадку', { kind: 'warn', key: 'cabin-full' }));

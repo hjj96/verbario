@@ -118,6 +118,7 @@ export class Shift {
     const sunny = w && (w.preset === 'calm' || w.preset === 'clearing');
     let count = 1;
     let theme = 'generic';
+    let pet = null;
     const signals = {};
     switch (type) {
       case 'raft':
@@ -126,6 +127,8 @@ export class Shift {
         signals.rockets = 2;
         signals.epirb = rng.chance(0.5);
         if (night) signals.strobe = true;
+        // now and then a fishing crew took the boat's dog into the raft (DESIGN §4: «Четыре лапы»)
+        if (rng.chance(theme === 'fishing' ? 0.5 : 0.06)) pet = 'dog';
         break;
       case 'hull':
         count = rng.int(2, 4);
@@ -171,6 +174,7 @@ export class Shift {
       people: makePeople(rng, theme, count, { used: this.used }),
       call: this.n,
     };
+    if (pet) entry.pet = pet;
     let s = null;
     try {
       s = this.ctx.survivors?.spawn?.(entry) || null;

@@ -694,6 +694,23 @@ export class Weather {
       this._camFocus.set(cam.position.x + f.x * k, 0, cam.position.z + f.z * k);
     } else this._camFocus.copy(this.heliPos).setY(0);
   }
+
+  // ---- checkpoint restore (mission.js, DESIGN §3.9) ----------------------------------------------
+  // Jump the mission weather script to `t` s of play (called right after mission:start): every entry
+  // already due is applied with its wind shift; one still in transition continues with the time it has
+  // left, the others land instantly.
+  restoreCheckpoint(t) {
+    if (this.forced || !(t > 0)) return;
+    this.scriptT = t;
+    while (this.scriptIdx < this.script.length && this.script[this.scriptIdx].at <= t) {
+      const s = this.script[this.scriptIdx++];
+      const opts = {};
+      if (s.windFrom !== undefined) opts.windFrom = s.windFrom;
+      else if (s.windShift) opts.windFrom = this._windTo / DEG - 180 + s.windShift;
+      this.setPreset(s.to, Math.max(0, s.at + (s.over ?? 30) - t), opts);
+      this._eye = !!s.eye;
+    }
+  }
 }
 
 function countBelow(arr, v) {

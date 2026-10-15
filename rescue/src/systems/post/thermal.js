@@ -3,10 +3,10 @@
 // One extra low-res pass: everything on render layer 2 (survivors, rafts, heli engines, flares, ship
 // funnels — the owners opt in with obj.layers.enable(2); objects that only carry userData.heat are
 // promoted to layer 2 by a slow scene sweep) is drawn with an override material into a small
-// mipmapped target (R = heat). FinalPass turns the normal frame into a white-hot monochrome image:
+// target (R = heat). FinalPass turns the normal frame into a white-hot monochrome image:
 // a cold, dark, low-contrast sea built from the frame's local contrast (digital detail enhancement,
 // so day/night/fog/lightning all land on the same AGC'd grey), the heat target on top (crisp core +
-// a soft bloom read from its mip chain + a faint microbolometer halo), reticle, scanline and fixed
+// a soft two-ring bloom + a faint microbolometer halo), reticle, scanline and fixed
 // pattern noise. A short boot flicker (NUC shutter, torn rows) plays on every toggle.
 //
 // API: thermal.active (bool, CONTRACT), toggle(on?), mix (0..1 shown), visible, prewarm().
@@ -73,8 +73,8 @@ export class ThermalView {
     this.rt = new THREE.WebGLRenderTarget(4, 4, {
       type: THREE.UnsignedByteType,
       depthBuffer: true,
-      generateMipmaps: true,
-      minFilter: THREE.LinearMipmapLinearFilter,
+      generateMipmaps: false, // a mip chain proved unreliable as a sampler here (incomplete → black)
+      minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
     });
     this.rt.texture.name = 'post.heat';

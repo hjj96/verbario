@@ -331,6 +331,9 @@ export class Rogue {
     this.length = Number(opts.length) || ROGUE.length;
     this.height = Number(opts.height) || Math.round(lerp(ROGUE.height[0], ROGUE.height[1], rnd()));
     this.telegraph = Number(opts.eta ?? opts.telegraph) || ROGUE.telegraph;
+    // cadet difficulty: every telegraph stage comes 1 s earlier (DESIGN §3.17)
+    this.lead = hz.ctx?.settings?.get?.('difficulty') === 'cadet' ? 1 : 0;
+    this.telegraph += this.lead;
     this.scripted = !!opts.scripted;
     this.name = opts.name || null;
     // travel direction: given, from a bearing («fromDeg» = where it comes FROM), or the wind ±20°
@@ -485,12 +488,13 @@ export class Rogue {
       this.stage = 'radio';
       hz.warn({ ...base, eta, stage: 'radio', level: 'caution', text: 'ВОЛНА!', detail: `${from.toUpperCase()}`, edge: true, scripted: this.scripted, name: this.name });
     }
-    if (!fl.suction && reaches && eta <= 8) {
+    const L = this.lead || 0;
+    if (!fl.suction && reaches && eta <= 8 + L) {
       fl.suction = true;
       this.stage = 'suction';
       hz.warn({ ...base, eta, stage: 'suction', level: 'caution', text: 'ВОЛНА!', detail: 'ОТСОС', edge: true });
     }
-    if (!fl.warning && reaches && eta <= 6) {
+    if (!fl.warning && reaches && eta <= 6 + L) {
       fl.warning = true;
       this.stage = 'warning';
       hz.warn({
@@ -498,7 +502,7 @@ export class Rogue {
         text: `ВОЛНА-УБИЙЦА · ${this.height}${NBSP}М · ${Math.max(1, Math.round(eta))}${NBSP}С`, detail: from.toUpperCase(),
       });
     }
-    if (!fl.reveal && reaches && eta <= 4) {
+    if (!fl.reveal && reaches && eta <= 4 + L) {
       fl.reveal = true;
       this.stage = 'reveal';
       hz.warn({

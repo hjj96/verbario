@@ -175,10 +175,11 @@ export class Bottle {
     _q.multiply(_q2.setFromAxisAngle(AX_Z, 0.13 + 0.07 * Math.sin(t * 1.7 + this.phase)));
     _q.multiply(_q2.setFromAxisAngle(AX_X, 0.25 * Math.sin(t * 1.1 + this.phase * 1.3)));
     const bob = 0.012 * Math.sin(t * 2.3 + this.phase);
-    this._place(this.x, this.y - 0.012 + bob, this.z, _q, SCALE);
-    sv.collars.push(this.x, this.y, this.z, this.nrm.x, this.nrm.y, this.nrm.z, 0.2, 0.5, 0.55, 0, this.phase, this.yaw, 2.4);
+    this._place(this.x, this.y - 0.025 + bob, this.z, _q, SCALE);
+    // thin wet collar along the glass (collar elongates along its Z; the bottle lies along X)
+    sv.collars.push(this.x, this.y, this.z, this.nrm.x, this.nrm.y, this.nrm.z, 0.11, 0.3, 0.5, 0, this.phase, this.yaw + Math.PI / 2, 2.2);
     this._glint(env);
-    if (env.play && env.heliAlive) this._pickup(env, dt);
+    if (env.play && env.rotorHeard) this._pickup(env, dt); // flying (not sitting on a pad)
   }
 
   _place(x, y, z, q, scale) {

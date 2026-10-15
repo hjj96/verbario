@@ -36,8 +36,10 @@ export class Spout {
     this.spinRate = P.spinRate * this.spin; // rad/s the heli is turned in the core (heli may read it)
     this.scale = P.scale * (Number(opts.scale) || 1);
     this.life = Number(opts.life) || lerp(P.life[0], P.life[1], rnd());
-    const tele = P.stages[0] + P.stages[1] + P.stages[2];
-    this.durations = [P.stages[0], P.stages[1], P.stages[2], Math.max(20, this.life - tele - P.decay), P.decay];
+    // cadet difficulty: the telegraph (dark spot) lasts +1 s (DESIGN §3.17)
+    const lead = this.ctx.settings?.get?.('difficulty') === 'cadet' ? 1 : 0;
+    const tele = P.stages[0] + lead + P.stages[1] + P.stages[2];
+    this.durations = [P.stages[0] + lead, P.stages[1], P.stages[2], Math.max(20, this.life - tele - P.decay), P.decay];
     // mature: N → the mature stage lasts N s; mature: true → spawn already mature (as stage: 4)
     if (opts.mature !== true && Number(opts.mature) > 0) this.durations[3] = Number(opts.mature);
     this.life = this.durations.reduce((a, b) => a + b, 0);

@@ -1,7 +1,7 @@
 // Gust fronts (DESIGN §3.12 «Порыв», §3.13 frequencies).
 // A front is a 140 m sin² band × 500 m gaussian taper of extra wind that travels at W + G along a
 // direction within ±20° of the wind. It is spawned upwind so that it reaches the heli in `eta` s
-// (6 s by default) and is announced with `weather:gust` — the same data feeds look.setFronts (the
+// (6 s by default, +1 s on cadet) and is announced with `weather:gust` — the same data feeds look.setFronts (the
 // "cat's paws" drawn by the ocean) and weather.windAt (what pushes the heli).
 import * as THREE from 'three';
 
@@ -37,6 +37,8 @@ export class Gusts {
   // Spawn a front so it reaches (hx, hz) after `eta` seconds.
   // windDir: Vector2 unit (towards), windSpeed: m/s mean. Returns the front or null (pool full).
   spawn(hx, hz, windDir, windSpeed, { strength = 8, dir, eta = 6, harmless = false } = {}) {
+    // cadet difficulty: every telegraph gets +1 s (DESIGN §3.17) — the front starts further upwind
+    if (this.ctx.settings?.get?.('difficulty') === 'cadet') eta += 1;
     let f = null;
     for (const p of this.pool) if (!p.alive) { f = p; break; }
     if (!f) {

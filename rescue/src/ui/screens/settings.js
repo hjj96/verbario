@@ -36,8 +36,9 @@ const SECTIONS = [
   {
     title: 'УПРАВЛЕНИЕ',
     rows: [
-      { key: 'assist', label: 'Стабилизация', type: 'choice', values: [['full', 'Полная'], ['standard', 'Стандарт'], ['off', 'Нет']], help: 'Что делает машина, когда вы отпускаете клавиши: «Полная» держит точку, «Стандарт» гасит 70 % сноса, «Нет» — всё сами.' },
-      { key: 'difficulty', label: 'Сложность', type: 'choice', values: [['cadet', 'Курсант'], ['pilot', 'Пилот'], ['ace', 'Ас']], help: 'Курсант: тепло ×1,5, урон ×0,6, очки ×0,8. Ас: тепло ×0,8, урон ×1,3, очки ×1,3. Применяется со следующего вылета.' },
+      { key: 'assist', label: 'Стабилизация', type: 'choice', values: [['full', 'Полная'], ['standard', 'Стандарт'], ['off', 'Нет']], help: 'Что делает машина, когда вы отпускаете клавиши: «Полная» держит точку, «Стандарт» гасит 70 % сноса, «Нет» — всё сами. Пока вы её не меняли, «Курсант» и сенсорный экран включают «Полную».' },
+      { key: 'difficulty', label: 'Сложность', type: 'choice', values: [['cadet', 'Курсант'], ['pilot', 'Пилот'], ['ace', 'Ас']], help: 'Курсант: тепло ×1,5, урон ×0,6, очки ×0,8. Ас: тепло ×0,8, урон ×1,3, очки ×1,3. Применяется со следующего вылета. «Курсант» включает полную стабилизацию, если вы её не выбирали сами.' },
+      { key: null, label: 'Назначение клавиш', type: 'link', go: 'controls', help: 'Две клавиши на каждое действие, обмен при конфликте, «Сбросить». Ctrl не используется.' },
       { key: 'invertLift', label: 'Инверсия высоты', type: 'toggle', help: 'Поменять местами клавиши набора и снижения.' },
       { key: 'vibration', label: 'Вибрация', type: 'slider', min: 0, max: 1, step: 0.1, help: 'Отдача геймпада при ударах, порывах и грозе.' },
     ],
@@ -120,11 +121,19 @@ export class SettingsScreen extends Screen {
       ctl.insertBefore(bar, val);
       for (let i = 0; i < 10; i++) el('i', { parent: bar });
     }
+    if (r.type === 'link') {
+      prev.hidden = true;
+      val.textContent = 'ИЗМЕНИТЬ';
+      node.classList.add('set-link');
+      const open = () => this.hud.go(r.go);
+      return { r, node, paint: () => {}, item: { el: node, help: r.help, onRight: open, onActivate: open } };
+    }
     const get = () => {
       const v = s?.get(r.key);
       return r.invert ? !v : v;
     };
     const put = (v) => {
+      if (r.key === 'assist') s?.set('assistExplicit', true); // Cadet / touch stop choosing it
       s?.set(r.key, r.invert ? !v : v);
       paint();
     };

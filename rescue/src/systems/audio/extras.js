@@ -295,17 +295,35 @@ export class Extras {
   }
 
   // Heartbeat «лаб-даб» under 20 % hull, on the UI bus (the pilot's own, not the world's).
+  // Also, quieter, while an injured person is aboard and the «золотой час» runs (DESIGN §3.6):
+  // a calm 64 bpm that quickens to ~100 bpm over the last 30 s.
   _heart(h, now, dt) {
     const hull = h.hull ?? 1;
-    if (hull >= HEART_HULL || h.alive === false) {
+    const gh = this.eng.ctx.mission?.goldenHour;
+    const golden = Number.isFinite(gh) && gh > 0 && h.alive !== false;
+    const hurt = hull < HEART_HULL && h.alive !== false;
+    if (!hurt && !golden) {
       this.heartT = 0;
       return;
     }
     this.heartT -= dt;
     if (this.heartT > 0) return;
-    const k = clamp((HEART_HULL - hull) / HEART_HULL, 0, 1);
-    this.heartT = 60 / (70 + 40 * k);
-    this.sfx._shot(1, 'heart', this.eng.mix.bus.ui, dB(-14 + 4 * k), 0, (v, out, t) => {
+    let bpm = 0;
+    let gain = -40;
+    if (golden) {
+      const u = clamp((30 - gh) / 30, 0, 1);
+      bpm = 64 + 36 * u * u * (3 - 2 * u);
+      gain = -24 + 4 * u;
+    }
+    if (hurt) {
+      const kh = clamp((HEART_HULL - hull) / HEART_HULL, 0, 1);
+      bpm = Math.max(bpm, 70 + 40 * kh);
+      gain = Math.max(gain, -14 + 4 * kh);
+    }
+    this.heartT = 60 / bpm;
+    this.heartBpm = bpm; // read-only stats (debug / tests)
+    this.heartBeats = (this.heartBeats || 0) + 1;
+    this.sfx._shot(1, 'heart', this.eng.mix.bus.ui, dB(gain), 0, (v, out, t) => {
       // «лаб» + «даб»; a 2nd harmonic each so laptop speakers still carry it (DESIGN §6.6 target note)
       this.sfx._osc(v, out, 'sine', 62, 40, t, 0.12, 0.004, 1);
       this.sfx._osc(v, out, 'sine', 124, 80, t, 0.08, 0.004, 0.35);

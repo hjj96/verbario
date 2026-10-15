@@ -113,6 +113,7 @@ export class Hud {
     ctx.settings?.onChange?.((k) => {
       this._applySettingsCss();
       if (k === 'colorblindMarkers') this.flight._palette();
+      if (k === 'bindings') this.flight.panels._dev = null; // key hints follow the rebinding
       for (const s of Object.values(this.screens)) s.onSettings?.(k);
     });
     // canvas text waits for the web fonts (DESIGN §7.3), but never longer than 2.5 s
@@ -128,8 +129,27 @@ export class Hud {
         console.error('[hud] touch controls failed', err);
       }
     }
+    this._touchDev = !!(window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window);
     this.resize(window.innerWidth, window.innerHeight);
     this._route(ctx.mode, true);
+  }
+
+  // Touch devices play in landscape only (DESIGN §3.2 «Тач»): in portrait a «Поверните устройство» gate
+  // covers everything and a running flight pauses.
+  _orient(w, h) {
+    const gate = !!this._touchDev && h > w && !this.nohud;
+    if (gate && !this.rotate) {
+      this.rotate = el('div.hud-rotate', { parent: this.root, attrs: { role: 'alertdialog', 'aria-live': 'assertive' } });
+      el('div.rot-icon', {
+        parent: this.rotate,
+        html: '<svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="22" y="8" width="20" height="36" rx="3"/><path d="M29 39h6"/><path d="M10 50a24 24 0 0 0 34 6"/><path d="M44 50v6h-6"/></svg>',
+      });
+      el('div.rot-title', { parent: this.rotate, text: 'ПОВЕРНИТЕ УСТРОЙСТВО' });
+      el('div.rot-text', { parent: this.rotate, text: 'Вертолёт управляется только в альбомной ориентации.' });
+    }
+    if (this.rotate) setClass(this.rotate, 'on', gate);
+    setClass(this.root, 'rotate-gate', gate);
+    if (gate && this.ctx.mode === 'play') this.emit('ui:pause', {});
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -396,6 +416,7 @@ export class Hud {
   resize(w, h) {
     this._W = w;
     this._H = h;
+    this._orient(w, h);
     this.flight.layout(w, h);
     for (const s of Object.values(this.screens)) s.resize?.(w, h);
   }

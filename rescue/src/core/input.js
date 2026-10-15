@@ -38,6 +38,74 @@ export const BINDINGS = {
   },
 };
 
+// Player key rebinding (DESIGN §7.6 [NICE], settings key `bindings`): two keys per action by event.code.
+// REBINDABLE lists the actions the УПРАВЛЕНИЕ sheet offers, each pointing at its slot in BINDINGS; an
+// override replaces that slot's whole key list. Menu keys (confirm / back / nav*), pause, debug stay fixed.
+export const REBINDABLE = [
+  { id: 'up', label: 'Полёт вверх по экрану (север)', axis: 'moveY', side: 1 },
+  { id: 'down', label: 'Полёт вниз по экрану', axis: 'moveY', side: 0 },
+  { id: 'left', label: 'Полёт влево', axis: 'moveX', side: 0 },
+  { id: 'right', label: 'Полёт вправо', axis: 'moveX', side: 1 },
+  { id: 'climb', label: 'Набор высоты (держать)', axis: 'lift', side: 1 },
+  { id: 'descend', label: 'Снижение (держать)', axis: 'lift', side: 0 },
+  { id: 'altPreset1', label: 'Высота 15 м', button: 'altPreset1' },
+  { id: 'altPreset2', label: 'Высота 40 м', button: 'altPreset2' },
+  { id: 'altPreset3', label: 'Высота 90 м', button: 'altPreset3' },
+  { id: 'winch', label: 'Лебёдка (держать)', button: 'winch' },
+  { id: 'boost', label: 'Форсаж (держать)', button: 'boost' },
+  { id: 'searchlight', label: 'Прожектор', button: 'searchlight' },
+  { id: 'flare', label: 'Фальшфейер к курсору', button: 'flare' },
+  { id: 'raftDrop', label: 'Сбросить плот', button: 'raftDrop' },
+  { id: 'horn', label: 'Громкоговоритель', button: 'horn' },
+  { id: 'map', label: 'Карта (держать)', button: 'map' },
+  { id: 'zoom', label: 'Зум камеры', button: 'zoom' },
+  { id: 'thermal', label: 'Тепловизор', button: 'thermal' },
+  { id: 'photo', label: 'Фоторежим', button: 'photo' },
+];
+
+// Keys a player may never bind: modifiers (Ctrl+W closes the tab — Ctrl is never used), the menu /
+// pause keys, the debug key and the browser's function keys.
+export function bindableCode(code) {
+  if (typeof code !== 'string' || !code) return false;
+  if (/^(Control|Meta|Alt|OS|Fn)/.test(code) || /^F\d+$/.test(code)) return false;
+  return !['Escape', 'Backspace', 'Backquote', 'Enter', 'NumpadEnter', 'CapsLock', 'ContextMenu', 'PrintScreen'].includes(code);
+}
+
+const DEFAULT_BINDINGS = JSON.parse(JSON.stringify(BINDINGS));
+
+// The default key list of a rebindable action (a copy).
+export function defaultKeys(id) {
+  const r = REBINDABLE.find((x) => x.id === id);
+  if (!r) return [];
+  return (r.axis ? DEFAULT_BINDINGS.axes[r.axis][r.side] : DEFAULT_BINDINGS.buttons[r.button]).slice();
+}
+
+// Current key list of a rebindable action (live BINDINGS).
+export function currentKeys(id) {
+  const r = REBINDABLE.find((x) => x.id === id);
+  if (!r) return [];
+  return r.axis ? BINDINGS.axes[r.axis][r.side] : BINDINGS.buttons[r.button];
+}
+
+// Rebuild BINDINGS in place from the defaults plus `overrides` ({ id: [code, code] }); everyone holding a
+// reference to BINDINGS (Input.poll, the HUD's raw key buffer, the controls sheet) sees the change live.
+// Mouse0 / Mouse2 stay allowed (flare / raft); anything unbindable is dropped.
+export function applyBindings(overrides) {
+  for (const name of Object.keys(DEFAULT_BINDINGS.axes)) {
+    BINDINGS.axes[name][0] = DEFAULT_BINDINGS.axes[name][0].slice();
+    BINDINGS.axes[name][1] = DEFAULT_BINDINGS.axes[name][1].slice();
+  }
+  for (const name of Object.keys(DEFAULT_BINDINGS.buttons)) BINDINGS.buttons[name] = DEFAULT_BINDINGS.buttons[name].slice();
+  if (!overrides || typeof overrides !== 'object') return;
+  for (const r of REBINDABLE) {
+    const list = overrides[r.id];
+    if (!Array.isArray(list)) continue;
+    const keys = [...new Set(list.filter((c) => bindableCode(c) || c === 'Mouse0' || c === 'Mouse2'))].slice(0, 2);
+    if (r.axis) BINDINGS.axes[r.axis][r.side] = keys;
+    else BINDINGS.buttons[r.button] = keys;
+  }
+}
+
 // Standard gamepad mapping.
 const PAD = {
   axes: { moveX: 0, moveY: 1, aimX: 2, aimY: 3 },
