@@ -179,7 +179,7 @@ export const CAMPAIGN = [
     },
     heli: { pad: 0 },
     survivors: [
-      { tag: 'maria', type: 'hull', x: 330, z: 240, count: 2, hidden: true, datumRadius: 150, name: 'Мария', since: 40, label: 'мотодора «Мария»' },
+      { tag: 'maria', type: 'hull', x: 330, z: 240, count: 2, hidden: true, datumRadius: 150, name: 'Мария', sinkTime: 300, since: 40, label: 'мотодора «Мария»', signals: { whistle: true } },
       { tag: 'raft-a', type: 'raft', x: -470, z: -360, count: 3, pet: 'dog', hidden: true, datumRadius: 200, since: 30, label: 'плот «Кильдина»', signals: { rockets: 3, epirb: true } },
       { tag: 'swimmer', type: 'swimmer', x: -200, z: 480, count: 1, hidden: true, datumRadius: 160, since: 20, label: 'рыбак за бортом', signals: { whistle: true } },
       { tag: 'raft-b', type: 'raft', x: 560, z: -560, count: 3, at: 90, hidden: true, datumRadius: 220, since: 10, label: 'второй плот «Кильдина»', signals: { rockets: 2 } },
@@ -433,7 +433,7 @@ export const CAMPAIGN = [
       ],
     },
     world: {
-      pads: [SKALISTY, arktur(-600, 700, 2.4, -1.8, [[-600, 700], [200, 200], [700, -500], [-200, -400]])],
+      pads: [SKALISTY, arktur(-600, 700, 2.4, -1.8, [[-600, 700], [200, 200], [700, -500], [-450, -330]])],
       props: { lighthouse: true, rocks: LIGHTHOUSE_ROCKS, debris: [{ x: 480, z: 520, radius: 40, count: 6, kind: 'barrels' }] },
     },
     heli: { pad: 0 },
