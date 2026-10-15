@@ -491,3 +491,18 @@ Systems expose enough on `window.__game` for tests, e.g. `__game.weather.setPres
 `heli:crash`, `heli:winch`, `heli:pickup`, `heli:land`, `heli:takeoff`, `heli:unload`, `heli:fuel-low`,
 `heli:refuel`, `heli:flare`, `survivor:spawn`, `survivor:spotted`, `survivor:critical`, `survivor:lost`,
 `survivor:boarded`, `survivor:rescued`, `radio:line`; extras listed under «Extensions in use».
+
+## Depth pass additions (shared contracts)
+
+* Input actions `photo` (V, L3) and `thermal` (T, R3).
+* **Photo mode** (post + camera own it): `ctx.photo = { active }`; while active the game is frozen like pause,
+  the camera is free (orbit/pan/zoom/height), HUD hides itself (`hud` checks `ctx.photo?.active`), post offers
+  tilt-shift/DOF/exposure, and a PNG can be saved.
+* **Thermal / FLIR** (post owns it): `ctx.post.thermal = { active }`. Heat sources opt in by enabling render layer 2
+  (`obj.layers.enable(2)`; survivors' people/rafts, heli engines/exhaust, flares, ship funnels). HUD shows a
+  «ТЕПЛОВИЗОР» label; survivors give detection a bonus while it is active at night/fog.
+* **Checkpoints**: mission snapshots on every landing (`mission.checkpoint`, event `mission:checkpoint`) and handles
+  `ui:retry-checkpoint` (pause + debrief offer «ПОВТОРИТЬ С ПОСАДКИ» when a checkpoint exists).
+* **Bottle with a note** (op 9★ easter egg): survivors emit `survivor:bottle {title, text}` when the bottle is picked up;
+  the HUD shows a paper note card.
+* `ctx.haptics` (core/haptics.js): gamepad rumble from events, scaled by `settings.vibration`.

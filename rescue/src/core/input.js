@@ -28,6 +28,8 @@ export const BINDINGS = {
     back: ['Escape', 'Backspace'],
     zoom: ['KeyZ'],
     debug: ['Backquote'],
+    photo: ['KeyV'], // photo mode (free camera, hidden HUD)
+    thermal: ['KeyT'], // FLIR / thermal view
     // menu navigation (also used by HUD menus)
     navUp: ['ArrowUp', 'KeyW'],
     navDown: ['ArrowDown', 'KeyS'],
@@ -42,7 +44,7 @@ const PAD = {
   lift: { up: 7, down: 6 }, // RT climbs, LT descends (analog)
   buttons: {
     winch: [0], confirm: [0], flare: [1], back: [1], searchlight: [2], horn: [3], boost: [4], zoom: [5],
-    map: [8], pause: [9], altUp: [12], altDown: [13], raftDrop: [15],
+    map: [8], pause: [9], photo: [10], thermal: [11], altUp: [12], altDown: [13], raftDrop: [15],
     navUp: [12], navDown: [13], navLeft: [14], navRight: [15],
   },
 };
