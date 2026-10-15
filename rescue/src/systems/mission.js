@@ -16,7 +16,8 @@
 //   task (current task line), hint (current onboarding glyph), chapter {n, text, title}, goldenHour (s|null),
 //   calls («Смена»), result + debriefPhase ('cinematic'|'logbook'), manifest, marks, cards(), career, rank,
 //   campaignCount, continueIndex, hasProgress, highscores, isUnlocked(i), square(x, z), resetProgress(),
-//   checkpoint (last landing snapshot | null: {t, pad, padName, …}), retryCheckpoint().
+//   checkpoint (last landing snapshot | null: {t, pad, padName, …}; cleared when the operation succeeds),
+//   retryCheckpoint().
 // Extra events: mission:chapter {n, text, title}, mission:task {text}, mission:call {call},
 //   mission:checkpoint {t, pad, padName} (every landing, DESIGN §3.9), mission:restored {t, padName},
 //   mission:logbook {report}, mission:locked {index, text}; mission:hint hide = {key, text: null, show: false}.
