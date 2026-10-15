@@ -32,6 +32,7 @@ import { Shift } from './mission/endless.js';
 import { buildReport } from './mission/report.js';
 import { buildObjectives, updateObjectives, updateTask } from './mission/objectives.js';
 import { windFromDeg, clockOf, clockWords, squareOf, PRESETS } from './mission/text.js';
+import { snapHazards, restoreHazard } from './mission/checkpoint.js';
 
 // Deep copy of plain data (checkpoint snapshots).
 const clone = (v) => {
@@ -69,6 +70,8 @@ export class Mission {
     this.chapter = null; // { n, text, title }
     this.checkpoint = null; // last landing snapshot (DESIGN §3.9 «каждая посадка — чекпоинт»)
     this._cpPad = null; // landed with people aboard: snapshot once the cabin is unloaded
+    this._careerBase = null; // a run restored from a checkpoint: career totals already filed up to it
+    this._craftOf = new WeakMap(); // carrier → the group (or {def}) it was built for: emptied craft keep their def
 
     this._focusV = new THREE.Vector3();
     this._triggers = new Set();
@@ -269,10 +272,13 @@ export class Mission {
   retryCheckpoint() {
     const cp = this.checkpoint;
     if (!cp || this.endless || cp.index !== this.index) return this.retry();
+    // career bookkeeping: a run that reached its debrief has been filed (up to past this landing); one left
+    // from the pause menu has not, so the new run still owes everything since that run's own start point
+    const owed = this.state === 'debrief' ? null : this._careerBase || { rescued: 0, lost: 0, time: 0, distance: 0 };
     this.start(cp.index);
     this.launch({ checkpoint: cp });
     try {
-      this._restoreCheckpoint(cp);
+      this._restoreCheckpoint(cp, owed);
     } catch (err) {
       console.error('[mission] checkpoint restore failed', err);
     }
@@ -463,6 +469,7 @@ export class Mission {
     this._endlessRecorded = null;
     this.checkpoint = null;
     this._cpPad = null;
+    this._careerBase = null;
     this._script = [];
     for (const e of def.script || []) this._script.push({ ...e, fired: false, armedAt: null });
     for (const e of def.radio || []) this._script.push({ ...e, do: 'radio', fired: false, armedAt: null });
@@ -688,7 +695,10 @@ export class Mission {
     });
     on('survivor:boarded', (p) => playing() && L.onBoarded(p.s, p.person));
     // Map groups to def entries while they are still at their spawn point (tags survive drift).
-    on('survivor:spawn', (p) => this.state !== 'title' && L.tag(p.s));
+    on('survivor:spawn', (p) => {
+      if (p.s?.carrier) this._craftOf.set(p.s.carrier, p.s);
+      if (this.state !== 'title') L.tag(p.s);
+    });
     on('survivor:rescued', (p) => {
       if (!playing()) return;
       const tag = L.onGroupRescued(p.s);
@@ -779,9 +789,11 @@ export class Mission {
   // ===============================================================================================
   // Checkpoints (DESIGN §3.9 «каждая посадка — чекпоинт», §3.15 «повтор — с последнего чекпоинта»)
   // ===============================================================================================
-  // Snapshot on a pad with an empty cabin: clock & script, weather, hazards, ships, the people still out
-  // there (people as indices into def.survivors[].people, so a re-prepared def maps back), ledger, score
-  // and the heli's tank, hull and consumables.
+  // Snapshot on a pad with an empty cabin: clock & script, weather (with the transition in flight), the live
+  // hazards, ships, the people still out there (people as indices into def.survivors[].people, so a
+  // re-prepared def maps back; their craft, the raft they climbed into, their signal stocks), the craft that
+  // drift on empty (dropped rafts, emptied hulls, the wreck), ledger, score and the heli's tank, hull and
+  // consumables.
   _takeCheckpoint(pad) {
     const ctx = this.ctx;
     const h = ctx.heli;
@@ -794,8 +806,19 @@ export class Mission {
     const def = this.def;
     const where = new Map(); // person record → [entry index, person index]
     def.survivors.forEach((e, ei) => (e.people || []).forEach((r, ri) => r && where.set(r, [ei, ri])));
+    const S = ctx.survivors;
+    const snapCarrier = (c) => (S?.snapCarrier ? S.snapCarrier(c) : { x: c.x, z: c.z, yaw: c.yaw, age: c.age });
+    // free carriers: nobody owns them (a dropped raft — maybe with swimmers aboard — or a craft its people left)
+    const carriers = [];
+    const freeIdx = new Map();
+    for (const c of S?.carriers || []) {
+      if (!c || c.alive === false || c.owner) continue;
+      const src = this._craftOf.get(c);
+      freeIdx.set(c, carriers.length);
+      carriers.push({ ...snapCarrier(c), ei: src?.def ? def.survivors.indexOf(src.def) : -1 });
+    }
     const groups = [];
-    for (const s of ctx.survivors?.list || []) {
+    for (const s of S?.list || []) {
       if (!s || s.state === 'rescued' || s.state === 'lost' || s.attached || !s.people?.length) continue;
       const ei = def.survivors.indexOf(s.def);
       if (ei < 0) continue;
@@ -817,10 +840,11 @@ export class Mission {
         age: s.age || 0,
         pet: !!s.pet,
         datum: s.datum && !s.spotted ? { x: s.datum.x, z: s.datum.z, radius: s.datum.radius } : null,
-        carrier: c ? { x: c.x, z: c.z, yaw: c.yaw, age: c.age, flood: c.flood, capsized: c.capsized, flip: c.flip, anchor: c.anchor ? { x: c.anchor.x, z: c.anchor.z } : null } : null,
+        carrier: c && c.owner === s ? snapCarrier(c) : null,
+        raft: c && freeIdx.has(c) ? freeIdx.get(c) : null,
+        sig: S?.snapSignals ? S.snapSignals(s) : null,
       });
     }
-    const S = ctx.survivors;
     const L = this.ledger;
     const sc = this.scorer;
     this.checkpoint = {
@@ -833,13 +857,18 @@ export class Mission {
       chapterNext: this._chapterNext,
       chapter: this.chapter ? { ...this.chapter } : null,
       lastChapterPreset: this._lastChapterPreset,
+      weather: ctx.weather?.checkpointState?.() || null,
       hazards: (ctx.hazards?.schedule || []).map((x) => !!x.done),
+      hazardsLive: snapHazards(ctx.hazards),
       ships: pads.map((pd) => {
         const n = pd?.place?.nav;
         return n ? { x: n.x, z: n.z, heading: n.heading, idx: n.idx, speed: n.speed, yawRate: n.yawRate } : null;
       }),
       survivors: {
         groups,
+        carriers,
+        // `from:` entries still to surface follow their craft: which free carrier that is (or where it stopped)
+        followers: this._followers.map((f) => (f.carrier ? { k: freeIdx.has(f.carrier) ? freeIdx.get(f.carrier) : -1, x: f.carrier.x, z: f.carrier.z } : null)),
         rescued: S?.rescuedTotal || 0,
         lost: S?.lostTotal || 0,
         lostMarkers: (S?.lostMarkers || []).map((m) => ({ x: m.x, z: m.z })),
@@ -864,7 +893,8 @@ export class Mission {
   }
 
   // Right after start() + launch(): every system has reset from the def; now move them to the snapshot.
-  _restoreCheckpoint(cp) {
+  // careerBase: what the career already holds of this attempt (default: everything up to the landing).
+  _restoreCheckpoint(cp, careerBase = null) {
     const ctx = this.ctx;
     const t = cp.t;
     this.elapsed = t;
@@ -877,31 +907,20 @@ export class Mission {
     this._chapterNext = cp.chapterNext;
     this.chapter = cp.chapter ? { ...cp.chapter } : null;
     this._lastChapterPreset = cp.lastChapterPreset;
-    ctx.weather?.restoreCheckpoint?.(t);
-    // scripted hazards already past stay past; a long-lived one (tornado, whirlpool) comes back for its rest
+    ctx.weather?.restoreCheckpoint?.(t, cp.weather);
+    // scripted hazards already due stay done; every hazard alive at the landing comes back exactly as it was
+    // (position, age and life left, stage clock, the tornado's curving track, a rogue crest on its way)
     const sched = ctx.hazards?.schedule || [];
     sched.forEach((x, i) => {
-      if (!cp.hazards[i]) return;
-      x.done = true;
-      const age = t - x.t;
-      const life = Number(x.e?.life) || 180;
-      if ((x.type === 'tornado' || x.type === 'whirlpool') && age < life - 10) {
-        const o = { ...x.e, scripted: true, life: Math.max(30, life - age) };
-        // a tornado on a fixed track (op «Глаз бури») resumes where it has got to, already down on the water
-        if (x.type === 'tornado' && Number.isFinite(o.headingDeg) && Number.isFinite(o.x) && Number.isFinite(o.z)) {
-          const a = (o.headingDeg * Math.PI) / 180;
-          const run = (Number(o.speed) || 6) * Math.max(0, age);
-          o.x += Math.sin(a) * run;
-          o.z -= Math.cos(a) * run;
-          o.mature = true;
-        }
-        try {
-          ctx.hazards.spawn?.(x.type, o);
-        } catch (err) {
-          console.warn('[mission] hazard restore', err);
-        }
-      }
+      if (cp.hazards[i]) x.done = true;
     });
+    for (const o of cp.hazardsLive || []) {
+      try {
+        restoreHazard(ctx.hazards, o);
+      } catch (err) {
+        console.warn('[mission] hazard restore', err);
+      }
+    }
     // ships back on their route position (the heli lands on the deck where it was)
     const pads = ctx.world?.pads || [];
     pads.forEach((pd, i) => {
@@ -924,7 +943,15 @@ export class Mission {
         if (!entry) continue;
         groups.push({ ...g, entry, people: g.people.map((k) => entry.people?.[k]).filter(Boolean) });
       }
-      S.restoreCheckpoint({ elapsed: t, groups, rescued: cp.survivors.rescued, lost: cp.survivors.lost, lostMarkers: cp.survivors.lostMarkers, bottleTaken: !!cp.survivors.bottleTaken });
+      const carriers = (cp.survivors.carriers || []).map((k) => ({ ...k, entry: this.def.survivors[k.ei] || null }));
+      const res = S.restoreCheckpoint({ elapsed: t, groups, carriers, rescued: cp.survivors.rescued, lost: cp.survivors.lost, lostMarkers: cp.survivors.lostMarkers, bottleTaken: !!cp.survivors.bottleTaken });
+      const made = res?.carriers || [];
+      made.forEach((c, i) => c && this._craftOf.set(c, { def: carriers[i].entry }));
+      // a `from:` entry still to surface tracks the same craft again (or the spot where it went down)
+      this._followers.forEach((f, i) => {
+        const sf = cp.survivors.followers?.[i];
+        if (sf) f.carrier = (sf.k >= 0 && made[sf.k]) || { x: sf.x, z: sf.z };
+      });
     }
     // the heli on that pad with what it had
     const h = ctx.heli;
@@ -960,6 +987,9 @@ export class Mission {
     }
     updateObjectives(this);
     updateTask(this);
+    // the career already holds everything up to this landing (filed when the earlier run ended)
+    const cs = cp.ledger.stats;
+    this._careerBase = careerBase ? { ...careerBase } : { rescued: cs.rescued || 0, lost: cs.lost || 0, time: t, distance: cs.distance || 0 };
     ctx.events.emit('mission:restored', { t, padName: cp.padName });
     if (this.chapter) ctx.events.emit('mission:chapter', this.chapter);
   }
@@ -1043,6 +1073,9 @@ export class Mission {
     const st = this.ledger.stats;
     if (this.endless) report.endlessResult = this._recordEndless(reason, report);
     else {
+      // a run restored from a checkpoint files only what happened since that landing in the career
+      const b = this._careerBase;
+      const since = (k) => Math.max(0, (st[k] || 0) - (b?.[k] || 0));
       report.progress = this.progress.recordMission(this.list, this.def, {
         success,
         total: report.score.total,
@@ -1051,7 +1084,10 @@ export class Mission {
         rescued: st.rescued,
         lost: st.lost,
         distance: st.distance,
+        career: b ? { rescued: since('rescued'), lost: since('lost'), time: since('time'), distance: since('distance') } : null,
       });
+      // a finished operation is not replayed from its last landing («ЗАНОВО» still flies it again)
+      if (success) this.checkpoint = null;
     }
     report.career = this.progress.career();
     this.result = report;

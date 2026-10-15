@@ -102,7 +102,9 @@ export class Progress {
     this.save();
   }
 
-  // Store a finished campaign operation. Returns what changed for the logbook.
+  // Store a finished campaign operation. Returns what changed for the logbook. r.career (optional): the
+  // {rescued, lost, time, distance} to add to the career instead of the run's totals — a run restored from
+  // a checkpoint only adds what happened since that landing (the rest was filed when the earlier run ended).
   recordMission(list, def, r) {
     const before = this.rank();
     const rec = this.data.ops[def.id] || { best: 0, bestTime: 0, medals: { bronze: false, silver: false, gold: false, cross: false }, plays: 0, passed: false };
@@ -117,7 +119,7 @@ export class Progress {
     rec.passed = rec.passed || !!r.success;
     this.data.ops[def.id] = rec;
     this.data.last = def.index;
-    this._addCareer(r);
+    this._addCareer(r.career || r);
     this.save();
     const after = this.rank();
     const nextIdx = def.index + 1;
