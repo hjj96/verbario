@@ -14,7 +14,8 @@
 //   seatsUsed, ceiling, aimSource, hoistWorld, downwash {x, z, radius, strength},
 //   beam {on, intensity, origin, dir, hit, cosOuter, angle, length}, setSearchlight(on),
 //   winch.{tension, jammed, surfaceY, height, inRange, radius, stretcher, cabinFull, denied}.
-// Extra events: heli:capture {survivor}, heli:slip {survivor, reason}, heli:snag, heli:winch-denied
+// Extra events: heli:capture {survivor}, heli:slip {survivor, reason}, heli:snag {x, z, reason:
+//   'wave'|'debris', kind}, heli:winch-denied
 //   {reason}, heli:cabin-full, heli:unload-person {pad, person, left}, heli:resupply {pad},
 //   heli:overheat, heli:autorotation, heli:failing {reason}, heli:water-strike, heli:touchdown
 //   {pad, vy}, heli:flare-throw {x, z, eta}, heli:raft-throw {x, z}. heli:refuel has state
@@ -27,6 +28,7 @@ import { Winch } from './heli/winch.js';
 import { Searchlight } from './heli/searchlight.js';
 import { HeliLights } from './heli/lights.js';
 import { HeliOps } from './heli/ops.js';
+import { Crewman } from './heli/crewman.js';
 
 const SKID = -SKID_Y;
 const PRESETS = [15, 40, 90];
@@ -114,6 +116,28 @@ export class Helicopter {
     this.beam = this.searchlightCtl.beam;
     this.lightsCtl = new HeliLights(ctx, this.model);
     this.ops = new HeliOps(this);
+    this.crewman = new Crewman(ctx, this.model); // hoist operator in the door (DESIGN §4 #9)
+
+    // Thermal heat sources (CONTRACT «Depth pass additions»): proxies on render layer 2 ONLY — the
+    // engine bays under the cowling and the two exhaust plumes; invisible to the normal camera.
+    const heatMat = new THREE.MeshBasicMaterial({ color: '#FFFFFF' });
+    const plumeMat = new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.55, depthWrite: false });
+    this.heatProxies = [];
+    for (const s of [-1, 1]) {
+      const bay = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 1.7), heatMat);
+      bay.position.set(0.5 * s, 1.36, 1.75);
+      const ex = POINTS[s < 0 ? 'exhaustL' : 'exhaustR'];
+      const plume = new THREE.Mesh(new THREE.ConeGeometry(0.42, 2.6, 8, 1, true).rotateX(-Math.PI / 2).translate(0, 0, 1.3), plumeMat);
+      plume.position.copy(ex);
+      plume.rotation.set(-0.2, 0.35 * s, 0);
+      for (const m of [bay, plume]) {
+        m.name = 'heli.heat';
+        m.layers.set(2);
+        m.frustumCulled = false;
+        this.model.body.add(m);
+        this.heatProxies.push(m);
+      }
+    }
 
     // Thrown flare visuals (small HDR embers, pooled).
     const fg = new THREE.SphereGeometry(0.28, 8, 6);
@@ -123,6 +147,7 @@ export class Helicopter {
       const m = new THREE.Mesh(fg, fm);
       m.name = 'heli.flareInFlight';
       m.visible = false;
+      m.layers.enable(2); // burning flare: a heat source for the thermal view
       ctx.scene.add(m);
       this.flareMeshes.push(m);
     }
@@ -169,6 +194,18 @@ export class Helicopter {
     this._col = new THREE.Color();
 
     ctx.events.on('mission:setup', ({ def }) => this.reset((def && def.heli) || { pad: 0 }));
+    // Touch auto-aim (DESIGN §3.2): remember recent distress signals (rocket, smoke, strobe…).
+    this._signals = [];
+    this._touchTgt = null;
+    ctx.events.on('survivor:signal', (p) => {
+      if (!p || !Number.isFinite(p.x + p.z)) return;
+      if (this._signals.length >= 12) this._signals.shift();
+      this._signals.push({ x: p.x, z: p.z, t: this.t, s: p.s || null });
+    });
+    ctx.events.on('mission:setup', () => {
+      this._signals.length = 0;
+      this._touchTgt = null;
+    });
     ctx.settings.onChange((k) => {
       if (k === 'quality') this._applyQuality();
     });
@@ -231,6 +268,7 @@ export class Helicopter {
     this.searchlightCtl.reset();
     this._computeHoist(this.flight.p, this.flight.heading, this.hoistWorld);
     this.winchCtl.reset();
+    this.crewman.reset();
     for (const m of this.flareMeshes) m.visible = false;
     for (const m of this.raftMeshes) m.visible = false;
     this._syncRender(0);
@@ -391,7 +429,10 @@ export class Helicopter {
       const r = 12 + 90 * am;
       this.aim.set(p.x + (ax / am) * r, 0, p.z - (ay / am) * r);
       this.aimSource = 'stick';
-    } else if (input.lastDevice !== 'gamepad' && input.mouse.active && ctx.cameraRig?.screenToWater) {
+    } else if (play && input.lastDevice === 'touch' && this._touchAim(this.aim)) {
+      // touch: the searchlight and flares lock onto the nearest spotted survivor / fresh signal
+      this.aimSource = 'touch';
+    } else if (input.lastDevice !== 'gamepad' && input.lastDevice !== 'touch' && input.mouse.active && ctx.cameraRig?.screenToWater) {
       ctx.cameraRig.screenToWater(input.mouse.ndcX, input.mouse.ndcY, this.aim);
       this.aimSource = 'mouse';
     } else {
@@ -417,6 +458,49 @@ export class Helicopter {
       }
     }
     f.noseTarget = target;
+  }
+
+  // Nearest spotted survivor group or recent distress signal (≤ 260 m, signals ≤ 25 s old) → out.
+  // A little hysteresis keeps the lock from flickering between two equally close targets.
+  _touchAim(out) {
+    const p = this.flight.p;
+    const R2 = 260 * 260;
+    let best = null;
+    let bd = R2;
+    let cur = Infinity;
+    const list = this.ctx.survivors?.list || [];
+    for (const s of list) {
+      if (!s || !s.position || !(s.remaining > 0)) continue;
+      if (s.state === 'rescued' || s.state === 'lost' || s.state === 'hidden') continue;
+      if (!s.spotted && s.state !== 'spotted' && s.state !== 'winching') continue;
+      const d2 = (s.position.x - p.x) ** 2 + (s.position.z - p.z) ** 2;
+      if (s === this._touchTgt) cur = d2;
+      if (d2 < bd) {
+        bd = d2;
+        best = s;
+      }
+    }
+    for (const g of this._signals) {
+      if (this.t - g.t > 25) continue;
+      if (g.s && list.includes(g.s) && (g.s.spotted || g.s.state === 'spotted')) continue; // already have it exactly
+      const d2 = (g.x - p.x) ** 2 + (g.z - p.z) ** 2;
+      if (g === this._touchTgt) cur = d2;
+      if (d2 < bd) {
+        bd = d2;
+        best = g;
+      }
+    }
+    if (!best) {
+      this._touchTgt = null;
+      return false;
+    }
+    if (this._touchTgt && best !== this._touchTgt && cur < R2 && bd > cur * 0.7) best = this._touchTgt;
+    this._touchTgt = best;
+    const x = best.position ? best.position.x : best.x;
+    const z = best.position ? best.position.z : best.z;
+    if (!Number.isFinite(x + z)) return false;
+    out.set(x, 0, z);
+    return true;
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -601,6 +685,10 @@ export class Helicopter {
 
     // --- winch visuals -------------------------------------------------------------------------------------
     this.winchCtl.render(dt, alpha, this.beam);
+    this.crewman.update(dt, this);
+    // engines are hot while turning (thermal proxies, layer 2 only)
+    const hot = !ditched && rpm > 0.2;
+    for (const m of this.heatProxies) m.visible = hot;
 
     // --- downwash on the water (R = 9 + .35·alt, s = sat(1 − (alt − 4)/28)²) + spray ------------------
     const altW = Math.max(0, this.position.y - this.seaY);

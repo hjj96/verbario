@@ -49,6 +49,8 @@ import { Carrier, scatterDebris } from './survivors/carriers.js';
 import { SignalDesk, initSignals, strobeOn } from './survivors/signals.js';
 import { POSE, poseTargets, applyPose, variant } from './survivors/poses.js';
 import { makeFallbackPeople, conditionFor, quoteFor, guessGender } from './survivors/people.js';
+import { markHeat, HeatProxy, thermalBoost } from './survivors/heat.js';
+import { Bottle } from './survivors/bottle.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const S = PERSON_SCALE;
@@ -101,7 +103,7 @@ export class Survivors {
     this.env = {
       t: 0, dt: 0, play: false, night: 0, preset: 'calm', intensity: 0, fogBlind: false, fog: 0,
       windX: 0, windZ: 0, windSpeed: 0, windDirX: 1, windDirZ: 0, windAngle: 0, Hs: 0.5, sunny: false,
-      base: 260, altBonus: 1, reduceFlashes: false,
+      base: 260, altBonus: 1, reduceFlashes: false, thermal: 1,
       heliAlive: false, rotorHeard: false, hx: 0, hy: 40, hz: 0, alt: 40, dwR: 9, dwS: 0,
       wState: 'stowed', bx: 0, by: 0, bz: 0, bH: 99, bWet: false, wLoad: null,
       ghostLight: new THREE.Color(0.4, 0.45, 0.5), foam: new THREE.Color('#E8EEEC'),
@@ -177,6 +179,19 @@ export class Survivors {
     this.glows = new Glows(look, 160);
     this.lines = new Lines(192);
     root.add(this.collars.mesh, this.glows.mesh, this.lines.mesh);
+    // thermal / FLIR (render layer 2, heat.js): people hot, submerged bodies faint, occupied craft via proxies
+    markHeat(this.crowd.mesh, 1);
+    markHeat(this.crowd.ghost, 0.25);
+    const B = this.batches;
+    this.heat = {
+      raft: new HeatProxy('rafts', B.raft.mesh.geometry, 0.7, B.raft.max),
+      boat: new HeatProxy('hulls', B.boat.mesh.geometry, 0.3, B.boat.max),
+      yacht: new HeatProxy('yachts', B.yacht.mesh.geometry, 0.3, B.yacht.max),
+      plane: new HeatProxy('planes', B.plane.mesh.geometry, 0.3, B.plane.max),
+    };
+    this.heatList = Object.values(this.heat);
+    for (const h of this.heatList) root.add(h.mesh);
+    this.bottle = new Bottle(this); // DESIGN §4 #46
   }
 
   // model: 'ferry' | 'trawler' (wrecks), 'barge'
@@ -217,6 +232,7 @@ export class Survivors {
     this.lostTotal = 0;
     this.elapsed = 0;
     this._quoteUsed.clear();
+    this.bottle?.clear();
   }
 
   // Spawn one group from a def entry ({type, x, z, count, hidden, signals, people, height, name, …}).
@@ -518,6 +534,7 @@ export class Survivors {
       else this.spawn(e);
     }
     this.pending.sort((a, b) => a.at - b.at);
+    this.bottle?.setup(def);
   }
 
   _onHorn(p) {
@@ -636,6 +653,7 @@ export class Survivors {
       env.alt = Number.isFinite(h.altitude) ? h.altitude : h.position.y;
     }
     env.fogBlind = (env.preset === 'fog' || env.fog > 0.55) && env.alt > 35;
+    env.thermal = thermalBoost(ctx, env); // FLIR detection multiplier (1 = off / by day)
     // rotor downwash (DESIGN §2.6.5 layer 9): R = 9 + .35·alt, s = sat(1 − (alt − 4)/28)²
     const dw = h?.downwash;
     env.dwR = dw && Number.isFinite(dw.radius) ? dw.radius : 9 + 0.35 * Math.max(0, env.alt);
@@ -1067,6 +1085,8 @@ export class Survivors {
     const size = TYPES[s.type]?.size ?? 1;
     const R = env.base * (0.85 + 0.003 * Math.max(0, env.alt) * env.altBonus) * size;
     if (!env.fogBlind && d < R) return this.spot(s, 'crew');
+    // FLIR at night / in fog: ×1.6 and sees through the murk (heat.js thermalBoost)
+    if (env.thermal > 1 && d < R * env.thermal) return this.spot(s, 'thermal');
     const lit = s.strobe || (s.carrier?.kind === 'raft' && !s.carrier.lampDead);
     if (lit && env.night > 0.45 && d < R * (s.strobe ? STROBE_MULT : 2)) return this.spot(s, s.strobe ? 'strobe' : 'lamp');
     // burning / flashing signals
@@ -1686,6 +1706,7 @@ export class Survivors {
     crowd.begin();
     for (const b of this.batchList) b.begin();
     for (const b of this.bigBatches) b.begin();
+    for (const h of this.heatList) h.begin();
     this.collars.begin();
     this.glows.begin();
     this.lines.begin();
@@ -1703,6 +1724,7 @@ export class Survivors {
         const lamp = lampOn ? (rf ? 0.4 : 1) : 0;
         const chem = !c.capsized && night > 0.45 && !c.dropped ? 1 : 0;
         B.raft.push(c.matrix, tape, lamp, c.flutter, 0, c.dissolve, chem, c.phase);
+        if (occupants && !c.capsized) this.heat.raft.push(c.matrix);
         if (lamp > 0) {
           c.toWorld(0, RAFT.canopyTop + 0.25, 0, _v);
           this.glows.add(_v.x, _v.y, _v.z, 0.35, C_LAMP, (2 + 6 * night) * lamp, 3.5, (0.3 + 1.6 * night) * lamp, 1, env.t * 0.2);
@@ -1723,6 +1745,7 @@ export class Survivors {
         const plane = c.style === 'plane';
         const b = plane ? B.plane : c.style === 'yacht' ? B.yacht : B.boat;
         b.push(c.matrix, tape, 0, 0, 0, c.dissolve, 0, c.phase);
+        if (occupants && c.dissolve < 0.5) this.heat[plane ? 'plane' : c.style === 'yacht' ? 'yacht' : 'boat'].push(c.matrix);
         if (c.decal) {
           // matrix AND matrixWorld: the parent's world update would otherwise overwrite our copy
           c.decal.mesh.matrix.copy(c.matrix);
@@ -1800,9 +1823,11 @@ export class Survivors {
       this.collars.push(m.x, m.y, m.z, m.nrm.x, m.nrm.y, m.nrm.z, 0.32, 0.7 * rise, 0.8, 0, m.phase);
     }
 
+    this.bottle.frame(env, dt);
     crowd.end();
     for (const b of this.batchList) b.end();
     for (const b of this.bigBatches) b.end();
+    for (const h of this.heatList) h.end();
     this.collars.end();
     this.glows.end();
     this.lines.end();

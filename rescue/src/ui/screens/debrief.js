@@ -67,6 +67,9 @@ export class DebriefScreen extends Screen {
     // buttons
     const foot = el('div.log-foot', { parent: this.sheet });
     this.bNext = el('div.btn.btn-primary', { text: 'ДАЛЕЕ', parent: foot, attrs: { role: 'button' } });
+    // «ПОВТОРИТЬ С ПОСАДКИ» (CONTRACT «Depth pass»: checkpoints) — shown while mission.checkpoint exists
+    this.bCheck = el('div.btn', { text: 'ПОВТОРИТЬ С ПОСАДКИ', parent: foot, attrs: { role: 'button' } });
+    this.bCheck.hidden = true;
     this.bRetry = el('div.btn', { text: 'ПОВТОРИТЬ', parent: foot, attrs: { role: 'button' } });
     this.bMenu = el('div.btn.btn-ghost', { text: 'В МЕНЮ', parent: foot, attrs: { role: 'button' } });
     this.menu = new Menu(hud, { name: 'debrief', layout: 'horizontal' });
@@ -229,6 +232,9 @@ export class DebriefScreen extends Screen {
     const canNext = !r.endless && r.success && Number.isFinite(r.index) && r.index + 1 < (mis.list?.length || 0);
     this.bNext.hidden = !canNext;
     if (canNext) items.push({ el: this.bNext, onActivate: () => this.hud.emit('ui:next', {}) });
+    const hasCheck = !!mis.checkpoint;
+    this.bCheck.hidden = !hasCheck;
+    if (hasCheck) items.push({ el: this.bCheck, onActivate: () => this.hud.emit('ui:retry-checkpoint', {}) });
     items.push({ el: this.bRetry, onActivate: () => this.hud.emit('ui:retry', {}) });
     items.push({ el: this.bMenu, onActivate: () => this.hud.emit('ui:menu', {}) });
     this.menu.setItems(items);

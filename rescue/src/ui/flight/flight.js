@@ -24,6 +24,15 @@ export class FlightHud {
     this.node = el('div.hud-flight', { parent: hud.root });
     this.frame = el('div.hud-vf', { parent: this.node }); // viewfinder corners (CSS)
     for (const c of ['tl', 'tr', 'bl', 'br']) el(`i.vf-${c}`, { parent: this.frame });
+    // Thermal / FLIR mode (post owns the image, CONTRACT «Depth pass»): a sensor-mode label under the
+    // REC block with the grey-scale bar, plus a faint inner frame with mid-edge ticks.
+    this.flir = el('div.hud-flir', { parent: this.node });
+    for (const c of ['t', 'r', 'b', 'l']) el(`i.flir-tk.flir-${c}`, { parent: this.flir });
+    this.flirLabel = el('div.flir-label', { parent: this.flir });
+    this.flirMode = el('div.flir-mode', { parent: this.flirLabel });
+    el('div.flir-sub', { parent: this.flirLabel, html: `<i class="flir-scale"></i><span>ИК 8–14${NBSP}мкм · АРУ</span>` });
+    this._flirOn = false;
+    this._flirPal = '';
     this.model = new FlightModel(hud);
     this.L = { W: 0, H: 0, hs: 1, tape: {}, alt: {}, winchPanel: {}, radar: {}, avoid: [] };
     this.overlay = new Overlay(this);
@@ -108,6 +117,7 @@ export class FlightHud {
     Object.assign(this.winch.node.style, { left: `${L.winchPanel.x}px`, top: `${L.winchPanel.y}px`, width: `${pw}px`, height: `${ph}px` });
     Object.assign(this.panels.altBox.style, { left: `${SAFE}px`, top: `${L.alt.y + L.alt.h / 2}px`, width: `${L.alt.x - SAFE - 12 * hs}px` });
     this.panels.tcBox.style.top = `${stripTop}px`;
+    Object.assign(this.flirLabel.style, { left: `${SAFE}px`, top: `${Math.round(L.avoid[0].h + 4 * hs)}px` });
     Object.assign(this.toasts.col.style, { top: `${tTop}px`, width: `${tcw}px` });
     // radio subtitles: in a short landscape frame they start right of the altimeter column
     this.subs.box.style.left = compact && !portrait ? `${Math.round(L.alt.x + 44 * hs)}px` : '';
@@ -139,6 +149,13 @@ export class FlightHud {
     on('mission:setup', ({ def }) => this._reset(def));
     on('mission:chapter', (p) => this.panels.showChapter(p.title || (p.text ? `ГЛАВА ${p.n} · ${p.text}` : '')));
     on('mission:hint', (p) => this.hints.onHint(p));
+    // Landing snapshot (CONTRACT «Depth pass»): the take-off pad snapshot at the start stays silent.
+    on('mission:checkpoint', (p) => {
+      if ((this.ctx.mission?.elapsed ?? 99) < 5) return;
+      const cp = p.checkpoint || this.ctx.mission?.checkpoint || p;
+      const n = cp?.pad?.name || p.pad?.name || cp?.padName || '';
+      T('КОНТРОЛЬНАЯ ТОЧКА', `${n ? `«${String(n).replace(/[«»]/g, '')}» · ` : ''}повтор с посадки — в меню паузы`, { kind: 'nav', key: 'checkpoint' });
+    });
     on('mission:objective', ({ objective: o }) => {
       if (!o || !playing()) return;
       if (o.done && !this._objDone.has(o.id)) {
@@ -301,6 +318,21 @@ export class FlightHud {
     }
     const emp = (ctx.heli?.emp || 0) > 0;
     setClass(this.node, 'emp', emp);
+    const th = ctx.post?.thermal;
+    const flir = !!th?.active;
+    if (flir !== this._flirOn) {
+      this._flirOn = flir;
+      setClass(this.node, 'thermal', flir);
+    }
+    if (flir) {
+      const black = /black|ч[её]рн/i.test(String(th.palette || th.mode || ''));
+      const pal = black ? 'ЧЁРН. ГОРЯЧ.' : 'БЕЛ. ГОРЯЧ.';
+      if (pal !== this._flirPal) {
+        this._flirPal = pal;
+        this.flirMode.innerHTML = `<b>ТЕПЛОВИЗОР</b> · ${pal}`;
+        setClass(this.flirLabel, 'black-hot', black);
+      }
+    }
     if (emp && Math.random() < 0.08) this.glitch(0.12);
 
     if (this._t10.tick(dt)) this._sea();

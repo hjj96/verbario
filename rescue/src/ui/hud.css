@@ -108,6 +108,28 @@ body.hud-mode-play #game { cursor: none; }
 .hud-vf .vf-bl { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
 .hud-vf .vf-br { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
 
+/* photo mode (ctx.photo.active): the whole HUD steps aside */
+.mayday-hud { transition: opacity .25s; }
+.mayday-hud.photo { opacity: 0; }
+.mayday-hud.photo * { pointer-events: none !important; }
+
+/* thermal / FLIR (ctx.post.thermal.active): sensor-mode label + faint inner frame with mid-edge ticks */
+.hud-flir { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s; }
+.hud-flight.thermal .hud-flir { opacity: 1; }
+.hud-flir::before { content: ''; position: absolute; inset: calc(46px * var(--hs)); border: 1px solid rgba(236, 240, 240, .1); }
+.flir-tk { position: absolute; background: rgba(236, 240, 240, .38); }
+.flir-t, .flir-b { left: 50%; width: 1px; height: calc(14px * var(--hs)); }
+.flir-l, .flir-r { top: 50%; height: 1px; width: calc(14px * var(--hs)); }
+.flir-t { top: calc(46px * var(--hs)); }
+.flir-b { bottom: calc(46px * var(--hs)); }
+.flir-l { left: calc(46px * var(--hs)); }
+.flir-r { right: calc(46px * var(--hs)); }
+.flir-label { position: absolute; font: 500 calc(11px * var(--hs)) / 1.25 var(--f-mono); letter-spacing: .14em; color: #EEF2F2; text-shadow: var(--tsh); }
+.flir-mode b { font-weight: 700; padding: 1px 5px; margin-right: 2px; background: rgba(238, 242, 242, .9); color: #10181D; text-shadow: none; }
+.flir-sub { display: flex; align-items: center; gap: 7px; margin-top: 5px; font-size: .82em; letter-spacing: .1em; color: rgba(238, 242, 242, .7); }
+.flir-scale { display: inline-block; width: calc(64px * var(--hs)); height: 5px; background: linear-gradient(90deg, #0b0f12, #eef2f2); border: 1px solid rgba(238, 242, 242, .35); }
+.flir-label.black-hot .flir-scale { background: linear-gradient(90deg, #eef2f2, #0b0f12); }
+
 /* REC + meteo (top-left) */
 .hud-tl {
   position: absolute;
@@ -855,8 +877,10 @@ body.hud-mode-play #game { cursor: none; }
 .pc-fc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 400 12.5px/1.4 var(--f-text); }
 .pc-fc span { display: inline-flex; align-items: center; gap: 3px; }
 .fc-arr { color: rgba(18, 33, 43, .45); font-family: var(--f-mono); }
-.pc-log { font: 400 12px/1.4 var(--f-text); }
+.pc-log { font: 400 12px/1.4 var(--f-text); max-height: calc(176px * var(--ts)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(18, 33, 43, .35) transparent; padding-right: 4px; }
 .pc-log div { padding: 3px 0; border-bottom: 1px dashed rgba(18, 33, 43, .2); }
+.pc-log .t { font: 500 9.5px/1 var(--f-mono); color: rgba(18, 33, 43, .5); margin-right: 6px; letter-spacing: .04em; }
+.pause-item .pi-sub { margin-left: 12px; font: 500 calc(11px * var(--ts)) / 1 var(--f-mono); letter-spacing: .08em; color: rgba(244, 241, 234, .45); vertical-align: middle; }
 .pc-log b { font: 600 10px/1 var(--f-head); letter-spacing: .14em; margin-right: 6px; }
 
 /* --- settings & controls ------------------------------------------------------------------------ */
@@ -907,6 +931,36 @@ body.hud-mode-play #game { cursor: none; }
 .ctl-sheet .set-foot { justify-content: flex-end; }
 
 /* --- confirm -------------------------------------------------------------------------------------- */
+/* bottle note (survivor:bottle): water-stained notepaper, folded once, an old hand */
+.scr-note { background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .35), rgba(0, 0, 0, .7)); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
+.note-sheet {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  scrollbar-width: none;
+  padding: 26px 34px 20px 40px;
+  color: #2A2A30;
+  background-color: #E9DEC4;
+  background-image:
+    linear-gradient(180deg, transparent 49.6%, rgba(90, 64, 30, .16) 50%, rgba(255, 255, 255, .22) 50.4%, transparent 51.2%),
+    radial-gradient(ellipse 38% 26% at 82% 18%, rgba(140, 104, 52, .2), rgba(140, 104, 52, .07) 70%, transparent 72%),
+    radial-gradient(ellipse 30% 22% at 14% 86%, rgba(120, 92, 50, .16), transparent 70%),
+    repeating-linear-gradient(180deg, transparent 0 25px, rgba(60, 90, 130, .14) 25px 26px),
+    linear-gradient(90deg, transparent 26px, rgba(200, 16, 46, .22) 26px 27px, transparent 27px);
+  border: 1px solid rgba(70, 52, 30, .45);
+  box-shadow: 0 2px 0 rgba(70, 52, 30, .25), 0 30px 60px rgba(0, 0, 0, .55);
+  transform: rotate(-1.2deg);
+  clip-path: polygon(0 1.2%, 6% 0, 14% .9%, 23% .2%, 31% 1%, 42% .1%, 55% .8%, 63% 0, 74% .9%, 86% .2%, 94% 1%, 100% .3%, 100% 100%, 0 100%);
+}
+.note-kicker { font: 600 10px/1 var(--f-mono); letter-spacing: .24em; color: rgba(42, 42, 48, .6); }
+.note-title { margin: 12px 0 10px; font: italic 600 calc(22px * var(--ts)) / 1.15 'PT Serif', Georgia, 'Times New Roman', serif; color: #1F2A44; }
+.note-body { font: italic 400 calc(15.5px * var(--ts)) / 26px 'PT Serif', Georgia, 'Times New Roman', serif; color: #22304F; }
+.note-body p { margin: 0 0 0; text-indent: 1.4em; }
+.note-body p + p { margin-top: 0; }
+.note-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+.note-keys { font: 500 10.5px/1 var(--f-mono); letter-spacing: .08em; color: rgba(42, 42, 48, .55); }
+.note-keys kbd.cap { color: #2A2A30; background: rgba(42, 42, 48, .06); }
 .scr-confirm { background: rgba(0, 0, 0, .5); display: flex; align-items: center; justify-content: center; z-index: 5; }
 .confirm-box { width: min(480px, 90vw); padding: 22px 26px; transform: rotate(-.4deg); }
 .confirm-head { font: 700 22px/1.1 var(--f-head); letter-spacing: .16em; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }

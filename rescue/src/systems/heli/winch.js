@@ -40,6 +40,15 @@ const CAPTURE = {
 };
 const MAX_CAPTURE_R = 4.5;
 
+// Cable snag on flotsam (DESIGN §3.5 «ТРОС ЗАХЛЕСТНУЛО» [SHOULD]): contact radii of floating props
+// (world floaters by shape, hazard debris by kind). Moored buoys, containers (rescue targets) and toy
+// ducks never snag the cable.
+const SNAG_R_FLOAT = { plank: 0.9, barrel: 0.6, ring: 0.55, canister: 0.45, kayak: 1.1, paddle: 0.7, suitcase: 0.5, fender: 0.45, fishbox: 0.55, float: 0.35, sail: 1.6 };
+const SNAG_R_DEBRIS = { board: 1.2, barrel: 0.6, buoy: 0.65, boat: 2.4 };
+const SNAG_CABLE = 0.55; // cable + basket half-width
+const SNAG_SETTLE = 0.8; // s in the water before a crossing counts (items already there don't)
+const SNAG_COOLDOWN = 15; // s between debris snags
+
 export class Winch {
   constructor(ctx, heli) {
     this.ctx = ctx;
@@ -90,6 +99,9 @@ export class Winch {
     this._tmp = new THREE.Vector3();
     this._tv = new THREE.Vector3();
     this.basketVel = new THREE.Vector3();
+    this.snagWet = 0; // s the empty basket has been at the water
+    this.snagCd = 0;
+    this.snagInside = new Set(); // flotsam currently touching the cable (a crossing = a new entry)
 
     this._buildVisuals();
   }
@@ -235,6 +247,9 @@ export class Winch {
     w.swing = 0;
     w.tension = 0;
     w.jammed = 0;
+    this.snagWet = 0;
+    this.snagCd = 0;
+    this.snagInside.clear();
     w.steadiness = 1;
     w.inRange = false;
     w.stretcher = false;
@@ -633,9 +648,83 @@ export class Winch {
       const lift = ctx.hazards.waveLiftAt(w.basket.x, w.basket.z) || 0;
       if (lift > 3) {
         w.jammed = 6;
-        ctx.events.emit('heli:snag', { x: w.basket.x, z: w.basket.z });
+        ctx.events.emit('heli:snag', { x: w.basket.x, z: w.basket.z, reason: 'wave' });
       }
     }
+    // …or a plank / barrel / hazard wreckage drifting across the EMPTY cable where it meets the water.
+    this.snagCd = Math.max(0, this.snagCd - dt);
+    if (!w.load && w.length > 3 && w.height < 2.5 && w.state !== 'stowed') {
+      this.snagWet += dt;
+      const hit = this._flotsamCrossing();
+      if (hit && w.jammed <= 0 && this.snagCd <= 0 && this.snagWet > SNAG_SETTLE) {
+        w.jammed = 6;
+        this.snagCd = SNAG_COOLDOWN;
+        ctx.events.emit('heli:snag', { x: w.basket.x, z: w.basket.z, reason: 'debris', kind: hit.shape || hit.kind || 'debris' });
+      }
+    } else if (this.snagWet > 0 || this.snagInside.size) {
+      this.snagWet = 0;
+      this.snagInside.clear();
+    }
+  }
+
+  // Returns a flotsam item that has just started touching the low cable (basket or the node above
+  // it), or null. Reads world floaters and hazard debris positions only.
+  _flotsamCrossing() {
+    const ctx = this.ctx;
+    const w = this.pub;
+    const cur = this.cur;
+    const kb = (N - 1) * 3;
+    const ka = (N - 2) * 3;
+    const bx = cur[kb], bz = cur[kb + 2];
+    // on a deck (structure targets, pads) nothing floats past the basket
+    const water = ctx.ocean?.heightAt ? ctx.ocean.heightAt(bx, bz) : w.surfaceY;
+    if (w.surfaceY - water > 1) return null;
+    const lowA = cur[ka + 1] - w.surfaceY < 2.5; // the node above the basket is near the water too
+    const ax = cur[ka], az = cur[ka + 2];
+    const inside = this.snagInside;
+    let hit = null;
+    const test = (it, r) => {
+      if (!it || !Number.isFinite(it.x + it.z)) return;
+      const rr = r + SNAG_CABLE;
+      const touch = (it.x - bx) ** 2 + (it.z - bz) ** 2 < rr * rr || (lowA && (it.x - ax) ** 2 + (it.z - az) ** 2 < rr * rr);
+      if (touch) {
+        if (!inside.has(it)) {
+          inside.add(it);
+          if (!hit && this.snagWet > SNAG_SETTLE) hit = it;
+        }
+      } else if (inside.has(it)) inside.delete(it);
+    };
+    const fl = ctx.world?.floaters?.items;
+    if (fl && fl.length) {
+      for (let i = 0; i < fl.length; i++) {
+        const it = fl[i];
+        const r = SNAG_R_FLOAT[it.shape];
+        if (!r || it.moored) continue;
+        if (Math.abs(it.x - bx) > 8 || Math.abs(it.z - bz) > 8) {
+          if (inside.has(it)) inside.delete(it);
+          continue;
+        }
+        test(it, r);
+      }
+    }
+    const items = ctx.hazards?.debris?.items;
+    if (items) {
+      for (const kind in items) {
+        const r = SNAG_R_DEBRIS[kind];
+        const list = items[kind];
+        if (!r || !list) continue;
+        for (let i = 0; i < list.length; i++) {
+          const it = list[i];
+          // airborne tornado junk passes over the cable; only what floats at the surface snags it
+          if (!Number.isFinite(it.y) || Math.abs(it.y - w.surfaceY) > 1.5) {
+            if (inside.has(it)) inside.delete(it);
+            continue;
+          }
+          test(it, r);
+        }
+      }
+    }
+    return hit;
   }
 
   // ----------------------------------------------------------------------------------------------

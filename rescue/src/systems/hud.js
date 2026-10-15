@@ -26,6 +26,7 @@ import { SettingsScreen } from '../ui/screens/settings.js';
 import { ControlsScreen } from '../ui/screens/controls.js';
 import { DebriefScreen } from '../ui/screens/debrief.js';
 import { ConfirmScreen } from '../ui/screens/confirm.js';
+import { NoteScreen } from '../ui/screens/note.js';
 import { TouchControls } from '../ui/flight/touch.js';
 import { BINDINGS } from '../core/input.js';
 
@@ -40,6 +41,7 @@ const SCREENS = {
   controls: ControlsScreen,
   debrief: DebriefScreen,
   confirm: ConfirmScreen,
+  note: NoteScreen,
 };
 
 export class Hud {
@@ -107,6 +109,7 @@ export class Hud {
     this.on('mission:logbook', (p) => this.screens.debrief?.onLogbook?.(p?.report));
     this.on('mission:complete', (p) => this._debriefData(p));
     this.on('mission:failed', (p) => this._debriefData(p));
+    this.on('survivor:bottle', (p) => this.showNote(p || {}));
     ctx.settings?.onChange?.((k) => {
       this._applySettingsCss();
       if (k === 'colorblindMarkers') this.flight._palette();
@@ -326,6 +329,19 @@ export class Hud {
     }
   }
 
+  // Bottle with a note (CONTRACT «Depth pass», op 9★): the game pauses for the reading, the paper note
+  // lies over the pause screen, and folding it away (confirm / back) resumes the flight.
+  showNote({ title, text } = {}) {
+    const ctx = this.ctx;
+    if (this.nohud || (ctx.mode !== 'play' && ctx.mode !== 'paused')) return;
+    let resume = false;
+    if (ctx.mode === 'play') {
+      this.emit('ui:pause', {});
+      resume = ctx.mode === 'paused';
+    }
+    this.go('note', { title, text, onClose: resume ? () => this.emit('ui:resume', {}) : null });
+  }
+
   // Called by the flash/press gates when they are done.
   gateDone(which) {
     this._gates[which] = false;
@@ -350,14 +366,21 @@ export class Hud {
     this._lastNow = now;
     this.time += uiDt;
     const top = this.stack[this.stack.length - 1];
+    // Photo mode (CONTRACT «Depth pass»: post + camera own it) — the whole HUD steps aside for the shot.
+    const photo = !!this.ctx.photo?.active;
+    if (photo !== this._photo) {
+      this._photo = photo;
+      setClass(this.root, 'photo', photo);
+      if (!photo) this.flight.panels._remeasure = true;
+    }
     this.static.update(uiDt);
-    if (top && !this.static.active) {
+    if (top && !this.static.active && !photo) {
       const menu = top.screen.menu;
       if (menu && !top.screen.blockInput) menu.handle(uiDt);
       top.screen.handleInput?.(uiDt);
     }
     for (const e of this.stack) e.screen.update?.(uiDt, e === top);
-    if (this.flight.visible && !this.nohud) {
+    if (this.flight.visible && !this.nohud && !photo) {
       try {
         this.flight.update(dt);
       } catch (err) {
