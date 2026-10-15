@@ -8,6 +8,7 @@
 //  Lines   — sea-anchor (drogue) lines from the rafts, 1 px rope. One draw call.
 import * as THREE from 'three';
 import { LOOK_GLSL_UNIFORMS } from '../../core/look.js';
+import { InstanceBounds } from './geo.js';
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -127,10 +128,12 @@ export class Collars {
     this.mesh.count = 0;
     this.max = max;
     this.n = 0;
+    this.bounds = new InstanceBounds(g, 1);
   }
 
   begin() {
     this.n = 0;
+    this.bounds.reset();
   }
 
   // (x, y, z) waterline centre, normal n, R object radius, foam/dark/lit 0..1, phase, yaw/elongation
@@ -143,7 +146,9 @@ export class Collars {
     _s.set(r, 1, r * elong);
     _p.set(x, y + 0.05, z);
     _m.compose(_p, _q, _s);
+    if (this.bounds.culled(_m)) return;
     this.mesh.setMatrixAt(this.n, _m);
+    this.bounds.add(_m);
     const a = this.data.array;
     const j = this.n * 4;
     a[j] = foam;
@@ -157,6 +162,7 @@ export class Collars {
     const n = this.n;
     this.mesh.count = n;
     if (!n) return;
+    this.bounds.apply(this.mesh);
     const im = this.mesh.instanceMatrix;
     im.clearUpdateRanges();
     im.addUpdateRange(0, n * 16);

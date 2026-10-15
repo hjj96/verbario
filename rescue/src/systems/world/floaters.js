@@ -13,6 +13,7 @@ import { bake, p, member, rng, UNIT, SURF, emit } from './geo.js';
 import { CH } from './materials.js';
 import { containerGeometry, createCraftMaterial, containerPaint, CONT } from '../survivors/craft.js';
 import { WEAR } from '../../core/weathering.js';
+import { InstanceBounds } from '../survivors/geo.js';
 
 const SIDES = [-1, 1];
 
@@ -312,7 +313,7 @@ export class Floaters {
     mesh.setColorAt(0, _col.set(1, 1, 1));
     mesh.count = 0;
     Wd.root.add(mesh);
-    b = { mesh, n: 0, max, def };
+    b = { mesh, n: 0, max, def, bounds: new InstanceBounds(geo, 1) };
     this.banks.set(shape, b);
     return b;
   }
@@ -469,6 +470,7 @@ export class Floaters {
     const items = this.items;
     if (!items.length) return;
     this.frame++;
+    for (const b of this.banks.values()) b.bounds.reset();
     const focus = env ? env.focus : null;
     const wind = env ? env.wind : null;
     const cur = env ? env.current : null;
@@ -533,6 +535,7 @@ export class Floaters {
       _m.compose(_p, _q, _s);
       const b = this.banks.get(it.shape);
       b.mesh.setMatrixAt(it.idx, _m);
+      b.bounds.add(_m);
       if (it.light >= 0) {
         _p.set(0, 3.66, 0).applyMatrix4(_m);
         Wd.lamps.setLocal(it.light, _p.x, _p.y, _p.z);
@@ -557,15 +560,19 @@ export class Floaters {
         _n.set(it.nx, it.ny, it.nz);
         const lit = ocean?.searchlightAt ? ocean.searchlightAt(it.x, it.z) : 0;
         if (it.long) {
-          const c = Math.cos(it.yaw), s = Math.sin(it.yaw);
-          Wd.collars.push(it.x + c * 1.6, it.h, it.z - s * 1.6, _n.x, _n.y, _n.z, it.R, 0.75, 0.25, lit, it.phase);
-          Wd.collars.push(it.x - c * 1.6, it.h, it.z + s * 1.6, _n.x, _n.y, _n.z, it.R, 0.75, 0.25, lit, it.phase + 3);
+          // one collar hugging the 6.06 × 2.44 m box (as survivors' containers: R 1.4 stretched ×2.4);
+          // the collar stretches along its local +z, the box's long axis is local +x → yaw + 90°
+          Wd.collars.push(it.x, it.h, it.z, _n.x, _n.y, _n.z, 1.4 * (it.def.k || 1), 0.75, 0.25, lit, it.phase, it.yaw + Math.PI / 2, 2.4);
         } else {
           Wd.collars.push(it.x, it.h, it.z, _n.x, _n.y, _n.z, it.R, it.moored ? 0.8 : 0.55, 0.25, lit, it.phase);
         }
       }
     }
-    for (const b of this.banks.values()) if (b.n) b.mesh.instanceMatrix.needsUpdate = true;
+    for (const b of this.banks.values()) {
+      if (!b.n) continue;
+      b.mesh.instanceMatrix.needsUpdate = true;
+      b.bounds.apply(b.mesh); // cull the bank (view + shadow pass) instead of drawing it everywhere
+    }
   }
 }
 

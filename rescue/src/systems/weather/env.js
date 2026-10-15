@@ -72,6 +72,21 @@ export class WeatherEnv {
       console.warn('[weather] PMREM unavailable', err);
       this.pmrem = null;
     }
+    // A lost context takes the baked cubeUV render target with it (three restores uploaded textures,
+    // never what was rendered into a target): props would go dark without their sky. Rebuild the
+    // generator (its blur targets are gone too) and re-bake on the next eligible frame.
+    const canvas = this.ctx.renderer?.domElement;
+    if (canvas && !this._onRestore) {
+      this._onRestore = () => {
+        if (!this.pmrem) return;
+        // no dispose(): the old GL objects died with the old context (deleting them only raises
+        // INVALID_OPERATION); the JS side is a few small objects, once per context loss
+        this.pmrem = new THREE.PMREMGenerator(this.ctx.renderer);
+        this.rt = null;
+        this.dirty = true;
+      };
+      canvas.addEventListener('webglcontextrestored', this._onRestore);
+    }
   }
 
   // Force a bake on the next eligible frame (transition start/end).

@@ -42,6 +42,8 @@ export class Carrier {
     this.capsized = false;
     this.flutter = 0;
     this.tapeLit = 0;
+    this.tapeFlash = 0; // 0..1 decaying glint of the retro tape (survivors._carrier)
+    this.tapeGlintT = 0;
     this.lamp = 0;
     this.lights = 0;
     this.chem = 0;

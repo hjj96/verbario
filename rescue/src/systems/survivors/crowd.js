@@ -13,7 +13,7 @@
 //   iLook = (skin, hood, jacket, pants) palette indices
 //   iFx   = (tape lit 0..1 (searchlightAt), strobe 0..1, water height under the person, ghost light)
 import * as THREE from 'three';
-import { mergeParts, limb } from './geo.js';
+import { mergeParts, limb, InstanceBounds } from './geo.js';
 import { PERSON_SCALE, SKIN, HOOD, JACKET, PANTS, C } from './tables.js';
 
 const S = PERSON_SCALE;
@@ -441,6 +441,7 @@ export class Crowd {
 
     this.n = 0;
     this.extras = true;
+    this.bounds = new InstanceBounds(g, 2.5); // arms / legs are posed on the GPU
   }
 
   setQuality(q) {
@@ -449,13 +450,15 @@ export class Crowd {
 
   begin() {
     this.n = 0;
+    this.bounds.reset();
   }
 
   // m: Matrix4 world transform; arms [θL, ψL, θR, ψR]; look/fx arrays of 4.
   push(m, aL, pL, aR, pR, legFold, dissolve, skin, hood, jacket, pants, tape, strobe, waterY, ghostLight) {
-    if (this.n >= this.max) return -1;
+    if (this.n >= this.max || this.bounds.culled(m)) return -1; // people cast no shadows: cull per instance
     const i = this.n++;
     this.mesh.setMatrixAt(i, m);
+    this.bounds.add(m);
     const j = i * 4;
     let a = this.aArms.array;
     a[j] = aL; a[j + 1] = pL; a[j + 2] = aR; a[j + 3] = pR;
@@ -477,6 +480,7 @@ export class Crowd {
     this.ghost.visible = n > 0 && this.extras;
     this.keyline.visible = this.ghost.visible && this.keylineOn;
     if (!n) return;
+    this.bounds.apply(this.mesh, this.ghost, this.keyline);
     this.mesh.instanceMatrix.clearUpdateRanges();
     this.mesh.instanceMatrix.addUpdateRange(0, n * 16);
     this.mesh.instanceMatrix.needsUpdate = true;

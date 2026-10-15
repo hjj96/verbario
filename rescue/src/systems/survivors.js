@@ -44,6 +44,7 @@ import {
   lostBuoyGeometry, debrisGeometry, DEBRIS_KINDS, createCraftMaterial, CraftBatch, nameDecal, hullNameGeometry, RAFT, CONT, containerPaint, planeGeometry, PLANE,
 } from './survivors/craft.js';
 import { Collars, Glows, Lines } from './survivors/water.js';
+import { InstanceBounds } from './survivors/geo.js';
 import { Carrier, scatterDebris } from './survivors/carriers.js';
 import { SignalDesk, initSignals, strobeOn } from './survivors/signals.js';
 import { POSE, poseTargets, applyPose, variant } from './survivors/poses.js';
@@ -1481,6 +1482,15 @@ export class Survivors {
     }
     c.pose(env, ocean, dt);
     c.tapeLit = ocean.searchlightAt ? ocean.searchlightAt(c.x, c.z, c.y + 1.2) : 0;
+    // retro tape FLASHES the instant the beam touches (DESIGN §2.10), then glints again every 1.4–3.4 s
+    // while the swell rocks the craft in the beam (craft.js: tape only; the canopy lift stays ≤ 1)
+    c.tapeFlash *= Math.exp(-dt / 0.3);
+    c.tapeGlintT -= dt;
+    if (c.tapeLit < 0.15) c.tapeGlintT = 0;
+    else if (c.tapeLit > 0.5 && c.tapeGlintT <= 0) {
+      c.tapeFlash = 1;
+      c.tapeGlintT = 1.4 + 2 * Math.abs(Math.sin(c.phase * 7.3 + env.t * 1.7)); // no rng draw: spawns stay seeded
+    }
     // leftovers (empty rafts, capsized rafts, abandoned containers) fade out after a while
     const occupied = c.owner || c.riders.length;
     if (!occupied && c.kind !== 'wreck' && c.kind !== 'barge' && c.kind !== 'rig') {
@@ -1672,6 +1682,7 @@ export class Survivors {
     const ocean = ctx.ocean;
     const crowd = this.crowd;
     const B = this.batches;
+    InstanceBounds.setView(ctx.camera);
     crowd.begin();
     for (const b of this.batchList) b.begin();
     for (const b of this.bigBatches) b.begin();
@@ -1685,12 +1696,13 @@ export class Survivors {
     for (const c of this.carriers) {
       const occupants = this._occupants(c);
       const lit = c.tapeLit;
+      const tape = lit + 3 * c.tapeFlash;
       if (c.kind === 'raft') {
         // canopy lamp 60/min; dead when the raft is capsized or its people are lost
         const lampOn = !c.lampDead && !c.capsized && (env.t + c.lampPhase) % SIG.lampPeriod < 0.13;
         const lamp = lampOn ? (rf ? 0.4 : 1) : 0;
         const chem = !c.capsized && night > 0.45 && !c.dropped ? 1 : 0;
-        B.raft.push(c.matrix, lit, lamp, c.flutter, 0, c.dissolve, chem, c.phase);
+        B.raft.push(c.matrix, tape, lamp, c.flutter, 0, c.dissolve, chem, c.phase);
         if (lamp > 0) {
           c.toWorld(0, RAFT.canopyTop + 0.25, 0, _v);
           this.glows.add(_v.x, _v.y, _v.z, 0.35, C_LAMP, (2 + 6 * night) * lamp, 3.5, (0.3 + 1.6 * night) * lamp, 1, env.t * 0.2);
@@ -1710,7 +1722,7 @@ export class Survivors {
       } else if (c.kind === 'hull') {
         const plane = c.style === 'plane';
         const b = plane ? B.plane : c.style === 'yacht' ? B.yacht : B.boat;
-        b.push(c.matrix, lit, 0, 0, 0, c.dissolve, 0, c.phase);
+        b.push(c.matrix, tape, 0, 0, 0, c.dissolve, 0, c.phase);
         if (c.decal) {
           // matrix AND matrixWorld: the parent's world update would otherwise overwrite our copy
           c.decal.mesh.matrix.copy(c.matrix);
@@ -1732,7 +1744,7 @@ export class Survivors {
           B.debris.push(_m, 0, 0, 0, 0, c.dissolve * 0.7, 0, 0, DEBRIS_KINDS.indexOf(d.kind) + 1);
         }
       } else if (c.kind === 'container') {
-        B.container.push(c.matrix, lit, 0, 0, 0, c.dissolve, 0, c.phase, 0, c.color);
+        B.container.push(c.matrix, tape, 0, 0, 0, c.dissolve, 0, c.phase, 0, c.color);
         // swell washing over the roof: foam where the sea stands above the roof at either end
         if (env.play && dt > 0 && ocean?.stamp) {
           c.washT = (c.washT || 0) - dt;
@@ -1749,7 +1761,7 @@ export class Survivors {
         }
         this.collars.push(c.x, c.y, c.z, c.nrm.x, c.nrm.y, c.nrm.z, 1.4, 0.9 * (1 - c.dissolve), 1 - c.dissolve, lit, c.phase, c.yaw, 2.4);
       } else if (c.kind === 'barge' || c.kind === 'wreck') {
-        c.batch.push(c.matrix, lit, 0, 0, c.kind === 'wreck' ? c.lights : Math.max(night, env.sunny ? 0 : 0.25), c.dissolve, 0, c.phase);
+        c.batch.push(c.matrix, tape, 0, 0, c.kind === 'wreck' ? c.lights : Math.max(night, env.sunny ? 0 : 0.25), c.dissolve, 0, c.phase);
         const gu = c.batch.geo.userData;
         this.collars.push(c.x, c.y + (c.kind === 'wreck' ? 0.3 : 0), c.z, 0, 1, 0, gu.collarR || 5.6, c.kind === 'wreck' ? 1 : 0.7, 1, lit, c.phase, c.yaw, gu.elong || 3.2);
         if (c.decal) {

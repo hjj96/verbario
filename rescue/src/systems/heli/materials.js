@@ -458,9 +458,12 @@ export function createConeMaterial(look) {
         float cosS = -rd;
         float g = 0.45;
         float hg = pow((1.0 + g * g) / (1.0 + g * g - 2.0 * g * cosS), 1.5);
+        // rain and spray glint back at every angle (specular drops): in dense media the backscatter seen
+        // by the drone above a near-nadir beam keeps most of the side-on brightness, so the shaft reads
+        hg = max(hg, 0.8 * smoothstep(0.08, 0.25, uDensity));
         float n2 = texture2D(uAtlas, vW.xz * 0.11 + vec2(0.0, uTime * 0.06) - uWindOffset * 0.11).r;
         // seen straight down the beam the whole column stacks into one pixel: keep only a faint core
-        float axisFade = 1.0 - 0.7 * smoothstep(0.75, 0.97, abs(rd));
+        float axisFade = 1.0 - 0.7 * smoothstep(0.85, 0.985, abs(rd));
         float a = uDensity * sum * hg * axisFade * (0.8 + 0.4 * n2) * 6.0;
         gl_FragColor = vec4(uColor * a * uIntensity, 1.0);
         ${FINISH}

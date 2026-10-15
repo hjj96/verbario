@@ -101,13 +101,19 @@ void main() {
   float stri = smoothstep(0.35, 0.75, hel);
   float tone = clamp(mix(bands, rings, 0.15) * 0.7 + stri * 0.3 + 0.1, 0.0, 1.0);
   // storm condensation is dark slate (#3B4447 → #A8B3B5 by the bands), pale only in clear air
-  tone *= mix(0.6, 1.0, uClear);
+  // (×0.8 floor, not ×0.6: seen from above against the near-black storm sea the column must still part)
+  tone *= mix(0.8, 1.0, uClear);
   vec3 alb = mix(mix(uDark, uTorDark, vF.w), mix(uLight, uTorLight, vF.w), tone);
   alb = mix(alb, uPale * mix(0.62, 1.0, tone), 0.8 * uClear * (1.0 - vF.w));
   alb *= mix(1.0, 0.72, vF.z); // the inner wall is the denser core
   vec3 N = normalize(vN);
   vec3 V = normalize(cameraPosition - vW);
-  float nv = abs(dot(N, V));
+  // facing measured across the column (V without its along-axis part): from the steep top-down camera
+  // every wall fragment is grazing in 3D, which made the whole tube "silhouette" — eroded to a faint veil
+  // over the dark storm sea. Across the axis, the tube's limbs read dense and its middle stays veiled.
+  vec2 vh = V.xz;
+  float nvx = abs(dot(N.xz, vh / max(length(vh), 1e-4)));
+  float nv = mix(abs(dot(N, V)), nvx, smoothstep(0.02, 0.15, length(vh)));
   // DESIGN alpha: .55·(.4 + .6·(1 − |N·V|)^1.5) — the silhouette reads, the face we look into is veiled
   float a = 0.55 * (0.4 + 0.6 * pow(1.0 - nv, 1.5));
   a *= vis * vG.x * (0.85 + 0.3 * n2) * mix(1.0, 0.85, vF.z) * mix(1.0, 1.3, vG.w);
@@ -136,10 +142,13 @@ ${HZ_GLSL}
 attribute vec4 cA; // x, z, radius, alpha
 attribute vec4 cB; // rotation (rad), tone, forming (0..1), seed
 attribute vec4 cC; // y, spin dir, sag (m), 0
+attribute vec4 cD; // funnel lean x, z (base = centre − lean), funnel presence 0..1, 0
 varying vec3 vW;
 varying vec4 vClip;
 varying vec4 vP; // r01, theta, rotation, spin
 varying vec4 vI; // alpha, tone, forming, seed
+varying vec4 vL; // collar centre x, z (funnel top), lean x, z
+varying float vFp; // funnel presence
 void main() {
   float r01 = position.x;
   float th = position.y;
@@ -152,6 +161,8 @@ void main() {
   vClip = gl_Position;
   vP = vec4(r01, th, cB.x, cC.y);
   vI = vec4(cA.w, cB.y, cB.z, cB.w);
+  vL = vec4(cA.xy, cD.xy);
+  vFp = cD.z;
 }
 `;
 
@@ -164,6 +175,8 @@ varying vec3 vW;
 varying vec4 vClip;
 varying vec4 vP;
 varying vec4 vI;
+varying vec4 vL;
+varying float vFp;
 void main() {
   float r01 = vP.x;
   float th = vP.y;
@@ -193,6 +206,18 @@ void main() {
   // (the tornado's wedge is ~60 m across at the cloud base, so its throat is proportionally wider)
   float thr = mix(1.0, 2.3, vI.y);
   a *= mix(1.0, smoothstep(0.045 * thr, 0.12 * thr, r01 + (n2 - 0.5) * 0.05), smoothstep(0.6, 1.0, form));
+  // sight-line cut-out: from the steep drone camera the mature funnel hangs BEHIND this disc (the throat
+  // only opens straight down the axis), so the cloud thins, raggedly, along the column's line of sight
+  if (vFp > 0.002 && cameraPosition.y > vW.y + 1.0) {
+    float dmin = 1e4;
+    for (int i = 0; i < 3; i++) {
+      float y = vW.y * (0.2 + 0.3 * float(i));
+      vec2 ray = cameraPosition.xz + (vW.xz - cameraPosition.xz) * (cameraPosition.y - y) / (cameraPosition.y - vW.y);
+      vec2 ax = vL.xy - vL.zw * (1.0 - pow(y / vW.y, 1.35));
+      dmin = min(dmin, length(ray - ax) - mix(7.0, 16.0, 0.5 * float(i)) * mix(1.0, 3.5, vI.y));
+    }
+    a *= mix(1.0, 0.25, vFp * (1.0 - smoothstep(-2.0, 16.0, dmin + (n2 - 0.5) * 10.0)));
+  }
   if (a <= 0.003) discard;
   // cloud tops seen from above: thick billows catch the sky, thin edges show the dark underside,
   // the throat where the funnel leaves the cloud is the darkest spot
@@ -374,7 +399,7 @@ export class VortexFx {
 
     // --- collars --------------------------------------------------------------------------------------
     const cg = polarDiscGeometry(26, 72);
-    this.cAttr = addInstanceAttrs(cg, ['cA', 'cB', 'cC'], MAX_VORTEX);
+    this.cAttr = addInstanceAttrs(cg, ['cA', 'cB', 'cC', 'cD'], MAX_VORTEX);
     this.collarMat = new THREE.ShaderMaterial({
       uniforms: {
         ...uniforms,
@@ -493,6 +518,7 @@ export class VortexFx {
         ca.cA.setXYZW(nc, s.x + s.leanX, s.z + s.leanZ, s.collarRadius, s.collarAlpha);
         ca.cB.setXYZW(nc, s.collarRot, s.tone, s.collarForm, s.seed);
         ca.cC.setXYZW(nc, s.topY, s.spinDir, s.collarSag, 0);
+        ca.cD.setXYZW(nc, s.leanX, s.leanZ, s.alpha * Math.min(1, Math.max(0, (s.reach - 0.28) / 0.5)), 0);
         nc++;
       }
       if (s.shadowStrength > 0.002) {

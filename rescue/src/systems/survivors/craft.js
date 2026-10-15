@@ -17,7 +17,7 @@
 //   aWear = weathering amount of the part (0 lenses/fabric … 1 the batch's preset)
 //   iCraft  = (tape lit, lamp, flutter amplitude, lights)  iCraft2 = (dissolve, chem, phase, roughness+)
 import * as THREE from 'three';
-import { mergeParts, rod, limb, shipHull, hullDeck } from './geo.js';
+import { mergeParts, rod, limb, shipHull, hullDeck, InstanceBounds } from './geo.js';
 import { PERSON_SCALE, C } from './tables.js';
 import { patchWeathering, WEAR } from '../../core/weathering.js';
 
@@ -1031,8 +1031,8 @@ export function createCraftMaterial(look, opts = {}) {
         // lamp-lit fabric (DESIGN §2.1 / §2.8 «защита оранжевого»): in the searchlight at night the
         // canopy reads as saturated orange (≈0.8 linear red → sRGB ≈ (230, 105, 25)) instead of a muddy
         // brown under the cone haze; albedo-proportional, so the hue never drifts toward the lamp white
-        if (ck == 0) totalEmissiveRadiance += diffuseColor.rgb * ${lampLift.toFixed(3)} * vCr.x * (0.2 + 0.8 * uNight);
-        else if (ck == 1) totalEmissiveRadiance += uTape * 1.4 * vCr.x; // tape strips: at 3.5 their night bloom veiled the canopy pale pink
+        if (ck == 0) totalEmissiveRadiance += diffuseColor.rgb * ${lampLift.toFixed(3)} * min(vCr.x, 1.0) * (0.2 + 0.8 * uNight);
+        else if (ck == 1) totalEmissiveRadiance += uTape * 1.4 * vCr.x; // tape strips: steady 1.4 (3.5 veiled the canopy pale pink); the beam's touch flashes them to ×4 for ~0.3 s (vCr.x > 1)
         else if (ck == 2) totalEmissiveRadiance += vec3(1.0, 0.98, 0.95) * (0.3 + 18.0 * vCr.y);
         else if (ck == 3) totalEmissiveRadiance += uWin * 2.2 * vCr.w + uRim * (0.5 + 2.5 * crFr) * (1.0 - vCr.w); // lit cabins / dark glass mirroring the sky
         else if (ck == 4) totalEmissiveRadiance += uChem * (0.4 + 3.5 * vCr2.y);
@@ -1117,16 +1117,20 @@ export class CraftBatch {
       this.keyline.count = 0;
     }
     this.n = 0;
+    this.bounds = new InstanceBounds(geometry, 2); // canopy flutter / rocking on the GPU
+    this.cullEach = !castShadow; // a shadow caster off-screen may still throw its shadow into view
   }
 
   begin() {
     this.n = 0;
+    this.bounds.reset();
   }
 
   push(m, tape = 0, lamp = 0, flutter = 0, lights = 0, dissolve = 0, chem = 0, phase = 0, w = 0, color = null) {
-    if (this.n >= this.max) return -1;
+    if (this.n >= this.max || (this.cullEach && this.bounds.culled(m))) return -1;
     const i = this.n++;
     this.mesh.setMatrixAt(i, m);
+    this.bounds.add(m);
     const j = i * 4;
     const a = this.a1.array;
     a[j] = tape; a[j + 1] = lamp; a[j + 2] = flutter; a[j + 3] = lights;
@@ -1146,6 +1150,7 @@ export class CraftBatch {
       this.keyline.visible = n > 0 && this.keylineOn;
     }
     if (!n) return;
+    this.bounds.apply(this.mesh, this.keyline);
     const im = this.mesh.instanceMatrix;
     im.clearUpdateRanges();
     im.addUpdateRange(0, n * 16);

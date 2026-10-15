@@ -38,7 +38,8 @@ export class Spout {
     this.life = Number(opts.life) || lerp(P.life[0], P.life[1], rnd());
     const tele = P.stages[0] + P.stages[1] + P.stages[2];
     this.durations = [P.stages[0], P.stages[1], P.stages[2], Math.max(20, this.life - tele - P.decay), P.decay];
-    if (Number(opts.mature) > 0) this.durations[3] = Number(opts.mature);
+    // mature: N → the mature stage lasts N s; mature: true → spawn already mature (as stage: 4)
+    if (opts.mature !== true && Number(opts.mature) > 0) this.durations[3] = Number(opts.mature);
     this.life = this.durations.reduce((a, b) => a + b, 0);
     this.telegraph = tele;
     this.stage = 1;
@@ -101,7 +102,7 @@ export class Spout {
     if (Number.isFinite(opts.vx) && Number.isFinite(opts.vz)) this.fixedDrift = new THREE.Vector2(opts.vx, opts.vz);
 
     // tests / scripted entries may start later in the life cycle
-    const st = Math.max(1, Math.min(5, Math.floor(Number(opts.stage) || 1)));
+    const st = Math.max(1, Math.min(5, Math.floor(Number(opts.stage) || (opts.mature === true ? 4 : 1))));
     if (st > 1) {
       for (let i = 1; i < st; i++) this.age += this.durations[i - 1];
       this.stage = st;

@@ -217,3 +217,69 @@ export function hullDeck(hullGeo, y, inset = 0.05) {
   g.computeVertexNormals();
   return g;
 }
+
+// Bounding sphere of an InstancedMesh batch whose instances are rebuilt every frame (begin → push → end),
+// so the batch frustum-culls (main view AND shadow pass) instead of drawing every instance of the
+// mission wherever the camera looks. add(m) per instance; apply(...meshes) once after the last push.
+// The pad covers the geometry's own extent × the largest instance scale + `margin` metres of GPU-side
+// motion (poses, flutter, bob) that the instance matrices do not carry.
+const _view = { on: false, frustum: new THREE.Frustum(), m: new THREE.Matrix4(), s: new THREE.Sphere() };
+
+export class InstanceBounds {
+  // Once per frame before the pushes: instances of non-shadow-casting batches outside this camera's
+  // frustum are dropped at push time (one sphere round groups 900 m apart would always touch the view).
+  static setView(camera) {
+    if (!camera) return (_view.on = false);
+    camera.updateMatrixWorld(); // the rig moved it last frame; the renderer would only refresh it at draw
+    _view.m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    _view.frustum.setFromProjectionMatrix(_view.m);
+    _view.on = true;
+  }
+
+  constructor(geometry, margin = 2) {
+    if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+    const bs = geometry.boundingSphere;
+    this.extent = bs.center.length() + bs.radius;
+    this.margin = margin;
+    this.box = new THREE.Box3();
+    this.sphere = new THREE.Sphere();
+    this.scale = 0;
+    this._v = new THREE.Vector3();
+  }
+
+  reset() {
+    this.box.makeEmpty();
+    this.scale = 0;
+  }
+
+  // true → the instance is off-screen (pad + 4 m for the camera moving after this frame's pushes)
+  culled(m) {
+    if (!_view.on) return false;
+    const e = m.elements;
+    const s2 = Math.max(e[0] * e[0] + e[1] * e[1] + e[2] * e[2], e[4] * e[4] + e[5] * e[5] + e[6] * e[6], e[8] * e[8] + e[9] * e[9] + e[10] * e[10]);
+    _view.s.center.set(e[12], e[13], e[14]);
+    _view.s.radius = this.extent * Math.sqrt(s2) + this.margin + 4;
+    return !_view.frustum.intersectsSphere(_view.s);
+  }
+
+  add(m) {
+    const e = m.elements;
+    this.box.expandByPoint(this._v.set(e[12], e[13], e[14]));
+    const s2 = Math.max(e[0] * e[0] + e[1] * e[1] + e[2] * e[2], e[4] * e[4] + e[5] * e[5] + e[6] * e[6], e[8] * e[8] + e[9] * e[9] + e[10] * e[10]);
+    if (s2 > this.scale) this.scale = s2;
+  }
+
+  apply(...meshes) {
+    const s = this.sphere;
+    if (this.box.isEmpty()) s.set(this._v.set(0, 0, 0), 0);
+    else {
+      this.box.getBoundingSphere(s);
+      s.radius += this.extent * Math.sqrt(this.scale) + this.margin;
+    }
+    for (const m of meshes) {
+      if (!m) continue;
+      m.boundingSphere = s;
+      m.frustumCulled = true;
+    }
+  }
+}
