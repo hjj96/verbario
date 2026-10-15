@@ -377,13 +377,21 @@ export const CAMPAIGN = [
     },
     heli: { pad: 0 },
     survivors: [
-      { tag: 'raft-b', type: 'raft', x: -1050, z: -350, count: 3, hidden: true, datumRadius: 200, since: 25, label: 'плот №2 «Вайгача»', signals: { rockets: 2, mirror: true } },
+      // on «Арктур»'s first leg, up-wind of the trawler: it drifts towards the wreck (was 100 m off the ship's
+      // start and froze out there once the ship had steamed east — bot: 3 lost in half the runs). The bigger
+      // raft (4; №1 now holds 3, still 16 in all) is the one by the ship, so it is lifted on the first sortie
+      // from the deck instead of drifting into the rogue waves' path near the wreck and capsizing there
+      { tag: 'raft-b', type: 'raft', x: -760, z: -400, count: 4, hidden: true, datumRadius: 200, since: 25, label: 'плот №2 «Вайгача»', signals: { rockets: 2, mirror: true } },
       { tag: 'vaygach', primary: true, type: 'wreck', fallbackType: 'deck', x: -380, z: -430, count: 6, height: 7, hidden: false, name: 'Вайгач', heading: 200 * DEG, sinkTime: 660, since: 20, label: 'траулер «Вайгач»' },
       { tag: 'sw-1', type: 'swimmer', x: -430, z: -520, count: 1, at: 25, hidden: true, datumRadius: 100, since: 10, label: 'смыло с палубы', signals: { whistle: true, mirror: true } },
-      { tag: 'raft-a', type: 'raft', x: 60, z: -640, count: 4, at: 75, hidden: true, datumRadius: 220, since: 25, label: 'плот №1 «Вайгача»', signals: { rockets: 2, epirb: true } },
+      // up-wind of the action: the storm (from 290°) drifts it ESE into «Арктур»'s 300–530 s leg instead of
+      // away from it (at 60,-640 it ended 900 m down-wind of the ship, behind a 90 % headwind BINGO); its
+      // beacon comes up at 110 s, so the three in it last into the night (bot: 1–4 of them froze mid-lift)
+      { tag: 'raft-a', type: 'raft', x: -250, z: -760, count: 3, at: 110, hidden: true, datumRadius: 220, since: 25, label: 'плот №1 «Вайгача»', signals: { rockets: 2, epirb: true } },
       // washed over the side as the player arrives: 120 s of warmth (9 °C) in the calm before the storm
       { tag: 'injured', type: 'injured', x: -360, z: -425, count: 1, at: 45, from: 'vaygach', hidden: false, since: 0, label: 'раненый тралмейстер', signals: { mirror: true } },
-      { tag: 'sw-2', type: 'swimmer', x: -520, z: -640, count: 1, at: 200, hidden: true, datumRadius: 100, since: 0, label: 'прыгнул с кормы', signals: { smoke: true, whistle: true, strobe: true } },
+      // «прыгнул с кормы»: in the water beside the trawler (was 250 m off it), drifting back onto it
+      { tag: 'sw-2', type: 'swimmer', x: -470, z: -570, count: 1, at: 200, hidden: true, datumRadius: 100, since: 0, label: 'прыгнул с кормы', signals: { smoke: true, whistle: true, strobe: true } },
     ],
     hazards: [
       { type: 'rogue', at: 240, repeat: 60, until: 1260, heights: [12, 18], target: 'heli', telegraph: 12 },
@@ -433,21 +441,31 @@ export const CAMPAIGN = [
       ],
     },
     world: {
-      pads: [SKALISTY, arktur(-600, 700, 2.4, -1.8, [[-600, 700], [200, 200], [700, -500], [-450, -330]])],
+      // «Арктур» steams up past «Печора» (~250 m off her at 4–5 min, when the skipper goes over the side and the
+      // eye opens) and on along the east side of the area: a deck for the barge's people and the stretchers
+      // instead of the 700 m back to the lighthouse
+      pads: [SKALISTY, arktur(-250, 800, 2.3, -1.92, [[-250, 800], [350, 300], [650, -450], [-300, -450]])],
       props: { lighthouse: true, rocks: LIGHTHOUSE_ROCKS, debris: [{ x: 480, z: 520, radius: 40, count: 6, kind: 'barrels' }] },
     },
     heli: { pad: 0 },
     survivors: [
-      { tag: 'gidrolog', type: 'hull', x: 330, z: -370, count: 3, hidden: true, datumRadius: 180, name: 'Гидролог-2', since: 30, label: 'бот «Гидролог-2»', signals: { epirb: true, rockets: 1, smoke: true }, sinkTime: 330 },
-      // the two injured reach the water around the eye (DESIGN §3.14 «Глаз — окно для носилок»): ~120 s each at 9 °C
-      { tag: 'gidrolog-inj', type: 'injured', x: 338, z: -364, count: 1, at: 332, from: 'gidrolog', hidden: false, since: 30, label: 'раненый с «Гидролога-2»' },
+      { tag: 'gidrolog', type: 'hull', x: 330, z: -370, count: 3, hidden: true, datumRadius: 180, name: 'Гидролог-2', since: 30, label: 'бот «Гидролог-2»', signals: { epirb: true, rockets: 1, smoke: true }, sinkTime: 300 },
+      // the two injured reach the water around the eye (DESIGN §3.14 «Глаз — окно для носилок»): ~120 s each at 9 °C.
+      // «Гидролог» goes down as the eye opens (300 s), so its injured has the eye's calm for the stretcher too —
+      // surfacing at 332 left 18 s of it, and a stretcher in the reversed storm rarely holds (bot: lost in 8 of 19)
+      { tag: 'gidrolog-inj', type: 'injured', x: 338, z: -364, count: 1, at: 302, from: 'gidrolog', hidden: false, since: 30, label: 'раненый с «Гидролога-2»' },
       { tag: 'zubov', type: 'raft', x: -420, z: -600, count: 6, hidden: true, datumRadius: 250, since: 40, label: 'плот «Профессора Зубова»', signals: { rockets: 3, epirb: true } },
       { tag: 'pechora', type: 'deck', x: 480, z: 520, height: 6, count: 6, hidden: false, name: 'Печора', theme: 'barge', since: 60, label: 'баржа «Печора»' },
       { tag: 'pechora-inj', type: 'injured', x: 530, z: 580, count: 1, at: 290, hidden: false, theme: 'barge', since: 0, label: 'шкипер «Печоры», ранен' },
       { tag: 'pechora-sw', type: 'swimmer', x: 445, z: 485, count: 1, hidden: true, datumRadius: 120, theme: 'barge', since: 5, label: 'смыт с «Печоры»', signals: { smoke: true, whistle: true, strobe: true } },
     ],
     hazards: [
-      { type: 'tornado', at: 15, x: -250, z: -1050, scripted: true },
+      // «вдоль берега на северо-восток» (d_start radio): a fixed track along the north edge, ~500 m off the
+      // «Зубов» raft and ~1 km off «Гидролог» — a wall the player sees and flies round, not a coin toss.
+      // Without a heading the tornado aims at the heli at spawn time and in some runs crossed «Гидролог»,
+      // dragging the hull south in its inflow until the three on the keel froze (bot, pilot: 6/18 twice in 3).
+      // seed 13 → a gentle left (northward) bend, ~0.002 rad/s.
+      { type: 'tornado', at: 15, x: -600, z: -1050, headingDeg: 70, speed: 5, life: 260, seed: 13, scripted: true },
       { type: 'whirlpool', at: 420, x: -720, z: -260, radius: 45, scripted: true },
     ],
     objectives: { rescue: 11, timeLimit: 0, extra: [{ id: 'injured', text: 'Оба раненых — на носилках', tags: ['gidrolog-inj', 'pechora-inj'] }] },
@@ -461,7 +479,7 @@ export const CAMPAIGN = [
       { at: 5, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', priority: 2, text: 'Чайка, Берег. Торнадо идёт вдоль берега на северо-восток. От воронки — дальше трёхсот метров. Глаз будет у вас через пять минут.' },
       { at: 291, speaker: 'ship', name: 'ПЕЧОРА', channel: 'ext', id: 'sh_skipper', priority: 3, text: 'Чайка, «Печора»! Рубку залило, шкипера вынесло за борт — он ранен, в воде у баржи!' },
       { at: 302, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', id: 'd_eye', priority: 3, text: 'Чайка, вы в глазе. У вас минута, не больше. Потом ветер развернётся.' },
-      { at: 334, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', id: 'd_gidrolog', priority: 3, text: 'Чайка, Берег. «Гидролог» затонул, у его буя всплыл человек — раненый, из-под корпуса!' },
+      { at: 306, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', id: 'd_gidrolog', priority: 3, text: 'Чайка, Берег. «Гидролог» затонул, у его буя всплыл человек — раненый, из-под корпуса!' },
       { at: 343, speaker: 'pilot', name: 'ВТОРОЙ ПИЛОТ', channel: 'ics', priority: 3, text: 'Ветер разворачивается… Держи, держи — сейчас ударит с юга!' },
       { at: 786, speaker: 'dispatch', name: 'БЕРЕГ', channel: 'ext', id: 'd_clear', priority: 1, text: 'Фронт уходит на восток. Над вашим районом прояснение.' },
     ],

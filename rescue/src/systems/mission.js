@@ -884,9 +884,19 @@ export class Mission {
       if (!cp.hazards[i]) return;
       x.done = true;
       const age = t - x.t;
-      if ((x.type === 'tornado' || x.type === 'whirlpool') && age < 170) {
+      const life = Number(x.e?.life) || 180;
+      if ((x.type === 'tornado' || x.type === 'whirlpool') && age < life - 10) {
+        const o = { ...x.e, scripted: true, life: Math.max(30, life - age) };
+        // a tornado on a fixed track (op «Глаз бури») resumes where it has got to, already down on the water
+        if (x.type === 'tornado' && Number.isFinite(o.headingDeg) && Number.isFinite(o.x) && Number.isFinite(o.z)) {
+          const a = (o.headingDeg * Math.PI) / 180;
+          const run = (Number(o.speed) || 6) * Math.max(0, age);
+          o.x += Math.sin(a) * run;
+          o.z -= Math.cos(a) * run;
+          o.mature = true;
+        }
         try {
-          ctx.hazards.spawn?.(x.type, { ...x.e, scripted: true, life: Math.max(30, 180 - age) });
+          ctx.hazards.spawn?.(x.type, o);
         } catch (err) {
           console.warn('[mission] hazard restore', err);
         }
