@@ -13,8 +13,19 @@ export class Hints {
     this.tr = new StyleSlot(this.node, 'transform');
     this.wasd = el('div.hud-wasd', { parent });
     this.wasdTr = new StyleSlot(this.wasd, 'transform');
-    this.wasd.innerHTML = `<span class="k-w">${keycap('W')}</span><span class="k-a">${keycap('A')}</span><span class="k-s">${keycap('S')}</span><span class="k-d">${keycap('D')}</span>`;
+    this._setWasd(['W', 'A', 'S', 'D']);
     this.active = null;
+  }
+
+  // The four caps around the ring: [up, left, down, right] — the player's current bindings (mission sends
+  // them resolved in mission:hint.keys), W A S D by default.
+  _setWasd(caps) {
+    const e = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const key = caps.join('\u0001');
+    if (key === this._wasdKey) return;
+    this._wasdKey = key;
+    const [w, a, s, d] = caps.map(e);
+    this.wasd.innerHTML = `<span class="k-w">${keycap(w)}</span><span class="k-a">${keycap(a)}</span><span class="k-s">${keycap(s)}</span><span class="k-d">${keycap(d)}</span>`;
   }
 
   onHint(p) {
@@ -25,6 +36,7 @@ export class Hints {
     }
     this.active = { key: p.key, anchor: p.anchor || 'bottom', pulse: !!p.pulse };
     const isWasd = p.key === 'move' && (this.ctx.input?.lastDevice || 'keyboard') === 'keyboard';
+    if (isWasd) this._setWasd(p.keys?.length === 4 ? p.keys : ['W', 'A', 'S', 'D']);
     this.node.innerHTML = withKeycaps(p.text);
     setClass(this.node, 'pulse', !!p.pulse);
     setClass(this.node, 'anchor-heli', this.active.anchor === 'heli' && !isWasd);

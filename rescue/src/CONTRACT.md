@@ -506,3 +506,13 @@ Systems expose enough on `window.__game` for tests, e.g. `__game.weather.setPres
 * **Bottle with a note** (op 9★ easter egg): survivors emit `survivor:bottle {title, text}` when the bottle is picked up;
   the HUD shows a paper note card.
 * `ctx.haptics` (core/haptics.js): gamepad rumble from events, scaled by `settings.vibration`.
+* Events added with these features: `photo:toggle {active}`, `photo:saved {name, size, w, h}`, `post:thermal {active}`,
+  `mission:restored {t, padName}` (after a checkpoint retry; `mission:start` then carries `checkpoint`).
+* Thermal mass: post sweeps the opaque meshes of `world.root` and `heli.group` onto render layer 3 (drawn into the
+  heat pass's G channel, clipped at sea level). `userData.thermMass` (default 0.5) overrides it per object;
+  `userData.heat` (default 1 on layer 2) sets a heat source's brightness.
+* Bottle score: the find is `stats.bottle` (not a person — never counts toward rescued/total) and a once-per-op style
+  line «Письмо в бутылке» (+25) outside the style chain; a bottle picked up before a checkpoint stays gone after a retry.
+* `mission:hint` carries `keys` resolved from the player's current bindings and last device (`[up, left, down, right]`
+  for the movement hint); hints re-emit when the device or a binding changes.
+* While `ctx.photo?.active`, mission ignores the pause key (photo mode leaves on V / Backspace / pad B).
