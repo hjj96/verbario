@@ -7,25 +7,50 @@
 //   show: mission:hint { key, text, label, keys: ['E'], anchor: 'heli'|'altimeter'|'pad'|'bottom', pulse, show: true }
 //   hide: mission:hint { key, text: null, show: false, learned }
 // `mission.hint` always mirrors the current one (or null) for polling.
+import { keyLabel } from '../../ui/common/keys.js';
+import { currentKeys } from '../../core/input.js';
 
 // Per device texts. [X] marks a keycap. anchor: where the HUD may place it (default bottom centre).
+// Keyboard caps follow the player's bindings (settings `bindings`, core/input.js REBINDABLE ids):
+// `{id}` becomes the keycap of that action's current first key. Gamepad buttons are fixed (input.js PAD).
 const HINTS = {
-  takeoff: { kb: '[E] Взлёт', pad: '[RT] Взлёт', touch: '[Высота ▲] Взлёт', anchor: 'heli', pulse: true, need: 1, ttl: 0 },
-  move: { kb: '[W] [A] [S] [D] Полёт', pad: '[Левый стик] Полёт', touch: '[Стик] Полёт', anchor: 'heli', need: 3, ttl: 20 },
-  descend: { kb: '[Q] Ниже · [1] 15 м', pad: '[LT] Ниже · [↓] 15 м', touch: '[Высота ▼] Ниже, к 15 м', anchor: 'altimeter', need: 1, ttl: 25 },
-  winch: { kb: '[Пробел] держать — лебёдка', pad: '[A] держать — лебёдка', touch: '[Лебёдка] держать', need: 1, ttl: 40 },
+  takeoff: { kb: '[{climb}] Взлёт', pad: '[RT] Взлёт', touch: '[Высота ▲] Взлёт', anchor: 'heli', pulse: true, need: 1, ttl: 0 },
+  move: { kb: '[{up}] [{left}] [{down}] [{right}] Полёт', pad: '[Левый стик] Полёт', touch: '[Стик] Полёт', anchor: 'heli', need: 3, ttl: 20 },
+  descend: { kb: '[{descend}] Ниже · [{altPreset1}] 15 м', pad: '[LT] Ниже · [↓] 15 м', touch: '[Высота ▼] Ниже, к 15 м', anchor: 'altimeter', need: 1, ttl: 25 },
+  winch: { kb: '[{winch}] держать — лебёдка', pad: '[A] держать — лебёдка', touch: '[Лебёдка] держать', need: 1, ttl: 40 },
   land: { kb: 'Сядь в круг посадки', pad: 'Сядь в круг посадки', touch: 'Сядь в круг посадки', anchor: 'pad', need: 1, ttl: 0 },
   deck: { kb: 'Палуба качается — садись, когда горизонт выровняется', anchor: 'pad', need: 1, ttl: 30 },
-  raftDrop: { kb: '[C] Сбросить плот — пусть гребут к нему', pad: '[→] Сбросить плот', touch: '[Плот] Сбросить', need: 1, ttl: 20 },
-  horn: { kb: '[H] Громкоговоритель — пусть отзовутся', pad: '[Y] Громкоговоритель', touch: '[Рупор] Позвать', need: 1, ttl: 25 },
-  searchlight: { kb: '[L] Прожектор · наводится мышью', pad: '[X] Прожектор · правый стик', touch: '[Прожектор] Вкл', need: 1, ttl: 25 },
-  flare: { kb: '[G] Фальшфейер к курсору', pad: '[B] Фальшфейер', touch: '[Фальшфейер] Бросить', need: 1, ttl: 25 },
-  boost: { kb: '[Shift] Форсаж — уходи от смерча', pad: '[LB] Форсаж', touch: '[Форсаж]', need: 2, ttl: 15, urgent: true },
-  climb: { kb: '[E] Вверх! · [3] 90 м', pad: '[RT] Вверх! · [↑] 90 м', touch: '[Высота ▲] Вверх!', need: 1, ttl: 12, urgent: true },
+  raftDrop: { kb: '[{raftDrop}] Сбросить плот — пусть гребут к нему', pad: '[→] Сбросить плот', touch: '[Плот] Сбросить', need: 1, ttl: 20 },
+  horn: { kb: '[{horn}] Громкоговоритель — пусть отзовутся', pad: '[Y] Громкоговоритель', touch: '[Рупор] Позвать', need: 1, ttl: 25 },
+  searchlight: { kb: '[{searchlight}] Прожектор · наводится мышью', pad: '[X] Прожектор · правый стик', touch: '[Прожектор] Вкл', need: 1, ttl: 25 },
+  flare: { kb: '[{flare}] Фальшфейер к курсору', pad: '[B] Фальшфейер', touch: '[Фальшфейер] Бросить', need: 1, ttl: 25 },
+  boost: { kb: '[{boost}] Форсаж — уходи от смерча', pad: '[LB] Форсаж', touch: '[Форсаж]', need: 2, ttl: 15, urgent: true },
+  climb: { kb: '[{climb}] Вверх! · [{altPreset3}] 90 м', pad: '[RT] Вверх! · [↑] 90 м', touch: '[Высота ▲] Вверх!', need: 1, ttl: 12, urgent: true },
   deckWinch: { kb: 'Высота над палубой: висите в 12–25 м над ней', need: 1, ttl: 30 },
   stretcher: { kb: 'Носилки: 3 с без раскачки — устойчивость ≥ 60 %', need: 1, ttl: 30 },
-  map: { kb: '[Tab] Карта — держать', pad: '[View] Карта — держать', touch: 'Карта', need: 1, ttl: 15 },
+  map: { kb: '[{map}] Карта — держать', pad: '[View] Карта — держать', touch: 'Карта', need: 1, ttl: 15 },
 };
+
+// The cap a hint shows when that key is still among the action's bindings (map is [M, Tab] by default;
+// the HUD's key bar says Tab, so does the hint); otherwise the first bound key.
+const PREFERRED = { map: 'Tab' };
+const ACTION_RE = /\{(\w+)\}/g;
+
+// Keycap label of an action's current key ('—' when the player cleared both slots).
+export function actionKey(id) {
+  const keys = currentKeys(id) || [];
+  const pref = PREFERRED[id];
+  return keyLabel(pref && keys.includes(pref) ? pref : keys[0]);
+}
+
+// The hint text for the player's last device, keyboard caps resolved from the live bindings.
+export function hintText(key, device) {
+  const H = HINTS[key];
+  if (!H) return '';
+  const text = (device === 'gamepad' ? H.pad : device === 'touch' ? H.touch : H.kb) || H.kb;
+  // a key bound to [ or ] must not close the [cap] markup early: full-width look-alikes
+  return text.replace(ACTION_RE, (_, id) => actionKey(id).replace(/\[/g, '［').replace(/\]/g, '］'));
+}
 
 // Higher priority pre-empts a lower one on screen (the pre-empted hint is queued again).
 const PRIORITY = { takeoff: 1, move: 1, map: 1, descend: 2, land: 2, deck: 2, horn: 2, searchlight: 2, flare: 2, raftDrop: 3, winch: 3, deckWinch: 3, stretcher: 3, boost: 5, climb: 5 };
@@ -123,17 +148,11 @@ export class Onboarding {
         return;
       }
     }
-    const dev = this.ctx.input?.lastDevice;
-    const text = (dev === 'gamepad' ? H.pad : dev === 'touch' ? H.touch : H.kb) || H.kb;
-    const keys = [];
-    let m;
-    KEY_RE.lastIndex = 0;
-    while ((m = KEY_RE.exec(text))) keys.push(m[1]);
     this.active = {
       key,
-      text,
-      label: text.replace(KEY_RE, '').replace(/^\s*[·—]?\s*/, '').trim(),
-      keys,
+      text: '',
+      label: '',
+      keys: [],
       anchor: H.anchor || 'bottom',
       pulse: !!H.pulse,
       priority: PRIORITY[key] || 1,
@@ -142,8 +161,26 @@ export class Onboarding {
       need: H.need,
     };
     this.shown.add(key);
-    const act = this.active;
-    this.ctx.events.emit('mission:hint', { key, text, label: act.label, keys, anchor: act.anchor, pulse: act.pulse, priority: act.priority, show: true });
+    this._emitShow(this.active);
+  }
+
+  // (Re)build the active hint's text for the current device + bindings and send it to the HUD.
+  _emitShow(act) {
+    const text = hintText(act.key, this.ctx.input?.lastDevice);
+    const keys = [];
+    let m;
+    KEY_RE.lastIndex = 0;
+    while ((m = KEY_RE.exec(text))) keys.push(m[1]);
+    act.text = text;
+    act.label = text.replace(KEY_RE, '').replace(/^\s*[·—]?\s*/, '').trim();
+    act.keys = keys;
+    this.ctx.events.emit('mission:hint', { key: act.key, text, label: act.label, keys, anchor: act.anchor, pulse: act.pulse, priority: act.priority, show: true });
+  }
+
+  // The player switched keyboard ↔ gamepad ↔ touch, or rebound a key: the glyph on screen follows.
+  _refresh() {
+    const a = this.active;
+    if (a && hintText(a.key, this.ctx.input?.lastDevice) !== a.text) this._emitShow(a);
   }
 
   _enqueue(key, front) {
@@ -286,6 +323,7 @@ export class Onboarding {
     if (this._tick <= 0) {
       this._tick = 0.25;
       if (this.enabled.size) this._triggers(t, heli);
+      this._refresh();
     }
     if (this._gapT > 0) this._gapT -= dt;
     else if (!this.active && this.queue.length) this._drainQueue();

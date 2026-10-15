@@ -380,7 +380,7 @@ export const CAMPAIGN = [
       { tag: 'raft-b', type: 'raft', x: -1050, z: -350, count: 3, hidden: true, datumRadius: 200, since: 25, label: 'плот №2 «Вайгача»', signals: { rockets: 2, mirror: true } },
       { tag: 'vaygach', primary: true, type: 'wreck', fallbackType: 'deck', x: -380, z: -430, count: 6, height: 7, hidden: false, name: 'Вайгач', heading: 200 * DEG, sinkTime: 660, since: 20, label: 'траулер «Вайгач»' },
       { tag: 'sw-1', type: 'swimmer', x: -430, z: -520, count: 1, at: 25, hidden: true, datumRadius: 100, since: 10, label: 'смыло с палубы', signals: { whistle: true, mirror: true } },
-      { tag: 'raft-a', type: 'raft', x: 150, z: -760, count: 4, at: 90, hidden: true, datumRadius: 220, since: 25, label: 'плот №1 «Вайгача»', signals: { rockets: 2, epirb: true } },
+      { tag: 'raft-a', type: 'raft', x: 60, z: -640, count: 4, at: 75, hidden: true, datumRadius: 220, since: 25, label: 'плот №1 «Вайгача»', signals: { rockets: 2, epirb: true } },
       // washed over the side as the player arrives: 120 s of warmth (9 °C) in the calm before the storm
       { tag: 'injured', type: 'injured', x: -360, z: -425, count: 1, at: 45, from: 'vaygach', hidden: false, since: 0, label: 'раненый тралмейстер', signals: { mirror: true } },
       { tag: 'sw-2', type: 'swimmer', x: -520, z: -640, count: 1, at: 200, hidden: true, datumRadius: 100, since: 0, label: 'прыгнул с кормы', signals: { smoke: true, whistle: true, strobe: true } },
@@ -441,7 +441,7 @@ export const CAMPAIGN = [
       { tag: 'gidrolog', type: 'hull', x: 330, z: -370, count: 3, hidden: true, datumRadius: 180, name: 'Гидролог-2', since: 30, label: 'бот «Гидролог-2»', signals: { epirb: true, rockets: 1, smoke: true }, sinkTime: 330 },
       // the two injured reach the water around the eye (DESIGN §3.14 «Глаз — окно для носилок»): ~120 s each at 9 °C
       { tag: 'gidrolog-inj', type: 'injured', x: 338, z: -364, count: 1, at: 332, from: 'gidrolog', hidden: false, since: 30, label: 'раненый с «Гидролога-2»' },
-      { tag: 'zubov', type: 'raft', x: -700, z: -320, count: 6, hidden: true, datumRadius: 250, since: 40, label: 'плот «Профессора Зубова»', signals: { rockets: 3, epirb: true } },
+      { tag: 'zubov', type: 'raft', x: -420, z: -600, count: 6, hidden: true, datumRadius: 250, since: 40, label: 'плот «Профессора Зубова»', signals: { rockets: 3, epirb: true } },
       { tag: 'pechora', type: 'deck', x: 480, z: 520, height: 6, count: 6, hidden: false, name: 'Печора', theme: 'barge', since: 60, label: 'баржа «Печора»' },
       { tag: 'pechora-inj', type: 'injured', x: 530, z: 580, count: 1, at: 290, hidden: false, theme: 'barge', since: 0, label: 'шкипер «Печоры», ранен' },
       { tag: 'pechora-sw', type: 'swimmer', x: 445, z: 485, count: 1, hidden: true, datumRadius: 120, theme: 'barge', since: 5, label: 'смыт с «Печоры»', signals: { smoke: true, whistle: true, strobe: true } },

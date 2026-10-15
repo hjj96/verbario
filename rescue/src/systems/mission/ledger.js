@@ -43,6 +43,7 @@ export function blankStats() {
     calls: 0,
     closed: 0,
     lastDamageSource: null,
+    bottle: null, // title of the note fished out of the sea (op 9★ easter egg) — not a person
   };
 }
 

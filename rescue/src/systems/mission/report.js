@@ -27,6 +27,7 @@ const REMARKS = [
   { when: (r) => r.damage >= 0.5, speaker: 'winchman', name: 'Семёныч', text: 'Вертолёт — на ремонт, командира — на беседу.' },
   { when: (r) => r.styleIds.includes('lastDrops'), speaker: 'pilot', name: 'Гордеев', text: 'Сели на парах. Больше так не делай. Пожалуйста.' },
   { when: (r) => r.styleIds.includes('paws'), speaker: 'rescuer', name: 'Костя', text: 'Кот, кстати, так и не сказал спасибо.' },
+  { when: (r) => r.styleIds.includes('bottle'), speaker: 'rescuer', name: 'Костя', text: 'Записку я забираю. Повешу над койкой — пусть кто-нибудь и нам напишет.' },
   { when: (r) => r.jewels >= 3, speaker: 'winchman', name: 'Семёныч', text: 'Висели как люстра. Красиво.' },
   { when: (r) => r.success && r.damage <= 1e-6, speaker: 'winchman', name: 'Семёныч', text: 'Даже чай не расплескали.' },
   { when: (r) => r.styleIds.includes('stormDeck'), speaker: 'winchman', name: 'Семёныч', text: 'Сели на палубу, как кот на забор. Уважаю.' },
@@ -138,6 +139,7 @@ export function buildReport(m, success, reason) {
     { label: 'Налёт', value: fmtKm(st.distance) },
   ];
   if (def.endless) lines.splice(5, 0, { label: 'Вызовы', value: `${st.calls} · закрыто ${st.closed}` });
+  if (st.bottle) lines.push({ label: 'Находка', value: `бутылка с запиской · «${st.bottle}»` });
 
   // Cinematic caption & stamp.
   const timeStr = fmtTime(st.time);

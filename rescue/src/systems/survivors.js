@@ -2111,12 +2111,21 @@ export class Survivors {
   // Called right after mission:setup + mission:start: the groups spawned from the def make way for the
   // snapshot's. cp = { elapsed, rescued, lost, lostMarkers: [{x, z}], groups: [{entry (a def.survivors
   // object), type, x, z, people: [records], health, spotted, age, pet, datum {x, z, radius} | null,
-  // carrier {x, z, yaw, age, flood, capsized, flip, anchor {x, z}} | null}] }. Entries due later stay pending.
+  // carrier {x, z, yaw, age, flood, capsized, flip, anchor {x, z}} | null}], bottleTaken }. Entries due
+  // later stay pending. The op 9★ bottle (re-placed by mission:setup) stays afloat unless it had already
+  // been fished out before the checkpoint.
   restoreCheckpoint(cp) {
     if (!cp) return;
     const t = Number(cp.elapsed) || 0;
     const later = (this.def?.survivors || []).filter((e) => e && (e.at || 0) > t);
+    const b = this.bottle;
+    const keep = b && b.active && !b.taken && !cp.bottleTaken ? { x: b.x, z: b.z, y: b.y, yaw: b.yaw, phase: b.phase } : null;
     this.clear();
+    if (keep) {
+      Object.assign(b, keep);
+      b.active = true;
+      b.group.visible = true;
+    }
     this.elapsed = t;
     for (const e of later) this.pending.push(e);
     this.pending.sort((a, b) => a.at - b.at);

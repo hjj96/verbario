@@ -244,6 +244,8 @@ export class Mission {
   pause() {
     const ctx = this.ctx;
     if (ctx.mode !== 'play' || this.state !== 'play') return;
+    // photo mode (post/photo.js) freezes the sim itself and owns Esc / Back (it leaves on them)
+    if (ctx.photo?.active) return;
     this._pausedFrame = ctx.time.frame;
     this._setMode('paused');
     this._startPausePoll();
@@ -360,7 +362,8 @@ export class Mission {
 
   _updatePlay(dt) {
     const ctx = this.ctx;
-    if (ctx.input?.rawPressed('pause')) {
+    // Esc / Start → pause, except in photo mode: there Esc / Back leaves the photo mode (post owns it)
+    if (ctx.input?.rawPressed('pause') && !ctx.photo?.active) {
       this.pause();
       return;
     }
@@ -752,6 +755,11 @@ export class Mission {
       L.stats.nearMisses++;
     });
     on('hazard:spawn', (p) => playing() && L.onHazardSpawn(p.hazard));
+    // Op 9★ bottle with a note: survivors then books style('bottle') («Письмо в бутылке», once per op).
+    // A find for the logbook, never a person: stats.rescued / total and «все спасены» are untouched.
+    on('survivor:bottle', (p) => {
+      if (playing() && !L.stats.bottle) L.stats.bottle = String(p.title || 'без подписи');
+    });
     // «Смена» has no script: every weather change the escalation picks opens a new chapter.
     on('weather:preset', (p) => {
       if (!playing() || !this.endless || !p.to || p.to === this._lastChapterPreset) return;
@@ -835,6 +843,7 @@ export class Mission {
         rescued: S?.rescuedTotal || 0,
         lost: S?.lostTotal || 0,
         lostMarkers: (S?.lostMarkers || []).map((m) => ({ x: m.x, z: m.z })),
+        bottleTaken: !!S?.bottle?.taken, // op 9★: a bottle fished out stays out after a restore
       },
       heli: { fuel: h.fuel, hull: h.hull, flares: h.flares, rafts: h.rafts, firstHit: h.firstHit, damageTaken: h.damageTaken },
       ledger: {
@@ -905,7 +914,7 @@ export class Mission {
         if (!entry) continue;
         groups.push({ ...g, entry, people: g.people.map((k) => entry.people?.[k]).filter(Boolean) });
       }
-      S.restoreCheckpoint({ elapsed: t, groups, rescued: cp.survivors.rescued, lost: cp.survivors.lost, lostMarkers: cp.survivors.lostMarkers });
+      S.restoreCheckpoint({ elapsed: t, groups, rescued: cp.survivors.rescued, lost: cp.survivors.lost, lostMarkers: cp.survivors.lostMarkers, bottleTaken: !!cp.survivors.bottleTaken });
     }
     // the heli on that pad with what it had
     const h = ctx.heli;

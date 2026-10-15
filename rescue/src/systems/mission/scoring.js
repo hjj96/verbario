@@ -14,6 +14,9 @@ export const STYLES = {
   fogBlind: { label: 'Сквозь молоко', points: 40, note: 'спасение в тумане без ракеты' },
   paws: { label: 'Четыре лапы', points: 50, note: 'спасён зверь' },
   noScratch: { label: 'Без царапины', points: 300, note: 'операция без единого повреждения' },
+  // op 9★ easter egg (survivors/bottle.js calls mission.style('bottle')): once per operation, outside
+  // the chain, not a flying style — it does not count towards the gold medal's «≥ 2 стиля»
+  bottle: { label: 'Письмо в бутылке', points: 25, note: 'выловлена бутылка с запиской', once: true, chain: false, medal: false },
 };
 
 export const DIFFICULTY = {
@@ -92,6 +95,8 @@ export class Scorer {
   style(id, t, position, emit = true, chainable = true) {
     const S = STYLES[id];
     if (!S) return 0;
+    if (S.once && this.styles.some((s) => s.id === id)) return 0;
+    if (S.chain === false) chainable = false;
     let chain = 1;
     if (chainable) {
       if (t - this.lastStyleT <= CHAIN_WINDOW && this.styles.length) this.chain++;
@@ -106,8 +111,11 @@ export class Scorer {
     return points;
   }
 
+  // Flying styles for the medals (an easter-egg line such as the bottle is not one).
   styleCount() {
-    return this.styles.length;
+    let n = 0;
+    for (const s of this.styles) if (STYLES[s.id]?.medal !== false) n++;
+    return n;
   }
 
   // Logbook breakdown: lines in fixed order, difficulty line, final total.
