@@ -12,7 +12,8 @@
 // Depth-pass extras (all off = zero cost apart from uniform branches):
 //   * photo mode: tilt-shift DOF (golden-angle disk blur around a focus line, bright taps weigh
 //     more → soft bokeh) and grade presets («Хроника», «Ч/Б», «Плёнка») after the base grade
-//   * thermal / FLIR (post/thermal.js): white-hot monochrome built from the frame's local contrast
+//   * thermal / FLIR (post/thermal.js): white-hot monochrome from the heat (R) and thermal-mass (G) pass,
+//     with the frame's local contrast as a fine texture
 //     + the layer-2 heat target, reticle, scanline, fixed-pattern noise, boot flicker
 // Input: the OutputPass result (ACES + sRGB already applied). Colour uniforms are sRGB values.
 import * as THREE from 'three';
@@ -242,23 +243,22 @@ void main() {
       uvT.x += (rs - 0.5) * 0.08 * boot * step(0.72, hash12(vec2(row * 1.7, floor(uThermT * 30.0))));
     }
     vec3 sc = boot > 0.001 ? texture2D(tDiffuse, uvT).rgb : col;
-    // detail enhancement: local contrast against a 4-tap ring → day/night/fog/flash all share one AGC
-    vec2 dp = 5.0 * uPxScale / uRes;
+    // detail enhancement: local contrast against a 4-tap ring — only a texture on top of the
+    // temperature picture (wave faces, rock grain), never the picture itself
+    vec2 dp = 4.0 * uPxScale / uRes;
     float Lc = luma(sc);
     float Ln = 0.25 * (luma(texture2D(tDiffuse, uvT + vec2(dp.x, 0.0)).rgb) + luma(texture2D(tDiffuse, uvT - vec2(dp.x, 0.0)).rgb)
                      + luma(texture2D(tDiffuse, uvT + vec2(0.0, dp.y)).rgb) + luma(texture2D(tDiffuse, uvT - vec2(0.0, dp.y)).rgb));
-    float rel = clamp((Lc - Ln) / (Ln + 0.05), -0.7, 0.7);
-    // cold sea: dark, low contrast, a touch colder toward the top (grazing reflection of the sky)
-    float v = 0.26 + 0.26 * rel + 0.07 * Lc / (Lc + 0.35) - 0.06 * (vUv.y - 0.5);
-    // heat: crisp core (dilated a little so a head in the water still reads) + a soft two-ring
-    // bloom (6 + 8 taps of the low-res heat target) + a faint dark halo (bolometer DDE artefact)
-    float h0 = texture2D(tHeat, uvT).r;
+    float rel = clamp((Lc - Ln) / (Ln + 0.08), -0.5, 0.5);
+    // heat (R) and thermal mass (G) from the low-res pass: a crisp centre tap + a soft two-ring
+    // bloom (6 + 8 taps); the inner ring also smooths the low-res edge of the mass
+    vec2 hs0 = texture2D(tHeat, uvT).rg;
     vec2 hr = vec2(uRes.y / uRes.x, 1.0);
-    float g1 = 0.0;
+    vec2 g1 = vec2(0.0);
     float g2 = 0.0;
     for (int i = 0; i < 6; i++) {
       float a = float(i) * 1.0471976 + 0.4;
-      g1 += texture2D(tHeat, uvT + vec2(cos(a), sin(a)) * hr * 0.007).r;
+      g1 += texture2D(tHeat, uvT + vec2(cos(a), sin(a)) * hr * 0.004).rg;
     }
     for (int i = 0; i < 8; i++) {
       float a = float(i) * 0.7853982 + 0.1;
@@ -266,9 +266,23 @@ void main() {
     }
     g1 /= 6.0;
     g2 /= 8.0;
-    float core = max(h0, min(1.0, g1 * 1.5) * 0.8);
-    float glow = 0.45 * g1 + 0.55 * g2;
-    v -= 0.12 * max(0.0, g2 - g1 * 1.5);
+    // cold sea: dark and nearly uniform (AGC spans the people, not the waves); whitecaps and foam
+    // emit a touch more, the grazing sky reflection toward the top of the frame reads colder
+    float foam = smoothstep(0.08, 0.35, rel) * (0.5 + 0.5 * smoothstep(0.15, 0.6, Lc));
+    float vSea = 0.17 + 0.09 * rel + 0.06 * foam - 0.05 * (vUv.y - 0.5);
+    // warm mass: land, rock, steel and timber hold the day's heat — smooth mid grey shaded by facing,
+    // warmer after a sunny day than at the end of a cold night, its own grain from the frame
+    float mass = mix(hs0.g, g1.g, 0.5);
+    float landK = smoothstep(0.05, 0.2, mass);
+    // sunlit faces are the warm ones by day; at night the picture flattens toward the stored heat
+    float vLand = 0.3 + mass * (0.24 + 0.08 * (1.0 - uNight)) + 0.16 * rel
+                + 0.12 * (1.0 - uNight) * (smoothstep(0.02, 0.5, Lc) - 0.4);
+    float v = mix(vSea, vLand, landK);
+    // heat: crisp core (dilated a little so a head in the water still reads), bloom, a faint dark halo
+    // (bolometer DDE artefact)
+    float core = max(hs0.r, min(1.0, g1.r * 1.5) * 0.8);
+    float glow = 0.45 * g1.r + 0.55 * g2;
+    v -= 0.1 * max(0.0, g2 - g1.r * 1.5);
     v = mix(v, 0.8 + 0.19 * core, smoothstep(0.03, 0.5, core));
     v += 0.45 * glow * (1.0 - 0.6 * core);
     // sensor: fixed-pattern column noise, scanlines, a slow rolling band, heavy lens vignette
