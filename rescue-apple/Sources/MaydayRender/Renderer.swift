@@ -132,7 +132,7 @@ public final class Renderer {
 
       // ---- 1. scene
       if let enc = cb.makeRenderCommandEncoder(descriptor: rt.scenePassDescriptor(clear: frame.fog.color)) {
-        enc.label = "scene"
+        enc.label = FramePass.scene.label
         enc.setViewport(viewport)
         ocean.encode(enc, pipeline: oceanPSO, mesh: oceanMesh, ring: ring, frameOffset: frameOffset,
                      lookOffset: lookOffset, lightsOffset: lightsOffset, input: frame.ocean)

@@ -48,7 +48,7 @@ public final class PostChain {
                             Float(viewport.width) / Float(targets.width), Float(viewport.height) / Float(targets.height))
     let off = ring.push(u)
     guard let enc = cb.makeRenderCommandEncoder(descriptor: targets.postPassDescriptor()) else { return }
-    enc.label = "composite+output"
+    enc.label = FramePass.compositeOutput.label
     enc.setViewport(viewport)
     enc.setRenderPipelineState(pso)
     enc.setFragmentTexture(targets.sceneHDR, index: Int(MD_TEX_SOURCE))
@@ -69,7 +69,10 @@ public final class PostChain {
     u.resPxSeed = SIMD4<Float>(w, h, pxScale, f.seed)
     u.gridFlow = SIMD4<Float>(f.grid.x, f.grid.y, f.flow.x, f.flow.y)
     u.lens = SIMD4<Float>(f.drops, f.refr, f.condense, f.salt)
-    u.caFlashVortexBright = SIMD4<Float>(f.ca, f.flash, f.vortex, f.bright)
+    // uCA is in pixels of the web's drawing buffer (= our internal size); the native FinalPass runs at
+    // drawable resolution, so convert to drawable pixels to keep the same fringe width on screen.
+    let caPx = f.ca * h / Float(max(1, source.height))
+    u.caFlashVortexBright = SIMD4<Float>(caPx, f.flash, f.vortex, f.bright)
     u.flashTintSatMul = SIMD4<Float>(f.flashTint.x, f.flashTint.y, f.flashTint.z, f.satMul)
     u.edge = f.edge
     u.slopePower = SIMD4<Float>(f.slope.x, f.slope.y, f.slope.z, f.power)
@@ -94,7 +97,7 @@ public final class PostChain {
     rp.colorAttachments[0].loadAction = .dontCare
     rp.colorAttachments[0].storeAction = .store
     guard let enc = cb.makeRenderCommandEncoder(descriptor: rp) else { return }
-    enc.label = "final"
+    enc.label = FramePass.final.label
     enc.setViewport(MTLViewport(originX: 0, originY: 0, width: Double(target.width), height: Double(target.height), znear: 0, zfar: 1))
     enc.setRenderPipelineState(pso)
     enc.setFragmentBuffer(ring.buffer, offset: off, index: Int(MD_BUF_PASS))

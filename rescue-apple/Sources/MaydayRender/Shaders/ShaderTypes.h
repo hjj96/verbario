@@ -47,6 +47,14 @@
 #define MD_BUF_PASS 7
 #define MD_BUF_OUTPUT 1         // compute kernels: results
 
+// ---- vertex attributes ([[attribute(n)]]) of a MeshBuffer: one interleaved stream at MD_BUF_VERTICES ----
+#define MD_ATTR_POSITION 0      // float3 position (three `position`)
+#define MD_ATTR_NORMAL 1        // float3 normal
+#define MD_ATTR_UV 2            // float2 uv
+#define MD_ATTR_COLOR 3         // float3 / float4 vertex colour (linear)
+#define MD_ATTR_SURF 4          // float4 aSurf (world/prop.js weathering contract)
+#define MD_ATTR_UV2 5           // float2 second uv set (decals)
+
 // ---- texture indices ([[texture(n)]]) ---------------------------------------------------------------
 #define MD_TEX_ATLAS 0          // look atlas 256² (R fbm, G worley F1, B F2−F1, A hash)
 #define MD_TEX_DETAIL 1         // look detail 256² (RG slopes, B height)
@@ -137,6 +145,16 @@ MD_STATIC_ASSERT(sizeof(MDHemiLight) == 48, "MDHemiLight layout");
 MD_STATIC_ASSERT(sizeof(MDSpotLight) == 64, "MDSpotLight layout");
 MD_STATIC_ASSERT(sizeof(MDPointLight) == 48, "MDPointLight layout");
 MD_STATIC_ASSERT(sizeof(MDLightsUniforms) == 608, "MDLightsUniforms layout");
+
+// Object (buffer 6): one mesh draw (PLAN §3.4 «Объект / инстанс»). three Object3D.matrixWorld, its
+// normal matrix in WORLD space (inverse-transpose of the upper 3×3 — MSL has no inverse(); three
+// computes normalMatrix on the CPU too; the 4th row / column is unused) and the thermal-pass inputs.
+typedef struct {
+  simd_float4x4 model;             // matrixWorld
+  simd_float4x4 normalMatrix;      // upper 3×3 = inverse(transpose(mat3(matrixWorld)))
+  simd_float4 heatMassLayer;       // heat 0..1, thermal mass 0..1, layer bits (as float), 0
+} MDObjectData;
+MD_STATIC_ASSERT(sizeof(MDObjectData) == 144, "MDObjectData layout");
 
 // Ocean (buffer 5): every uniform of ocean/material.js createOceanUniforms, same names.
 typedef struct {

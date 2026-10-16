@@ -1,0 +1,4 @@
+module simd {
+  header "simd/simd.h"
+  export *
+}

@@ -111,8 +111,9 @@ final class GameMTKView: MTKView {
     if let o = resignObserver { NotificationCenter.default.removeObserver(o) }
     resignObserver = nil
     if let w = window {
+      // queue: .main → the (@Sendable) block runs on the main thread, where the view lives
       resignObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: w, queue: .main) { [weak self] _ in
-        self?.host?.devices.keyboard.blur()
+        MainActor.assumeIsolated { () -> Void in self?.host?.devices.keyboard.blur() }
       }
     }
   }

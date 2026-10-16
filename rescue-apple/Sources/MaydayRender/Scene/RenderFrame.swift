@@ -163,6 +163,8 @@ public struct FinalInput {
   public var refr: Float = 0.018
   public var condense: Float = 0
   public var salt: Float = 0
+  /// uCA in INTERNAL-resolution pixels (post.js: (P.ca + caKick) × drawingBufferHeight / 1080);
+  /// PostChain rescales it to the drawable.
   public var ca: Float = 0.4
   public var flash: Float = 0
   public var flashTint = SIMD3<Float>(0.86, 0.9, 1)

@@ -1,0 +1,116 @@
+// MSL syntax/type-check shim for clang++ (NOT Metal): address spaces and stage keywords vanish,
+// vectors are clang ext_vector types (MSL sizes/alignments), constructors go through overloads.
+#pragma once
+#define constant
+#define device
+#define thread
+#define threadgroup
+#define vertex
+#define fragment
+#define kernel
+typedef unsigned int uint;
+typedef float float2 __attribute__((ext_vector_type(2)));
+typedef float float3 __attribute__((ext_vector_type(3)));
+typedef float float4 __attribute__((ext_vector_type(4)));
+typedef int int2 __attribute__((ext_vector_type(2)));
+typedef int int3 __attribute__((ext_vector_type(3)));
+typedef int int4 __attribute__((ext_vector_type(4)));
+typedef uint uint2 __attribute__((ext_vector_type(2)));
+typedef uint uint3 __attribute__((ext_vector_type(3)));
+typedef uint uint4 __attribute__((ext_vector_type(4)));
+
+struct float3x3 {
+  float3 c[3];
+  float3x3() {}
+  float3x3(float3 a, float3 b, float3 d) { c[0] = a; c[1] = b; c[2] = d; }
+  float3& operator[](int i) { return c[i]; }
+  const float3& operator[](int i) const { return c[i]; }
+};
+struct float4x4 {
+  float4 c[4];
+  float4x4() {}
+  float4x4(float4 a, float4 b, float4 d, float4 e) { c[0] = a; c[1] = b; c[2] = d; c[3] = e; }
+  float4& operator[](int i) { return c[i]; }
+  const float4& operator[](int i) const { return c[i]; }
+};
+float3 operator*(const float3x3& m, float3 v);
+float4 operator*(const float4x4& m, float4 v);
+float4x4 operator*(const float4x4& a, const float4x4& b);
+float3x3 operator*(const float3x3& a, const float3x3& b);
+
+float2 md_make_float2(float);
+float2 md_make_float2(float, float);
+float2 md_make_float2(float2);
+float2 md_make_float2(uint2);
+float2 md_make_float2(int2);
+float3 md_make_float3(float);
+float3 md_make_float3(float, float, float);
+float3 md_make_float3(float2, float);
+float3 md_make_float3(float, float2);
+float3 md_make_float3(float3);
+float4 md_make_float4(float);
+float4 md_make_float4(float, float, float, float);
+float4 md_make_float4(float3, float);
+float4 md_make_float4(float, float3);
+float4 md_make_float4(float2, float2);
+float4 md_make_float4(float2, float, float);
+float4 md_make_float4(float, float, float2);
+float4 md_make_float4(float4);
+uint2 md_make_uint2(uint);
+uint2 md_make_uint2(uint, uint);
+uint2 md_make_uint2(float2);
+int2 md_make_int2(int, int);
+int2 md_make_int2(float2);
+#define float2(...) md_make_float2(__VA_ARGS__)
+#define float3(...) md_make_float3(__VA_ARGS__)
+#define float4(...) md_make_float4(__VA_ARGS__)
+#define uint2(...) md_make_uint2(__VA_ARGS__)
+#define int2(...) md_make_int2(__VA_ARGS__)
+
+struct sampler {};
+struct level { explicit level(float) {} };
+template <typename T> struct texture2d {
+  float4 sample(sampler, float2) const;
+  float4 sample(sampler, float2, level) const;
+  float4 read(uint2, uint lod = 0) const;
+  uint get_width(uint lod = 0) const;
+  uint get_height(uint lod = 0) const;
+};
+
+namespace metal {
+#define MD_UN(f) float f(float); float2 f(float2); float3 f(float3); float4 f(float4);
+#define MD_BIN(f) float f(float, float); float2 f(float2, float2); float3 f(float3, float3); float4 f(float4, float4);
+#define MD_TER(f) float f(float, float, float); float2 f(float2, float2, float2); float3 f(float3, float3, float3); float4 f(float4, float4, float4);
+MD_UN(sin) MD_UN(cos) MD_UN(tan) MD_UN(exp) MD_UN(exp2) MD_UN(log) MD_UN(log2) MD_UN(sqrt) MD_UN(rsqrt)
+MD_UN(abs) MD_UN(floor) MD_UN(ceil) MD_UN(fract) MD_UN(acos) MD_UN(asin) MD_UN(atan) MD_UN(saturate)
+MD_UN(fwidth) MD_UN(dfdx) MD_UN(dfdy) MD_UN(round) MD_UN(trunc) MD_UN(sign)
+MD_BIN(pow) MD_BIN(atan2) MD_BIN(min) MD_BIN(max) MD_BIN(step) MD_BIN(fmod) MD_BIN(reflect)
+MD_TER(clamp) MD_TER(mix) MD_TER(smoothstep) MD_TER(fma)
+uint min(uint, uint); uint max(uint, uint); uint2 min(uint2, uint2); uint2 max(uint2, uint2);
+int min(int, int); int max(int, int);
+float dot(float2, float2); float dot(float3, float3); float dot(float4, float4);
+float length(float2); float length(float3); float length(float4);
+float distance(float2, float2); float distance(float3, float3);
+float2 normalize(float2); float3 normalize(float3); float4 normalize(float4);
+float3 cross(float3, float3);
+float3x3 transpose(const float3x3&); float4x4 transpose(const float4x4&);
+float select(float, float, bool); float2 select(float2, float2, int2); float3 select(float3, float3, int3); float4 select(float4, float4, int4);
+bool any(int2); bool any(int3); bool any(int4); bool all(int2); bool all(int3); bool all(int4);
+namespace precise { float sin(float); float cos(float); float2 sin(float2); float2 cos(float2); }
+
+// strict: mixed scalar/vector arguments (allowed by clang splats, not guaranteed by MSL) are errors
+template <class A, class B> void pow(A, B) = delete;
+template <class A, class B> void atan2(A, B) = delete;
+template <class A, class B> void min(A, B) = delete;
+template <class A, class B> void max(A, B) = delete;
+template <class A, class B> void step(A, B) = delete;
+template <class A, class B> void fmod(A, B) = delete;
+template <class A, class B> void reflect(A, B) = delete;
+template <class A, class B> void dot(A, B) = delete;
+template <class A, class B> void cross(A, B) = delete;
+template <class A, class B, class C> void clamp(A, B, C) = delete;
+template <class A, class B, class C> void mix(A, B, C) = delete;
+template <class A, class B, class C> void smoothstep(A, B, C) = delete;
+template <class A, class B, class C> void select(A, B, C) = delete;
+}
+

@@ -13,6 +13,7 @@ final class ShaderTypesLayoutTests: XCTestCase {
     XCTAssertEqual(MemoryLayout<MDSpotLight>.size, 64)
     XCTAssertEqual(MemoryLayout<MDPointLight>.size, 48)
     XCTAssertEqual(MemoryLayout<MDLightsUniforms>.size, 608)
+    XCTAssertEqual(MemoryLayout<MDObjectData>.size, 144)
     XCTAssertEqual(MemoryLayout<MDOceanUniforms>.size, 2032)
     XCTAssertEqual(MemoryLayout<MDOutputUniforms>.size, 32)
     XCTAssertEqual(MemoryLayout<MDFinalUniforms>.size, 288)
