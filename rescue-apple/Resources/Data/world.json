@@ -1,0 +1,523 @@
+{
+  "schema": "mayday.world",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/world.js", "rescue/src/systems/world/boats.js", "rescue/src/systems/world/contact.js",
+    "rescue/src/systems/world/decals.js", "rescue/src/systems/world/floaters.js", "rescue/src/systems/world/geo.js",
+    "rescue/src/systems/world/lamps.js", "rescue/src/systems/world/landforms.js",
+    "rescue/src/systems/world/lighthouse.js", "rescue/src/systems/world/materials.js",
+    "rescue/src/systems/world/rig.js", "rescue/src/systems/world/rigging.js", "rescue/src/systems/world/ship.js",
+    "rescue/src/systems/world/terrain.js", "rescue/src/systems/world/terrainMaterial.js",
+    "rescue/src/systems/world/vegetation.js", "rescue/src/systems/world/vessel.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {
+    "world/boats": {"scratch": ["_v", "_n", "_d", "_s2", "_funnel"]},
+    "world/contact": {"scratch": ["_m", "_q", "_qy", "_s", "_p", "_n", "_UP"]},
+    "world/floaters": {"scratch": ["_m", "_q", "_qy", "_qr", "_e", "_p", "_s", "_n", "_UP", "_flow", "_col"]},
+    "world/geo": {"scratch": ["_sc", "_ma", "_mb", "_md", "_mq", "_UP", "_tint", "_ts", "_tp", "_tq", "_tb"]},
+    "world/lamps": {"scratch": ["_v", "_c"]},
+    "world/lighthouse": {"scratch": ["_c"]},
+    "world/materials": {"glsl": ["FOG_FADE", "PROP_LIGHTS_BEGIN", "WX_PRESETS"]},
+    "world/rig": {"glsl": ["FLAME_VS", "FLAME_FS", "PLUME_VS", "PLUME_FS"], "scratch": ["_v", "_w", "_growth"]},
+    "world/rigging": {"scratch": ["_m", "_q", "_s", "_d", "_UP"]},
+    "world/ship": {"glsl": ["SHEET_VS", "SHEET_FS"], "scratch": ["_v", "_w", "_d", "_q", "_v2", "_funnel"]},
+    "world/terrain": {"scratch": ["_fd"]},
+    "world/terrainMaterial": {"mutable": ["rockTex"], "scratch": ["_w"]},
+    "world/vegetation": {"glsl": ["VEG_VERTEX_PARS", "VEG_PROJECT"], "mutable": ["vegTex"]},
+    "world/vessel": {"scratch": ["_hc", "_m4", "_box20", "_lb"]}
+  },
+  "data": {
+    "world": {
+      "SERVICES": {
+        "lighthouse": {"fuel": 10, "repair": 4, "resupply": true},
+        "ship": {"fuel": 6, "repair": 0, "resupply": true},
+        "rig": {"fuel": 10, "repair": 0, "resupply": false},
+        "coast": {"fuel": 10, "repair": 4, "resupply": true}
+      },
+      "HEIGHT": {"lighthouse": 12, "ship": 9, "rig": 32}
+    },
+    "world/boats": {
+      "SIDES": [-1, 1],
+      "DEG": 0.017453292519943295,
+      "ST_SURF": {"radius": 7, "strength": 0.6},
+      "RADAR_COL": {"hex": "#2a2e33", "lin": [0.023153366173251366, 0.02732089163382382, 0.033104766565152086]},
+      "KINDS": {
+        "patrol": {"fn": "patrolParts", "srcLength": 5871},
+        "trawler": {"fn": "trawlerParts", "srcLength": 6440},
+        "cargo": {"fn": "cargoParts", "srcLength": 7207}
+      }
+    },
+    "world/contact": {},
+    "world/decals": {"FONT": "'Oswald', 'Arial Narrow', Impact, sans-serif"},
+    "world/floaters": {
+      "SIDES": [-1, 1],
+      "W": "#FFFFFF",
+      "SHAPES": {
+        "plank": {
+          "k": 1.1,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [p(UNIT.box, W, [0, 0, 0], [3.0, 0.14, 0.3], null, SURF.wood)]"
+          },
+          "y": -0.02,
+          "R": 0.9,
+          "tint": ["#6B5A45", "#7A6248", "#5A4C3C", "#8C3B2E", "#4E5A52"],
+          "leeway": 0.025
+        },
+        "barrel": {
+          "k": 1.15,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [ p(UNIT.cyl12, W, [0, 0, 0], [0.31, 0.9, 0.31], [0, 0, Math.PI / 2], SURF.paint), p(UNIT.cyl12, '#555555', [-0.3, 0, 0], [0.325, 0.05, 0.325], [0, 0, Math.PI / 2], SURF.steel), p(UNIT.cyl12, '#555555', [0.3, 0, 0], [0.325, 0.05, 0.325], [0, 0, Math.PI / 2], SURF.steel), ]"
+          },
+          "y": -0.06,
+          "R": 0.6,
+          "tint": ["#1F5E8C", "#B3412E", "#2F7D4F", "#6B3A2A", "#C9A227"],
+          "leeway": 0.03
+        },
+        "ring": {
+          "k": 1.15,
+          "parts": {
+            "fn": "parts",
+            "src": "() => { const out = []; for (let i = 0; i < 8; i++) { const g = new THREE.TorusGeometry(0.37, 0.09, 6, 4, Math.PI / 4).rotateZ((i * Math.PI) / 4).rotateX(Math.PI / 2); out.push({ geometry: g, color: i % 2 ? '#F4F1EA' : '#FF5A1F', surf: SURF.gloss }); } return out; }"
+          },
+          "y": 0,
+          "R": 0.55,
+          "tint": null,
+          "leeway": 0.04
+        },
+        "canister": {
+          "k": 1.15,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [ p(UNIT.box, W, [0, 0, 0], [0.48, 0.2, 0.34], null, SURF.paint), p(UNIT.box, W, [0.08, 0.13, 0], [0.18, 0.06, 0.08], null, SURF.paint), p(UNIT.cyl8, '#1A1C1E', [-0.18, 0.12, 0.1], [0.04, 0.06, 0.04], null, SURF.rubber), ]"
+          },
+          "y": 0,
+          "R": 0.45,
+          "tint": ["#C9A227", "#B3261E", "#2F7D4F", "#E6E6E0"],
+          "leeway": 0.04
+        },
+        "kayak": {
+          "k": 1.05,
+          "parts": {"fn": "parts", "srcLength": 660},
+          "y": -0.03,
+          "R": 1.1,
+          "tint": ["#C8553C", "#D9A030", "#3A6E94", "#D8D4C8"],
+          "leeway": 0.035
+        },
+        "paddle": {
+          "k": 1.1,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [ p(UNIT.cyl6, '#1A1C1E', [0, 0, 0], [0.025, 2.2, 0.025], [0, 0, Math.PI / 2], SURF.rubber), p(UNIT.box, '#F2C200', [1.15, 0, 0], [0.46, 0.02, 0.17], [0, 0.4, 0], SURF.gloss), p(UNIT.box, '#F2C200', [-1.15, 0, 0], [0.46, 0.02, 0.17], [0, -0.4, 0], SURF.gloss), ]"
+          },
+          "y": 0.01,
+          "R": 0,
+          "tint": null,
+          "leeway": 0.03
+        },
+        "suitcase": {
+          "k": 1.15,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [ p(UNIT.box, W, [0, 0, 0], [0.7, 0.26, 0.5], null, SURF.paint), p(UNIT.box, '#1A1C1E', [0, 0.15, 0.18], [0.24, 0.05, 0.04], null, SURF.rubber), p(UNIT.box, '#9A9E9B', [0, 0.131, 0], [0.71, 0.01, 0.06], null, SURF.steel), ]"
+          },
+          "y": -0.02,
+          "R": 0.6,
+          "tint": ["#2E3338", "#7A1E1E", "#1F5E8C", "#4E5A52", "#C2B79C"],
+          "leeway": 0.03
+        },
+        "fender": {
+          "k": 1.1,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [p(UNIT.cyl12, W, [0, 0, 0], [0.2, 0.75, 0.2], [0, 0, Math.PI / 2], SURF.rubber), p(UNIT.sphereLo, W, [0.37, 0, 0], 0.2, null, SURF.rubber), p(UNIT.sphereLo, W, [-0.37, 0, 0], 0.2, null, SURF.rubber)]"
+          },
+          "y": 0.02,
+          "R": 0.45,
+          "tint": ["#E6E6E0", "#1F5E8C", "#2E3338"],
+          "leeway": 0.05
+        },
+        "fishbox": {
+          "k": 1.1,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [p(UNIT.box, W, [0, 0, 0], [0.8, 0.3, 0.5], null, SURF.paint), p(UNIT.box, '#10161A', [0, 0.151, 0], [0.7, 0.01, 0.4], null, SURF.rubber)]"
+          },
+          "y": -0.04,
+          "R": 0.6,
+          "tint": ["#1F5E8C", "#E8452C", "#E6E6E0"],
+          "leeway": 0.035
+        },
+        "float": {
+          "k": 1.15,
+          "parts": {"fn": "parts", "src": "() => [p(UNIT.sphereLo, W, [0, 0, 0], 0.17, null, SURF.gloss)]"},
+          "y": 0.02,
+          "R": 0,
+          "tint": ["#FF7B2E", "#F2C200", "#E6E6E0"],
+          "leeway": 0.02
+        },
+        "sail": {
+          "k": 1,
+          "parts": {"fn": "parts", "srcLength": 1506},
+          "y": 0.04,
+          "R": 1.9,
+          "tint": null,
+          "leeway": 0.012
+        },
+        "container": {
+          "k": 1,
+          "craft": true,
+          "y": 0,
+          "R": 2.4,
+          "tint": ["#9E4636", "#2D5876", "#3D6A4C", "#B49440"],
+          "leeway": 0.06
+        },
+        "duck": {
+          "k": 1.4,
+          "parts": {
+            "fn": "parts",
+            "src": "() => [ p(UNIT.sphereLo, '#FFD400', [0, 0.04, 0], [0.17, 0.12, 0.13], null, SURF.gloss), p(UNIT.sphereLo, '#FFD400', [0.11, 0.15, 0], 0.08, null, SURF.gloss), p(UNIT.box, '#FF8A00', [0.2, 0.14, 0], [0.07, 0.03, 0.05], null, SURF.gloss), ]"
+          },
+          "y": 0,
+          "R": 0,
+          "tint": null,
+          "leeway": 0.035
+        }
+      },
+      "Y": "#B89A3C",
+      "K": "#232526",
+      "R": "#9E2E24",
+      "BUOY_KINDS": ["east", "west", "north", "south", "isolated", "mark"],
+      "BUOY_LIGHT": {
+        "north": "#FFFFFF",
+        "south": "#FFFFFF",
+        "east": "#FFFFFF",
+        "west": "#FFFFFF",
+        "isolated": "#FFFFFF",
+        "mark": "#F2C200"
+      }
+    },
+    "world/geo": {
+      "SURF": {
+        "paint": [0.55, 0, 0, 0],
+        "gloss": [0.32, 0, 0, 0],
+        "steel": [0.42, 0.55, 0, 0],
+        "rust": [0.82, 0.15, 0, 0],
+        "rubber": [0.8, 0, 0, 0],
+        "rock": [0.93, 0, -1, 0],
+        "concrete": [0.88, 0, 0, 0],
+        "wood": [0.85, 0, 0, 0],
+        "glass": [0.07, 0, 0, 0],
+        "fabric": [0.9, 0, 0, 0],
+        "decal": [0.62, 0, 0, -1],
+        "paintWorn": [0.62, 0, -0.31666666666666665, 0],
+        "paintFaded": [0.7, 0, -0.18333333333333335, 0],
+        "steelRusty": [0.6, 0.45, -0.45, 0],
+        "steelWorn": [0.42, 0.55, -0.31666666666666665, 0],
+        "concreteStained": [0.88, 0, -0.31666666666666665, 0],
+        "concreteWet": [0.8, 0, -0.45, 0]
+      },
+      "WEAR_LEVEL": {"clean": 0, "light": 0.3333333333333333, "medium": 0.6666666666666666, "heavy": 1},
+      "UNIT": {
+        "box": {"three": "BufferGeometry", "type": "BoxGeometry", "vertices": 24, "indices": 36},
+        "cyl6": {"three": "BufferGeometry", "type": "CylinderGeometry", "vertices": 40, "indices": 72},
+        "cyl8": {"three": "BufferGeometry", "type": "CylinderGeometry", "vertices": 52, "indices": 96},
+        "cyl12": {"three": "BufferGeometry", "type": "CylinderGeometry", "vertices": 76, "indices": 144},
+        "cyl20": {"three": "BufferGeometry", "type": "CylinderGeometry", "vertices": 124, "indices": 240},
+        "cyl32": {"three": "BufferGeometry", "type": "CylinderGeometry", "vertices": 196, "indices": 384},
+        "cone8": {"three": "BufferGeometry", "type": "ConeGeometry", "vertices": 35, "indices": 48},
+        "cone16": {"three": "BufferGeometry", "type": "ConeGeometry", "vertices": 67, "indices": 96},
+        "sphere": {"three": "BufferGeometry", "type": "SphereGeometry", "vertices": 117, "indices": 504},
+        "sphereLo": {"three": "BufferGeometry", "type": "SphereGeometry", "vertices": 63, "indices": 240},
+        "hemi": {"three": "BufferGeometry", "type": "SphereGeometry", "vertices": 119, "indices": 528},
+        "torus": {"three": "BufferGeometry", "type": "TorusGeometry", "vertices": 119, "indices": 576},
+        "plane": {"three": "BufferGeometry", "type": "PlaneGeometry", "vertices": 4, "indices": 6},
+        "oct": {"three": "BufferGeometry", "type": "CylinderGeometry", "vertices": 52, "indices": 96},
+        "prism": {"three": "BufferGeometry", "type": "BufferGeometry", "vertices": 24, "indices": 0}
+      },
+      "ROCK_BASE": {"hex": "#2e3437", "lin": [0.02732089163382382, 0.0343398068028541, 0.03820437158923601]},
+      "ROCK_WARM": {"hex": "#3a3833", "lin": [0.04231141061442144, 0.03954623527052923, 0.033104766565152086]},
+      "ROCK_DARK": {"hex": "#22282b", "lin": [0.015996293361446288, 0.02121901037134225, 0.024157632443547246]},
+      "ROCK_LICHEN": {"hex": "#77775c", "lin": [0.1844749944900301, 0.1844749944900301, 0.10702310296918527]},
+      "ROCK_ORANGE": {"hex": "#8a6a3a", "lin": [0.2541520943200296, 0.14412847084818123, 0.04231141061442144]},
+      "ROCK_MOSS": {"hex": "#5a6644", "lin": [0.10224173307914941, 0.13286832154414627, 0.057805430183792694]},
+      "ROCK_GUANO": {"hex": "#a8aaa2", "lin": [0.3915724777393922, 0.4019777798219466, 0.3613067797729723]},
+      "ROCK_ALGAE": {"hex": "#1f2a22", "lin": [0.013702083043526807, 0.023153366173251366, 0.015996293361446288]},
+      "FACET": 0.28
+    },
+    "world/lamps": {},
+    "world/landforms": {
+      "TERRAIN_STEP": {"high": 0.85, "medium": 0.95, "low": 1.3},
+      "ICE": 1.2,
+      "ISLAND_LOBES": [
+        [-6, -16, 33, 22, -0.95, 10.4, 0.62, 1.8, 0, 1],
+        [-13, -31, 12, 9, -0.6, 11, 0.3, 2.4, 0.15, 1],
+        [14, -31, 15, 10, 0.3, 9.2, 0.38, 2.2, 0, 1],
+        [27, -36, 8, 6, -1.2, 7.4, 0.4, 2.2, 0, 1],
+        [2, -1, 15, 13, 0, 8.6, 0.5, 2, 0, 1],
+        [16, -10, 9, 7, 0, 7.6, 0.5, 2, 0, 1],
+        [-32, -6, 13, 8, -1.2, 6, 0.35, 2.4, 0, 1],
+        [-30, -38, 10, 7, -1, 6.2, 0.22, 2.8, 0.3, 1],
+        [22, 4, 12, 8, -0.8, 4.4, 0.65, 1.7, 0, 1],
+        [30, -16, 10, 8, -1.2, 6.2, 0.42, 2, 0, 1],
+        [2, 16, 11, 7, -1, 3.8, 0.65, 1.8, 0, 1],
+        [-17, 12, 9, 6, -1.3, 4, 0.5, 2, 0, 1],
+        [1, -47, 9, 7, 0.3, -3, 0.5, 2, 0, 1],
+        [-31, 9, 7, 6, 0.5, -3, 0.5, 2, 0, 1],
+        [38, -4, 6, 5, 0.6, -3, 0.5, 2, 0, 1],
+        [-6, 25, 6, 4, 1, -3, 0.5, 2, 0, 1],
+        [-47, -25, 6, 3.2, -1.2, 0.96, 0.7, 1.6, 0, 0.9],
+        [42, 1, 5, 2.6, -1.2, 0.66, 0.75, 1.6, 0, 0.9],
+        [-50, 4, 5, 2.4, -1.2, 0.54, 0.75, 1.6, 0, 0.9],
+        [-10, 32, 4.5, 2.4, -1.2, 0.48, 0.8, 1.6, 0, 0.9],
+        [35, -47, 5, 3, -1.2, 0.84, 0.7, 1.6, 0, 0.9],
+        [-42, -51, 4, 2.2, -1.2, 0.54, 0.75, 1.6, 0, 0.9],
+        [48, -24, 3.5, 2, -1.2, 0.42, 0.8, 1.6, 0, 0.9],
+        [17, 31, 3.2, 1.8, -1.2, 0.36, 0.8, 1.6, 0, 0.9],
+        [-56, -12, 3, 1.6, -1.2, 0.3, 0.8, 1.6, 0, 0.9],
+        [8, -55, 3.5, 2, -1.2, 0.48, 0.8, 1.6, 0, 0.9]
+      ],
+      "ISLAND_FLATS": [
+        {"x": 0, "z": 0, "r": 13.2, "blend": 8, "y": 8.4, "keep": 0.22},
+        {"x": 0, "z": 0, "r": 15.5, "blend": 2, "max": 10.6},
+        {"x": -9, "z": -27, "r": 6, "blend": 4.5, "y": 9.6, "keep": 0.1},
+        {"box": [13, -27, 6.3, 4.4], "blend": 4.5, "y": 9.2, "keep": 0.08},
+        {"box": [4.8, -24.5, 2.3, 2.1], "blend": 3, "y": 9.5, "keep": 0.05},
+        {"box": [14.5, -8, 4.6, 3.2], "blend": 3.5, "y": 9.4, "keep": 0.08},
+        {"x": 22, "z": -31, "r": 2.2, "blend": 3.5, "y": 8.8, "keep": 0.1},
+        {"x": 30, "z": -38, "r": 1.2, "blend": 3, "y": 7.8, "keep": 0.2},
+        {"x": 16, "z": -40, "r": 1.2, "blend": 3, "y": 7.8, "keep": 0.2},
+        {"x": 26, "z": -20, "r": 1.2, "blend": 3, "y": 6.8, "keep": 0.2},
+        {
+          "seg": [[-3.2, -11.2], [-7.9, -22.6]],
+          "hw": 2.4,
+          "blend": 3.2,
+          "y0": 11.1,
+          "y1": 9.9,
+          "keep": 0.06
+        },
+        {"x": 22.4, "z": 8.2, "r": 3.4, "blend": 5, "y": 1.9, "keep": 0.15}
+      ],
+      "ISLAND_CUTS": [{"seg": [[24.6, 11.6], [37, 31]], "hw": 3.4, "blend": 3, "y": -2.2}],
+      "ISLAND_BOUNDS": {"x0": -60, "z0": -60, "x1": 54, "z1": 40},
+      "CLEAR": [
+        {"x": 0, "z": 0, "r": 19},
+        {"x": -9, "z": -27, "r": 9},
+        {"box": [13, -27, 9, 7]},
+        {"box": [4.8, -24.5, 4, 4]},
+        {"box": [14.5, -8, 7, 6]},
+        {"x": 22, "z": -31, "r": 4},
+        {"seg": [[-3.2, -11.2], [-7.9, -22.6]], "hw": 4},
+        {"seg": [[23, 9], [37, 31]], "hw": 4.5},
+        {"x": 10.4, "z": 7.6, "r": 3}
+      ],
+      "PATHS": [
+        [[22.4, 8.2], [18.5, 1.5], [15.5, -4.5]],
+        [[13.5, -11.5], [12.8, -17], [12.6, -22.4]],
+        [[7.5, -25.5], [1.5, -27.5], [-3.6, -27.4]]
+      ],
+      "ICE_R": 0.45,
+      "BOULDER_SEG": {"high": [10, 7], "medium": [9, 6], "low": [8, 6]},
+      "BOULDERS": {"high": 1, "medium": 0.75, "low": 0.45}
+    },
+    "world/lighthouse": {
+      "DECK_Y": 12,
+      "PAD_R": 12.3,
+      "TOWER": {"x": -9, "z": -27},
+      "LANTERN_Y": 38.3,
+      "BEAM_LEN": 680,
+      "PERIOD": 8,
+      "PERIM_R": 11.286346651957155,
+      "C": {
+        "white": "#D6D2C6",
+        "red": "#9E2A22",
+        "dark": "#383E3D",
+        "cupola": "#5A2622",
+        "roof": "#6E2C26",
+        "roofEave": "#552A25",
+        "roofSeam": "#5F2722",
+        "trim": "#E2DED3",
+        "render": "#D2CEC2",
+        "door": "#3E4C47",
+        "concrete": "#8E8E87",
+        "concreteDark": "#6E706B",
+        "jetty": "#76776F",
+        "deckEdge": "#5A5F5C",
+        "net": "#2A2F2E",
+        "glass": "#FFF1CF",
+        "window": "#FFC98A",
+        "steel": "#535C5A",
+        "galv": "#A3A7A2",
+        "clad": "#6E6A60",
+        "cladRib": "#5F5B52",
+        "tank": "#C2C2B8",
+        "rust": "#6B3A22"
+      },
+      "GLOW": {
+        "lamp": {"hex": "#ffe2b0", "lin": [1, 0.76052450467022, 0.43415363616478553]},
+        "flood": {"hex": "#ffe6b0", "lin": [1, 0.7912979403281553, 0.43415363616478553]},
+        "window": {"hex": "#ffc98a", "lin": [1, 0.5840784178830671, 0.2541520943200296]},
+        "nav": {"hex": "#12ff6e", "lin": [0.0060488330203860696, 1, 0.15592646369776456]}
+      }
+    },
+    "world/materials": {
+      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n",
+      "CH": {
+        "ALWAYS": 0,
+        "WINDOWS": 1,
+        "PERIM": 2,
+        "FLOOD": 3,
+        "NAV": 4,
+        "ANTI": 5,
+        "LANTERN": 6,
+        "FLAME": 7,
+        "WANDS": 8,
+        "UNLOAD0": 9,
+        "BUOY0": 12,
+        "PADLIGHT": 18,
+        "BOAT": 19,
+        "BLUE": 20,
+        "CLOUD": 21,
+        "DIM": 22,
+        "BEACON": 23
+      },
+      "CH_COUNT": 24,
+      "GLOWS": 6,
+      "WX_DECODE": "\nvec4 wxA = uWxA;\nvec4 wxB = uWxB;\nif (vSurf.z < -0.02 && vSurf.z > -0.5) {\n  float wl = clamp((-vSurf.z - 0.05) / 0.4, 0.0, 1.0) * 3.0;\n  float wf = fract(min(wl, 2.999));\n  vec4 a0 = wl < 1.0 ? WXA0 : (wl < 2.0 ? WXA1 : WXA2);\n  vec4 a1 = wl < 1.0 ? WXA1 : (wl < 2.0 ? WXA2 : WXA3);\n  vec2 b0 = wl < 1.0 ? WXB0 : (wl < 2.0 ? WXB1 : WXB2);\n  vec2 b1 = wl < 1.0 ? WXB1 : (wl < 2.0 ? WXB2 : WXB3);\n  wxA = mix(a0, a1, wf);\n  wxB.xy = mix(b0, b1, wf);\n}\nfloat wxOn = (vSurf.z > 0.0 || vSurf.z < -0.5) ? 0.0 : 1.0;\nwxA *= wxOn;\nwxB.xy *= wxOn;\nif (vSurf.w > -0.5 && vPropG.y > 0.5) {\n  wxB.w = vPropG.x; // standing on land: base grime + a thin splash / algae line above the ground\n  wxA.w *= 0.5;\n}\nfloat wxMx = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));\nfloat wxSat = (wxMx - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b))) / max(wxMx, 1e-3);\nvec3 wxStreak = mix(uWxGrime * 1.35, uWxStreak, max(smoothstep(0.15, 0.4, vSurf.y), smoothstep(0.12, 0.35, wxSat)));\n"
+    },
+    "world/rig": {
+      "LOWER_Y": 22,
+      "UPPER_Y": 32,
+      "PAD": {"x": -34, "z": -24, "r": 11.5},
+      "FLARE_BASE": [22, 30, 16],
+      "FLARE_TIP": [56.8, 47, 28.1],
+      "DERRICK": {"x": 4, "z": -12, "top": 74},
+      "LD": {"cz": 10, "w": 43.6, "d": 23.6},
+      "C": {
+        "leg": "#B89A3A",
+        "splash": "#4A3A30",
+        "deck": "#5E6467",
+        "deckTop": "#7A8084",
+        "module": "#A7B0B3",
+        "white": "#E6E6E0",
+        "derrick": "#D8D8D2",
+        "yellow": "#C9A227",
+        "orange": "#FF6A13",
+        "dark": "#2E3338",
+        "window": "#FFC98A",
+        "steel": "#7E868C"
+      },
+      "FLAME_COL": {"hex": "#ff8a2a", "lin": [1, 0.2541520943200296, 0.023153366173251366]},
+      "SODIUM": {"hex": "#ffc27a", "lin": [1, 0.5394794890033748, 0.19461783043107173]},
+      "SMOKE_OPTS": {"kind": "generic", "size": [4, 18], "life": 7, "rise": 2.5, "alpha": 0.22},
+      "TAU": 6.283185307179586
+    },
+    "world/rigging": {
+      "ORANGE": {"hex": "#c8452e", "lin": [0.5775804404214573, 0.059511238155621766, 0.02732089163382382]},
+      "WHITE": {"hex": "#e8e2d8", "lin": [0.8069522576650873, 0.76052450467022, 0.6866853124288865]},
+      "SEGS": 4,
+      "SOCK_LEN": 5.2,
+      "R0": 0.5
+    },
+    "world/ship": {
+      "SIDES": [-1, 1],
+      "L": 72,
+      "B": 15,
+      "DECK_Y": 9,
+      "DECK_Z": 24.5,
+      "DECK_R": 11.5,
+      "HORN_R": 300,
+      "HULL_C": "#5C6670",
+      "FORE": {"z0": -36, "z1": -4, "w": 16},
+      "C": {
+        "white": "#E6E6E0",
+        "deck": "#4B524E",
+        "helideckUnder": "#3A4044",
+        "dark": "#2E3338",
+        "steel": "#7E868C",
+        "orange": "#FF6A13",
+        "yellow": "#C9A227",
+        "black": "#1A1C1E",
+        "window": "#FFC98A",
+        "bridge": "#9FB8C8"
+      },
+      "SIG": {"x": 7, "z": 16.9},
+      "SIG_SCALE": 1.45,
+      "COLLARS": [[-29, 3.6, 2], [-13, 5.6, 2.1], [5, 5.9, 2], [22, 5.9, 1.9], [34, 5.4, 1]],
+      "OBST_Z": [1, -3, -26],
+      "ST_BOW": {"radius": 3.2, "strength": 0},
+      "ST_WASH": {"radius": 4.5, "strength": 0},
+      "ST_DISTURB": {"radius": 6, "strength": 0},
+      "ST_SLAM": {"radius": 9, "strength": 0},
+      "RADAR_COL": {"hex": "#2a2e33", "lin": [0.023153366173251366, 0.02732089163382382, 0.033104766565152086]},
+      "ARM_COL": {"hex": "#ff7a1a", "lin": [1, 0.19461783043107173, 0.010329823026364548]},
+      "FLOOD_COL": {"hex": "#ffe2b0", "lin": [1, 0.76052450467022, 0.43415363616478553]},
+      "DECK_COL": {"hex": "#ffe6b0", "lin": [1, 0.7912979403281553, 0.43415363616478553]},
+      "WHITE": {"hex": "#ffffff", "lin": [1, 1, 1]},
+      "WAND_COL": {"hex": "#ffffff", "lin": [4.6, 1.75, 1.05]},
+      "SHIP_DECK": {"y": 9, "z": 24.5, "r": 11.5}
+    },
+    "world/terrain": {
+      "GX": [
+        0.9807852506637573, 0.8314695954322815, 0.5555702447891235, 0.19509032368659973, -0.19509032368659973,
+        -0.5555702447891235, -0.8314695954322815, -0.9807852506637573, -0.9807852506637573, -0.8314695954322815,
+        -0.5555702447891235, -0.19509032368659973, 0.19509032368659973, 0.5555702447891235, 0.8314695954322815,
+        0.9807852506637573
+      ],
+      "GY": [
+        0.19509032368659973, 0.5555702447891235, 0.8314695954322815, 0.9807852506637573, 0.9807852506637573,
+        0.8314695954322815, 0.5555702447891235, 0.19509032368659973, -0.19509032368659973, -0.5555702447891235,
+        -0.8314695954322815, -0.9807852506637573, -0.9807852506637573, -0.8314695954322815, -0.5555702447891235,
+        -0.19509032368659973
+      ]
+    },
+    "world/terrainMaterial": {
+      "RT": 256,
+      "PALETTE": {
+        "cGranL": "#8A8884",
+        "cGranD": "#525256",
+        "cGranP": "#8C7A72",
+        "cQuartz": "#BDB8AE",
+        "cLichG": "#9EA095",
+        "cLichY": "#8E8A5A",
+        "cLichO": "#B0703A",
+        "cBlack": "#262522",
+        "cWeed": "#3A3820",
+        "cBarn": "#ABA799",
+        "cMoss": "#4E5A38",
+        "cCrow": "#2F3826",
+        "cHeath": "#5A4655",
+        "cRust": "#6E5136",
+        "cStraw": "#7D7550",
+        "cGuano": "#D9D6CB"
+      },
+      "GLOWS": 4,
+      "terrainUniforms": {
+        "uSwell": {"value": 0.5},
+        "uTFill": {"value": {"hex": "#000000", "lin": [0, 0, 0]}},
+        "uTGlow": {"value": [[0, -10000, 0, 1], [0, -10000, 0, 1], [0, -10000, 0, 1], [0, -10000, 0, 1]]},
+        "uTGlowCol": {
+          "value": [
+            {"hex": "#000000", "lin": [0, 0, 0]},
+            {"hex": "#000000", "lin": [0, 0, 0]},
+            {"hex": "#000000", "lin": [0, 0, 0]},
+            {"hex": "#000000", "lin": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    "world/vegetation": {
+      "VEG_COUNTS": {
+        "high": {"spruce": 64, "shrub": 300, "tuft": 340},
+        "medium": {"spruce": 46, "shrub": 190, "tuft": 150},
+        "low": {"spruce": 28, "shrub": 90, "tuft": 0}
+      },
+      "PREVAIL": [-0.7071067811865476, 0.7071067811865476]
+    },
+    "world/vessel": {"DEG": 0.017453292519943295, "BOX20": {"L": 6.06, "W": 2.44, "H": 2.59}}
+  }
+}

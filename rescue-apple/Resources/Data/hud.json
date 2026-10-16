@@ -1,0 +1,191 @@
+{
+  "schema": "mayday.hud",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/hud.js", "rescue/src/ui/flight/flight.js", "rescue/src/ui/flight/hints.js",
+    "rescue/src/ui/flight/map.js", "rescue/src/ui/flight/model.js", "rescue/src/ui/flight/overlay.js",
+    "rescue/src/ui/flight/radar.js", "rescue/src/ui/flight/toasts.js", "rescue/src/ui/flight/warnings.js",
+    "rescue/src/ui/flight/winch.js", "rescue/src/ui/common/palette.js", "rescue/src/ui/common/chart.js",
+    "rescue/src/ui/common/fonts.js", "rescue/src/ui/common/transition.js", "rescue/src/ui/common/typewriter.js",
+    "rescue/src/ui/common/dom.js", "rescue/src/ui/screens/boot.js", "rescue/src/ui/screens/briefing.js",
+    "rescue/src/ui/screens/confirm.js", "rescue/src/ui/screens/debrief.js", "rescue/src/ui/screens/note.js",
+    "rescue/src/ui/screens/operations.js", "rescue/src/ui/screens/pause.js", "rescue/src/ui/screens/screen.js",
+    "rescue/src/ui/screens/title.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {
+    "ui/flight/overlay": {"mutable": ["THUMB"]},
+    "ui/common/fonts": {"runtime": ["cache"]},
+    "ui/screens/debrief": {"mutable": ["filterSeq"]}
+  },
+  "data": {
+    "hud": {
+      "SCREENS": {
+        "flash": {"class": "FlashScreen"},
+        "press": {"class": "PressScreen"},
+        "title": {"class": "TitleScreen"},
+        "operations": {"class": "OperationsScreen"},
+        "briefing": {"class": "BriefingScreen"},
+        "pause": {"class": "PauseScreen"},
+        "settings": {"class": "SettingsScreen"},
+        "controls": {"class": "ControlsScreen"},
+        "debrief": {"class": "DebriefScreen"},
+        "confirm": {"class": "ConfirmScreen"},
+        "note": {"class": "NoteScreen"}
+      }
+    },
+    "ui/flight/flight": {"SAFE": 24},
+    "ui/flight/hints": {},
+    "ui/flight/map": {"TAU": 6.283185307179586},
+    "ui/flight/model": {},
+    "ui/flight/overlay": {
+      "TAU": 6.283185307179586,
+      "DASH_A": [5, 5],
+      "DASH_B": [2, 4],
+      "DASH_C": [8, 6],
+      "NO_DASH": [],
+      "EDGE_MAX": 8,
+      "EDGE_MARGIN": 56,
+      "MERGE_PX": 26,
+      "FOOT": {
+        "swimmer": 1.6,
+        "injured": 1.6,
+        "raft": 3.6,
+        "hull": 4.2,
+        "container": 5.5,
+        "deck": 9,
+        "wreck": 16,
+        "plane": 9
+      },
+      "TICKS": [15, 40, 90, 120],
+      "WAVE_N": 32,
+      "TIMES": [
+        "×0", "×1", "×2", "×3", "×4", "×5", "×6", "×7", "×8", "×9", "×10", "×11", "×12", "×13", "×14", "×15", "×16",
+        "×17", "×18", "×19", "×20", "×21", "×22", "×23", "×24", "×25", "×26", "×27", "×28", "×29", "×30", "×31", "×32",
+        "×33", "×34", "×35", "×36", "×37", "×38", "×39", "×40", "×41", "×42", "×43", "×44", "×45", "×46", "×47", "×48",
+        "×49", "×50", "×51", "×52", "×53", "×54", "×55", "×56", "×57", "×58", "×59", "×60", "×61", "×62", "×63"
+      ]
+    },
+    "ui/flight/radar": {
+      "TAU": 6.283185307179586,
+      "RANGES": [600, 1200, 2400],
+      "RANGE_TXT": ["600 М", "1,2 КМ", "2,4 КМ"],
+      "TRAIL": 60,
+      "DASH": [2, 3],
+      "NO_DASH": []
+    },
+    "ui/flight/toasts": {"MAX": 4, "REPEAT_S": 5},
+    "ui/flight/warnings": {
+      "POLL": 0.1,
+      "DEFS": {
+        "autorot": {"prio": 11, "level": "danger"},
+        "rogue": {"prio": 10, "level": "danger"},
+        "hull": {"prio": 9, "level": "danger"},
+        "spout": {"prio": 8, "level": "danger"},
+        "tornado": {"prio": 8, "level": "danger"},
+        "low": {"prio": 7, "level": "danger"},
+        "obstacle": {"prio": 7, "level": "danger"},
+        "tension": {"prio": 6, "level": "caution"},
+        "storm": {"prio": 6, "level": "caution"},
+        "hazard": {"prio": 5, "level": "caution"},
+        "fuel": {"prio": 5, "level": "caution"},
+        "overheat": {"prio": 4, "level": "caution"},
+        "turbulence": {"prio": 3, "level": "caution"},
+        "outside": {"prio": 2, "level": "caution"}
+      }
+    },
+    "ui/flight/winch": {},
+    "ui/common/palette": {
+      "BASE": {
+        "fg": "#E8E4D8",
+        "rescue": "#FF5A1F",
+        "nav": "#56B4E9",
+        "hazard": "#D67AD9",
+        "wind": "#BFE6FF",
+        "info": "#8FD3E0",
+        "ok": "#7CF2A8",
+        "warn": "#FFC24B",
+        "danger": "#FF3B30"
+      },
+      "COLORBLIND": {"rescue": "#FFB000", "nav": "#2FA8FF", "hazard": "#C86CFF"},
+      "NIGHT_AMBER": "#FFB547",
+      "PAPER": {
+        "paper": "#F3E9D6",
+        "ink": "#12212B",
+        "orange": "#FF5A1F",
+        "yellow": "#F5D547",
+        "stamp": "#C8102E",
+        "bronze": "#C8814A",
+        "silver": "#C9D3DA",
+        "gold": "#FFD36A",
+        "cold": "#2E6BD6",
+        "warm": "#E5322D",
+        "occl": "#8A4FBF"
+      }
+    },
+    "ui/common/chart": {"LEVELS": [5, 10, 20, 30, 50, 75, 100, 150, 200], "DEG": 0.017453292519943295, "NM": 1852},
+    "ui/common/fonts": {
+      "MONO": 0,
+      "HEAD": 1,
+      "FAMILY": [
+        "\"JetBrains Mono\", ui-monospace, \"DejaVu Sans Mono\", monospace",
+        "Oswald, Impact, \"Arial Narrow\", \"Roboto Condensed\", sans-serif"
+      ]
+    },
+    "ui/common/transition": {"NW": 160, "NH": 90, "DURATION": 0.25},
+    "ui/common/typewriter": {},
+    "ui/common/dom": {"SVG_NS": "http://www.w3.org/2000/svg"},
+    "ui/screens/boot": {},
+    "ui/screens/briefing": {
+      "WIND": {
+        "calm": 3,
+        "overcast": 9,
+        "squall": 16,
+        "storm": 24,
+        "nightStorm": 21,
+        "fog": 3,
+        "clearing": 6,
+        "nightCalm": 2
+      }
+    },
+    "ui/screens/confirm": {},
+    "ui/screens/debrief": {
+      "LINE_DT": 0.4,
+      "SPEAKER": {
+        "dispatch": "БЕРЕГ",
+        "pilot": "ВТОРОЙ ПИЛОТ",
+        "winchman": "БОРТОПЕРАТОР",
+        "rescuer": "СПАСАТЕЛЬ"
+      }
+    },
+    "ui/screens/note": {},
+    "ui/screens/operations": {
+      "BG_DEF": {
+        "seed": 31,
+        "coords": "69°12′ с.ш. 33°30′ в.д.",
+        "area": {"radius": 3000},
+        "world": {
+          "pads": [
+            {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0},
+            {"type": "rig", "name": "Северная-7", "x": 1150, "z": -650},
+            {"type": "ship", "name": "Арктур", "x": -700, "z": -500}
+          ],
+          "props": {
+            "lighthouse": true,
+            "rocks": [
+              {"x": -62, "z": 38, "radius": 26, "height": 12},
+              {"x": 74, "z": 52, "radius": 16, "height": 8},
+              {"x": -260, "z": 150, "radius": 22, "height": 38},
+              {"x": 420, "z": 90, "radius": 16, "height": 22}
+            ]
+          }
+        }
+      }
+    },
+    "ui/screens/pause": {},
+    "ui/screens/screen": {},
+    "ui/screens/title": {}
+  }
+}

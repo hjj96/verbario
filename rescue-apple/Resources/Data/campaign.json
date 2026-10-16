@@ -1,0 +1,1475 @@
+{
+  "schema": "mayday.campaign",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/systems/mission/campaign.js"],
+  "producer": "tools/export/export-data.mjs",
+  "data": {
+    "mission/campaign": {
+      "DEG": 0.017453292519943295,
+      "SKALISTY": {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+      "LIGHTHOUSE_ROCKS": [
+        {"x": -62, "z": 38, "radius": 26, "height": 12},
+        {"x": 74, "z": 52, "radius": 16, "height": 8},
+        {"x": -34, "z": -74, "radius": 12, "height": 6}
+      ],
+      "CAMPAIGN": [
+        {
+          "id": "first",
+          "codename": "БАЙДАРКА",
+          "title": "Первый вылет",
+          "subtitle": "Байдарочники у маяка «Скалистый»",
+          "date": "28 августа",
+          "clock": "07:40",
+          "coords": "69°11′ с.ш. 33°31′ в.д.",
+          "difficulty": 1,
+          "seed": 101,
+          "theme": "kayak",
+          "tags": ["calm", "kayak"],
+          "brief": "07:12. Турбаза «Полярная» сообщила: группа на морских байдарках — пятеро, инструктор и четверо туристов — не вышла на утреннюю связь. Вечером они встали лагерем в бухте за маяком «Скалистый».\n\nВ 07:31 смотритель маяка увидел с галереи перевёрнутую байдарку в трёхстах метрах к северо-востоку. Больше никого.\n\nМоре пока как зеркало, вода плюс десять. Синоптики обещают к девяти ветер с северо-запада.\n\nЭто ваш первый вылет на «Чайке-07». Семёныч проверил трос, Гордеев на связи. Найдите их, пока вода ещё «тёплая».",
+          "area": {"radius": 1400},
+          "weather": {"start": "calm", "windFrom": 315, "script": [{"at": 240, "to": "overcast", "over": 60}]},
+          "world": {
+            "pads": [{"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0}],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "buoys": [{"x": 180, "z": -95, "kind": "east"}, {"x": -150, "z": -260, "kind": "west"}],
+              "debris": [
+                {"x": 228, "z": -236, "radius": 26, "count": 5, "kind": "kayak"},
+                {"x": 455, "z": -318, "radius": 18, "count": 2, "kind": "paddle"}
+              ]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "kayak-1",
+              "type": "swimmer",
+              "x": 212,
+              "z": -212,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "since": 40,
+              "lead": ["инструктор турбазы", "инструктор турбазы"],
+              "label": "инструктор группы",
+              "signals": {"rockets": 1, "whistle": true}
+            },
+            {
+              "tag": "kayak-2",
+              "type": "swimmer",
+              "x": 470,
+              "z": -330,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 150,
+              "since": 55,
+              "label": "турист",
+              "signals": {"rockets": 1, "smoke": true, "whistle": true, "mirror": true}
+            },
+            {
+              "tag": "kayak-raft",
+              "type": "raft",
+              "x": -180,
+              "z": -540,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 180,
+              "since": 70,
+              "label": "плот турбазы",
+              "signals": {"rockets": 2, "epirb": true}
+            }
+          ],
+          "hazards": [],
+          "objectives": {"rescue": 3, "timeLimit": 0},
+          "waterTemp": 10,
+          "current": {"x": 0.25, "z": -0.15},
+          "par": 360,
+          "hazardsRandom": false,
+          "onboarding": true,
+          "hints": ["takeoff", "move", "descend", "winch", "land"],
+          "script": [
+            {"at": 10, "do": "rocket", "tag": "kayak-1", "focus": 3},
+            {"at": 32, "do": "gust", "strength": 8, "harmless": true},
+            {
+              "after": "boarded",
+              "delay": 5,
+              "latest": 90,
+              "do": "rocket",
+              "tag": "kayak-2",
+              "focus": 2.5
+            },
+            {"after": "boarded", "delay": 11, "latest": 96, "do": "rocket", "tag": "kayak-raft"}
+          ],
+          "radio": [
+            {
+              "after": "rocket:kayak-raft",
+              "delay": 4,
+              "speaker": "survivor",
+              "name": "ПОСТРАДАВШИЙ",
+              "channel": "handheld",
+              "id": "s_vhf",
+              "priority": 2,
+              "text": "…кто-нибудь слышит… плот… нас трое… видим огни…"
+            },
+            {
+              "at": 228,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 1,
+              "text": "Чайка, Берег. Синоптики не ошиблись: с северо-запада задувает до девяти метров в секунду. Заканчивайте и домой."
+            }
+          ]
+        },
+        {
+          "id": "ferry",
+          "codename": "ПАРОМ",
+          "title": "Паром «Северянка»",
+          "subtitle": "Восемь на корме, два плота",
+          "date": "14 октября",
+          "clock": "15:20",
+          "coords": "69°12′ с.ш. 33°27′ в.д.",
+          "difficulty": 2,
+          "seed": 202,
+          "theme": "ferry",
+          "tags": ["ferry"],
+          "brief": "15:04. Пассажирский паром «Северянка» на линии Мурманск — Териберка потерял ход в четырёх милях от берега: заклинило рулевое, судно развернуло лагом к волне и посадило на банку. Пробоина в машинном отделении, крен растёт.\n\nНа борту был сорок один человек. Большинство сняли шлюпки и катер береговой охраны «Сторож-7». На корме остались восемь — те, кто не успел к шлюпкам. Два спасательных плота сорвало и унесло на север.\n\nС Рыбачьего идёт шквал. «Арктур» идёт к парому и примет людей на палубу — она ближе маяка, но качается.\n\nСалон — шесть мест. Считайте рейсы.",
+          "area": {"radius": 1600},
+          "weather": {
+            "start": "overcast",
+            "windFrom": 300,
+            "script": [{"at": 180, "to": "squall", "over": 40}]
+          },
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -1150,
+                "z": -150,
+                "heading": 1.047518004662921,
+                "drift": {"x": 2.6, "z": -1.5},
+                "speed": 3,
+                "route": [[-1150, -150], [-420, -620], [480, -760], [620, 120], [-560, 260]]
+              }
+            ],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "boats": [
+                {
+                  "x": -760,
+                  "z": -260,
+                  "kind": "patrol",
+                  "name": "Сторож-7",
+                  "heading": 1.2217304763960306
+                }
+              ],
+              "debris": [{"x": -360, "z": -440, "radius": 60, "count": 10, "kind": "luggage"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "ferry",
+              "primary": true,
+              "type": "wreck",
+              "fallbackType": "deck",
+              "x": -330,
+              "z": -470,
+              "count": 8,
+              "height": 6,
+              "hidden": false,
+              "name": "Северянка",
+              "heading": 1.0471975511965976,
+              "sinkTime": 480,
+              "since": 35,
+              "label": "паром «Северянка», корма"
+            },
+            {
+              "tag": "raft-a",
+              "type": "raft",
+              "x": -760,
+              "z": -820,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 50,
+              "label": "плот №1 «Северянки»",
+              "signals": {"rockets": 2, "epirb": true}
+            },
+            {
+              "tag": "raft-b",
+              "type": "raft",
+              "x": 180,
+              "z": -1010,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 250,
+              "since": 50,
+              "label": "плот №2 «Северянки»",
+              "signals": {"rockets": 2}
+            }
+          ],
+          "hazards": [],
+          "objectives": {
+            "rescue": 9,
+            "timeLimit": 0,
+            "extra": [{"id": "ferry", "text": "Снять всех с «Северянки»", "tag": "ferry"}]
+          },
+          "waterTemp": 8,
+          "current": {"x": 0.35, "z": 0.2},
+          "par": 600,
+          "hazardsRandom": false,
+          "hints": ["deck", "raftDrop"],
+          "script": [],
+          "radio": [
+            {
+              "at": 24,
+              "speaker": "survivor",
+              "name": "ПАРОМ «СЕВЕРЯНКА»",
+              "channel": "handheld",
+              "id": "s_ferry",
+              "priority": 2,
+              "text": "Нас ещё восемь на корме! Быстрее, крен растёт!"
+            },
+            {
+              "at": 108,
+              "speaker": "coastguard",
+              "name": "СТОРОЖ-7",
+              "channel": "ext",
+              "id": "c_help",
+              "priority": 2,
+              "text": "Берег, Сторож-7. Шлюпки у нас, людей забираем сами. Вертолёт — на корму и на плоты."
+            },
+            {
+              "at": 168,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. Шквал будет у вас через пару минут. «Арктур» подходит к «Северянке» с запада, палуба свободна."
+            },
+            {
+              "at": 282,
+              "speaker": "survivor",
+              "name": "ПАРОМ «СЕВЕРЯНКА»",
+              "channel": "handheld",
+              "priority": 2,
+              "text": "Вода в салоне! Крен двадцать пять! Мы на корме, у флагштока!"
+            }
+          ]
+        },
+        {
+          "id": "fog",
+          "codename": "МОЛОКО",
+          "title": "Молоко",
+          "subtitle": "Туман у Кошек",
+          "date": "22 октября",
+          "clock": "08:55",
+          "coords": "69°08′ с.ш. 33°48′ в.д.",
+          "difficulty": 2,
+          "seed": 303,
+          "theme": "fishing",
+          "tags": ["fog", "cold"],
+          "brief": "08:40. На залив лёг туман: видимость двести метров и падает. Рыболовецкий траулер «Кильдин» в тумане сел на камни Кошек у входа в губу, команда ушла на плотах. Тогда же пропала мотодора «Мария» с двумя рыбаками — последний раз её видели у маяка.\n\nСверху вы не увидите ничего. Слушайте. Плоты пускают ракеты — красная видна сквозь туман до километра. У одного плота аварийный радиобуй. Люди в воде свистят, если слышат ротор. Громкоговоритель — чтобы они ответили.\n\nВокруг маяка из тумана торчат скалы. Высота — ваш друг, но не ниже скал.",
+          "area": {"radius": 1400},
+          "weather": {"start": "fog", "windFrom": 200, "script": []},
+          "world": {
+            "pads": [{"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0}],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6},
+                {"x": 150, "z": -250, "radius": 18, "height": 26, "name": "Кошки"},
+                {"x": 215, "z": -300, "radius": 12, "height": 14, "name": "Кошки"},
+                {"x": -260, "z": 150, "radius": 22, "height": 38},
+                {"x": 420, "z": 90, "radius": 16, "height": 22},
+                {"x": -100, "z": -430, "radius": 14, "height": 18},
+                {"x": -380, "z": -120, "radius": 10, "height": 12}
+              ],
+              "boats": [
+                {
+                  "x": 250,
+                  "z": -330,
+                  "kind": "trawler",
+                  "name": "Кильдин",
+                  "heading": 0.6108652381980153,
+                  "aground": true
+                }
+              ],
+              "buoys": [{"x": 60, "z": -180, "kind": "isolated"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "maria",
+              "type": "hull",
+              "x": 330,
+              "z": 240,
+              "count": 2,
+              "hidden": true,
+              "datumRadius": 150,
+              "name": "Мария",
+              "sinkTime": 300,
+              "since": 40,
+              "label": "мотодора «Мария»",
+              "signals": {"whistle": true}
+            },
+            {
+              "tag": "raft-a",
+              "type": "raft",
+              "x": -470,
+              "z": -360,
+              "count": 3,
+              "pet": "dog",
+              "hidden": true,
+              "datumRadius": 200,
+              "since": 30,
+              "label": "плот «Кильдина»",
+              "signals": {"rockets": 3, "epirb": true}
+            },
+            {
+              "tag": "swimmer",
+              "type": "swimmer",
+              "x": -200,
+              "z": 480,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 160,
+              "since": 20,
+              "label": "рыбак за бортом",
+              "signals": {"whistle": true}
+            },
+            {
+              "tag": "raft-b",
+              "type": "raft",
+              "x": 560,
+              "z": -560,
+              "count": 3,
+              "at": 90,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 10,
+              "label": "второй плот «Кильдина»",
+              "signals": {"rockets": 2}
+            }
+          ],
+          "hazards": [],
+          "objectives": {"rescue": 6, "timeLimit": 0},
+          "waterTemp": 7,
+          "current": {"x": 0.2, "z": -0.3},
+          "par": 540,
+          "hazardsRandom": false,
+          "hints": ["horn", "searchlight", "map"],
+          "script": [],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "coastguard",
+              "name": "МАЯК «СКАЛИСТЫЙ»",
+              "channel": "ext",
+              "id": "c_light",
+              "priority": 2,
+              "text": "Чайка, Скалистый. Даю ревун каждые тридцать секунд — идите на звук."
+            },
+            {
+              "at": 92,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. «Кильдин» сообщает: спустили второй плот, северо-восточнее камней. Трое. Ищите по ракетам."
+            },
+            {
+              "after": "spotted:raft-a",
+              "delay": 2,
+              "speaker": "winchman",
+              "name": "БОРТОПЕРАТОР",
+              "channel": "ics",
+              "id": "w_dog",
+              "priority": 1,
+              "text": "На плоту собака! Лает на нас — через ротор слышно."
+            },
+            {
+              "at": 205,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Скалы где-то справа. Не вижу, но чувствую. Держи выше сорока."
+            }
+          ]
+        },
+        {
+          "id": "rig",
+          "codename": "БУРОВАЯ",
+          "title": "Буровая «Северная-7»",
+          "subtitle": "Шестеро на нижней палубе",
+          "date": "3 ноября",
+          "clock": "13:10",
+          "coords": "69°41′ с.ш. 34°55′ в.д.",
+          "difficulty": 3,
+          "seed": 404,
+          "theme": "rig",
+          "tags": ["rig", "storm", "cold"],
+          "brief": "12:55. Морская буровая платформа «Северная-7», девяносто миль от берега. Пожар в буровом модуле, верхние ярусы в дыму. Шестерых отрезало огнём на нижней палубе — двадцать два метра над водой. Шлюпку спускали в шторм: плот с четверыми унесло, двое упали в воду.\n\nДевять баллов. За платформой по ветру — турбулентный клин: в нём машину бросает. Факел гнётся по ветру, над ним восходящий поток.\n\nМетеорологи предупреждают о волнах-убийцах. Услышите про аномальную волну — бросайте всё и вверх.\n\n«Арктур» держится в миле. Его палуба гуляет на девять градусов.",
+          "area": {"radius": 1500},
+          "weather": {"start": "storm", "windFrom": 330, "script": []},
+          "world": {
+            "pads": [
+              {"type": "rig", "name": "Северная-7", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": 1300,
+                "z": 420,
+                "heading": -1.5707963267948966,
+                "drift": {"x": -3, "z": 0},
+                "speed": 3,
+                "route": [[1300, 420], [-150, 640], [-760, 120], [-380, -620], [560, -560]]
+              }
+            ],
+            "props": {
+              "rig": true,
+              "debris": [{"x": 90, "z": 140, "radius": 50, "count": 8, "kind": "planks"}]
+            }
+          },
+          "heli": {"x": 420, "z": 380, "heading": -0.8353565591193911, "altitude": 60},
+          "survivors": [
+            {
+              "tag": "lowerdeck",
+              "primary": true,
+              "type": "deck",
+              "x": -8,
+              "z": 12,
+              "height": 22,
+              "count": 6,
+              "hidden": false,
+              "since": 25,
+              "label": "нижняя палуба «Северной-7»"
+            },
+            {
+              "tag": "sw-1",
+              "type": "swimmer",
+              "x": 140,
+              "z": 210,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 110,
+              "since": 25,
+              "label": "упал при спуске шлюпки",
+              "signals": {"strobe": true, "whistle": true}
+            },
+            {
+              "tag": "sw-2",
+              "type": "swimmer",
+              "x": 205,
+              "z": 250,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 110,
+              "since": 25,
+              "label": "упал при спуске шлюпки",
+              "signals": {"strobe": true, "whistle": true}
+            },
+            {
+              "tag": "raft",
+              "type": "raft",
+              "x": 160,
+              "z": 400,
+              "count": 4,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 30,
+              "label": "плот «Северной-7»",
+              "signals": {"rockets": 2, "epirb": true}
+            }
+          ],
+          "hazards": [
+            {
+              "type": "rogue",
+              "at": 300,
+              "height": 15,
+              "fromDeg": 300,
+              "target": "heli",
+              "telegraph": 12,
+              "scripted": true
+            }
+          ],
+          "objectives": {
+            "rescue": 8,
+            "timeLimit": 0,
+            "extra": [{"id": "deck", "text": "Снять всех с нижней палубы", "tag": "lowerdeck"}]
+          },
+          "waterTemp": 7,
+          "current": {"x": 0.3, "z": 0.4},
+          "par": 660,
+          "hazardsRandom": false,
+          "hints": ["deckWinch", "deck", "climb"],
+          "script": [],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "ship",
+              "name": "СЕВЕРНАЯ-7",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Северная-7! Нижняя палуба, западный угол, шестеро. Огонь идёт по кабельным лоткам. Быстрее!"
+            },
+            {
+              "at": 40,
+              "speaker": "ship",
+              "name": "АРКТУР",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, «Арктур». Принимаем всех, медики на палубе. Палуба гуляет — заходите с кормы."
+            },
+            {
+              "at": 282,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Командир, зыбь странная. Слишком длинная."
+            },
+            {
+              "at": 430,
+              "speaker": "ship",
+              "name": "СЕВЕРНАЯ-7",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, огонь дошёл до третьего яруса. Сколько вам ещё?"
+            }
+          ]
+        },
+        {
+          "id": "spouts",
+          "codename": "РЕГАТА",
+          "title": "Водяные смерчи",
+          "subtitle": "Регата «Кубок Студёного моря»",
+          "date": "9 ноября",
+          "clock": "11:50",
+          "coords": "69°25′ с.ш. 33°58′ в.д.",
+          "difficulty": 3,
+          "seed": 505,
+          "theme": "regatta",
+          "tags": ["regatta", "spout", "storm"],
+          "brief": "11:48. Парусная регата «Кубок Студёного моря», четырнадцать яхт. Утром шли в свежий ветер; в одиннадцать с запада подошла линия шквалов с водяными смерчами. Флот разбросало. Три яхты легли на борт — «Ирбис», «Норд» и «Кайра». В воде люди без плотов.\n\n«Арктур» — судно обеспечения регаты, он и будет вашей палубой. Других площадок нет.\n\nСмерч сверху начинается тёмным пятном и спиралью пены на воде. Дайте ему пройти. В ядре вертолёт не тянет: его крутит и бросает вверх. Форсаж — чтобы уйти.",
+          "area": {"radius": 1600},
+          "weather": {"start": "overcast", "windFrom": 250, "script": [{"at": 120, "to": "storm", "over": 60}]},
+          "world": {
+            "pads": [
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -500,
+                "z": -500,
+                "heading": 1.5707963267948966,
+                "drift": {"x": 3, "z": 0},
+                "speed": 3,
+                "route": [[-500, -500], [350, -520], [250, -900], [-350, -880]]
+              }
+            ],
+            "props": {
+              "buoys": [{"x": -20, "z": -300, "kind": "mark"}, {"x": 300, "z": -900, "kind": "mark"}],
+              "debris": [{"x": -360, "z": -440, "radius": 30, "count": 6, "kind": "sail"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "irbis",
+              "type": "hull",
+              "x": -380,
+              "z": -420,
+              "count": 2,
+              "hidden": true,
+              "datumRadius": 150,
+              "name": "Ирбис",
+              "sinkTime": 320,
+              "since": 20,
+              "label": "яхта «Ирбис»",
+              "signals": {"epirb": true}
+            },
+            {
+              "tag": "irbis-sw",
+              "type": "swimmer",
+              "x": -330,
+              "z": -470,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "since": 20,
+              "label": "экипаж «Ирбиса»",
+              "signals": {"smoke": true, "whistle": true}
+            },
+            {
+              "tag": "nord",
+              "type": "hull",
+              "x": 520,
+              "z": -610,
+              "count": 2,
+              "hidden": true,
+              "datumRadius": 180,
+              "name": "Норд",
+              "sinkTime": 360,
+              "since": 20,
+              "label": "яхта «Норд»",
+              "signals": {"rockets": 1}
+            },
+            {
+              "tag": "nord-sw",
+              "type": "swimmer",
+              "x": 580,
+              "z": -560,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "since": 20,
+              "label": "экипаж «Норда»",
+              "signals": {"smoke": true, "whistle": true}
+            },
+            {
+              "tag": "kaira",
+              "type": "hull",
+              "x": -120,
+              "z": -860,
+              "count": 2,
+              "at": 100,
+              "hidden": true,
+              "datumRadius": 200,
+              "name": "Кайра",
+              "sinkTime": 320,
+              "since": 0,
+              "label": "яхта «Кайра»",
+              "signals": {"rockets": 1, "epirb": true}
+            },
+            {
+              "tag": "kaira-sw",
+              "type": "swimmer",
+              "x": -70,
+              "z": -900,
+              "count": 1,
+              "at": 100,
+              "hidden": true,
+              "datumRadius": 150,
+              "since": 0,
+              "label": "экипаж «Кайры»",
+              "signals": {"smoke": true, "whistle": true}
+            },
+            {
+              "tag": "lone",
+              "type": "swimmer",
+              "x": 280,
+              "z": -280,
+              "count": 1,
+              "at": 160,
+              "hidden": true,
+              "datumRadius": 130,
+              "since": 5,
+              "label": "сорван волной с «Сирина»",
+              "signals": {"smoke": true, "whistle": true}
+            }
+          ],
+          "hazards": [{"type": "waterspout", "at": 150, "x": 120, "z": -560, "scripted": true}],
+          "objectives": {"rescue": 6, "timeLimit": 0},
+          "waterTemp": 8,
+          "current": {"x": 0.2, "z": 0.1},
+          "par": 600,
+          "hazardsRandom": true,
+          "hints": ["boost"],
+          "script": [],
+          "radio": [
+            {
+              "at": 4,
+              "speaker": "ship",
+              "name": "АРКТУР",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, «Арктур». Регата сошла с дистанции. Яхты подбираем на ходу, люди в воде — ваши."
+            },
+            {
+              "at": 103,
+              "speaker": "survivor",
+              "name": "ЯХТА «КАЙРА»",
+              "channel": "handheld",
+              "priority": 2,
+              "text": "Мэйдэй, мэйдэй, «Кайра»… легли на борт… двое… видим смерч…"
+            }
+          ]
+        },
+        {
+          "id": "night",
+          "codename": "КОНТЕЙНЕР",
+          "title": "Ночная смена",
+          "subtitle": "Контейнеры «Полярного ветра»",
+          "date": "27 ноября",
+          "clock": "02:40",
+          "coords": "70°02′ с.ш. 32°40′ в.д.",
+          "difficulty": 4,
+          "seed": 606,
+          "theme": "cargo",
+          "tags": ["night", "storm", "cargo"],
+          "brief": "02:25. Сухогруз «Полярный ветер» в шторм потерял палубный груз — сорок контейнеров. Вместе с ними за борт смыло палубную команду: семеро держатся на плавающих контейнерах, троих видели в спасательном плоту. Развернуть судно капитан не может.\n\nНочь, шторм, видимость километр. Ищите прожектором: светоотражатели на жилетах вспыхивают в луче. Стробы мигают раз в полторы секунды. Фальшфейер на воду — и район подсвечен на сорок секунд.\n\nКонтейнеры дрейфуют быстро. Домой ведёт луч маяка.",
+          "area": {"radius": 1600},
+          "weather": {"start": "nightStorm", "windFrom": 280, "script": []},
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -1100,
+                "z": 300,
+                "heading": 1.0014831356942346,
+                "drift": {"x": 2.5, "z": -1.6},
+                "speed": 3,
+                "route": [[-1100, 300], [-200, -300], [600, -700], [700, 200]]
+              }
+            ],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "containers": [
+                {"x": 200, "z": -300, "color": "#B3412E"},
+                {"x": 520, "z": -380, "color": "#1F5E8C"},
+                {"x": -150, "z": -560, "color": "#2F7D4F"},
+                {"x": 610, "z": -700, "color": "#C9A227"},
+                {"x": -520, "z": -820, "color": "#B3412E"},
+                {"x": 90, "z": -800, "color": "#1F5E8C"},
+                {"x": 880, "z": -420, "color": "#2F7D4F"},
+                {"x": -300, "z": -300, "color": "#C9A227"}
+              ],
+              "boats": [
+                {
+                  "x": 1150,
+                  "z": -1250,
+                  "kind": "cargo",
+                  "name": "Полярный ветер",
+                  "heading": 4.363323129985824
+                }
+              ]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "cat",
+              "type": "container",
+              "x": 360,
+              "z": -450,
+              "count": 3,
+              "pet": "cat",
+              "color": "#1F5E8C",
+              "hidden": true,
+              "datumRadius": 200,
+              "since": 40,
+              "label": "синий контейнер",
+              "signals": {"strobe": true}
+            },
+            {
+              "tag": "cont-b",
+              "type": "container",
+              "x": 60,
+              "z": -640,
+              "count": 2,
+              "color": "#B3412E",
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 40,
+              "label": "красный контейнер",
+              "signals": {"strobe": true}
+            },
+            {
+              "tag": "raft",
+              "type": "raft",
+              "x": 60,
+              "z": -930,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 250,
+              "since": 45,
+              "label": "плот «Полярного ветра»",
+              "signals": {"rockets": 2, "epirb": true, "strobe": true}
+            },
+            {
+              "tag": "cont-c",
+              "type": "container",
+              "x": 520,
+              "z": -180,
+              "count": 2,
+              "at": 150,
+              "color": "#C9A227",
+              "hidden": false,
+              "datumRadius": 160,
+              "since": 40,
+              "label": "жёлтый контейнер",
+              "signals": {"strobe": true}
+            }
+          ],
+          "hazards": [],
+          "objectives": {
+            "rescue": 6,
+            "timeLimit": 0,
+            "extra": [{"id": "cat", "text": "Найти кота", "tag": "cat"}]
+          },
+          "waterTemp": 9,
+          "current": {"x": 0.3, "z": -0.1},
+          "par": 660,
+          "hazardsRandom": false,
+          "hints": ["searchlight", "flare"],
+          "script": [],
+          "radio": [
+            {
+              "at": 4,
+              "speaker": "ship",
+              "name": "ПОЛЯРНЫЙ ВЕТЕР",
+              "channel": "ext",
+              "id": "sh_cargo",
+              "priority": 2,
+              "text": "Чайка, сухогруз «Полярный ветер». У нас смыло контейнеры, на одном люди."
+            },
+            {
+              "at": 55,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Темно, как в трюме. Свети, командир, — будем ловить полоски на жилетах."
+            },
+            {
+              "at": 152,
+              "speaker": "ship",
+              "name": "ПОЛЯРНЫЙ ВЕТЕР",
+              "channel": "ext",
+              "id": "sh_yellow",
+              "priority": 2,
+              "text": "Чайка, «Полярный ветер». Ещё один контейнер, жёлтый, на нём двое — у нас на радаре, передаю место. Его кренит, долго не удержатся."
+            },
+            {
+              "after": "rescued:cat",
+              "delay": 3,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_cat",
+              "priority": 1,
+              "text": "Чайка, повторите, сколько на борту. …И кот? Принято, кот засчитан."
+            }
+          ]
+        },
+        {
+          "id": "ninth",
+          "codename": "ДЕВЯТЫЙ ВАЛ",
+          "title": "Девятый вал",
+          "subtitle": "Последний закат перед полярной ночью",
+          "date": "29 ноября",
+          "clock": "12:20",
+          "coords": "69°58′ с.ш. 35°10′ в.д.",
+          "difficulty": 5,
+          "seed": 707,
+          "theme": "trawler",
+          "tags": ["wave", "storm", "trawler"],
+          "brief": "12:20. Последний закат перед полярной ночью: солнце едва поднялось над горизонтом — и уже садится. Траулер «Вайгач» получил пробоину и тонет в двадцати милях к северу. Шестнадцать человек: шестеро ещё на палубе, с ними раненый тралмейстер, остальные на плотах и в воде.\n\nПока светло, море обманчиво спокойное. Через две минуты с запада придёт шторм, через семь — ночь. В зыби аномальные волны: после четвёртой минуты они будут приходить раз в минуту.\n\nИ ещё. Наблюдатели «Арктура» говорят о большой волне — метров двадцать. Её услышат за пятнадцать секунд до того, как увидят.",
+          "area": {"radius": 1700},
+          "weather": {
+            "start": "clearing",
+            "windFrom": 290,
+            "script": [{"at": 150, "to": "storm", "over": 60}, {"at": 420, "to": "nightStorm", "over": 60}]
+          },
+          "world": {
+            "pads": [
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -1050,
+                "z": -250,
+                "heading": 1.5707963267948966,
+                "drift": {"x": 3, "z": 0},
+                "speed": 3,
+                "route": [[-1050, -250], [-150, -280], [300, -800], [-650, -900]]
+              }
+            ],
+            "props": {"debris": [{"x": -400, "z": -460, "radius": 70, "count": 12, "kind": "nets"}]}
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "raft-b",
+              "type": "raft",
+              "x": -760,
+              "z": -400,
+              "count": 4,
+              "hidden": true,
+              "datumRadius": 200,
+              "since": 25,
+              "label": "плот №2 «Вайгача»",
+              "signals": {"rockets": 2, "mirror": true}
+            },
+            {
+              "tag": "vaygach",
+              "primary": true,
+              "type": "wreck",
+              "fallbackType": "deck",
+              "x": -380,
+              "z": -430,
+              "count": 6,
+              "height": 7,
+              "hidden": false,
+              "name": "Вайгач",
+              "heading": 3.490658503988659,
+              "sinkTime": 660,
+              "since": 20,
+              "label": "траулер «Вайгач»"
+            },
+            {
+              "tag": "sw-1",
+              "type": "swimmer",
+              "x": -430,
+              "z": -520,
+              "count": 1,
+              "at": 25,
+              "hidden": true,
+              "datumRadius": 100,
+              "since": 10,
+              "label": "смыло с палубы",
+              "signals": {"whistle": true, "mirror": true}
+            },
+            {
+              "tag": "raft-a",
+              "type": "raft",
+              "x": -250,
+              "z": -760,
+              "count": 3,
+              "at": 110,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 25,
+              "label": "плот №1 «Вайгача»",
+              "signals": {"rockets": 2, "epirb": true}
+            },
+            {
+              "tag": "injured",
+              "type": "injured",
+              "x": -360,
+              "z": -425,
+              "count": 1,
+              "at": 45,
+              "from": "vaygach",
+              "hidden": false,
+              "since": 0,
+              "label": "раненый тралмейстер",
+              "signals": {"mirror": true}
+            },
+            {
+              "tag": "sw-2",
+              "type": "swimmer",
+              "x": -470,
+              "z": -570,
+              "count": 1,
+              "at": 200,
+              "hidden": true,
+              "datumRadius": 100,
+              "since": 0,
+              "label": "прыгнул с кормы",
+              "signals": {"smoke": true, "whistle": true, "strobe": true}
+            }
+          ],
+          "hazards": [
+            {
+              "type": "rogue",
+              "at": 240,
+              "repeat": 60,
+              "until": 1260,
+              "heights": [12, 18],
+              "target": "heli",
+              "telegraph": 12
+            },
+            {
+              "type": "rogue",
+              "at": 480,
+              "height": 22,
+              "fromDeg": 290,
+              "target": "heli",
+              "telegraph": 15,
+              "scripted": true,
+              "name": "Девятый вал"
+            }
+          ],
+          "objectives": {"rescue": 10, "timeLimit": 0},
+          "waterTemp": 9,
+          "current": {"x": 0.4, "z": 0.15},
+          "par": 780,
+          "hazardsRandom": false,
+          "hints": ["climb"],
+          "script": [{"at": 466, "do": "chapter", "text": "ДЕВЯТЫЙ ВАЛ"}],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. «Вайгач» передаёт: оставляют судно. Шестнадцать человек. Солнце сядет через двадцать минут — дальше только прожектор."
+            },
+            {
+              "at": 46,
+              "speaker": "ship",
+              "name": "ВАЙГАЧ",
+              "channel": "ext",
+              "id": "sh_mob",
+              "priority": 3,
+              "text": "Чайка, «Вайгач»! Тралмейстера смыло за борт — он ранен, сам не выплывет. Он у нас под бортом!"
+            },
+            {
+              "at": 128,
+              "speaker": "winchman",
+              "name": "БОРТОПЕРАТОР",
+              "channel": "ics",
+              "id": "w_gulls",
+              "priority": 1,
+              "text": "Чайки снялись все разом. Не к добру."
+            },
+            {
+              "at": 462,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 3,
+              "text": "Командир… посмотри на запад. Это не волна. Это стена."
+            },
+            {
+              "at": 520,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег! Чайка, ответьте… Вижу вас на радаре. Слава богу. Работайте."
+            }
+          ]
+        },
+        {
+          "id": "eye",
+          "codename": "ГЛАЗ",
+          "title": "Глаз бури",
+          "subtitle": "Полярный циклон «Ксения»",
+          "date": "2 декабря",
+          "clock": "11:50",
+          "coords": "69°15′ с.ш. 33°40′ в.д.",
+          "difficulty": 5,
+          "seed": 808,
+          "theme": "research",
+          "tags": ["storm", "eye"],
+          "brief": "11:30. Полярный циклон «Ксения». Ветер тридцать метров в секунду, вдоль берега идёт торнадо. Центр циклона пройдёт над районом около полудня: у вас будет минута тишины, а потом ветер ударит с другой стороны.\n\nТри точки. Научный бот «Гидролог-2» перевернулся: трое на днище, четвёртый, раненый, — в воздушном пузыре под корпусом. Плот с исследовательского судна «Профессор Зубов» — шестеро. Баржа «Печора» сидит на банке: шестеро на палубе, одного смыло; шкипер со сломанной ногой — в рубке, а её заливает.\n\nОбоих раненых вынесет в воду как раз к глазу, а в ледяной воде раненый долго не протянет. Носилки — только когда машина стоит: глаз и есть ваше окно. После него все рефлексы удержания будут наоборот.",
+          "area": {"radius": 1700},
+          "weather": {
+            "start": "storm",
+            "windFrom": 20,
+            "script": [
+              {"at": 300, "to": "clearing", "over": 20, "chapter": "ГЛАЗ БУРИ", "eye": true},
+              {"at": 350, "to": "storm", "over": 15, "windShift": 180, "chapter": "ВЕТЕР НАОБОРОТ"},
+              {"at": 780, "to": "clearing", "over": 90}
+            ]
+          },
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -250,
+                "z": 800,
+                "heading": 0.875203349951616,
+                "drift": {"x": 2.3, "z": -1.92},
+                "speed": 3,
+                "route": [[-250, 800], [350, 300], [650, -450], [-300, -450]]
+              }
+            ],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "debris": [{"x": 480, "z": 520, "radius": 40, "count": 6, "kind": "barrels"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "gidrolog",
+              "type": "hull",
+              "x": 330,
+              "z": -370,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 180,
+              "name": "Гидролог-2",
+              "since": 30,
+              "label": "бот «Гидролог-2»",
+              "signals": {"epirb": true, "rockets": 1, "smoke": true},
+              "sinkTime": 300
+            },
+            {
+              "tag": "gidrolog-inj",
+              "type": "injured",
+              "x": 338,
+              "z": -364,
+              "count": 1,
+              "at": 302,
+              "from": "gidrolog",
+              "hidden": false,
+              "since": 30,
+              "label": "раненый с «Гидролога-2»"
+            },
+            {
+              "tag": "zubov",
+              "type": "raft",
+              "x": -420,
+              "z": -600,
+              "count": 6,
+              "hidden": true,
+              "datumRadius": 250,
+              "since": 40,
+              "label": "плот «Профессора Зубова»",
+              "signals": {"rockets": 3, "epirb": true}
+            },
+            {
+              "tag": "pechora",
+              "type": "deck",
+              "x": 480,
+              "z": 520,
+              "height": 6,
+              "count": 6,
+              "hidden": false,
+              "name": "Печора",
+              "theme": "barge",
+              "since": 60,
+              "label": "баржа «Печора»"
+            },
+            {
+              "tag": "pechora-inj",
+              "type": "injured",
+              "x": 530,
+              "z": 580,
+              "count": 1,
+              "at": 290,
+              "hidden": false,
+              "theme": "barge",
+              "since": 0,
+              "label": "шкипер «Печоры», ранен"
+            },
+            {
+              "tag": "pechora-sw",
+              "type": "swimmer",
+              "x": 445,
+              "z": 485,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "theme": "barge",
+              "since": 5,
+              "label": "смыт с «Печоры»",
+              "signals": {"smoke": true, "whistle": true, "strobe": true}
+            }
+          ],
+          "hazards": [
+            {
+              "type": "tornado",
+              "at": 15,
+              "x": -600,
+              "z": -1050,
+              "headingDeg": 70,
+              "speed": 5,
+              "life": 260,
+              "seed": 13,
+              "scripted": true
+            },
+            {"type": "whirlpool", "at": 420, "x": -720, "z": -260, "radius": 45, "scripted": true}
+          ],
+          "objectives": {
+            "rescue": 11,
+            "timeLimit": 0,
+            "extra": [
+              {
+                "id": "injured",
+                "text": "Оба раненых — на носилках",
+                "tags": ["gidrolog-inj", "pechora-inj"]
+              }
+            ]
+          },
+          "waterTemp": 9,
+          "current": {"x": -0.3, "z": 0.3},
+          "par": 900,
+          "hazardsRandom": true,
+          "hints": ["stretcher", "boost"],
+          "script": [],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. Торнадо идёт вдоль берега на северо-восток. От воронки — дальше трёхсот метров. Глаз будет у вас через пять минут."
+            },
+            {
+              "at": 291,
+              "speaker": "ship",
+              "name": "ПЕЧОРА",
+              "channel": "ext",
+              "id": "sh_skipper",
+              "priority": 3,
+              "text": "Чайка, «Печора»! Рубку залило, шкипера вынесло за борт — он ранен, в воде у баржи!"
+            },
+            {
+              "at": 302,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_eye",
+              "priority": 3,
+              "text": "Чайка, вы в глазе. У вас минута, не больше. Потом ветер развернётся."
+            },
+            {
+              "at": 306,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_gidrolog",
+              "priority": 3,
+              "text": "Чайка, Берег. «Гидролог» затонул, у его буя всплыл человек — раненый, из-под корпуса!"
+            },
+            {
+              "at": 343,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 3,
+              "text": "Ветер разворачивается… Держи, держи — сейчас ударит с юга!"
+            },
+            {
+              "at": 786,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_clear",
+              "priority": 1,
+              "text": "Фронт уходит на восток. Над вашим районом прояснение."
+            }
+          ]
+        },
+        {
+          "id": "moon",
+          "codename": "ЛУНА",
+          "title": "Лунная дорожка",
+          "subtitle": "Ан-2 в новогоднюю ночь",
+          "star": true,
+          "date": "31 декабря",
+          "clock": "23:10",
+          "coords": "69°19′ с.ш. 34°12′ в.д.",
+          "difficulty": 2,
+          "seed": 909,
+          "theme": "plane",
+          "tags": ["night", "plane", "calm"],
+          "brief": "22:58. У Ан-2 с доктором и новогодней почтой для Дальних Зеленцов отказал двигатель. Пилот посадил машину на воду — прямо в лунную дорожку. Пятеро стоят на крыльях. Самолёт продержится на плаву пару минут, не больше.\n\nШтиль, луна, мороз. Вода светится от каждого движения.\n\nДо Нового года пятьдесят минут. Давайте успеем.",
+          "area": {"radius": 1200},
+          "weather": {"start": "nightCalm", "windFrom": 180, "script": []},
+          "world": {
+            "pads": [
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -150,
+                "z": 250,
+                "heading": 0.973619668702219,
+                "drift": {"x": 2.5, "z": -1.7},
+                "speed": 3,
+                "route": [[-150, 250], [400, -150], [100, -600], [-450, -200]]
+              }
+            ],
+            "props": {"whale": {"x": -320, "z": -520}, "bottle": {"x": 175, "z": -175}}
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "an2",
+              "type": "plane",
+              "fallbackType": "raft",
+              "x": 100,
+              "z": -250,
+              "count": 5,
+              "hidden": true,
+              "datumRadius": 150,
+              "since": 6,
+              "lead": ["пилот Ан-2", null],
+              "sinkTime": 120,
+              "label": "Ан-2 на воде",
+              "signals": {"strobe": true}
+            }
+          ],
+          "hazards": [],
+          "objectives": {"rescue": 3, "timeLimit": 0},
+          "waterTemp": 6,
+          "current": {"x": 0.1, "z": 0.05},
+          "par": 360,
+          "hazardsRandom": false,
+          "hints": [],
+          "script": [],
+          "radio": [
+            {
+              "at": 4,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Луна какая… Командир, видишь дорожку? Они прямо на ней."
+            },
+            {
+              "at": 30,
+              "speaker": "survivor",
+              "name": "АН-2",
+              "channel": "handheld",
+              "priority": 2,
+              "text": "Мы на крыле… вода прибывает… сколько вам до нас?"
+            },
+            {
+              "after": "rescued:an2",
+              "delay": 4,
+              "speaker": "winchman",
+              "name": "БОРТОПЕРАТОР",
+              "channel": "ics",
+              "id": "w_bottle",
+              "priority": 1,
+              "text": "Командир, у самолёта что-то блестит на воде… Бутылка! Подцепим корзиной?"
+            }
+          ]
+        }
+      ],
+      "ENDLESS": {
+        "id": "endless",
+        "endless": true,
+        "codename": "СМЕНА",
+        "title": "Смена",
+        "subtitle": "Дежурство на маяке «Скалистый»",
+        "date": null,
+        "clock": "08:00",
+        "coords": "69°13′ с.ш. 33°30′ в.д.",
+        "difficulty": 3,
+        "seed": null,
+        "theme": "generic",
+        "tags": [],
+        "brief": "Дежурная смена. Вызовы приходят по одному — с моря, с судов, с берега; Берег называет квадрат и сколько людей.\n\nТопливо и корпус переносятся между вылетами: заправка на любой площадке, ремонт — только на маяке.\n\nПогода будет меняться, к вечеру стемнеет. Смена закончится, когда вы потеряете десятерых — или машину.",
+        "area": {"radius": 2400},
+        "weather": {"start": "calm", "windFrom": 300, "script": []},
+        "world": {
+          "pads": [
+            {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+            {
+              "type": "ship",
+              "name": "Арктур",
+              "x": -700,
+              "z": -500,
+              "heading": 3.141592653589793,
+              "drift": {"x": 0, "z": 0},
+              "speed": 3,
+              "route": [[-700, -500], [-200, -1100], [600, -900], [300, -300]]
+            },
+            {"type": "rig", "name": "Северная-7", "x": 1150, "z": -650, "heading": 0}
+          ],
+          "props": {
+            "lighthouse": true,
+            "rig": true,
+            "rocks": [
+              {"x": -62, "z": 38, "radius": 26, "height": 12},
+              {"x": 74, "z": 52, "radius": 16, "height": 8},
+              {"x": -34, "z": -74, "radius": 12, "height": 6}
+            ]
+          }
+        },
+        "heli": {"pad": 0},
+        "survivors": [],
+        "hazards": [],
+        "objectives": {"rescue": 0, "timeLimit": 0},
+        "waterTemp": 8,
+        "current": {"x": 0.25, "z": 0.1},
+        "par": 0,
+        "hazardsRandom": true,
+        "hints": [
+          "takeoff", "move", "descend", "winch", "land", "horn", "searchlight", "flare", "boost", "climb", "deck",
+          "stretcher"
+        ],
+        "script": [],
+        "radio": []
+      },
+      "TITLE": {
+        "id": "title",
+        "attract": true,
+        "codename": "MAYDAY",
+        "title": "MAYDAY",
+        "clock": "05:42",
+        "seed": 77,
+        "area": {"radius": 2000},
+        "weather": {"start": "nightStorm", "windFrom": 270, "script": []},
+        "world": {
+          "pads": [
+            {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+            {
+              "type": "ship",
+              "name": "Арктур",
+              "x": 420,
+              "z": -280,
+              "heading": 3.141592653589793,
+              "drift": {"x": 0, "z": 0},
+              "speed": 3,
+              "route": [[420, -280], [-300, -700], [500, -900]]
+            },
+            {"type": "rig", "name": "Северная-7", "x": -1100, "z": -850, "heading": 0}
+          ],
+          "props": {
+            "lighthouse": true,
+            "rig": true,
+            "rocks": [
+              {"x": -62, "z": 38, "radius": 26, "height": 12},
+              {"x": 74, "z": 52, "radius": 16, "height": 8},
+              {"x": -34, "z": -74, "radius": 12, "height": 6}
+            ]
+          }
+        },
+        "heli": {"x": 160, "z": -120, "heading": 0.9, "altitude": 48},
+        "survivors": [],
+        "hazards": [],
+        "objectives": {"rescue": 0, "timeLimit": 0},
+        "waterTemp": 8,
+        "current": {"x": 0, "z": 0},
+        "par": 0,
+        "hazardsRandom": false,
+        "hints": [],
+        "script": [],
+        "radio": []
+      },
+      "TITLE_CYCLE": ["nightStorm", "fog", "calm", "clearing"]
+    }
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "schema": "mayday.fx",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/fx.js", "rescue/src/systems/fx/common.js", "rescue/src/systems/fx/gusts.js",
+    "rescue/src/systems/fx/life.js", "rescue/src/systems/fx/lightning.js", "rescue/src/systems/fx/lightpool.js",
+    "rescue/src/systems/fx/particles.js", "rescue/src/systems/fx/rain.js", "rescue/src/systems/fx/signals.js",
+    "rescue/src/systems/fx/sky.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {
+    "fx/common": {"glsl": ["AIR_GLSL", "FOG_PARS"], "scratch": ["_c"], "runtime": ["cache"]},
+    "fx/gusts": {"glsl": ["VERT", "FRAG"]},
+    "fx/life": {"glsl": ["FLAP_HEAD", "JELLY_VERT", "JELLY_FRAG", "SHADE_FRAG"]},
+    "fx/lightning": {"glsl": ["VERT", "FRAG_CORE", "FRAG_HALO"]},
+    "fx/particles": {"glsl": ["VERT", "FRAG_HEAD"]},
+    "fx/rain": {"glsl": ["RAIN_VERT", "RAIN_FRAG", "MOTE_VERT", "MOTE_FRAG"]},
+    "fx/signals": {"glsl": ["GLOW_VERT", "GLOW_FRAG", "RING_VERT", "RING_FRAG"]},
+    "fx/sky": {"glsl": ["SCUD_VERT", "SCUD_FRAG", "LAYER_VERT", "LAYER_FRAG", "GLORY_FRAG"]}
+  },
+  "data": {
+    "fx": {
+      "HIGH": {
+        "rain": 9000,
+        "motes": 320,
+        "downwash": 600,
+        "crest": 300,
+        "crestProbes": 30,
+        "splash": 420,
+        "smoke": 720,
+        "glow": 900,
+        "scud": 14,
+        "fogLayers": 3,
+        "gulls": 24,
+        "seaSmoke": true,
+        "dolphins": 5,
+        "jelly": 120
+      },
+      "MAX_SPRAY": 1320,
+      "DEG": 0.017453292519943295,
+      "P": {
+        "dwSpray": {"drag": 1.5, "accY": -6, "wind": 0.55, "flags": 2, "emissive": 0, "spin": 0.6},
+        "dwMist": {"drag": 1.3, "accY": -1.6, "wind": 0.95, "flags": 0, "emissive": 0, "spin": 0.7},
+        "dwHaze": {"drag": 0.7, "accY": 0.25, "wind": 1, "flags": 8, "emissive": 0, "spin": 0.15},
+        "crest": {"drag": 0.7, "accY": -3.5, "wind": 0.75, "flags": 2, "emissive": 0, "spin": 0.3},
+        "droplet": {"drag": 0.6, "accY": -9.8, "wind": 0.3, "flags": 0, "emissive": 0, "spin": 0.8},
+        "mist": {"drag": 1.2, "accY": -0.5, "wind": 0.7, "flags": 0, "emissive": 0, "spin": 0.3},
+        "signalSmoke": {"drag": 0.8, "accY": 1.2, "wind": 0.8, "flags": 32, "emissive": 0, "spin": 0.25},
+        "damageSmoke": {"drag": 1.1, "accY": 0.7, "wind": 1, "flags": 33, "emissive": 0, "spin": 0.5},
+        "smoke": {"drag": 0.9, "accY": 0.9, "wind": 0.85, "flags": 33, "emissive": 0, "spin": 0.35},
+        "steam": {"drag": 0.9, "accY": 2.4, "wind": 0.7, "flags": 0, "emissive": 0, "spin": 0.4},
+        "boltSteam": {"drag": 1.4, "accY": 1.5, "wind": 0.85, "flags": 32, "emissive": 0, "spin": 0.6},
+        "spark": {"drag": 0.8, "accY": -9.8, "wind": 0.2, "flags": 6, "emissive": 1, "spin": 0},
+        "bio": {"drag": 1.6, "accY": -3, "wind": 0.4, "flags": 28, "emissive": 1, "spin": 0},
+        "hail": {"drag": 0.4, "accY": -9.8, "wind": 0.2, "flags": 0, "emissive": 0, "spin": 0}
+      }
+    },
+    "fx/common": {
+      "QUALITY": {
+        "low": {
+          "rain": 2000,
+          "motes": 0,
+          "downwash": 200,
+          "crest": 0,
+          "crestProbes": 0,
+          "splash": 220,
+          "smoke": 260,
+          "glow": 260,
+          "scud": 4,
+          "fogLayers": 2,
+          "gulls": 8,
+          "seaSmoke": false,
+          "dolphins": 0,
+          "jelly": 0
+        },
+        "medium": {
+          "rain": 5000,
+          "motes": 160,
+          "downwash": 350,
+          "crest": 150,
+          "crestProbes": 15,
+          "splash": 320,
+          "smoke": 460,
+          "glow": 520,
+          "scud": 8,
+          "fogLayers": 2,
+          "gulls": 16,
+          "seaSmoke": true,
+          "dolphins": 4,
+          "jelly": 70
+        },
+        "high": {
+          "rain": 9000,
+          "motes": 320,
+          "downwash": 600,
+          "crest": 300,
+          "crestProbes": 30,
+          "splash": 420,
+          "smoke": 720,
+          "glow": 900,
+          "scud": 14,
+          "fogLayers": 3,
+          "gulls": 24,
+          "seaSmoke": true,
+          "dolphins": 5,
+          "jelly": 120
+        }
+      },
+      "COLORS": {
+        "rain": "#B9C7CD",
+        "bolt": "#FFFFFF",
+        "boltHalo": "#C7D6FF",
+        "boltHaloDay": "#DCE6FF",
+        "cloudLit": "#6A7BA8",
+        "flare": "#FF2A12",
+        "flareCore": "#FFF4E8",
+        "flareLight": "#FF3A1E",
+        "rocket": "#FF3A22",
+        "bio": "#35E0FF",
+        "smokeOrange": "#FF7B2E",
+        "smokeOrangeEnd": "#E8A27A",
+        "streak": "#E8EEF0",
+        "spray": "#E4ECEE",
+        "steam": "#C8D0D4",
+        "gull": "#F4F4F0",
+        "gullTip": "#23272A",
+        "searchlight": "#FFF1DA",
+        "elmo": "#7FB8FF"
+      },
+      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n"
+    },
+    "fx/gusts": {"SLOTS": 4, "PER": 80},
+    "fx/life": {
+      "GULL_PRESETS": ["calm", "overcast", "clearing"],
+      "HINGE": 0.08,
+      "SURFACE_T": 16,
+      "BLOW": {"drag": 1.3, "accY": -1.2, "wind": 0.85, "flags": 32, "emissive": 0, "spin": 0.3}
+    },
+    "fx/lightning": {"MAX_SEG": 288, "BOLT_SLOTS": 2, "SPIDER_SLOTS": 2},
+    "fx/lightpool": {"PHYSICAL": 4, "HYSTERESIS": 1.35},
+    "fx/particles": {
+      "F_SWIRL": 1,
+      "F_STRETCH": 2,
+      "F_TWINKLE": 4,
+      "F_FLOAT": 8,
+      "F_BIO": 16,
+      "F_TURB": 32,
+      "ATTRS": ["iA", "iB", "iC", "iD", "iE", "iF"],
+      "FRAG": {"spray": {"glsl": 719}, "smoke": {"glsl": 1051}, "glow": {"glsl": 189}},
+      "KIND": {
+        "spray": {
+          "blending": 1,
+          "maxStretch": 3,
+          "stretch": 0.14,
+          "fadeIn": 0.05,
+          "fadeOut": 0.55,
+          "growth": 0.6,
+          "push": 0.6,
+          "beam": 4,
+          "light": 0.5,
+          "sun": 0.5
+        },
+        "smoke": {
+          "blending": 1,
+          "maxStretch": 3,
+          "stretch": 0.06,
+          "fadeIn": 0.05,
+          "fadeOut": 0.45,
+          "growth": 0.5,
+          "push": 0.5,
+          "beam": 2,
+          "light": 1,
+          "sun": 0.55
+        },
+        "glow": {
+          "blending": 2,
+          "maxStretch": 8,
+          "stretch": 0.06,
+          "fadeIn": 0.02,
+          "fadeOut": 0.5,
+          "growth": 1,
+          "push": 0.2,
+          "beam": 0,
+          "light": 0,
+          "sun": 0
+        }
+      }
+    },
+    "fx/rain": {"FALL": 9, "LEN": 1.2, "LOCAL_MAX": 1600},
+    "fx/signals": {
+      "MAX_GLOWS": 32,
+      "MAX_RINGS": 4,
+      "P_FLARE_SMOKE": {"drag": 0.9, "accY": 0.7, "wind": 0.8, "flags": 32, "emissive": 0, "spin": 0.4},
+      "P_EMBER": {"drag": 1.2, "accY": -3.5, "wind": 0.4, "flags": 6, "emissive": 1, "spin": 0},
+      "P_TRAIL": {"drag": 0.6, "accY": 0.4, "wind": 0.6, "flags": 0, "emissive": 0, "spin": 0.3},
+      "MAX_FLARES": 8,
+      "MAX_ROCKETS": 4,
+      "FLARE_LIFE": 40,
+      "ROCKET_RISE": 2.5,
+      "ROCKET_DESCENT": 25,
+      "LENS_COOLDOWN": 150,
+      "LENS_RANGE": 320,
+      "LENS_DIST": 30
+    },
+    "fx/sky": {
+      "SCUD_TILE": 480,
+      "SCUD_MAX": 14,
+      "LAYER_HEIGHTS": [3, 10, 22],
+      "LAYER_ALPHA": [0.6, 0.48, 0.36],
+      "LAYER_SCALE": [0.0042, 0.0034, 0.0027]
+    }
+  }
+}

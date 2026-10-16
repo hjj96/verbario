@@ -1,0 +1,335 @@
+{
+  "schema": "mayday.mission",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/mission.js", "rescue/src/systems/mission/endless.js", "rescue/src/systems/mission/ledger.js",
+    "rescue/src/systems/mission/objectives.js", "rescue/src/systems/mission/onboarding.js",
+    "rescue/src/systems/mission/prepare.js", "rescue/src/systems/mission/progress.js",
+    "rescue/src/systems/mission/report.js", "rescue/src/systems/mission/scoring.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "data": {
+    "mission": {"CINEMATIC_S": 6.5, "TITLE_CYCLE_S": 45, "CRASH_TO_DEBRIEF_S": 3.2},
+    "mission/endless": {"MAX_ACTIVE": 5},
+    "mission/ledger": {"TRACK_MAX": 1800, "GOLDEN_HOUR_S": 150, "DAMAGE_FLUSH_S": 0.35},
+    "mission/objectives": {},
+    "mission/onboarding": {
+      "HINTS": {
+        "takeoff": {
+          "kb": "[{climb}] Взлёт",
+          "pad": "[RT] Взлёт",
+          "touch": "[Высота ▲] Взлёт",
+          "anchor": "heli",
+          "pulse": true,
+          "need": 1,
+          "ttl": 0
+        },
+        "move": {
+          "kb": "[{up}] [{left}] [{down}] [{right}] Полёт",
+          "pad": "[Левый стик] Полёт",
+          "touch": "[Стик] Полёт",
+          "anchor": "heli",
+          "need": 3,
+          "ttl": 20
+        },
+        "descend": {
+          "kb": "[{descend}] Ниже · [{altPreset1}] 15 м",
+          "pad": "[LT] Ниже · [↓] 15 м",
+          "touch": "[Высота ▼] Ниже, к 15 м",
+          "anchor": "altimeter",
+          "need": 1,
+          "ttl": 25
+        },
+        "winch": {
+          "kb": "[{winch}] держать — лебёдка",
+          "pad": "[A] держать — лебёдка",
+          "touch": "[Лебёдка] держать",
+          "need": 1,
+          "ttl": 40
+        },
+        "land": {
+          "kb": "Сядь в круг посадки",
+          "pad": "Сядь в круг посадки",
+          "touch": "Сядь в круг посадки",
+          "anchor": "pad",
+          "need": 1,
+          "ttl": 0
+        },
+        "deck": {
+          "kb": "Палуба качается — садись, когда горизонт выровняется",
+          "anchor": "pad",
+          "need": 1,
+          "ttl": 30
+        },
+        "raftDrop": {
+          "kb": "[{raftDrop}] Сбросить плот — пусть гребут к нему",
+          "pad": "[→] Сбросить плот",
+          "touch": "[Плот] Сбросить",
+          "need": 1,
+          "ttl": 20
+        },
+        "horn": {
+          "kb": "[{horn}] Громкоговоритель — пусть отзовутся",
+          "pad": "[Y] Громкоговоритель",
+          "touch": "[Рупор] Позвать",
+          "need": 1,
+          "ttl": 25
+        },
+        "searchlight": {
+          "kb": "[{searchlight}] Прожектор · наводится мышью",
+          "pad": "[X] Прожектор · правый стик",
+          "touch": "[Прожектор] Вкл",
+          "need": 1,
+          "ttl": 25
+        },
+        "flare": {
+          "kb": "[{flare}] Фальшфейер к курсору",
+          "pad": "[B] Фальшфейер",
+          "touch": "[Фальшфейер] Бросить",
+          "need": 1,
+          "ttl": 25
+        },
+        "boost": {
+          "kb": "[{boost}] Форсаж — уходи от смерча",
+          "pad": "[LB] Форсаж",
+          "touch": "[Форсаж]",
+          "need": 2,
+          "ttl": 15,
+          "urgent": true
+        },
+        "climb": {
+          "kb": "[{climb}] Вверх! · [{altPreset3}] 90 м",
+          "pad": "[RT] Вверх! · [↑] 90 м",
+          "touch": "[Высота ▲] Вверх!",
+          "need": 1,
+          "ttl": 12,
+          "urgent": true
+        },
+        "deckWinch": {"kb": "Высота над палубой: висите в 12–25 м над ней", "need": 1, "ttl": 30},
+        "stretcher": {"kb": "Носилки: 3 с без раскачки — устойчивость ≥ 60 %", "need": 1, "ttl": 30},
+        "map": {
+          "kb": "[{map}] Карта — держать",
+          "pad": "[View] Карта — держать",
+          "touch": "Карта",
+          "need": 1,
+          "ttl": 15
+        }
+      },
+      "PREFERRED": {"map": "Tab"},
+      "ACTION_RE": {"regexp": "\\{(\\w+)\\}", "flags": "g"},
+      "PRIORITY": {
+        "takeoff": 1,
+        "move": 1,
+        "map": 1,
+        "descend": 2,
+        "land": 2,
+        "deck": 2,
+        "horn": 2,
+        "searchlight": 2,
+        "flare": 2,
+        "raftDrop": 3,
+        "winch": 3,
+        "deckWinch": 3,
+        "stretcher": 3,
+        "boost": 5,
+        "climb": 5
+      },
+      "QUEUE_TTL": 8,
+      "KEY_RE": {"regexp": "\\[([^\\]]+)\\]", "flags": "g"}
+    },
+    "mission/prepare": {
+      "MUST_TYPES": ["swimmer", "raft", "hull", "container", "injured", "deck"],
+      "MONTHS": [
+        "января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября",
+        "декабря"
+      ]
+    },
+    "mission/progress": {
+      "RANKS": [
+        {"rings": 0, "name": "Стажёр"},
+        {"rings": 3, "name": "Второй пилот"},
+        {"rings": 7, "name": "Командир экипажа"},
+        {"rings": 12, "name": "Пилот-спасатель 2-го класса"},
+        {"rings": 17, "name": "Пилот-спасатель 1-го класса"},
+        {"rings": 21, "name": "Старший пилот-инструктор"},
+        {"rings": 24, "name": "«Буревестник»"}
+      ]
+    },
+    "mission/report": {
+      "MEDAL_LABEL": {"bronze": "Бронза", "silver": "Серебро", "gold": "Золото", "cross": "Крест"},
+      "FAIL_TEXT": {
+        "crash": "АВАРИЙНОЕ ПРИВОДНЕНИЕ",
+        "ditch": "АВАРИЙНОЕ ПРИВОДНЕНИЕ",
+        "abort": "ОТБОЙ ОПЕРАЦИИ",
+        "time": "ВРЕМЯ ВЫШЛО",
+        "lost": "СМЕНА ОКОНЧЕНА",
+        "quit": "СМЕНА СДАНА"
+      },
+      "REMARKS": [
+        {
+          "when": {"fn": "when", "src": "(r) => r.reason === 'crash'"},
+          "speaker": "pilot",
+          "name": "Гордеев",
+          "text": "Машину жалко. Людей — нет: все живы. Это главное."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.reason === 'ditch'"},
+          "speaker": "winchman",
+          "name": "Семёныч",
+          "text": "Говорил же: бинго — значит бинго. Ладно. Искупались."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.endless && r.rescued >= 20"},
+          "speaker": "dispatch",
+          "name": "Берег",
+          "text": "Смена сдана. Двадцать с лишним человек дома. Спасибо, Чайка. Отдыхайте."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.endless"},
+          "speaker": "dispatch",
+          "name": "Берег",
+          "text": "Смена сдана. Спасибо, Чайка. Катера продолжают работу."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.reason === 'abort' || r.reason === 'time'"},
+          "speaker": "pilot",
+          "name": "Гордеев",
+          "text": "Не всех. Но и не никого. Пошли писать рапорт."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.damage >= 0.5"},
+          "speaker": "winchman",
+          "name": "Семёныч",
+          "text": "Вертолёт — на ремонт, командира — на беседу."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.styleIds.includes('lastDrops')"},
+          "speaker": "pilot",
+          "name": "Гордеев",
+          "text": "Сели на парах. Больше так не делай. Пожалуйста."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.styleIds.includes('paws')"},
+          "speaker": "rescuer",
+          "name": "Костя",
+          "text": "Кот, кстати, так и не сказал спасибо."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.styleIds.includes('bottle')"},
+          "speaker": "rescuer",
+          "name": "Костя",
+          "text": "Записку я забираю. Повешу над койкой — пусть кто-нибудь и нам напишет."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.jewels >= 3"},
+          "speaker": "winchman",
+          "name": "Семёныч",
+          "text": "Висели как люстра. Красиво."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.success && r.damage <= 1e-6"},
+          "speaker": "winchman",
+          "name": "Семёныч",
+          "text": "Даже чай не расплескали."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.styleIds.includes('stormDeck')"},
+          "speaker": "winchman",
+          "name": "Семёныч",
+          "text": "Сели на палубу, как кот на забор. Уважаю."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.styleIds.includes('lightning')"},
+          "speaker": "pilot",
+          "name": "Гордеев",
+          "text": "Рядом шарахнуло, а приборы живы. И мы живы."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.lost > 0"},
+          "speaker": "pilot",
+          "name": "Гордеев",
+          "text": "Не всех… Ладно. Работаем дальше."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.par && r.time < r.par * 0.75"},
+          "speaker": "pilot",
+          "name": "Гордеев",
+          "text": "Быстро. Берег спрашивает, не перепутали ли мы район."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.tags.includes('fog')"},
+          "speaker": "pilot",
+          "name": "Гордеев",
+          "text": "Летели на ощупь, как в погреб за картошкой. Но нашли."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.tags.includes('eye')"},
+          "speaker": "rescuer",
+          "name": "Костя",
+          "text": "Небо было голубое ровно минуту. Я засёк."
+        },
+        {
+          "when": {"fn": "when", "src": "(r) => r.tags.includes('night')"},
+          "speaker": "rescuer",
+          "name": "Костя",
+          "text": "Вода плюс семь. Напоминаю: я на это не подписывался. А, нет, подписывался."
+        },
+        {
+          "when": {"fn": "when", "src": "() => true"},
+          "speaker": "winchman",
+          "name": "Семёныч",
+          "text": "Вот вернёмся — борща. И спать. Именно в таком порядке."
+        }
+      ]
+    },
+    "mission/scoring": {
+      "STYLES": {
+        "jewel": {"label": "Ювелирно", "points": 30, "note": "весь цикл лебёдки при устойчивости ≥ 85 %"},
+        "underCrest": {"label": "Под гребнем", "points": 60, "note": "подъём, пока под тросом шёл гребень ≥ 6 м"},
+        "lightning": {"label": "Мимо молнии", "points": 40, "note": "удар в 15–40 м без урона"},
+        "eye": {"label": "Глаз в глаз", "points": 50, "note": "ближе двух радиусов к ядру вихря без урона"},
+        "fullHouse": {"label": "Полный борт", "points": 100, "note": "доставка с полным салоном"},
+        "stormDeck": {"label": "Палуба в шторм", "points": 75, "note": "чистая посадка при качке ≥ 6°"},
+        "lastDrops": {"label": "На последних каплях", "points": 100, "note": "посадка с топливом < 5 %"},
+        "oneGo": {"label": "Одним заходом", "points": 50, "note": "весь плот поднят без выхода из висения"},
+        "fogBlind": {"label": "Сквозь молоко", "points": 40, "note": "спасение в тумане без ракеты"},
+        "paws": {"label": "Четыре лапы", "points": 50, "note": "спасён зверь"},
+        "noScratch": {"label": "Без царапины", "points": 300, "note": "операция без единого повреждения"},
+        "bottle": {
+          "label": "Письмо в бутылке",
+          "points": 25,
+          "note": "выловлена бутылка с запиской",
+          "once": true,
+          "chain": false,
+          "medal": false
+        }
+      },
+      "DIFFICULTY": {
+        "cadet": {"label": "Курсант", "mult": 0.8},
+        "pilot": {"label": "Пилот", "mult": 1},
+        "ace": {"label": "Ас", "mult": 1.3}
+      },
+      "ORDER": ["delivered", "warmth", "golden", "style", "time", "lost", "damage", "autorotation"],
+      "LABELS": {
+        "delivered": "Доставлено людей",
+        "warmth": "Тепло при подъёме",
+        "golden": "«Золотой час»",
+        "style": "Стиль",
+        "time": "Быстрее пара",
+        "lost": "Потеряно людей",
+        "damage": "Повреждения корпуса",
+        "autorotation": "Посадка на авторотации"
+      },
+      "CHAIN_WINDOW": 20
+    },
+    "derived": {
+      "rules": {
+        "medalsFor": "function medalsFor({ success, ratio, time, par, styles, damage }) {\n  const bronze = !!success && ratio >= 0.6 - 1e-9;\n  const silver = bronze && ratio >= 0.85 - 1e-9 && (!par || time <= par * 1.3);\n  const gold = silver && ratio >= 1 - 1e-9 && (!par || time <= par) && styles >= 2;\n  const cross = gold && damage <= 1e-6;\n  return { bronze, silver, gold, cross, rings: (bronze ? 1 : 0) + (silver ? 1 : 0) + (gold ? 1 : 0) };\n}",
+        "styleChain": "chainable style within CHAIN_WINDOW s of the previous one: chain++, else chain = 0; points = round(base · min(2, 1.2^chain)); once-styles count once; chain:false styles never chain",
+        "final": "max(0, round(raw · DIFFICULTY[d].mult))"
+      }
+    }
+  }
+}

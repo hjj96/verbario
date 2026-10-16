@@ -1,0 +1,2336 @@
+{
+  "schema": "mayday.vectors.mission.scoring",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/systems/mission/scoring.js"],
+  "producer": "tools/export/export-vectors.mjs",
+  "tolerance": {
+    "class": "bitwise",
+    "note": "points/ints exact; emitted score:add payloads compared field by field; strings byte-exact"
+  },
+  "data": {
+    "scorer": {
+      "note": "new Scorer(events); reset(difficulty); then ops in order (args as passed); ret = return value; raw/chain/final after the op. STYLES iterated in data order of mission.json STYLES",
+      "scripts": [
+        {
+          "difficulty": "cadet",
+          "ops": [
+            {
+              "op": "add",
+              "args": ["delivered", 250, "Доставлен", {"x": 10, "y": 0, "z": -4}, 1, true],
+              "ret": 250,
+              "raw": 250,
+              "chain": 0,
+              "final": 200
+            },
+            {
+              "op": "add",
+              "args": ["warmth", 37.5, "Тепло", null, 1, true],
+              "ret": 38,
+              "raw": 288,
+              "chain": 0,
+              "final": 230
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 30, {"x": 1, "z": 2}, true, true],
+              "ret": 30,
+              "raw": 318,
+              "chain": 0,
+              "final": 254
+            },
+            {
+              "op": "style",
+              "args": ["underCrest", 37.5, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 390,
+              "chain": 1,
+              "final": 312
+            },
+            {
+              "op": "style",
+              "args": ["lightning", 45, {"x": 1, "z": 2}, true, true],
+              "ret": 58,
+              "raw": 448,
+              "chain": 2,
+              "final": 358
+            },
+            {
+              "op": "style",
+              "args": ["eye", 70, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 498,
+              "chain": 0,
+              "final": 398
+            },
+            {
+              "op": "style",
+              "args": ["fullHouse", 95, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 598,
+              "chain": 0,
+              "final": 478
+            },
+            {
+              "op": "style",
+              "args": ["stormDeck", 120, {"x": 1, "z": 2}, true, true],
+              "ret": 75,
+              "raw": 673,
+              "chain": 0,
+              "final": 538
+            },
+            {
+              "op": "style",
+              "args": ["lastDrops", 145, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 773,
+              "chain": 0,
+              "final": 618
+            },
+            {
+              "op": "style",
+              "args": ["oneGo", 170, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 823,
+              "chain": 0,
+              "final": 658
+            },
+            {
+              "op": "style",
+              "args": ["fogBlind", 177.5, {"x": 1, "z": 2}, true, true],
+              "ret": 48,
+              "raw": 871,
+              "chain": 1,
+              "final": 697
+            },
+            {
+              "op": "style",
+              "args": ["paws", 185, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 943,
+              "chain": 2,
+              "final": 754
+            },
+            {
+              "op": "style",
+              "args": ["noScratch", 192.5, {"x": 1, "z": 2}, true, true],
+              "ret": 518,
+              "raw": 1461,
+              "chain": 3,
+              "final": 1169
+            },
+            {
+              "op": "style",
+              "args": ["bottle", 217.5, {"x": 1, "z": 2}, true, true],
+              "ret": 25,
+              "raw": 1486,
+              "chain": 3,
+              "final": 1189
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 242.5, null, true, true],
+              "ret": 30,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1213
+            },
+            {
+              "op": "style",
+              "args": ["unknownStyle", 242.5, null, true, true],
+              "ret": 0,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1213
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 342.5, null, false, false],
+              "ret": 30,
+              "raw": 1546,
+              "chain": 0,
+              "final": 1237
+            },
+            {
+              "op": "add",
+              "args": ["lost", -120, "Потерян", {"x": 0, "z": 0}, 1, true],
+              "ret": -120,
+              "raw": 1426,
+              "chain": 0,
+              "final": 1141
+            },
+            {
+              "op": "add",
+              "args": ["damage", -33.4, "", null, 1, false],
+              "ret": -33,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1114
+            },
+            {
+              "op": "add",
+              "args": ["time", 0, "", null, 0, true],
+              "ret": 0,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1114
+            }
+          ],
+          "emitted": [
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 250,
+                "reason": "Доставлен",
+                "position": {"x": 10, "y": 0, "z": -4},
+                "kind": "delivered"
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {"points": 38, "reason": "Тепло", "position": null, "kind": "warmth"}
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Под гребнем",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "underCrest",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 58,
+                "reason": "Мимо молнии",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lightning",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Глаз в глаз",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "eye",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "Полный борт",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fullHouse",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 75,
+                "reason": "Палуба в шторм",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "stormDeck",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "На последних каплях",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lastDrops",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Одним заходом",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "oneGo",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 48,
+                "reason": "Сквозь молоко",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fogBlind",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Четыре лапы",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "paws",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 518,
+                "reason": "Без царапины",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "noScratch",
+                "chain": 1.7279999999999998
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 25,
+                "reason": "Письмо в бутылке",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "bottle",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": null,
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": -120,
+                "reason": "Потерян",
+                "position": {"x": 0, "y": 0, "z": 0},
+                "kind": "lost"
+              }
+            }
+          ],
+          "styleCount": 13,
+          "breakdown": {
+            "lines": [
+              {"id": "delivered", "label": "Доставлено людей", "points": 250, "count": 1},
+              {"id": "warmth", "label": "Тепло при подъёме", "points": 38, "count": 1},
+              {"id": "style", "label": "Стиль", "points": 1258, "count": 14},
+              {"id": "lost", "label": "Потеряно людей", "points": -120, "count": 1},
+              {"id": "damage", "label": "Повреждения корпуса", "points": -33, "count": 1}
+            ],
+            "styles": [
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 30
+              },
+              {
+                "id": "underCrest",
+                "label": "Под гребнем",
+                "note": "подъём, пока под тросом шёл гребень ≥ 6 м",
+                "points": 72,
+                "base": 60,
+                "chain": 1.2,
+                "t": 37.5
+              },
+              {
+                "id": "lightning",
+                "label": "Мимо молнии",
+                "note": "удар в 15–40 м без урона",
+                "points": 58,
+                "base": 40,
+                "chain": 1.44,
+                "t": 45
+              },
+              {
+                "id": "eye",
+                "label": "Глаз в глаз",
+                "note": "ближе двух радиусов к ядру вихря без урона",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 70
+              },
+              {
+                "id": "fullHouse",
+                "label": "Полный борт",
+                "note": "доставка с полным салоном",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 95
+              },
+              {
+                "id": "stormDeck",
+                "label": "Палуба в шторм",
+                "note": "чистая посадка при качке ≥ 6°",
+                "points": 75,
+                "base": 75,
+                "chain": 1,
+                "t": 120
+              },
+              {
+                "id": "lastDrops",
+                "label": "На последних каплях",
+                "note": "посадка с топливом < 5 %",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 145
+              },
+              {
+                "id": "oneGo",
+                "label": "Одним заходом",
+                "note": "весь плот поднят без выхода из висения",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 170
+              },
+              {
+                "id": "fogBlind",
+                "label": "Сквозь молоко",
+                "note": "спасение в тумане без ракеты",
+                "points": 48,
+                "base": 40,
+                "chain": 1.2,
+                "t": 177.5
+              },
+              {
+                "id": "paws",
+                "label": "Четыре лапы",
+                "note": "спасён зверь",
+                "points": 72,
+                "base": 50,
+                "chain": 1.44,
+                "t": 185
+              },
+              {
+                "id": "noScratch",
+                "label": "Без царапины",
+                "note": "операция без единого повреждения",
+                "points": 518,
+                "base": 300,
+                "chain": 1.7279999999999998,
+                "t": 192.5
+              },
+              {
+                "id": "bottle",
+                "label": "Письмо в бутылке",
+                "note": "выловлена бутылка с запиской",
+                "points": 25,
+                "base": 25,
+                "chain": 1,
+                "t": 217.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 242.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 342.5
+              }
+            ],
+            "subtotal": 1393,
+            "difficulty": {"id": "cadet", "label": "Курсант", "mult": 0.8, "points": -279},
+            "total": 1114
+          }
+        },
+        {
+          "difficulty": "pilot",
+          "ops": [
+            {
+              "op": "add",
+              "args": ["delivered", 250, "Доставлен", {"x": 10, "y": 0, "z": -4}, 1, true],
+              "ret": 250,
+              "raw": 250,
+              "chain": 0,
+              "final": 250
+            },
+            {
+              "op": "add",
+              "args": ["warmth", 37.5, "Тепло", null, 1, true],
+              "ret": 38,
+              "raw": 288,
+              "chain": 0,
+              "final": 288
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 30, {"x": 1, "z": 2}, true, true],
+              "ret": 30,
+              "raw": 318,
+              "chain": 0,
+              "final": 318
+            },
+            {
+              "op": "style",
+              "args": ["underCrest", 37.5, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 390,
+              "chain": 1,
+              "final": 390
+            },
+            {
+              "op": "style",
+              "args": ["lightning", 45, {"x": 1, "z": 2}, true, true],
+              "ret": 58,
+              "raw": 448,
+              "chain": 2,
+              "final": 448
+            },
+            {
+              "op": "style",
+              "args": ["eye", 70, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 498,
+              "chain": 0,
+              "final": 498
+            },
+            {
+              "op": "style",
+              "args": ["fullHouse", 95, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 598,
+              "chain": 0,
+              "final": 598
+            },
+            {
+              "op": "style",
+              "args": ["stormDeck", 120, {"x": 1, "z": 2}, true, true],
+              "ret": 75,
+              "raw": 673,
+              "chain": 0,
+              "final": 673
+            },
+            {
+              "op": "style",
+              "args": ["lastDrops", 145, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 773,
+              "chain": 0,
+              "final": 773
+            },
+            {
+              "op": "style",
+              "args": ["oneGo", 170, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 823,
+              "chain": 0,
+              "final": 823
+            },
+            {
+              "op": "style",
+              "args": ["fogBlind", 177.5, {"x": 1, "z": 2}, true, true],
+              "ret": 48,
+              "raw": 871,
+              "chain": 1,
+              "final": 871
+            },
+            {
+              "op": "style",
+              "args": ["paws", 185, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 943,
+              "chain": 2,
+              "final": 943
+            },
+            {
+              "op": "style",
+              "args": ["noScratch", 192.5, {"x": 1, "z": 2}, true, true],
+              "ret": 518,
+              "raw": 1461,
+              "chain": 3,
+              "final": 1461
+            },
+            {
+              "op": "style",
+              "args": ["bottle", 217.5, {"x": 1, "z": 2}, true, true],
+              "ret": 25,
+              "raw": 1486,
+              "chain": 3,
+              "final": 1486
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 242.5, null, true, true],
+              "ret": 30,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1516
+            },
+            {
+              "op": "style",
+              "args": ["unknownStyle", 242.5, null, true, true],
+              "ret": 0,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1516
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 342.5, null, false, false],
+              "ret": 30,
+              "raw": 1546,
+              "chain": 0,
+              "final": 1546
+            },
+            {
+              "op": "add",
+              "args": ["lost", -120, "Потерян", {"x": 0, "z": 0}, 1, true],
+              "ret": -120,
+              "raw": 1426,
+              "chain": 0,
+              "final": 1426
+            },
+            {
+              "op": "add",
+              "args": ["damage", -33.4, "", null, 1, false],
+              "ret": -33,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1393
+            },
+            {
+              "op": "add",
+              "args": ["time", 0, "", null, 0, true],
+              "ret": 0,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1393
+            }
+          ],
+          "emitted": [
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 250,
+                "reason": "Доставлен",
+                "position": {"x": 10, "y": 0, "z": -4},
+                "kind": "delivered"
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {"points": 38, "reason": "Тепло", "position": null, "kind": "warmth"}
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Под гребнем",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "underCrest",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 58,
+                "reason": "Мимо молнии",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lightning",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Глаз в глаз",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "eye",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "Полный борт",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fullHouse",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 75,
+                "reason": "Палуба в шторм",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "stormDeck",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "На последних каплях",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lastDrops",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Одним заходом",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "oneGo",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 48,
+                "reason": "Сквозь молоко",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fogBlind",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Четыре лапы",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "paws",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 518,
+                "reason": "Без царапины",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "noScratch",
+                "chain": 1.7279999999999998
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 25,
+                "reason": "Письмо в бутылке",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "bottle",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": null,
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": -120,
+                "reason": "Потерян",
+                "position": {"x": 0, "y": 0, "z": 0},
+                "kind": "lost"
+              }
+            }
+          ],
+          "styleCount": 13,
+          "breakdown": {
+            "lines": [
+              {"id": "delivered", "label": "Доставлено людей", "points": 250, "count": 1},
+              {"id": "warmth", "label": "Тепло при подъёме", "points": 38, "count": 1},
+              {"id": "style", "label": "Стиль", "points": 1258, "count": 14},
+              {"id": "lost", "label": "Потеряно людей", "points": -120, "count": 1},
+              {"id": "damage", "label": "Повреждения корпуса", "points": -33, "count": 1}
+            ],
+            "styles": [
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 30
+              },
+              {
+                "id": "underCrest",
+                "label": "Под гребнем",
+                "note": "подъём, пока под тросом шёл гребень ≥ 6 м",
+                "points": 72,
+                "base": 60,
+                "chain": 1.2,
+                "t": 37.5
+              },
+              {
+                "id": "lightning",
+                "label": "Мимо молнии",
+                "note": "удар в 15–40 м без урона",
+                "points": 58,
+                "base": 40,
+                "chain": 1.44,
+                "t": 45
+              },
+              {
+                "id": "eye",
+                "label": "Глаз в глаз",
+                "note": "ближе двух радиусов к ядру вихря без урона",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 70
+              },
+              {
+                "id": "fullHouse",
+                "label": "Полный борт",
+                "note": "доставка с полным салоном",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 95
+              },
+              {
+                "id": "stormDeck",
+                "label": "Палуба в шторм",
+                "note": "чистая посадка при качке ≥ 6°",
+                "points": 75,
+                "base": 75,
+                "chain": 1,
+                "t": 120
+              },
+              {
+                "id": "lastDrops",
+                "label": "На последних каплях",
+                "note": "посадка с топливом < 5 %",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 145
+              },
+              {
+                "id": "oneGo",
+                "label": "Одним заходом",
+                "note": "весь плот поднят без выхода из висения",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 170
+              },
+              {
+                "id": "fogBlind",
+                "label": "Сквозь молоко",
+                "note": "спасение в тумане без ракеты",
+                "points": 48,
+                "base": 40,
+                "chain": 1.2,
+                "t": 177.5
+              },
+              {
+                "id": "paws",
+                "label": "Четыре лапы",
+                "note": "спасён зверь",
+                "points": 72,
+                "base": 50,
+                "chain": 1.44,
+                "t": 185
+              },
+              {
+                "id": "noScratch",
+                "label": "Без царапины",
+                "note": "операция без единого повреждения",
+                "points": 518,
+                "base": 300,
+                "chain": 1.7279999999999998,
+                "t": 192.5
+              },
+              {
+                "id": "bottle",
+                "label": "Письмо в бутылке",
+                "note": "выловлена бутылка с запиской",
+                "points": 25,
+                "base": 25,
+                "chain": 1,
+                "t": 217.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 242.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 342.5
+              }
+            ],
+            "subtotal": 1393,
+            "difficulty": {"id": "pilot", "label": "Пилот", "mult": 1, "points": 0},
+            "total": 1393
+          }
+        },
+        {
+          "difficulty": "ace",
+          "ops": [
+            {
+              "op": "add",
+              "args": ["delivered", 250, "Доставлен", {"x": 10, "y": 0, "z": -4}, 1, true],
+              "ret": 250,
+              "raw": 250,
+              "chain": 0,
+              "final": 325
+            },
+            {
+              "op": "add",
+              "args": ["warmth", 37.5, "Тепло", null, 1, true],
+              "ret": 38,
+              "raw": 288,
+              "chain": 0,
+              "final": 374
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 30, {"x": 1, "z": 2}, true, true],
+              "ret": 30,
+              "raw": 318,
+              "chain": 0,
+              "final": 413
+            },
+            {
+              "op": "style",
+              "args": ["underCrest", 37.5, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 390,
+              "chain": 1,
+              "final": 507
+            },
+            {
+              "op": "style",
+              "args": ["lightning", 45, {"x": 1, "z": 2}, true, true],
+              "ret": 58,
+              "raw": 448,
+              "chain": 2,
+              "final": 582
+            },
+            {
+              "op": "style",
+              "args": ["eye", 70, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 498,
+              "chain": 0,
+              "final": 647
+            },
+            {
+              "op": "style",
+              "args": ["fullHouse", 95, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 598,
+              "chain": 0,
+              "final": 777
+            },
+            {
+              "op": "style",
+              "args": ["stormDeck", 120, {"x": 1, "z": 2}, true, true],
+              "ret": 75,
+              "raw": 673,
+              "chain": 0,
+              "final": 875
+            },
+            {
+              "op": "style",
+              "args": ["lastDrops", 145, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 773,
+              "chain": 0,
+              "final": 1005
+            },
+            {
+              "op": "style",
+              "args": ["oneGo", 170, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 823,
+              "chain": 0,
+              "final": 1070
+            },
+            {
+              "op": "style",
+              "args": ["fogBlind", 177.5, {"x": 1, "z": 2}, true, true],
+              "ret": 48,
+              "raw": 871,
+              "chain": 1,
+              "final": 1132
+            },
+            {
+              "op": "style",
+              "args": ["paws", 185, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 943,
+              "chain": 2,
+              "final": 1226
+            },
+            {
+              "op": "style",
+              "args": ["noScratch", 192.5, {"x": 1, "z": 2}, true, true],
+              "ret": 518,
+              "raw": 1461,
+              "chain": 3,
+              "final": 1899
+            },
+            {
+              "op": "style",
+              "args": ["bottle", 217.5, {"x": 1, "z": 2}, true, true],
+              "ret": 25,
+              "raw": 1486,
+              "chain": 3,
+              "final": 1932
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 242.5, null, true, true],
+              "ret": 30,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1971
+            },
+            {
+              "op": "style",
+              "args": ["unknownStyle", 242.5, null, true, true],
+              "ret": 0,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1971
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 342.5, null, false, false],
+              "ret": 30,
+              "raw": 1546,
+              "chain": 0,
+              "final": 2010
+            },
+            {
+              "op": "add",
+              "args": ["lost", -120, "Потерян", {"x": 0, "z": 0}, 1, true],
+              "ret": -120,
+              "raw": 1426,
+              "chain": 0,
+              "final": 1854
+            },
+            {
+              "op": "add",
+              "args": ["damage", -33.4, "", null, 1, false],
+              "ret": -33,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1811
+            },
+            {
+              "op": "add",
+              "args": ["time", 0, "", null, 0, true],
+              "ret": 0,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1811
+            }
+          ],
+          "emitted": [
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 250,
+                "reason": "Доставлен",
+                "position": {"x": 10, "y": 0, "z": -4},
+                "kind": "delivered"
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {"points": 38, "reason": "Тепло", "position": null, "kind": "warmth"}
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Под гребнем",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "underCrest",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 58,
+                "reason": "Мимо молнии",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lightning",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Глаз в глаз",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "eye",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "Полный борт",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fullHouse",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 75,
+                "reason": "Палуба в шторм",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "stormDeck",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "На последних каплях",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lastDrops",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Одним заходом",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "oneGo",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 48,
+                "reason": "Сквозь молоко",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fogBlind",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Четыре лапы",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "paws",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 518,
+                "reason": "Без царапины",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "noScratch",
+                "chain": 1.7279999999999998
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 25,
+                "reason": "Письмо в бутылке",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "bottle",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": null,
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": -120,
+                "reason": "Потерян",
+                "position": {"x": 0, "y": 0, "z": 0},
+                "kind": "lost"
+              }
+            }
+          ],
+          "styleCount": 13,
+          "breakdown": {
+            "lines": [
+              {"id": "delivered", "label": "Доставлено людей", "points": 250, "count": 1},
+              {"id": "warmth", "label": "Тепло при подъёме", "points": 38, "count": 1},
+              {"id": "style", "label": "Стиль", "points": 1258, "count": 14},
+              {"id": "lost", "label": "Потеряно людей", "points": -120, "count": 1},
+              {"id": "damage", "label": "Повреждения корпуса", "points": -33, "count": 1}
+            ],
+            "styles": [
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 30
+              },
+              {
+                "id": "underCrest",
+                "label": "Под гребнем",
+                "note": "подъём, пока под тросом шёл гребень ≥ 6 м",
+                "points": 72,
+                "base": 60,
+                "chain": 1.2,
+                "t": 37.5
+              },
+              {
+                "id": "lightning",
+                "label": "Мимо молнии",
+                "note": "удар в 15–40 м без урона",
+                "points": 58,
+                "base": 40,
+                "chain": 1.44,
+                "t": 45
+              },
+              {
+                "id": "eye",
+                "label": "Глаз в глаз",
+                "note": "ближе двух радиусов к ядру вихря без урона",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 70
+              },
+              {
+                "id": "fullHouse",
+                "label": "Полный борт",
+                "note": "доставка с полным салоном",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 95
+              },
+              {
+                "id": "stormDeck",
+                "label": "Палуба в шторм",
+                "note": "чистая посадка при качке ≥ 6°",
+                "points": 75,
+                "base": 75,
+                "chain": 1,
+                "t": 120
+              },
+              {
+                "id": "lastDrops",
+                "label": "На последних каплях",
+                "note": "посадка с топливом < 5 %",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 145
+              },
+              {
+                "id": "oneGo",
+                "label": "Одним заходом",
+                "note": "весь плот поднят без выхода из висения",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 170
+              },
+              {
+                "id": "fogBlind",
+                "label": "Сквозь молоко",
+                "note": "спасение в тумане без ракеты",
+                "points": 48,
+                "base": 40,
+                "chain": 1.2,
+                "t": 177.5
+              },
+              {
+                "id": "paws",
+                "label": "Четыре лапы",
+                "note": "спасён зверь",
+                "points": 72,
+                "base": 50,
+                "chain": 1.44,
+                "t": 185
+              },
+              {
+                "id": "noScratch",
+                "label": "Без царапины",
+                "note": "операция без единого повреждения",
+                "points": 518,
+                "base": 300,
+                "chain": 1.7279999999999998,
+                "t": 192.5
+              },
+              {
+                "id": "bottle",
+                "label": "Письмо в бутылке",
+                "note": "выловлена бутылка с запиской",
+                "points": 25,
+                "base": 25,
+                "chain": 1,
+                "t": 217.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 242.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 342.5
+              }
+            ],
+            "subtotal": 1393,
+            "difficulty": {"id": "ace", "label": "Ас", "mult": 1.3, "points": 418},
+            "total": 1811
+          }
+        },
+        {
+          "difficulty": "bogus",
+          "ops": [
+            {
+              "op": "add",
+              "args": ["delivered", 250, "Доставлен", {"x": 10, "y": 0, "z": -4}, 1, true],
+              "ret": 250,
+              "raw": 250,
+              "chain": 0,
+              "final": 250
+            },
+            {
+              "op": "add",
+              "args": ["warmth", 37.5, "Тепло", null, 1, true],
+              "ret": 38,
+              "raw": 288,
+              "chain": 0,
+              "final": 288
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 30, {"x": 1, "z": 2}, true, true],
+              "ret": 30,
+              "raw": 318,
+              "chain": 0,
+              "final": 318
+            },
+            {
+              "op": "style",
+              "args": ["underCrest", 37.5, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 390,
+              "chain": 1,
+              "final": 390
+            },
+            {
+              "op": "style",
+              "args": ["lightning", 45, {"x": 1, "z": 2}, true, true],
+              "ret": 58,
+              "raw": 448,
+              "chain": 2,
+              "final": 448
+            },
+            {
+              "op": "style",
+              "args": ["eye", 70, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 498,
+              "chain": 0,
+              "final": 498
+            },
+            {
+              "op": "style",
+              "args": ["fullHouse", 95, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 598,
+              "chain": 0,
+              "final": 598
+            },
+            {
+              "op": "style",
+              "args": ["stormDeck", 120, {"x": 1, "z": 2}, true, true],
+              "ret": 75,
+              "raw": 673,
+              "chain": 0,
+              "final": 673
+            },
+            {
+              "op": "style",
+              "args": ["lastDrops", 145, {"x": 1, "z": 2}, true, true],
+              "ret": 100,
+              "raw": 773,
+              "chain": 0,
+              "final": 773
+            },
+            {
+              "op": "style",
+              "args": ["oneGo", 170, {"x": 1, "z": 2}, true, true],
+              "ret": 50,
+              "raw": 823,
+              "chain": 0,
+              "final": 823
+            },
+            {
+              "op": "style",
+              "args": ["fogBlind", 177.5, {"x": 1, "z": 2}, true, true],
+              "ret": 48,
+              "raw": 871,
+              "chain": 1,
+              "final": 871
+            },
+            {
+              "op": "style",
+              "args": ["paws", 185, {"x": 1, "z": 2}, true, true],
+              "ret": 72,
+              "raw": 943,
+              "chain": 2,
+              "final": 943
+            },
+            {
+              "op": "style",
+              "args": ["noScratch", 192.5, {"x": 1, "z": 2}, true, true],
+              "ret": 518,
+              "raw": 1461,
+              "chain": 3,
+              "final": 1461
+            },
+            {
+              "op": "style",
+              "args": ["bottle", 217.5, {"x": 1, "z": 2}, true, true],
+              "ret": 25,
+              "raw": 1486,
+              "chain": 3,
+              "final": 1486
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 242.5, null, true, true],
+              "ret": 30,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1516
+            },
+            {
+              "op": "style",
+              "args": ["unknownStyle", 242.5, null, true, true],
+              "ret": 0,
+              "raw": 1516,
+              "chain": 0,
+              "final": 1516
+            },
+            {
+              "op": "style",
+              "args": ["jewel", 342.5, null, false, false],
+              "ret": 30,
+              "raw": 1546,
+              "chain": 0,
+              "final": 1546
+            },
+            {
+              "op": "add",
+              "args": ["lost", -120, "Потерян", {"x": 0, "z": 0}, 1, true],
+              "ret": -120,
+              "raw": 1426,
+              "chain": 0,
+              "final": 1426
+            },
+            {
+              "op": "add",
+              "args": ["damage", -33.4, "", null, 1, false],
+              "ret": -33,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1393
+            },
+            {
+              "op": "add",
+              "args": ["time", 0, "", null, 0, true],
+              "ret": 0,
+              "raw": 1393,
+              "chain": 0,
+              "final": 1393
+            }
+          ],
+          "emitted": [
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 250,
+                "reason": "Доставлен",
+                "position": {"x": 10, "y": 0, "z": -4},
+                "kind": "delivered"
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {"points": 38, "reason": "Тепло", "position": null, "kind": "warmth"}
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Под гребнем",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "underCrest",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 58,
+                "reason": "Мимо молнии",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lightning",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Глаз в глаз",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "eye",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "Полный борт",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fullHouse",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 75,
+                "reason": "Палуба в шторм",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "stormDeck",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 100,
+                "reason": "На последних каплях",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "lastDrops",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 50,
+                "reason": "Одним заходом",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "oneGo",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 48,
+                "reason": "Сквозь молоко",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "fogBlind",
+                "chain": 1.2
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 72,
+                "reason": "Четыре лапы",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "paws",
+                "chain": 1.44
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 518,
+                "reason": "Без царапины",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "noScratch",
+                "chain": 1.7279999999999998
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 25,
+                "reason": "Письмо в бутылке",
+                "position": {"x": 1, "y": 0, "z": 2},
+                "kind": "style",
+                "style": "bottle",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": 30,
+                "reason": "Ювелирно",
+                "position": null,
+                "kind": "style",
+                "style": "jewel",
+                "chain": 1
+              }
+            },
+            {
+              "name": "score:add",
+              "payload": {
+                "points": -120,
+                "reason": "Потерян",
+                "position": {"x": 0, "y": 0, "z": 0},
+                "kind": "lost"
+              }
+            }
+          ],
+          "styleCount": 13,
+          "breakdown": {
+            "lines": [
+              {"id": "delivered", "label": "Доставлено людей", "points": 250, "count": 1},
+              {"id": "warmth", "label": "Тепло при подъёме", "points": 38, "count": 1},
+              {"id": "style", "label": "Стиль", "points": 1258, "count": 14},
+              {"id": "lost", "label": "Потеряно людей", "points": -120, "count": 1},
+              {"id": "damage", "label": "Повреждения корпуса", "points": -33, "count": 1}
+            ],
+            "styles": [
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 30
+              },
+              {
+                "id": "underCrest",
+                "label": "Под гребнем",
+                "note": "подъём, пока под тросом шёл гребень ≥ 6 м",
+                "points": 72,
+                "base": 60,
+                "chain": 1.2,
+                "t": 37.5
+              },
+              {
+                "id": "lightning",
+                "label": "Мимо молнии",
+                "note": "удар в 15–40 м без урона",
+                "points": 58,
+                "base": 40,
+                "chain": 1.44,
+                "t": 45
+              },
+              {
+                "id": "eye",
+                "label": "Глаз в глаз",
+                "note": "ближе двух радиусов к ядру вихря без урона",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 70
+              },
+              {
+                "id": "fullHouse",
+                "label": "Полный борт",
+                "note": "доставка с полным салоном",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 95
+              },
+              {
+                "id": "stormDeck",
+                "label": "Палуба в шторм",
+                "note": "чистая посадка при качке ≥ 6°",
+                "points": 75,
+                "base": 75,
+                "chain": 1,
+                "t": 120
+              },
+              {
+                "id": "lastDrops",
+                "label": "На последних каплях",
+                "note": "посадка с топливом < 5 %",
+                "points": 100,
+                "base": 100,
+                "chain": 1,
+                "t": 145
+              },
+              {
+                "id": "oneGo",
+                "label": "Одним заходом",
+                "note": "весь плот поднят без выхода из висения",
+                "points": 50,
+                "base": 50,
+                "chain": 1,
+                "t": 170
+              },
+              {
+                "id": "fogBlind",
+                "label": "Сквозь молоко",
+                "note": "спасение в тумане без ракеты",
+                "points": 48,
+                "base": 40,
+                "chain": 1.2,
+                "t": 177.5
+              },
+              {
+                "id": "paws",
+                "label": "Четыре лапы",
+                "note": "спасён зверь",
+                "points": 72,
+                "base": 50,
+                "chain": 1.44,
+                "t": 185
+              },
+              {
+                "id": "noScratch",
+                "label": "Без царапины",
+                "note": "операция без единого повреждения",
+                "points": 518,
+                "base": 300,
+                "chain": 1.7279999999999998,
+                "t": 192.5
+              },
+              {
+                "id": "bottle",
+                "label": "Письмо в бутылке",
+                "note": "выловлена бутылка с запиской",
+                "points": 25,
+                "base": 25,
+                "chain": 1,
+                "t": 217.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 242.5
+              },
+              {
+                "id": "jewel",
+                "label": "Ювелирно",
+                "note": "весь цикл лебёдки при устойчивости ≥ 85 %",
+                "points": 30,
+                "base": 30,
+                "chain": 1,
+                "t": 342.5
+              }
+            ],
+            "subtotal": 1393,
+            "difficulty": {"id": "pilot", "label": "Пилот", "mult": 1, "points": 0},
+            "total": 1393
+          }
+        }
+      ]
+    },
+    "medalsFor": {
+      "fields": ["success", "ratio", "time", "par", "styles", "damage", "bronze", "silver", "gold", "cross", "rings"],
+      "cases": [
+        [true, 0.5, 100, 0, 1, 0, false, false, false, false, 0],
+        [true, 0.5, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [true, 0.5, 100, 0, 2, 0, false, false, false, false, 0],
+        [true, 0.5, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [true, 0.5, 500, 600, 1, 0, false, false, false, false, 0],
+        [true, 0.5, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [true, 0.5, 500, 600, 2, 0, false, false, false, false, 0],
+        [true, 0.5, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [true, 0.5, 700, 600, 1, 0, false, false, false, false, 0],
+        [true, 0.5, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [true, 0.5, 700, 600, 2, 0, false, false, false, false, 0],
+        [true, 0.5, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [true, 0.5, 781, 600, 1, 0, false, false, false, false, 0],
+        [true, 0.5, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [true, 0.5, 781, 600, 2, 0, false, false, false, false, 0],
+        [true, 0.5, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [true, 0.5, 779, 600, 1, 0, false, false, false, false, 0],
+        [true, 0.5, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [true, 0.5, 779, 600, 2, 0, false, false, false, false, 0],
+        [true, 0.5, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [true, 0.5, 779, 600, 2, 0.2, false, false, false, false, 0],
+        [true, 0.5999999999, 100, 0, 1, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 100, 0, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 100, 0, 1, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 100, 0, 2, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 100, 0, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 100, 0, 2, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 500, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 500, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 500, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 500, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 500, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 500, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 700, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 700, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 700, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 700, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 700, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 700, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 781, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 781, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 781, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 781, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 781, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 781, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 779, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 779, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 779, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.5999999999, 779, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.5999999999, 779, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.5999999999, 779, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.6, 100, 0, 1, 0, true, false, false, false, 1],
+        [true, 0.6, 100, 0, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 100, 0, 1, 0.2, true, false, false, false, 1],
+        [true, 0.6, 100, 0, 2, 0, true, false, false, false, 1],
+        [true, 0.6, 100, 0, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 100, 0, 2, 0.2, true, false, false, false, 1],
+        [true, 0.6, 500, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.6, 500, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 500, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.6, 500, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.6, 500, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 500, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.6, 700, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.6, 700, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 700, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.6, 700, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.6, 700, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 700, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.6, 781, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.6, 781, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 781, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.6, 781, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.6, 781, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 781, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.6, 779, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.6, 779, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 779, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.6, 779, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.6, 779, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.6, 779, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.85, 100, 0, 1, 0, true, true, false, false, 2],
+        [true, 0.85, 100, 0, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 100, 0, 1, 0.2, true, true, false, false, 2],
+        [true, 0.85, 100, 0, 2, 0, true, true, false, false, 2],
+        [true, 0.85, 100, 0, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 100, 0, 2, 0.2, true, true, false, false, 2],
+        [true, 0.85, 500, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.85, 500, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 500, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.85, 500, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.85, 500, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 500, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 0.85, 700, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.85, 700, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 700, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.85, 700, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.85, 700, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 700, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 0.85, 781, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.85, 781, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.85, 781, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.85, 781, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.85, 781, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.85, 781, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.85, 779, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.85, 779, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 779, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.85, 779, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.85, 779, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.85, 779, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 0.9, 100, 0, 1, 0, true, true, false, false, 2],
+        [true, 0.9, 100, 0, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 100, 0, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9, 100, 0, 2, 0, true, true, false, false, 2],
+        [true, 0.9, 100, 0, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 100, 0, 2, 0.2, true, true, false, false, 2],
+        [true, 0.9, 500, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.9, 500, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 500, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9, 500, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.9, 500, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 500, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 0.9, 700, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.9, 700, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 700, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9, 700, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.9, 700, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 700, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 0.9, 781, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.9, 781, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.9, 781, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.9, 781, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.9, 781, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.9, 781, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.9, 779, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.9, 779, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 779, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9, 779, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.9, 779, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.9, 779, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 0.9999999999, 100, 0, 1, 0, true, true, false, false, 2],
+        [true, 0.9999999999, 100, 0, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9999999999, 100, 0, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9999999999, 100, 0, 2, 0, true, true, true, true, 3],
+        [true, 0.9999999999, 100, 0, 2, 1e-7, true, true, true, true, 3],
+        [true, 0.9999999999, 100, 0, 2, 0.2, true, true, true, false, 3],
+        [true, 0.9999999999, 500, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.9999999999, 500, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9999999999, 500, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9999999999, 500, 600, 2, 0, true, true, true, true, 3],
+        [true, 0.9999999999, 500, 600, 2, 1e-7, true, true, true, true, 3],
+        [true, 0.9999999999, 500, 600, 2, 0.2, true, true, true, false, 3],
+        [true, 0.9999999999, 700, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.9999999999, 700, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9999999999, 700, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9999999999, 700, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.9999999999, 700, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.9999999999, 700, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 0.9999999999, 781, 600, 1, 0, true, false, false, false, 1],
+        [true, 0.9999999999, 781, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 0.9999999999, 781, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 0.9999999999, 781, 600, 2, 0, true, false, false, false, 1],
+        [true, 0.9999999999, 781, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 0.9999999999, 781, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 0.9999999999, 779, 600, 1, 0, true, true, false, false, 2],
+        [true, 0.9999999999, 779, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 0.9999999999, 779, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 0.9999999999, 779, 600, 2, 0, true, true, false, false, 2],
+        [true, 0.9999999999, 779, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 0.9999999999, 779, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 1, 100, 0, 1, 0, true, true, false, false, 2],
+        [true, 1, 100, 0, 1, 1e-7, true, true, false, false, 2],
+        [true, 1, 100, 0, 1, 0.2, true, true, false, false, 2],
+        [true, 1, 100, 0, 2, 0, true, true, true, true, 3],
+        [true, 1, 100, 0, 2, 1e-7, true, true, true, true, 3],
+        [true, 1, 100, 0, 2, 0.2, true, true, true, false, 3],
+        [true, 1, 500, 600, 1, 0, true, true, false, false, 2],
+        [true, 1, 500, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 1, 500, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 1, 500, 600, 2, 0, true, true, true, true, 3],
+        [true, 1, 500, 600, 2, 1e-7, true, true, true, true, 3],
+        [true, 1, 500, 600, 2, 0.2, true, true, true, false, 3],
+        [true, 1, 700, 600, 1, 0, true, true, false, false, 2],
+        [true, 1, 700, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 1, 700, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 1, 700, 600, 2, 0, true, true, false, false, 2],
+        [true, 1, 700, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 1, 700, 600, 2, 0.2, true, true, false, false, 2],
+        [true, 1, 781, 600, 1, 0, true, false, false, false, 1],
+        [true, 1, 781, 600, 1, 1e-7, true, false, false, false, 1],
+        [true, 1, 781, 600, 1, 0.2, true, false, false, false, 1],
+        [true, 1, 781, 600, 2, 0, true, false, false, false, 1],
+        [true, 1, 781, 600, 2, 1e-7, true, false, false, false, 1],
+        [true, 1, 781, 600, 2, 0.2, true, false, false, false, 1],
+        [true, 1, 779, 600, 1, 0, true, true, false, false, 2],
+        [true, 1, 779, 600, 1, 1e-7, true, true, false, false, 2],
+        [true, 1, 779, 600, 1, 0.2, true, true, false, false, 2],
+        [true, 1, 779, 600, 2, 0, true, true, false, false, 2],
+        [true, 1, 779, 600, 2, 1e-7, true, true, false, false, 2],
+        [true, 1, 779, 600, 2, 0.2, true, true, false, false, 2],
+        [false, 0.5, 100, 0, 1, 0, false, false, false, false, 0],
+        [false, 0.5, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5, 100, 0, 2, 0, false, false, false, false, 0],
+        [false, 0.5, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5, 500, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5, 500, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5, 700, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5, 700, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5, 781, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5, 781, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5, 779, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5, 779, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5, 779, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 100, 0, 1, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 100, 0, 2, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 500, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 500, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 700, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 700, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 781, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 781, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 779, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.5999999999, 779, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.5999999999, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.5999999999, 779, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.6, 100, 0, 1, 0, false, false, false, false, 0],
+        [false, 0.6, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [false, 0.6, 100, 0, 2, 0, false, false, false, false, 0],
+        [false, 0.6, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [false, 0.6, 500, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.6, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.6, 500, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.6, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.6, 700, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.6, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.6, 700, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.6, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.6, 781, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.6, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.6, 781, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.6, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.6, 779, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.6, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.6, 779, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.6, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.6, 779, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.85, 100, 0, 1, 0, false, false, false, false, 0],
+        [false, 0.85, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [false, 0.85, 100, 0, 2, 0, false, false, false, false, 0],
+        [false, 0.85, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [false, 0.85, 500, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.85, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.85, 500, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.85, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.85, 700, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.85, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.85, 700, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.85, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.85, 781, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.85, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.85, 781, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.85, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.85, 779, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.85, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.85, 779, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.85, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.85, 779, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9, 100, 0, 1, 0, false, false, false, false, 0],
+        [false, 0.9, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9, 100, 0, 2, 0, false, false, false, false, 0],
+        [false, 0.9, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9, 500, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9, 500, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9, 700, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9, 700, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9, 781, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9, 781, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9, 779, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9, 779, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9, 779, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 100, 0, 1, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 100, 0, 2, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 500, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 500, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 700, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 700, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 781, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 781, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 779, 600, 1, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 0.9999999999, 779, 600, 2, 0, false, false, false, false, 0],
+        [false, 0.9999999999, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 0.9999999999, 779, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 1, 100, 0, 1, 0, false, false, false, false, 0],
+        [false, 1, 100, 0, 1, 1e-7, false, false, false, false, 0],
+        [false, 1, 100, 0, 1, 0.2, false, false, false, false, 0],
+        [false, 1, 100, 0, 2, 0, false, false, false, false, 0],
+        [false, 1, 100, 0, 2, 1e-7, false, false, false, false, 0],
+        [false, 1, 100, 0, 2, 0.2, false, false, false, false, 0],
+        [false, 1, 500, 600, 1, 0, false, false, false, false, 0],
+        [false, 1, 500, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 1, 500, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 1, 500, 600, 2, 0, false, false, false, false, 0],
+        [false, 1, 500, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 1, 500, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 1, 700, 600, 1, 0, false, false, false, false, 0],
+        [false, 1, 700, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 1, 700, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 1, 700, 600, 2, 0, false, false, false, false, 0],
+        [false, 1, 700, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 1, 700, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 1, 781, 600, 1, 0, false, false, false, false, 0],
+        [false, 1, 781, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 1, 781, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 1, 781, 600, 2, 0, false, false, false, false, 0],
+        [false, 1, 781, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 1, 781, 600, 2, 0.2, false, false, false, false, 0],
+        [false, 1, 779, 600, 1, 0, false, false, false, false, 0],
+        [false, 1, 779, 600, 1, 1e-7, false, false, false, false, 0],
+        [false, 1, 779, 600, 1, 0.2, false, false, false, false, 0],
+        [false, 1, 779, 600, 2, 0, false, false, false, false, 0],
+        [false, 1, 779, 600, 2, 1e-7, false, false, false, false, 0],
+        [false, 1, 779, 600, 2, 0.2, false, false, false, false, 0]
+      ]
+    }
+  }
+}

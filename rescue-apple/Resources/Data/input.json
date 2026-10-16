@@ -1,0 +1,238 @@
+{
+  "schema": "mayday.input",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/core/input.js", "rescue/src/core/haptics.js", "rescue/src/ui/common/keys.js",
+    "rescue/src/ui/common/nav.js", "rescue/src/ui/flight/touch.js", "rescue/src/ui/screens/controls.js",
+    "rescue/src/ui/flight/panels.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "data": {
+    "core/input": {
+      "BINDINGS": {
+        "axes": {
+          "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+          "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+          "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+        },
+        "buttons": {
+          "winch": ["Space"],
+          "boost": ["ShiftLeft", "ShiftRight"],
+          "searchlight": ["KeyL"],
+          "flare": ["KeyG", "Mouse0"],
+          "raftDrop": ["KeyC", "Mouse2"],
+          "horn": ["KeyH"],
+          "altPreset1": ["Digit1", "Numpad1"],
+          "altPreset2": ["Digit2", "Numpad2"],
+          "altPreset3": ["Digit3", "Numpad3"],
+          "altUp": [],
+          "altDown": [],
+          "map": ["KeyM", "Tab"],
+          "pause": ["Escape", "KeyP"],
+          "confirm": ["Enter", "NumpadEnter"],
+          "back": ["Escape", "Backspace"],
+          "zoom": ["KeyZ"],
+          "debug": ["Backquote"],
+          "photo": ["KeyV"],
+          "thermal": ["KeyT"],
+          "navUp": ["ArrowUp", "KeyW"],
+          "navDown": ["ArrowDown", "KeyS"],
+          "navLeft": ["ArrowLeft", "KeyA"],
+          "navRight": ["ArrowRight", "KeyD"]
+        }
+      },
+      "REBINDABLE": [
+        {"id": "up", "label": "Полёт вверх по экрану (север)", "axis": "moveY", "side": 1},
+        {"id": "down", "label": "Полёт вниз по экрану", "axis": "moveY", "side": 0},
+        {"id": "left", "label": "Полёт влево", "axis": "moveX", "side": 0},
+        {"id": "right", "label": "Полёт вправо", "axis": "moveX", "side": 1},
+        {"id": "climb", "label": "Набор высоты (держать)", "axis": "lift", "side": 1},
+        {"id": "descend", "label": "Снижение (держать)", "axis": "lift", "side": 0},
+        {"id": "altPreset1", "label": "Высота 15 м", "button": "altPreset1"},
+        {"id": "altPreset2", "label": "Высота 40 м", "button": "altPreset2"},
+        {"id": "altPreset3", "label": "Высота 90 м", "button": "altPreset3"},
+        {"id": "winch", "label": "Лебёдка (держать)", "button": "winch"},
+        {"id": "boost", "label": "Форсаж (держать)", "button": "boost"},
+        {"id": "searchlight", "label": "Прожектор", "button": "searchlight"},
+        {"id": "flare", "label": "Фальшфейер к курсору", "button": "flare"},
+        {"id": "raftDrop", "label": "Сбросить плот", "button": "raftDrop"},
+        {"id": "horn", "label": "Громкоговоритель", "button": "horn"},
+        {"id": "map", "label": "Карта (держать)", "button": "map"},
+        {"id": "zoom", "label": "Зум камеры", "button": "zoom"},
+        {"id": "thermal", "label": "Тепловизор", "button": "thermal"},
+        {"id": "photo", "label": "Фоторежим", "button": "photo"}
+      ],
+      "DEFAULT_BINDINGS": {
+        "axes": {
+          "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+          "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+          "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+        },
+        "buttons": {
+          "winch": ["Space"],
+          "boost": ["ShiftLeft", "ShiftRight"],
+          "searchlight": ["KeyL"],
+          "flare": ["KeyG", "Mouse0"],
+          "raftDrop": ["KeyC", "Mouse2"],
+          "horn": ["KeyH"],
+          "altPreset1": ["Digit1", "Numpad1"],
+          "altPreset2": ["Digit2", "Numpad2"],
+          "altPreset3": ["Digit3", "Numpad3"],
+          "altUp": [],
+          "altDown": [],
+          "map": ["KeyM", "Tab"],
+          "pause": ["Escape", "KeyP"],
+          "confirm": ["Enter", "NumpadEnter"],
+          "back": ["Escape", "Backspace"],
+          "zoom": ["KeyZ"],
+          "debug": ["Backquote"],
+          "photo": ["KeyV"],
+          "thermal": ["KeyT"],
+          "navUp": ["ArrowUp", "KeyW"],
+          "navDown": ["ArrowDown", "KeyS"],
+          "navLeft": ["ArrowLeft", "KeyA"],
+          "navRight": ["ArrowRight", "KeyD"]
+        }
+      },
+      "PAD": {
+        "axes": {"moveX": 0, "moveY": 1, "aimX": 2, "aimY": 3},
+        "lift": {"up": 7, "down": 6},
+        "buttons": {
+          "winch": [0],
+          "confirm": [0],
+          "flare": [1],
+          "back": [1],
+          "searchlight": [2],
+          "horn": [3],
+          "boost": [4],
+          "zoom": [5],
+          "map": [8],
+          "pause": [9],
+          "photo": [10],
+          "thermal": [11],
+          "altUp": [12],
+          "altDown": [13],
+          "raftDrop": [15],
+          "navUp": [12],
+          "navDown": [13],
+          "navLeft": [14],
+          "navRight": [15]
+        }
+      }
+    },
+    "core/haptics": {
+      "RULES": {
+        "heli:damage": {"fn": "heli:damage", "src": "(p) => [Math.min(1, 0.35 + (p.amount || 0) * 3), 220]"},
+        "heli:water-strike": {"fn": "heli:water-strike", "src": "() => [0.45, 160]"},
+        "heli:touchdown": {"fn": "heli:touchdown", "src": "() => [0.25, 90]"},
+        "heli:land": {"fn": "heli:land", "src": "(p) => [p.autorotation ? 0.7 : 0.2, 120]"},
+        "heli:crash": {"fn": "heli:crash", "src": "() => [1, 700]"},
+        "heli:capture": {"fn": "heli:capture", "src": "() => [0.2, 80]"},
+        "heli:pickup": {"fn": "heli:pickup", "src": "() => [0.3, 110]"},
+        "heli:slip": {"fn": "heli:slip", "src": "() => [0.5, 200]"},
+        "heli:snag": {"fn": "heli:snag", "src": "() => [0.6, 260]"},
+        "hazard:hit": {"fn": "hazard:hit", "src": "(p) => [Math.min(1, 0.5 + (p.damage || 0) * 2), 320]"},
+        "weather:gust": {
+          "fn": "weather:gust",
+          "src": "(p) => (p.harmless ? null : [Math.min(0.5, (p.strength || 8) / 30), 260])"
+        },
+        "weather:lightning": {
+          "fn": "weather:lightning",
+          "src": "(p) => (p.cloudOnly || (p.distance ?? 1e9) > 600 ? null : [Math.max(0.15, 0.7 - p.distance / 900), 240])"
+        }
+      }
+    },
+    "ui/common/keys": {
+      "NAMES": {
+        "Space": "Пробел",
+        "ShiftLeft": "Shift",
+        "ShiftRight": "Shift П",
+        "Escape": "Esc",
+        "Backspace": "⌫",
+        "Enter": "Enter",
+        "NumpadEnter": "Num Enter",
+        "ArrowUp": "↑",
+        "ArrowDown": "↓",
+        "ArrowLeft": "←",
+        "ArrowRight": "→",
+        "PageUp": "PgUp",
+        "PageDown": "PgDn",
+        "Tab": "Tab",
+        "Mouse0": "ЛКМ",
+        "Mouse2": "ПКМ",
+        "Backquote": "`",
+        "Minus": "-",
+        "Equal": "=",
+        "BracketLeft": "[",
+        "BracketRight": "]",
+        "Semicolon": ";",
+        "Quote": "'",
+        "Comma": ",",
+        "Period": ".",
+        "Slash": "/",
+        "Backslash": "\\",
+        "IntlBackslash": "\\",
+        "Delete": "Del",
+        "Insert": "Ins",
+        "Home": "Home",
+        "End": "End"
+      },
+      "NUM": {"Add": "+", "Subtract": "−", "Multiply": "×", "Divide": "/", "Decimal": "."}
+    },
+    "ui/common/nav": {"REPEAT_FIRST": 0.18, "REPEAT_NEXT": 0.09, "DIRS": ["navUp", "navDown", "navLeft", "navRight"]},
+    "ui/flight/touch": {"STICK_R": 64},
+    "ui/screens/controls": {
+      "PAD": {
+        "up": "левый стик",
+        "down": "левый стик",
+        "left": "левый стик",
+        "right": "левый стик",
+        "climb": "RT",
+        "descend": "LT",
+        "altPreset1": "D-pad ↑ / ↓",
+        "altPreset2": "D-pad ↑ / ↓",
+        "altPreset3": "D-pad ↑ / ↓",
+        "winch": "A",
+        "boost": "LB",
+        "searchlight": "X · правый стик",
+        "flare": "B",
+        "raftDrop": "D-pad →",
+        "horn": "Y",
+        "map": "View",
+        "zoom": "RB",
+        "thermal": "R3",
+        "photo": "L3"
+      }
+    },
+    "ui/flight/panels": {
+      "KB_HINTS": [
+        ["winch", "Пробел", "лебёдка"],
+        ["searchlight", "L", "прожектор"],
+        ["flare", "G", "фальшфейер"],
+        ["horn", "H", "рупор"],
+        ["map", "Tab", "карта"]
+      ],
+      "KEYS": {
+        "keyboard": [
+          ["Пробел", "лебёдка"],
+          ["L", "прожектор"],
+          ["G", "фальшфейер"],
+          ["H", "рупор"],
+          ["Tab", "карта"],
+          ["Esc", "пауза"]
+        ],
+        "gamepad": [
+          ["A", "лебёдка"],
+          ["X", "прожектор"],
+          ["B", "фальшфейер"],
+          ["Y", "рупор"],
+          ["View", "карта"],
+          ["Start", "пауза"]
+        ],
+        "touch": []
+      }
+    }
+  }
+}

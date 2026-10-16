@@ -1,0 +1,217 @@
+{
+  "schema": "mayday.manifest",
+  "version": 1,
+  "formatVersion": 1,
+  "webRevision": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "webDirty": false,
+  "files": [
+    {
+      "path": "Resources/Data/audio.json",
+      "schema": "mayday.audio",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 3031,
+      "sha256": "84c5184d282e41784b2787bf9b1d01c2b3bd6629264452a25573fa88b4fa8a4a"
+    },
+    {
+      "path": "Resources/Data/camera.json",
+      "schema": "mayday.camera",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 834,
+      "sha256": "da0103fec8dc26f77c03df30e846dc2998d9750ffaba70a6d7bc0fcf4c347089"
+    },
+    {
+      "path": "Resources/Data/campaign.json",
+      "schema": "mayday.campaign",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 61174,
+      "sha256": "3630b8b498a02144d1b536270480d45f3bff1cafb6b0bbc88f2ea6cd3a06692f"
+    },
+    {
+      "path": "Resources/Data/events.json",
+      "schema": "mayday.events",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 37209,
+      "sha256": "d1fce0de02e0ea1b238f1b78333204326b18ab6bedbced5730dec2248f37ba86"
+    },
+    {
+      "path": "Resources/Data/fx.json",
+      "schema": "mayday.fx",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 7234,
+      "sha256": "76fe005541979f3499ce2c7704b693d70b38187815e4bf360462c7bcb8951ee7"
+    },
+    {
+      "path": "Resources/Data/game.json",
+      "schema": "mayday.game",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 7254,
+      "sha256": "75874d5bf0495620559bd3e94b7185c88dc12dcc3fb39b01d3e58a0670ab173c"
+    },
+    {
+      "path": "Resources/Data/hazards.json",
+      "schema": "mayday.hazards",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 7808,
+      "sha256": "440043e4ad82231762d46885b3ba0f77a5f3ddd7d7824e3d0aaab4921f06a560"
+    },
+    {
+      "path": "Resources/Data/heli.json",
+      "schema": "mayday.heli",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 8294,
+      "sha256": "d969f74a0638882bd94ee041a960e9bedd24c74b3557731f3a482fd8b0d5891d"
+    },
+    {
+      "path": "Resources/Data/hud.json",
+      "schema": "mayday.hud",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 6837,
+      "sha256": "2c95ba1a2f245b7b9aaedade780d93a13f7db2196f661bc21b83028f8dd80089"
+    },
+    {
+      "path": "Resources/Data/icons.json",
+      "schema": "mayday.icons",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 7522,
+      "sha256": "db98b0573f0f44add2771d74884addad3895eaf3155cb995f04b32172b1418f0"
+    },
+    {
+      "path": "Resources/Data/input.json",
+      "schema": "mayday.input",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 9072,
+      "sha256": "520178c05daafb6b4539d4c7fe90d61ec6e2514ff8222476079b80c7ceb14357"
+    },
+    {
+      "path": "Resources/Data/look.json",
+      "schema": "mayday.look",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 3298,
+      "sha256": "aa6977006a565b8199df7b637621a3249058c442237961330696688a8758a5a6"
+    },
+    {
+      "path": "Resources/Data/mission.json",
+      "schema": "mayday.mission",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 14886,
+      "sha256": "b4832a0eee9687bb3b4cf2b96b445733fb783c1a0155f4a2f0748b46f737b243"
+    },
+    {
+      "path": "Resources/Data/names_ru.json",
+      "schema": "mayday.names_ru",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 27421,
+      "sha256": "492e98eb711076f4dbbc46bc9447da361f6596c595505d4bb9cded16a1d0c1b5"
+    },
+    {
+      "path": "Resources/Data/ocean.json",
+      "schema": "mayday.ocean",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 3432,
+      "sha256": "974635f44f5dd43f1fccc40c17b1a89ab62fa44e591b28219814dc23d05b4072"
+    },
+    {
+      "path": "Resources/Data/palette.json",
+      "schema": "mayday.palette",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 24760,
+      "sha256": "07c6d025f4b50c5a25fe28d7b264b0130c844596064dfe4255354f34b1b02d52"
+    },
+    {
+      "path": "Resources/Data/post.json",
+      "schema": "mayday.post",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 2331,
+      "sha256": "08851fa3b63611b62eeccabcdc6886ca48ac0a29c718cad46de504760b83395e"
+    },
+    {
+      "path": "Resources/Data/radio.json",
+      "schema": "mayday.radio",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 16486,
+      "sha256": "3752eeea84aeb07e2ec239fd6166da4453c50994461864e747662a8400886c14"
+    },
+    {
+      "path": "Resources/Data/settings.json",
+      "schema": "mayday.settings",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 9980,
+      "sha256": "4b7ffc3a031e2458c16d0d518def80438a6a4564d30fbb5f23657b9781bea1a9"
+    },
+    {
+      "path": "Resources/Data/survivors.json",
+      "schema": "mayday.survivors",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 7671,
+      "sha256": "34757d13abd5e26dcd2202897c7944eafd3c31f8452c547e5b4b10cbfa3f19a7"
+    },
+    {
+      "path": "Resources/Data/text_ru.json",
+      "schema": "mayday.text_ru",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 13483,
+      "sha256": "fe96f9704322a9b846e553c100616480770563b6e35685a2c66d51d3deb83a6d"
+    },
+    {
+      "path": "Resources/Data/weather.json",
+      "schema": "mayday.weather",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 20760,
+      "sha256": "e1a3fcb73da6b89b06548ed4bd7993f9a0d79ecab3b927694a5de7ded935d4ab"
+    },
+    {
+      "path": "Resources/Data/world.json",
+      "schema": "mayday.world",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 23122,
+      "sha256": "684ba5f90ddbef8b9846d3f231876a5c774b1f03924330fa93fd628cfd07a0ef"
+    },
+    {
+      "path": "Resources/Textures/atlas.rgba",
+      "schema": "raw.rgba8",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 262144,
+      "sha256": "dbc12a3680a9ac5f5e803c965e42bcd2f65f8a4100b2644074822404a3c37891"
+    },
+    {
+      "path": "Resources/Textures/detail.rgba",
+      "schema": "raw.rgba8",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 262144,
+      "sha256": "c8ede53ac3b88b8eec0cb034b5d9484d3ade3ebdd33965e10b7291df952ceefc"
+    },
+    {
+      "path": "Resources/Textures/lace.rgba",
+      "schema": "raw.rgba8",
+      "version": 1,
+      "producer": "tools/export/export-data.mjs",
+      "bytes": 1048576,
+      "sha256": "a4ce9ae9d6db0de2f5c80aba42090e6501f0b7e1f3ee42d269a65b96fb01a26e"
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "schema": "mayday.look",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/core/look.js", "rescue/src/core/weathering.js", "rescue/src/core/math.js"],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {
+    "core/look": {"glsl": ["LOOK_GLSL_UNIFORMS", "LOOK_GLSL_FUNCS"], "mutable": ["fogPatched"]},
+    "core/weathering": {"glsl": ["VERT_PARS", "VERT_MAIN", "FRAG_PARS", "FRAG_MAIN"]},
+    "core/math": {"glsl": ["GLSL_NOISE"]}
+  },
+  "data": {
+    "core/look": {
+      "ATLAS": 256,
+      "LACE": 512,
+      "DETAIL": 256,
+      "GUST_SCALE": 0.006,
+      "GUST_DRIFT": 0.9,
+      "CLOUD_SCALE": 0.0025,
+      "CLOUD_DRIFT": 1.5
+    },
+    "core/weathering": {
+      "WEAR": {
+        "clean": {
+          "breakup": 0.05,
+          "streaks": 0.08,
+          "grime": 0.05,
+          "waterline": 0,
+          "roughBreakup": 0.08,
+          "deckWear": 0.1
+        },
+        "light": {
+          "breakup": 0.08,
+          "streaks": 0.22,
+          "grime": 0.15,
+          "waterline": 0.6,
+          "roughBreakup": 0.12,
+          "deckWear": 0.25
+        },
+        "medium": {
+          "breakup": 0.11,
+          "streaks": 0.38,
+          "grime": 0.3,
+          "waterline": 1,
+          "roughBreakup": 0.15,
+          "deckWear": 0.4
+        },
+        "heavy": {
+          "breakup": 0.15,
+          "streaks": 0.6,
+          "grime": 0.5,
+          "waterline": 1,
+          "roughBreakup": 0.2,
+          "deckWear": 0.6
+        }
+      },
+      "DEFAULTS": {
+        "breakup": 0.1,
+        "streaks": 0.35,
+        "grime": 0.3,
+        "waterline": 1,
+        "roughBreakup": 0.15,
+        "deckWear": 0.35,
+        "scale": 1,
+        "seaLevel": 0,
+        "streakColor": "#6B3A22",
+        "grimeColor": "#2A2622",
+        "algaeColor": "#2F3A2C",
+        "saltColor": "#D8D6CC"
+      }
+    },
+    "core/math": {},
+    "derived": {
+      "lookSeed": 7,
+      "uniformDefaults": {
+        "uTime": 0,
+        "uWind": [0, 0],
+        "uWindOffset": [0, 0],
+        "uRain": 0,
+        "uWet": 0,
+        "uFlash": 0,
+        "uNight": 0,
+        "uGustFronts": [[0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0]],
+        "uGustFrontsB": [[0, 140, 500, 0], [0, 140, 500, 0], [0, 140, 500, 0], [0, 140, 500, 0]]
+      },
+      "textures": {
+        "atlas": {
+          "file": "Resources/Textures/atlas.rgba",
+          "width": 256,
+          "height": 256,
+          "channels": 4,
+          "dtype": "Uint8Array",
+          "wrap": [1000, 1000],
+          "sha256": "dbc12a3680a9ac5f5e803c965e42bcd2f65f8a4100b2644074822404a3c37891"
+        },
+        "detail": {
+          "file": "Resources/Textures/detail.rgba",
+          "width": 256,
+          "height": 256,
+          "channels": 4,
+          "dtype": "Uint8Array",
+          "wrap": [1000, 1000],
+          "sha256": "c8ede53ac3b88b8eec0cb034b5d9484d3ade3ebdd33965e10b7291df952ceefc"
+        },
+        "lace": {
+          "file": "Resources/Textures/lace.rgba",
+          "width": 512,
+          "height": 512,
+          "channels": 4,
+          "dtype": "Uint8Array",
+          "wrap": [1000, 1000],
+          "sha256": "a4ce9ae9d6db0de2f5c80aba42090e6501f0b7e1f3ee42d269a65b96fb01a26e"
+        }
+      }
+    }
+  }
+}

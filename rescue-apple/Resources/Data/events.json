@@ -1,0 +1,1085 @@
+{
+  "schema": "mayday.events",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/**/*.js (emit/on call sites)", "rescue/src/CONTRACT.md"],
+  "producer": "tools/export/export-data.mjs",
+  "note": "payloadKeys = keys of object literals passed to emit() (static scan); payloadRefs = non-literal payload expressions; indirect = event name passed to a non-emit helper (file:function); inContract = named in CONTRACT.md",
+  "data": {
+    "events": [
+      {
+        "name": "camera:zoom",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/camera.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["index", "zoom"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "fx:gulls",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/fx/life.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["state"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "game:mode",
+        "inContract": true,
+        "emitters": ["rescue/src/main.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/camera.js", "rescue/src/systems/hud.js",
+          "rescue/src/systems/post.js", "rescue/src/systems/radio/triggers.js", "rescue/src/systems/weather.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["from", "to"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "game:ready",
+        "inContract": true,
+        "emitters": ["rescue/src/main.js"],
+        "listeners": ["rescue/src/systems/hud.js", "rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:crest",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/hazards/rogue.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["hazard", "height", "survivor", "type", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:end",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/hazards.js"],
+        "listeners": ["rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["hazard", "type"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:engulf",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/hazards/whirlpool.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["hazard", "survivor", "type"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:hit",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/hazards.js"],
+        "listeners": ["rescue/src/systems/post.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["...info", "damage", "source", "type"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:near-miss",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/hazards.js", "rescue/src/systems/hazards/charges.js"],
+        "listeners": ["rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["distance", "hazard", "text", "type", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:pass",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/hazards/rogue.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["clearance", "hazard", "type"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:spawn",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/hazards.js"],
+        "listeners": ["rescue/src/systems/fx.js", "rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": ["hazard", "type"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:stage",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/hazards.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["hazard", "name", "stage", "type"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "hazard:warning",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/hazards.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/camera.js", "rescue/src/systems/fx.js",
+          "rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": ["rescue/src/systems/mission.js:onEvent"],
+        "payloadKeys": [],
+        "payloadRefs": ["p"],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:autorotation",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:cabin-full",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["seats", "survivor"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:capture",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["survivor"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:crash",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/camera.js", "rescue/src/systems/mission.js",
+          "rescue/src/systems/radio/triggers.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["onDeck", "pad", "reason", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:damage",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/camera.js", "rescue/src/systems/mission.js",
+          "rescue/src/systems/post.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["amount", "hull", "source"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:failing",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["reason"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:flare",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/mission.js", "rescue/src/systems/survivors.js"],
+        "indirect": ["rescue/src/systems/mission.js:onEvent"],
+        "payloadKeys": ["x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:flare-throw",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["eta", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:fuel-low",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["fuel", "level", "pad"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:land",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js", "rescue/src/systems/world.js"],
+        "indirect": ["rescue/src/systems/mission.js:onEvent"],
+        "payloadKeys": ["autorotation", "pad", "vy"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:loudspeaker",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js", "rescue/src/systems/survivors.js"],
+        "indirect": [],
+        "payloadKeys": ["x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:overheat",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:pickup",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/mission.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": ["rescue/src/systems/mission.js:onEvent"],
+        "payloadKeys": ["person", "survivor"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:raft-drop",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js", "rescue/src/systems/survivors.js"],
+        "indirect": [],
+        "payloadKeys": ["x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:raft-throw",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:refuel",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js",
+          "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["fuel", "pad", "state"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:resupply",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["pad"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:searchlight",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["on"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:slip",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["reason", "survivor"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:snag",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["kind", "reason", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:takeoff",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js",
+          "rescue/src/systems/world.js"
+        ],
+        "indirect": ["rescue/src/systems/mission.js:onEvent"],
+        "payloadKeys": ["pad"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:tension",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["level", "phase"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:touchdown",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["pad", "vy"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:unload",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/mission.js", "rescue/src/systems/world.js",
+          "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["count", "pad", "people"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:unload-person",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/ops.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/world.js"],
+        "indirect": [],
+        "payloadKeys": ["left", "pad", "person"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:water-strike",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["strength", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:winch",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["...LogicalExpression", "load", "state"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "heli:winch-denied",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/heli/winch.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["reason"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:call",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/mission/endless.js"],
+        "listeners": ["rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["call"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:chapter",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/camera.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": ["MemberExpression"],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:checkpoint",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": ["rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["pad", "padName", "t"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:complete",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/hud.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": ["payload"],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:failed",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/hud.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": ["payload"],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:hint",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/mission/onboarding.js"],
+        "listeners": ["rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["anchor", "key", "keys", "label", "learned", "priority", "pulse", "show", "text"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:locked",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": ["rescue/src/ui/screens/operations.js"],
+        "indirect": [],
+        "payloadKeys": ["index", "text"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:logbook",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": ["rescue/src/systems/hud.js"],
+        "indirect": [],
+        "payloadKeys": ["report"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:objective",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/mission/objectives.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["objective"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:restored",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": [],
+        "indirect": [],
+        "payloadKeys": ["padName", "t"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:setup",
+        "inContract": true,
+        "emitters": ["rescue/src/core/stubs.js", "rescue/src/systems/mission.js"],
+        "listeners": [
+          "rescue/src/core/stubs.js", "rescue/src/main.js", "rescue/src/systems/audio.js",
+          "rescue/src/systems/camera.js", "rescue/src/systems/fx.js", "rescue/src/systems/hazards.js",
+          "rescue/src/systems/heli.js", "rescue/src/systems/ocean.js", "rescue/src/systems/post.js",
+          "rescue/src/systems/radio/triggers.js", "rescue/src/systems/survivors.js", "rescue/src/systems/weather.js",
+          "rescue/src/systems/world.js", "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["def"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:start",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/mission.js"],
+        "listeners": [
+          "rescue/src/systems/camera.js", "rescue/src/systems/hazards.js", "rescue/src/systems/radio/triggers.js",
+          "rescue/src/systems/weather.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["checkpoint", "def"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "mission:task",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/mission/objectives.js"],
+        "listeners": [],
+        "indirect": [],
+        "payloadKeys": ["text"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "photo:saved",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/post/photo.js"],
+        "listeners": [],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": ["MemberExpression"],
+        "bareEmit": false
+      },
+      {
+        "name": "photo:toggle",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/post/photo.js"],
+        "listeners": [],
+        "indirect": [],
+        "payloadKeys": ["active"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "post:quality-hint",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/post.js"],
+        "listeners": ["rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["frameMs", "quality", "suggest"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "post:thermal",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/post/thermal.js"],
+        "listeners": [],
+        "indirect": [],
+        "payloadKeys": ["active"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "radio:line",
+        "inContract": true,
+        "emitters": ["rescue/src/core/stubs.js", "rescue/src/systems/radio.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["channel", "duration", "id", "name", "priority", "speaker", "text"],
+        "payloadRefs": ["payload"],
+        "bareEmit": false
+      },
+      {
+        "name": "score:add",
+        "inContract": true,
+        "emitters": [
+          "rescue/src/systems/mission/ledger.js", "rescue/src/systems/mission/scoring.js",
+          "rescue/src/systems/survivors/bottle.js"
+        ],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["chain", "count", "kind", "points", "position", "reason", "style"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:boarded",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["person", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:bottle",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors/bottle.js"],
+        "listeners": ["rescue/src/systems/hud.js", "rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": ["by", "text", "title", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:capsize",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["cause", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:creak",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["s", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:critical",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:downwash",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["level", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:jump",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["from", "parent", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:lost",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:pet",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["action", "distance", "pet", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:raft-boarded",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:rescued",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/mission.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:shout",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js", "rescue/src/systems/survivors/signals.js"],
+        "listeners": ["rescue/src/systems/audio.js", "rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["reason", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:signal",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/heli.js", "rescue/src/systems/mission.js",
+          "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["arc", "error", "kind", "s", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:sinking",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["cause", "phase", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:spawn",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": ["s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:spotted",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/mission.js", "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"],
+        "indirect": [],
+        "payloadKeys": ["by", "s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "survivor:tip",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/survivors.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["s"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:back",
+        "inContract": false,
+        "emitters": ["rescue/src/ui/common/nav.js", "rescue/src/ui/screens/operations.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["locked", "menu"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:click",
+        "inContract": false,
+        "emitters": [
+          "rescue/src/ui/common/nav.js", "rescue/src/ui/flight/toasts.js", "rescue/src/ui/screens/boot.js",
+          "rescue/src/ui/screens/controls.js"
+        ],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["index", "menu"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:endless",
+        "inContract": false,
+        "emitters": [],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": ["rescue/src/ui/screens/title.js:_start"],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:hover",
+        "inContract": false,
+        "emitters": ["rescue/src/ui/common/nav.js", "rescue/src/ui/screens/settings.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["adjust", "index", "menu"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:launch",
+        "inContract": true,
+        "emitters": ["rescue/src/ui/screens/briefing.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:menu",
+        "inContract": true,
+        "emitters": ["rescue/src/ui/screens/briefing.js", "rescue/src/ui/screens/debrief.js", "rescue/src/ui/screens/pause.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:next",
+        "inContract": true,
+        "emitters": ["rescue/src/ui/screens/debrief.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:pause",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/hud.js", "rescue/src/ui/flight/touch.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:resume",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/hud.js", "rescue/src/ui/screens/pause.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:retry",
+        "inContract": true,
+        "emitters": ["rescue/src/ui/screens/debrief.js", "rescue/src/ui/screens/pause.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:retry-checkpoint",
+        "inContract": true,
+        "emitters": ["rescue/src/ui/screens/debrief.js", "rescue/src/ui/screens/pause.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:select-mission",
+        "inContract": true,
+        "emitters": ["rescue/src/ui/screens/operations.js"],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": [],
+        "payloadKeys": ["index"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:settings",
+        "inContract": true,
+        "emitters": [],
+        "listeners": [],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:stamp",
+        "inContract": false,
+        "emitters": ["rescue/src/ui/screens/debrief.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["soft", "success"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:start",
+        "inContract": true,
+        "emitters": [],
+        "listeners": ["rescue/src/systems/mission.js"],
+        "indirect": ["rescue/src/ui/screens/title.js:_start"],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:static",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/hud.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": [],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "ui:type",
+        "inContract": false,
+        "emitters": ["rescue/src/ui/screens/briefing.js", "rescue/src/ui/screens/debrief.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["ch", "i", "voice"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "weather:charge",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/weather/lightning.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/hazards.js", "rescue/src/systems/radio/triggers.js",
+          "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["eta", "heli", "radius", "target", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "weather:gust",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/weather.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/camera.js", "rescue/src/systems/fx.js",
+          "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["dir", "eta", "harmless", "strength", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "weather:lightning",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/weather/lightning.js"],
+        "listeners": [
+          "rescue/src/systems/audio.js", "rescue/src/systems/camera.js", "rescue/src/systems/fx.js",
+          "rescue/src/systems/hazards.js", "rescue/src/systems/ocean.js", "rescue/src/systems/post.js",
+          "rescue/src/systems/radio/triggers.js", "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["cloudOnly", "distance", "strength", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "weather:preset",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/weather.js"],
+        "listeners": [
+          "rescue/src/systems/mission.js", "rescue/src/systems/ocean.js", "rescue/src/systems/radio/triggers.js",
+          "rescue/src/ui/flight/flight.js"
+        ],
+        "indirect": [],
+        "payloadKeys": ["from", "gust", "label", "over", "to", "windFrom", "worse"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "weather:pressure",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/weather.js"],
+        "listeners": ["rescue/src/systems/radio/triggers.js"],
+        "indirect": [],
+        "payloadKeys": ["pressure", "trend"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "world:foghorn",
+        "inContract": true,
+        "emitters": ["rescue/src/systems/world/lighthouse.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "world:horn",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/world/ship.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["distance", "name", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      },
+      {
+        "name": "world:slam",
+        "inContract": false,
+        "emitters": ["rescue/src/systems/world/ship.js"],
+        "listeners": ["rescue/src/systems/audio.js"],
+        "indirect": [],
+        "payloadKeys": ["ship", "strength", "x", "z"],
+        "payloadRefs": [],
+        "bareEmit": false
+      }
+    ]
+  }
+}

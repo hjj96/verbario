@@ -1,0 +1,2982 @@
+{
+  "schema": "mayday.vectors.mission.prepare",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/mission/prepare.js", "rescue/src/systems/mission/campaign.js",
+    "rescue/src/systems/mission/manifest.js"
+  ],
+  "producer": "tools/export/export-vectors.mjs",
+  "tolerance": {
+    "class": "bitwise",
+    "note": "whole def tree equal (numbers bitwise, strings byte-exact); \"today\" frozen to 2026-10-16 (local time of the exporter, TZ=UTC in CI)"
+  },
+  "data": {
+    "today": "2026-10-16",
+    "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"],
+    "defs": [
+      {
+        "id": "first",
+        "opts": {"index": 0, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "first",
+          "codename": "БАЙДАРКА",
+          "title": "Первый вылет",
+          "subtitle": "Байдарочники у маяка «Скалистый»",
+          "date": "28 августа",
+          "clock": "07:40",
+          "coords": "69°11′ с.ш. 33°31′ в.д.",
+          "difficulty": 1,
+          "seed": 101,
+          "theme": "kayak",
+          "tags": ["calm", "kayak"],
+          "brief": "07:12. Турбаза «Полярная» сообщила: группа на морских байдарках — пятеро, инструктор и четверо туристов — не вышла на утреннюю связь. Вечером они встали лагерем в бухте за маяком «Скалистый».\n\nВ 07:31 смотритель маяка увидел с галереи перевёрнутую байдарку в трёхстах метрах к северо-востоку. Больше никого.\n\nМоре пока как зеркало, вода плюс десять. Синоптики обещают к девяти ветер с северо-запада.\n\nЭто ваш первый вылет на «Чайке-07». Семёныч проверил трос, Гордеев на связи. Найдите их, пока вода ещё «тёплая».",
+          "area": {"radius": 1400},
+          "weather": {"start": "calm", "windFrom": 315, "script": [{"at": 240, "to": "overcast", "over": 60}]},
+          "world": {
+            "pads": [{"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0}],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "buoys": [{"x": 180, "z": -95, "kind": "east"}, {"x": -150, "z": -260, "kind": "west"}],
+              "debris": [
+                {"x": 228, "z": -236, "radius": 26, "count": 5, "kind": "kayak"},
+                {"x": 455, "z": -318, "radius": 18, "count": 2, "kind": "paddle"}
+              ]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "kayak-1",
+              "type": "swimmer",
+              "x": 212,
+              "z": -212,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "since": 40,
+              "lead": ["инструктор турбазы", "инструктор турбазы"],
+              "label": "инструктор группы",
+              "signals": {"rockets": 1, "whistle": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Максим Рябов",
+                  "first": "Максим",
+                  "surname": "Рябов",
+                  "gender": "m",
+                  "age": 26,
+                  "child": false,
+                  "occupation": "инструктор турбазы"
+                }
+              ],
+              "datum": {"x": 222, "z": -213}
+            },
+            {
+              "tag": "kayak-2",
+              "type": "swimmer",
+              "x": 470,
+              "z": -330,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 150,
+              "since": 55,
+              "label": "турист",
+              "signals": {"rockets": 1, "smoke": true, "whistle": true, "mirror": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Анна Ершова",
+                  "first": "Анна",
+                  "surname": "Ершова",
+                  "gender": "f",
+                  "age": 42,
+                  "child": false,
+                  "occupation": "фотограф"
+                }
+              ],
+              "datum": {"x": 482, "z": -333}
+            },
+            {
+              "tag": "kayak-raft",
+              "type": "raft",
+              "x": -180,
+              "z": -540,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 180,
+              "since": 70,
+              "label": "плот турбазы",
+              "signals": {"rockets": 2, "epirb": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Сергей Миронов",
+                  "first": "Сергей",
+                  "surname": "Миронов",
+                  "gender": "m",
+                  "age": 35,
+                  "child": false,
+                  "occupation": "программист"
+                },
+                {
+                  "name": "Ольга Ковальчук",
+                  "first": "Ольга",
+                  "surname": "Ковальчук",
+                  "gender": "f",
+                  "age": 65,
+                  "child": false,
+                  "occupation": "туристка из Петербурга"
+                },
+                {
+                  "name": "Пётр Корельский",
+                  "first": "Пётр",
+                  "surname": "Корельский",
+                  "gender": "m",
+                  "age": 51,
+                  "child": false,
+                  "occupation": "инструктор турбазы"
+                }
+              ],
+              "datum": {"x": -145, "z": -500}
+            }
+          ],
+          "hazards": [],
+          "objectives": {"rescue": 3, "timeLimit": 0, "extra": []},
+          "waterTemp": 10,
+          "current": {"x": 0.25, "z": -0.15},
+          "par": 360,
+          "hazardsRandom": false,
+          "onboarding": true,
+          "hints": ["takeoff", "move", "descend", "winch", "land"],
+          "script": [
+            {"at": 10, "do": "rocket", "tag": "kayak-1", "focus": 3},
+            {"at": 32, "do": "gust", "strength": 8, "harmless": true},
+            {
+              "after": "boarded",
+              "delay": 5,
+              "latest": 90,
+              "do": "rocket",
+              "tag": "kayak-2",
+              "focus": 2.5
+            },
+            {"after": "boarded", "delay": 11, "latest": 96, "do": "rocket", "tag": "kayak-raft"}
+          ],
+          "radio": [
+            {
+              "after": "rocket:kayak-raft",
+              "delay": 4,
+              "speaker": "survivor",
+              "name": "ПОСТРАДАВШИЙ",
+              "channel": "handheld",
+              "id": "s_vhf",
+              "priority": 2,
+              "text": "…кто-нибудь слышит… плот… нас трое… видим огни…"
+            },
+            {
+              "at": 228,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 1,
+              "text": "Чайка, Берег. Синоптики не ошиблись: с северо-запада задувает до девяти метров в секунду. Заканчивайте и домой."
+            }
+          ],
+          "index": 0,
+          "number": "01",
+          "timeOfDay": 0.3194444444444444,
+          "total": 5,
+          "lastSpawnAt": 0,
+          "datums": [
+            {"x": 222, "z": -213, "radius": 120, "tag": "kayak-1", "label": "инструктор группы"},
+            {"x": 482, "z": -333, "radius": 150, "tag": "kayak-2", "label": "турист"},
+            {"x": -145, "z": -500, "radius": 180, "tag": "kayak-raft", "label": "плот турбазы"}
+          ],
+          "presets": ["calm", "overcast"],
+          "chapters": [{"at": 0, "n": 1, "text": "ШТИЛЬ"}, {"at": 240, "n": 2, "text": "ВЕТЕР КРЕПЧАЕТ"}],
+          "windFrom": 315,
+          "card": "ОПЕРАЦИЯ «БАЙДАРКА» · 28 августа, 07:40 · 69°11′ с.ш. 33°31′ в.д. · ветер СЗ 3\u00a0м/с, волнение 2, видимость 20\u00a0км",
+          "dispatch": {
+            "square": "Женя-шесть",
+            "count": 5,
+            "countWords": "пятеро",
+            "dir": "к северо-востоку",
+            "dist": 300,
+            "distWords": "триста",
+            "x": 222,
+            "z": -213
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 3 из 5",
+            "silver": "Не менее 85\u00a0% — 5 из 5, время до 7:48",
+            "gold": "Всех, время до 6:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "ferry",
+        "opts": {"index": 1, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "ferry",
+          "codename": "ПАРОМ",
+          "title": "Паром «Северянка»",
+          "subtitle": "Восемь на корме, два плота",
+          "date": "14 октября",
+          "clock": "15:20",
+          "coords": "69°12′ с.ш. 33°27′ в.д.",
+          "difficulty": 2,
+          "seed": 202,
+          "theme": "ferry",
+          "tags": ["ferry"],
+          "brief": "15:04. Пассажирский паром «Северянка» на линии Мурманск — Териберка потерял ход в четырёх милях от берега: заклинило рулевое, судно развернуло лагом к волне и посадило на банку. Пробоина в машинном отделении, крен растёт.\n\nНа борту был сорок один человек. Большинство сняли шлюпки и катер береговой охраны «Сторож-7». На корме остались восемь — те, кто не успел к шлюпкам. Два спасательных плота сорвало и унесло на север.\n\nС Рыбачьего идёт шквал. «Арктур» идёт к парому и примет людей на палубу — она ближе маяка, но качается.\n\nСалон — шесть мест. Считайте рейсы.",
+          "area": {"radius": 1600},
+          "weather": {
+            "start": "overcast",
+            "windFrom": 300,
+            "script": [{"at": 180, "to": "squall", "over": 40}]
+          },
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -1150,
+                "z": -150,
+                "heading": 1.047518004662921,
+                "drift": {"x": 2.6, "z": -1.5},
+                "speed": 3,
+                "route": [[-1150, -150], [-420, -620], [480, -760], [620, 120], [-560, 260]]
+              }
+            ],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "boats": [
+                {
+                  "x": -760,
+                  "z": -260,
+                  "kind": "patrol",
+                  "name": "Сторож-7",
+                  "heading": 1.2217304763960306
+                }
+              ],
+              "debris": [{"x": -360, "z": -440, "radius": 60, "count": 10, "kind": "luggage"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "ferry",
+              "primary": true,
+              "type": "deck",
+              "fallbackType": "deck",
+              "x": -330,
+              "z": -470,
+              "count": 8,
+              "height": 6,
+              "hidden": false,
+              "name": "Северянка",
+              "heading": 1.0471975511965976,
+              "sinkTime": 480,
+              "since": 35,
+              "label": "паром «Северянка», корма",
+              "at": 0,
+              "signals": {},
+              "requestedType": "wreck",
+              "people": [
+                {
+                  "name": "Константин Шергин",
+                  "first": "Константин",
+                  "surname": "Шергин",
+                  "gender": "m",
+                  "age": 45,
+                  "child": false,
+                  "occupation": "пассажир"
+                },
+                {
+                  "name": "Екатерина Павлова",
+                  "first": "Екатерина",
+                  "surname": "Павлова",
+                  "gender": "f",
+                  "age": 22,
+                  "child": false,
+                  "occupation": "студентка"
+                },
+                {
+                  "name": "Михаил Галкин",
+                  "first": "Михаил",
+                  "surname": "Галкин",
+                  "gender": "m",
+                  "age": 57,
+                  "child": false,
+                  "occupation": "пенсионер"
+                },
+                {
+                  "name": "Елена Цветкова",
+                  "first": "Елена",
+                  "surname": "Цветкова",
+                  "gender": "f",
+                  "age": 23,
+                  "child": false,
+                  "occupation": "пассажирка"
+                },
+                {
+                  "name": "Андрей Ильин",
+                  "first": "Андрей",
+                  "surname": "Ильин",
+                  "gender": "m",
+                  "age": 61,
+                  "child": false,
+                  "occupation": "пассажир"
+                },
+                {
+                  "name": "Егор Фомин",
+                  "first": "Егор",
+                  "surname": "Фомин",
+                  "gender": "m",
+                  "age": 39,
+                  "child": false,
+                  "occupation": "пассажир"
+                },
+                {
+                  "name": "Даша Зайцева",
+                  "first": "Даша",
+                  "surname": "Зайцева",
+                  "gender": "f",
+                  "age": 11,
+                  "child": true,
+                  "occupation": "школьница"
+                },
+                {
+                  "name": "Илья Комаров",
+                  "first": "Илья",
+                  "surname": "Комаров",
+                  "gender": "m",
+                  "age": 62,
+                  "child": false,
+                  "occupation": "вахтовик"
+                }
+              ]
+            },
+            {
+              "tag": "raft-a",
+              "type": "raft",
+              "x": -760,
+              "z": -820,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 50,
+              "label": "плот №1 «Северянки»",
+              "signals": {"rockets": 2, "epirb": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Алексей Белых",
+                  "first": "Алексей",
+                  "surname": "Белых",
+                  "gender": "m",
+                  "age": 49,
+                  "child": false,
+                  "occupation": "учитель из Териберки"
+                },
+                {
+                  "name": "Максим Чупров",
+                  "first": "Максим",
+                  "surname": "Чупров",
+                  "gender": "m",
+                  "age": 34,
+                  "child": false,
+                  "occupation": "студент"
+                },
+                {
+                  "name": "Ольга Жукова",
+                  "first": "Ольга",
+                  "surname": "Жукова",
+                  "gender": "f",
+                  "age": 47,
+                  "child": false,
+                  "occupation": "почтальон"
+                }
+              ],
+              "datum": {"x": -761, "z": -833}
+            },
+            {
+              "tag": "raft-b",
+              "type": "raft",
+              "x": 180,
+              "z": -1010,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 250,
+              "since": 50,
+              "label": "плот №2 «Северянки»",
+              "signals": {"rockets": 2},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Петя Воробьёв",
+                  "first": "Петя",
+                  "surname": "Воробьёв",
+                  "gender": "m",
+                  "age": 9,
+                  "child": true,
+                  "occupation": "школьник"
+                },
+                {
+                  "name": "Николай Ковалёв",
+                  "first": "Николай",
+                  "surname": "Ковалёв",
+                  "gender": "m",
+                  "age": 20,
+                  "child": false,
+                  "occupation": "студент"
+                },
+                {
+                  "name": "Илья Лазарев",
+                  "first": "Илья",
+                  "surname": "Лазарев",
+                  "gender": "m",
+                  "age": 43,
+                  "child": false,
+                  "occupation": "вахтовик"
+                }
+              ],
+              "datum": {"x": 208, "z": -1062}
+            }
+          ],
+          "hazards": [],
+          "objectives": {
+            "rescue": 9,
+            "timeLimit": 0,
+            "extra": [{"id": "ferry", "text": "Снять всех с «Северянки»", "tag": "ferry"}]
+          },
+          "waterTemp": 8,
+          "current": {"x": 0.35, "z": 0.2},
+          "par": 600,
+          "hazardsRandom": false,
+          "hints": ["deck", "raftDrop"],
+          "script": [],
+          "radio": [
+            {
+              "at": 24,
+              "speaker": "survivor",
+              "name": "ПАРОМ «СЕВЕРЯНКА»",
+              "channel": "handheld",
+              "id": "s_ferry",
+              "priority": 2,
+              "text": "Нас ещё восемь на корме! Быстрее, крен растёт!"
+            },
+            {
+              "at": 108,
+              "speaker": "coastguard",
+              "name": "СТОРОЖ-7",
+              "channel": "ext",
+              "id": "c_help",
+              "priority": 2,
+              "text": "Берег, Сторож-7. Шлюпки у нас, людей забираем сами. Вертолёт — на корму и на плоты."
+            },
+            {
+              "at": 168,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. Шквал будет у вас через пару минут. «Арктур» подходит к «Северянке» с запада, палуба свободна."
+            },
+            {
+              "at": 282,
+              "speaker": "survivor",
+              "name": "ПАРОМ «СЕВЕРЯНКА»",
+              "channel": "handheld",
+              "priority": 2,
+              "text": "Вода в салоне! Крен двадцать пять! Мы на корме, у флагштока!"
+            }
+          ],
+          "index": 1,
+          "number": "02",
+          "timeOfDay": 0.6388888888888888,
+          "total": 14,
+          "lastSpawnAt": 0,
+          "datums": [
+            {"x": -761, "z": -833, "radius": 220, "tag": "raft-a", "label": "плот №1 «Северянки»"},
+            {"x": 208, "z": -1062, "radius": 250, "tag": "raft-b", "label": "плот №2 «Северянки»"}
+          ],
+          "presets": ["overcast", "squall"],
+          "chapters": [{"at": 0, "n": 1, "text": "ВЕТЕР КРЕПЧАЕТ"}, {"at": 180, "n": 2, "text": "ШКВАЛ"}],
+          "windFrom": 300,
+          "card": "ОПЕРАЦИЯ «ПАРОМ» · 14 октября, 15:20 · 69°12′ с.ш. 33°27′ в.д. · ветер СЗ 9\u00a0м/с, волнение 4, видимость 8\u00a0км",
+          "dispatch": {
+            "square": "Елена-шесть",
+            "count": 14,
+            "countWords": "14\u00a0человек",
+            "dir": "к северо-западу",
+            "dist": 550,
+            "distWords": "пятьсот пятьдесят",
+            "x": -330,
+            "z": -470
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 9 из 14",
+            "silver": "Не менее 85\u00a0% — 12 из 14, время до 13:00",
+            "gold": "Всех, время до 10:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "fog",
+        "opts": {"index": 2, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "fog",
+          "codename": "МОЛОКО",
+          "title": "Молоко",
+          "subtitle": "Туман у Кошек",
+          "date": "22 октября",
+          "clock": "08:55",
+          "coords": "69°08′ с.ш. 33°48′ в.д.",
+          "difficulty": 2,
+          "seed": 303,
+          "theme": "fishing",
+          "tags": ["fog", "cold"],
+          "brief": "08:40. На залив лёг туман: видимость двести метров и падает. Рыболовецкий траулер «Кильдин» в тумане сел на камни Кошек у входа в губу, команда ушла на плотах. Тогда же пропала мотодора «Мария» с двумя рыбаками — последний раз её видели у маяка.\n\nСверху вы не увидите ничего. Слушайте. Плоты пускают ракеты — красная видна сквозь туман до километра. У одного плота аварийный радиобуй. Люди в воде свистят, если слышат ротор. Громкоговоритель — чтобы они ответили.\n\nВокруг маяка из тумана торчат скалы. Высота — ваш друг, но не ниже скал.",
+          "area": {"radius": 1400},
+          "weather": {"start": "fog", "windFrom": 200, "script": []},
+          "world": {
+            "pads": [{"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0}],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6},
+                {"x": 150, "z": -250, "radius": 18, "height": 26, "name": "Кошки"},
+                {"x": 215, "z": -300, "radius": 12, "height": 14, "name": "Кошки"},
+                {"x": -260, "z": 150, "radius": 22, "height": 38},
+                {"x": 420, "z": 90, "radius": 16, "height": 22},
+                {"x": -100, "z": -430, "radius": 14, "height": 18},
+                {"x": -380, "z": -120, "radius": 10, "height": 12}
+              ],
+              "boats": [
+                {
+                  "x": 250,
+                  "z": -330,
+                  "kind": "trawler",
+                  "name": "Кильдин",
+                  "heading": 0.6108652381980153,
+                  "aground": true
+                }
+              ],
+              "buoys": [{"x": 60, "z": -180, "kind": "isolated"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "maria",
+              "type": "hull",
+              "x": 330,
+              "z": 240,
+              "count": 2,
+              "hidden": true,
+              "datumRadius": 150,
+              "name": "Мария",
+              "sinkTime": 300,
+              "since": 40,
+              "label": "мотодора «Мария»",
+              "signals": {"whistle": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Роман Воронов",
+                  "first": "Роман",
+                  "surname": "Воронов",
+                  "gender": "m",
+                  "age": 40,
+                  "child": false,
+                  "occupation": "моторист"
+                },
+                {
+                  "name": "Андрей Семёнов",
+                  "first": "Андрей",
+                  "surname": "Семёнов",
+                  "gender": "m",
+                  "age": 51,
+                  "child": false,
+                  "occupation": "капитан сейнера"
+                }
+              ],
+              "datum": {"x": 330, "z": 217}
+            },
+            {
+              "tag": "raft-a",
+              "type": "raft",
+              "x": -470,
+              "z": -360,
+              "count": 3,
+              "pet": "dog",
+              "hidden": true,
+              "datumRadius": 200,
+              "since": 30,
+              "label": "плот «Кильдина»",
+              "signals": {"rockets": 3, "epirb": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Борис Шергин",
+                  "first": "Борис",
+                  "surname": "Шергин",
+                  "gender": "m",
+                  "age": 31,
+                  "child": false,
+                  "occupation": "рыбак"
+                },
+                {
+                  "name": "Олег Лукин",
+                  "first": "Олег",
+                  "surname": "Лукин",
+                  "gender": "m",
+                  "age": 66,
+                  "child": false,
+                  "occupation": "рыбак"
+                },
+                {
+                  "name": "Игорь Савельев",
+                  "first": "Игорь",
+                  "surname": "Савельев",
+                  "gender": "m",
+                  "age": 33,
+                  "child": false,
+                  "occupation": "рыбак"
+                }
+              ],
+              "datum": {"x": -464, "z": -429}
+            },
+            {
+              "tag": "swimmer",
+              "type": "swimmer",
+              "x": -200,
+              "z": 480,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 160,
+              "since": 20,
+              "label": "рыбак за бортом",
+              "signals": {"whistle": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Евгений Воробьёв",
+                  "first": "Евгений",
+                  "surname": "Воробьёв",
+                  "gender": "m",
+                  "age": 39,
+                  "child": false,
+                  "occupation": "рыбак"
+                }
+              ],
+              "datum": {"x": -218, "z": 496}
+            },
+            {
+              "tag": "raft-b",
+              "type": "raft",
+              "x": 560,
+              "z": -560,
+              "count": 3,
+              "at": 90,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 10,
+              "label": "второй плот «Кильдина»",
+              "signals": {"rockets": 2},
+              "people": [
+                {
+                  "name": "Тимофей Хабаров",
+                  "first": "Тимофей",
+                  "surname": "Хабаров",
+                  "gender": "m",
+                  "age": 53,
+                  "child": false,
+                  "occupation": "матрос"
+                },
+                {
+                  "name": "Варвара Рыбакова",
+                  "first": "Варвара",
+                  "surname": "Рыбакова",
+                  "gender": "f",
+                  "age": 30,
+                  "child": false,
+                  "occupation": "рыбачка"
+                },
+                {
+                  "name": "Геннадий Шубин",
+                  "first": "Геннадий",
+                  "surname": "Шубин",
+                  "gender": "m",
+                  "age": 23,
+                  "child": false,
+                  "occupation": "матрос"
+                }
+              ],
+              "datum": {"x": 536, "z": -563}
+            }
+          ],
+          "hazards": [],
+          "objectives": {"rescue": 6, "timeLimit": 0, "extra": []},
+          "waterTemp": 7,
+          "current": {"x": 0.2, "z": -0.3},
+          "par": 540,
+          "hazardsRandom": false,
+          "hints": ["horn", "searchlight", "map"],
+          "script": [],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "coastguard",
+              "name": "МАЯК «СКАЛИСТЫЙ»",
+              "channel": "ext",
+              "id": "c_light",
+              "priority": 2,
+              "text": "Чайка, Скалистый. Даю ревун каждые тридцать секунд — идите на звук."
+            },
+            {
+              "at": 92,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. «Кильдин» сообщает: спустили второй плот, северо-восточнее камней. Трое. Ищите по ракетам."
+            },
+            {
+              "after": "spotted:raft-a",
+              "delay": 2,
+              "speaker": "winchman",
+              "name": "БОРТОПЕРАТОР",
+              "channel": "ics",
+              "id": "w_dog",
+              "priority": 1,
+              "text": "На плоту собака! Лает на нас — через ротор слышно."
+            },
+            {
+              "at": 205,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Скалы где-то справа. Не вижу, но чувствую. Держи выше сорока."
+            }
+          ],
+          "index": 2,
+          "number": "03",
+          "timeOfDay": 0.3715277777777778,
+          "total": 9,
+          "lastSpawnAt": 90,
+          "datums": [
+            {"x": 330, "z": 217, "radius": 150, "tag": "maria", "label": "мотодора «Мария»"},
+            {"x": -464, "z": -429, "radius": 200, "tag": "raft-a", "label": "плот «Кильдина»"},
+            {"x": -218, "z": 496, "radius": 160, "tag": "swimmer", "label": "рыбак за бортом"}
+          ],
+          "presets": ["fog"],
+          "chapters": [{"at": 0, "n": 1, "text": "ТУМАН"}],
+          "windFrom": 200,
+          "card": "ОПЕРАЦИЯ «МОЛОКО» · 22 октября, 08:55 · 69°08′ с.ш. 33°48′ в.д. · ветер Ю 3\u00a0м/с, волнение 3, видимость 0,2\u00a0км",
+          "dispatch": {
+            "square": "Женя-семь",
+            "count": 9,
+            "countWords": "девятеро",
+            "dir": "к юго-востоку",
+            "dist": 400,
+            "distWords": "четыреста",
+            "x": 330,
+            "z": 217
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 6 из 9",
+            "silver": "Не менее 85\u00a0% — 8 из 9, время до 11:42",
+            "gold": "Всех, время до 9:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "rig",
+        "opts": {"index": 3, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "rig",
+          "codename": "БУРОВАЯ",
+          "title": "Буровая «Северная-7»",
+          "subtitle": "Шестеро на нижней палубе",
+          "date": "3 ноября",
+          "clock": "13:10",
+          "coords": "69°41′ с.ш. 34°55′ в.д.",
+          "difficulty": 3,
+          "seed": 404,
+          "theme": "rig",
+          "tags": ["rig", "storm", "cold"],
+          "brief": "12:55. Морская буровая платформа «Северная-7», девяносто миль от берега. Пожар в буровом модуле, верхние ярусы в дыму. Шестерых отрезало огнём на нижней палубе — двадцать два метра над водой. Шлюпку спускали в шторм: плот с четверыми унесло, двое упали в воду.\n\nДевять баллов. За платформой по ветру — турбулентный клин: в нём машину бросает. Факел гнётся по ветру, над ним восходящий поток.\n\nМетеорологи предупреждают о волнах-убийцах. Услышите про аномальную волну — бросайте всё и вверх.\n\n«Арктур» держится в миле. Его палуба гуляет на девять градусов.",
+          "area": {"radius": 1500},
+          "weather": {"start": "storm", "windFrom": 330, "script": []},
+          "world": {
+            "pads": [
+              {"type": "rig", "name": "Северная-7", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": 1300,
+                "z": 420,
+                "heading": -1.5707963267948966,
+                "drift": {"x": -3, "z": 0},
+                "speed": 3,
+                "route": [[1300, 420], [-150, 640], [-760, 120], [-380, -620], [560, -560]]
+              }
+            ],
+            "props": {
+              "rig": true,
+              "debris": [{"x": 90, "z": 140, "radius": 50, "count": 8, "kind": "planks"}]
+            }
+          },
+          "heli": {"x": 420, "z": 380, "heading": -0.8353565591193911, "altitude": 60},
+          "survivors": [
+            {
+              "tag": "lowerdeck",
+              "primary": true,
+              "type": "deck",
+              "x": -8,
+              "z": 12,
+              "height": 22,
+              "count": 6,
+              "hidden": false,
+              "since": 25,
+              "label": "нижняя палуба «Северной-7»",
+              "at": 0,
+              "signals": {},
+              "people": [
+                {
+                  "name": "Матвей Ильин",
+                  "first": "Матвей",
+                  "surname": "Ильин",
+                  "gender": "m",
+                  "age": 31,
+                  "child": false,
+                  "occupation": "помощник бурильщика"
+                },
+                {
+                  "name": "Олег Каргопольский",
+                  "first": "Олег",
+                  "surname": "Каргопольский",
+                  "gender": "m",
+                  "age": 22,
+                  "child": false,
+                  "occupation": "электрик"
+                },
+                {
+                  "name": "Николай Голубев",
+                  "first": "Николай",
+                  "surname": "Голубев",
+                  "gender": "m",
+                  "age": 21,
+                  "child": false,
+                  "occupation": "повар буровой"
+                },
+                {
+                  "name": "Илья Лебедев",
+                  "first": "Илья",
+                  "surname": "Лебедев",
+                  "gender": "m",
+                  "age": 21,
+                  "child": false,
+                  "occupation": "помощник бурильщика"
+                },
+                {
+                  "name": "Михаил Степанов",
+                  "first": "Михаил",
+                  "surname": "Степанов",
+                  "gender": "m",
+                  "age": 58,
+                  "child": false,
+                  "occupation": "повар буровой"
+                },
+                {
+                  "name": "Артём Хабаров",
+                  "first": "Артём",
+                  "surname": "Хабаров",
+                  "gender": "m",
+                  "age": 21,
+                  "child": false,
+                  "occupation": "буровой мастер"
+                }
+              ]
+            },
+            {
+              "tag": "sw-1",
+              "type": "swimmer",
+              "x": 140,
+              "z": 210,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 110,
+              "since": 25,
+              "label": "упал при спуске шлюпки",
+              "signals": {"strobe": true, "whistle": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Павел Морозов",
+                  "first": "Павел",
+                  "surname": "Морозов",
+                  "gender": "m",
+                  "age": 41,
+                  "child": false,
+                  "occupation": "геолог"
+                }
+              ],
+              "datum": {"x": 140, "z": 210}
+            },
+            {
+              "tag": "sw-2",
+              "type": "swimmer",
+              "x": 205,
+              "z": 250,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 110,
+              "since": 25,
+              "label": "упал при спуске шлюпки",
+              "signals": {"strobe": true, "whistle": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Виктор Кудрявцев",
+                  "first": "Виктор",
+                  "surname": "Кудрявцев",
+                  "gender": "m",
+                  "age": 52,
+                  "child": false,
+                  "occupation": "помощник бурильщика"
+                }
+              ],
+              "datum": {"x": 204, "z": 250}
+            },
+            {
+              "tag": "raft",
+              "type": "raft",
+              "x": 160,
+              "z": 400,
+              "count": 4,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 30,
+              "label": "плот «Северной-7»",
+              "signals": {"rockets": 2, "epirb": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Илья Баранов",
+                  "first": "Илья",
+                  "surname": "Баранов",
+                  "gender": "m",
+                  "age": 42,
+                  "child": false,
+                  "occupation": "электрик"
+                },
+                {
+                  "name": "Виктор Зуев",
+                  "first": "Виктор",
+                  "surname": "Зуев",
+                  "gender": "m",
+                  "age": 20,
+                  "child": false,
+                  "occupation": "помощник бурильщика"
+                },
+                {
+                  "name": "Савелий Быков",
+                  "first": "Савелий",
+                  "surname": "Быков",
+                  "gender": "m",
+                  "age": 20,
+                  "child": false,
+                  "occupation": "помощник бурильщика"
+                },
+                {
+                  "name": "Олег Канев",
+                  "first": "Олег",
+                  "surname": "Канев",
+                  "gender": "m",
+                  "age": 57,
+                  "child": false,
+                  "occupation": "геолог"
+                }
+              ],
+              "datum": {"x": 146, "z": 407}
+            }
+          ],
+          "hazards": [
+            {
+              "type": "rogue",
+              "at": 300,
+              "height": 15,
+              "fromDeg": 300,
+              "target": "heli",
+              "telegraph": 12,
+              "scripted": true
+            }
+          ],
+          "objectives": {
+            "rescue": 8,
+            "timeLimit": 0,
+            "extra": [{"id": "deck", "text": "Снять всех с нижней палубы", "tag": "lowerdeck"}]
+          },
+          "waterTemp": 7,
+          "current": {"x": 0.3, "z": 0.4},
+          "par": 660,
+          "hazardsRandom": false,
+          "hints": ["deckWinch", "deck", "climb"],
+          "script": [],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "ship",
+              "name": "СЕВЕРНАЯ-7",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Северная-7! Нижняя палуба, западный угол, шестеро. Огонь идёт по кабельным лоткам. Быстрее!"
+            },
+            {
+              "at": 40,
+              "speaker": "ship",
+              "name": "АРКТУР",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, «Арктур». Принимаем всех, медики на палубе. Палуба гуляет — заходите с кормы."
+            },
+            {
+              "at": 282,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Командир, зыбь странная. Слишком длинная."
+            },
+            {
+              "at": 430,
+              "speaker": "ship",
+              "name": "СЕВЕРНАЯ-7",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, огонь дошёл до третьего яруса. Сколько вам ещё?"
+            }
+          ],
+          "index": 3,
+          "number": "04",
+          "timeOfDay": 0.5486111111111112,
+          "total": 12,
+          "lastSpawnAt": 0,
+          "datums": [
+            {"x": 140, "z": 210, "radius": 110, "tag": "sw-1", "label": "упал при спуске шлюпки"},
+            {"x": 204, "z": 250, "radius": 110, "tag": "sw-2", "label": "упал при спуске шлюпки"},
+            {"x": 146, "z": 407, "radius": 220, "tag": "raft", "label": "плот «Северной-7»"}
+          ],
+          "presets": ["storm"],
+          "chapters": [{"at": 0, "n": 1, "text": "ШТОРМ"}],
+          "windFrom": 330,
+          "card": "ОПЕРАЦИЯ «БУРОВАЯ» · 3 ноября, 13:10 · 69°41′ с.ш. 34°55′ в.д. · ветер СЗ 24\u00a0м/с, волнение 7, видимость 2\u00a0км",
+          "dispatch": {
+            "square": "Елена-семь",
+            "count": 12,
+            "countWords": "12\u00a0человек",
+            "dir": "к северо-западу",
+            "dist": 550,
+            "distWords": "пятьсот пятьдесят",
+            "x": -8,
+            "z": 12
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 8 из 12",
+            "silver": "Не менее 85\u00a0% — 11 из 12, время до 14:18",
+            "gold": "Всех, время до 11:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "spouts",
+        "opts": {"index": 4, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "spouts",
+          "codename": "РЕГАТА",
+          "title": "Водяные смерчи",
+          "subtitle": "Регата «Кубок Студёного моря»",
+          "date": "9 ноября",
+          "clock": "11:50",
+          "coords": "69°25′ с.ш. 33°58′ в.д.",
+          "difficulty": 3,
+          "seed": 505,
+          "theme": "regatta",
+          "tags": ["regatta", "spout", "storm"],
+          "brief": "11:48. Парусная регата «Кубок Студёного моря», четырнадцать яхт. Утром шли в свежий ветер; в одиннадцать с запада подошла линия шквалов с водяными смерчами. Флот разбросало. Три яхты легли на борт — «Ирбис», «Норд» и «Кайра». В воде люди без плотов.\n\n«Арктур» — судно обеспечения регаты, он и будет вашей палубой. Других площадок нет.\n\nСмерч сверху начинается тёмным пятном и спиралью пены на воде. Дайте ему пройти. В ядре вертолёт не тянет: его крутит и бросает вверх. Форсаж — чтобы уйти.",
+          "area": {"radius": 1600},
+          "weather": {"start": "overcast", "windFrom": 250, "script": [{"at": 120, "to": "storm", "over": 60}]},
+          "world": {
+            "pads": [
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -500,
+                "z": -500,
+                "heading": 1.5707963267948966,
+                "drift": {"x": 3, "z": 0},
+                "speed": 3,
+                "route": [[-500, -500], [350, -520], [250, -900], [-350, -880]]
+              }
+            ],
+            "props": {
+              "buoys": [{"x": -20, "z": -300, "kind": "mark"}, {"x": 300, "z": -900, "kind": "mark"}],
+              "debris": [{"x": -360, "z": -440, "radius": 30, "count": 6, "kind": "sail"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "irbis",
+              "type": "hull",
+              "x": -380,
+              "z": -420,
+              "count": 2,
+              "hidden": true,
+              "datumRadius": 150,
+              "name": "Ирбис",
+              "sinkTime": 320,
+              "since": 20,
+              "label": "яхта «Ирбис»",
+              "signals": {"epirb": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Светлана Ластина",
+                  "first": "Светлана",
+                  "surname": "Ластина",
+                  "gender": "f",
+                  "age": 19,
+                  "child": false,
+                  "occupation": "шкотовая"
+                },
+                {
+                  "name": "Евгений Окулов",
+                  "first": "Евгений",
+                  "surname": "Окулов",
+                  "gender": "m",
+                  "age": 28,
+                  "child": false,
+                  "occupation": "яхтсмен"
+                }
+              ],
+              "datum": {"x": -398, "z": -449}
+            },
+            {
+              "tag": "irbis-sw",
+              "type": "swimmer",
+              "x": -330,
+              "z": -470,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "since": 20,
+              "label": "экипаж «Ирбиса»",
+              "signals": {"smoke": true, "whistle": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Николай Мезенцев",
+                  "first": "Николай",
+                  "surname": "Мезенцев",
+                  "gender": "m",
+                  "age": 56,
+                  "child": false,
+                  "occupation": "тактик"
+                }
+              ],
+              "datum": {"x": -322, "z": -477}
+            },
+            {
+              "tag": "nord",
+              "type": "hull",
+              "x": 520,
+              "z": -610,
+              "count": 2,
+              "hidden": true,
+              "datumRadius": 180,
+              "name": "Норд",
+              "sinkTime": 360,
+              "since": 20,
+              "label": "яхта «Норд»",
+              "signals": {"rockets": 1},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Олег Миронов",
+                  "first": "Олег",
+                  "surname": "Миронов",
+                  "gender": "m",
+                  "age": 65,
+                  "child": false,
+                  "occupation": "яхтсмен"
+                },
+                {
+                  "name": "Екатерина Смирнова",
+                  "first": "Екатерина",
+                  "surname": "Смирнова",
+                  "gender": "f",
+                  "age": 44,
+                  "child": false,
+                  "occupation": "яхтсменка"
+                }
+              ],
+              "datum": {"x": 477, "z": -598}
+            },
+            {
+              "tag": "nord-sw",
+              "type": "swimmer",
+              "x": 580,
+              "z": -560,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "since": 20,
+              "label": "экипаж «Норда»",
+              "signals": {"smoke": true, "whistle": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Елена Рогачёва",
+                  "first": "Елена",
+                  "surname": "Рогачёва",
+                  "gender": "f",
+                  "age": 30,
+                  "child": false,
+                  "occupation": "яхтсменка"
+                }
+              ],
+              "datum": {"x": 595, "z": -570}
+            },
+            {
+              "tag": "kaira",
+              "type": "hull",
+              "x": -120,
+              "z": -860,
+              "count": 2,
+              "at": 100,
+              "hidden": true,
+              "datumRadius": 200,
+              "name": "Кайра",
+              "sinkTime": 320,
+              "since": 0,
+              "label": "яхта «Кайра»",
+              "signals": {"rockets": 1, "epirb": true},
+              "people": [
+                {
+                  "name": "Артём Воронов",
+                  "first": "Артём",
+                  "surname": "Воронов",
+                  "gender": "m",
+                  "age": 59,
+                  "child": false,
+                  "occupation": "яхтсмен"
+                },
+                {
+                  "name": "Лев Никитин",
+                  "first": "Лев",
+                  "surname": "Никитин",
+                  "gender": "m",
+                  "age": 57,
+                  "child": false,
+                  "occupation": "тактик"
+                }
+              ],
+              "datum": {"x": -138, "z": -812}
+            },
+            {
+              "tag": "kaira-sw",
+              "type": "swimmer",
+              "x": -70,
+              "z": -900,
+              "count": 1,
+              "at": 100,
+              "hidden": true,
+              "datumRadius": 150,
+              "since": 0,
+              "label": "экипаж «Кайры»",
+              "signals": {"smoke": true, "whistle": true},
+              "people": [
+                {
+                  "name": "Егор Архипов",
+                  "first": "Егор",
+                  "surname": "Архипов",
+                  "gender": "m",
+                  "age": 20,
+                  "child": false,
+                  "occupation": "шкотовый"
+                }
+              ],
+              "datum": {"x": -71, "z": -912}
+            },
+            {
+              "tag": "lone",
+              "type": "swimmer",
+              "x": 280,
+              "z": -280,
+              "count": 1,
+              "at": 160,
+              "hidden": true,
+              "datumRadius": 130,
+              "since": 5,
+              "label": "сорван волной с «Сирина»",
+              "signals": {"smoke": true, "whistle": true},
+              "people": [
+                {
+                  "name": "Василий Мезенцев",
+                  "first": "Василий",
+                  "surname": "Мезенцев",
+                  "gender": "m",
+                  "age": 43,
+                  "child": false,
+                  "occupation": "шкотовый"
+                }
+              ],
+              "datum": {"x": 291, "z": -311}
+            }
+          ],
+          "hazards": [{"type": "waterspout", "at": 150, "x": 120, "z": -560, "scripted": true}],
+          "objectives": {"rescue": 6, "timeLimit": 0, "extra": []},
+          "waterTemp": 8,
+          "current": {"x": 0.2, "z": 0.1},
+          "par": 600,
+          "hazardsRandom": true,
+          "hints": ["boost"],
+          "script": [],
+          "radio": [
+            {
+              "at": 4,
+              "speaker": "ship",
+              "name": "АРКТУР",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, «Арктур». Регата сошла с дистанции. Яхты подбираем на ходу, люди в воде — ваши."
+            },
+            {
+              "at": 103,
+              "speaker": "survivor",
+              "name": "ЯХТА «КАЙРА»",
+              "channel": "handheld",
+              "priority": 2,
+              "text": "Мэйдэй, мэйдэй, «Кайра»… легли на борт… двое… видим смерч…"
+            }
+          ],
+          "index": 4,
+          "number": "05",
+          "timeOfDay": 0.4930555555555556,
+          "total": 10,
+          "lastSpawnAt": 160,
+          "datums": [
+            {"x": -398, "z": -449, "radius": 150, "tag": "irbis", "label": "яхта «Ирбис»"},
+            {"x": -322, "z": -477, "radius": 120, "tag": "irbis-sw", "label": "экипаж «Ирбиса»"},
+            {"x": 477, "z": -598, "radius": 180, "tag": "nord", "label": "яхта «Норд»"},
+            {"x": 595, "z": -570, "radius": 120, "tag": "nord-sw", "label": "экипаж «Норда»"}
+          ],
+          "presets": ["overcast", "storm"],
+          "chapters": [{"at": 0, "n": 1, "text": "ВЕТЕР КРЕПЧАЕТ"}, {"at": 120, "n": 2, "text": "ШТОРМ"}],
+          "windFrom": 250,
+          "card": "ОПЕРАЦИЯ «РЕГАТА» · 9 ноября, 11:50 · 69°25′ с.ш. 33°58′ в.д. · ветер З 9\u00a0м/с, волнение 4, видимость 8\u00a0км",
+          "dispatch": {
+            "square": "Елена-шесть",
+            "count": 10,
+            "countWords": "десятеро",
+            "dir": "к юго-востоку",
+            "dist": 100,
+            "distWords": "сто",
+            "x": -398,
+            "z": -449
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 6 из 10",
+            "silver": "Не менее 85\u00a0% — 9 из 10, время до 13:00",
+            "gold": "Всех, время до 10:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "night",
+        "opts": {"index": 5, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "night",
+          "codename": "КОНТЕЙНЕР",
+          "title": "Ночная смена",
+          "subtitle": "Контейнеры «Полярного ветра»",
+          "date": "27 ноября",
+          "clock": "02:40",
+          "coords": "70°02′ с.ш. 32°40′ в.д.",
+          "difficulty": 4,
+          "seed": 606,
+          "theme": "cargo",
+          "tags": ["night", "storm", "cargo"],
+          "brief": "02:25. Сухогруз «Полярный ветер» в шторм потерял палубный груз — сорок контейнеров. Вместе с ними за борт смыло палубную команду: семеро держатся на плавающих контейнерах, троих видели в спасательном плоту. Развернуть судно капитан не может.\n\nНочь, шторм, видимость километр. Ищите прожектором: светоотражатели на жилетах вспыхивают в луче. Стробы мигают раз в полторы секунды. Фальшфейер на воду — и район подсвечен на сорок секунд.\n\nКонтейнеры дрейфуют быстро. Домой ведёт луч маяка.",
+          "area": {"radius": 1600},
+          "weather": {"start": "nightStorm", "windFrom": 280, "script": []},
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -1100,
+                "z": 300,
+                "heading": 1.0014831356942346,
+                "drift": {"x": 2.5, "z": -1.6},
+                "speed": 3,
+                "route": [[-1100, 300], [-200, -300], [600, -700], [700, 200]]
+              }
+            ],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "containers": [
+                {"x": 200, "z": -300, "color": "#B3412E"},
+                {"x": 520, "z": -380, "color": "#1F5E8C"},
+                {"x": -150, "z": -560, "color": "#2F7D4F"},
+                {"x": 610, "z": -700, "color": "#C9A227"},
+                {"x": -520, "z": -820, "color": "#B3412E"},
+                {"x": 90, "z": -800, "color": "#1F5E8C"},
+                {"x": 880, "z": -420, "color": "#2F7D4F"},
+                {"x": -300, "z": -300, "color": "#C9A227"}
+              ],
+              "boats": [
+                {
+                  "x": 1150,
+                  "z": -1250,
+                  "kind": "cargo",
+                  "name": "Полярный ветер",
+                  "heading": 4.363323129985824
+                }
+              ]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "cat",
+              "type": "container",
+              "x": 360,
+              "z": -450,
+              "count": 3,
+              "pet": "cat",
+              "color": "#1F5E8C",
+              "hidden": true,
+              "datumRadius": 200,
+              "since": 40,
+              "label": "синий контейнер",
+              "signals": {"strobe": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Борис Карпов",
+                  "first": "Борис",
+                  "surname": "Карпов",
+                  "gender": "m",
+                  "age": 35,
+                  "child": false,
+                  "occupation": "второй помощник"
+                },
+                {
+                  "name": "Светлана Чернова",
+                  "first": "Светлана",
+                  "surname": "Чернова",
+                  "gender": "f",
+                  "age": 48,
+                  "child": false,
+                  "occupation": "буфетчица"
+                },
+                {
+                  "name": "Борис Блинов",
+                  "first": "Борис",
+                  "surname": "Блинов",
+                  "gender": "m",
+                  "age": 21,
+                  "child": false,
+                  "occupation": "кок с сухогруза"
+                }
+              ],
+              "datum": {"x": 330, "z": -395}
+            },
+            {
+              "tag": "cont-b",
+              "type": "container",
+              "x": 60,
+              "z": -640,
+              "count": 2,
+              "color": "#B3412E",
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 40,
+              "label": "красный контейнер",
+              "signals": {"strobe": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Василий Кудрявцев",
+                  "first": "Василий",
+                  "surname": "Кудрявцев",
+                  "gender": "m",
+                  "age": 32,
+                  "child": false,
+                  "occupation": "электромеханик"
+                },
+                {
+                  "name": "Геннадий Семёнов",
+                  "first": "Геннадий",
+                  "surname": "Семёнов",
+                  "gender": "m",
+                  "age": 21,
+                  "child": false,
+                  "occupation": "матрос «Полярного ветра»"
+                }
+              ],
+              "datum": {"x": 55, "z": -664}
+            },
+            {
+              "tag": "raft",
+              "type": "raft",
+              "x": 60,
+              "z": -930,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 250,
+              "since": 45,
+              "label": "плот «Полярного ветра»",
+              "signals": {"rockets": 2, "epirb": true, "strobe": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Игорь Яковлев",
+                  "first": "Игорь",
+                  "surname": "Яковлев",
+                  "gender": "m",
+                  "age": 44,
+                  "child": false,
+                  "occupation": "матрос «Полярного ветра»"
+                },
+                {
+                  "name": "Сергей Степанов",
+                  "first": "Сергей",
+                  "surname": "Степанов",
+                  "gender": "m",
+                  "age": 52,
+                  "child": false,
+                  "occupation": "электромеханик"
+                },
+                {
+                  "name": "Степан Бурков",
+                  "first": "Степан",
+                  "surname": "Бурков",
+                  "gender": "m",
+                  "age": 28,
+                  "child": false,
+                  "occupation": "электромеханик"
+                }
+              ],
+              "datum": {"x": 46, "z": -866}
+            },
+            {
+              "tag": "cont-c",
+              "type": "container",
+              "x": 520,
+              "z": -180,
+              "count": 2,
+              "at": 150,
+              "color": "#C9A227",
+              "hidden": false,
+              "datumRadius": 160,
+              "since": 40,
+              "label": "жёлтый контейнер",
+              "signals": {"strobe": true},
+              "people": [
+                {
+                  "name": "Тимофей Ковалёв",
+                  "first": "Тимофей",
+                  "surname": "Ковалёв",
+                  "gender": "m",
+                  "age": 44,
+                  "child": false,
+                  "occupation": "матрос «Полярного ветра»"
+                },
+                {
+                  "name": "Тимофей Иванов",
+                  "first": "Тимофей",
+                  "surname": "Иванов",
+                  "gender": "m",
+                  "age": 38,
+                  "child": false,
+                  "occupation": "кок с сухогруза"
+                }
+              ]
+            }
+          ],
+          "hazards": [],
+          "objectives": {
+            "rescue": 6,
+            "timeLimit": 0,
+            "extra": [{"id": "cat", "text": "Найти кота", "tag": "cat"}]
+          },
+          "waterTemp": 9,
+          "current": {"x": 0.3, "z": -0.1},
+          "par": 660,
+          "hazardsRandom": false,
+          "hints": ["searchlight", "flare"],
+          "script": [],
+          "radio": [
+            {
+              "at": 4,
+              "speaker": "ship",
+              "name": "ПОЛЯРНЫЙ ВЕТЕР",
+              "channel": "ext",
+              "id": "sh_cargo",
+              "priority": 2,
+              "text": "Чайка, сухогруз «Полярный ветер». У нас смыло контейнеры, на одном люди."
+            },
+            {
+              "at": 55,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Темно, как в трюме. Свети, командир, — будем ловить полоски на жилетах."
+            },
+            {
+              "at": 152,
+              "speaker": "ship",
+              "name": "ПОЛЯРНЫЙ ВЕТЕР",
+              "channel": "ext",
+              "id": "sh_yellow",
+              "priority": 2,
+              "text": "Чайка, «Полярный ветер». Ещё один контейнер, жёлтый, на нём двое — у нас на радаре, передаю место. Его кренит, долго не удержатся."
+            },
+            {
+              "after": "rescued:cat",
+              "delay": 3,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_cat",
+              "priority": 1,
+              "text": "Чайка, повторите, сколько на борту. …И кот? Принято, кот засчитан."
+            }
+          ],
+          "index": 5,
+          "number": "06",
+          "timeOfDay": 0.1111111111111111,
+          "total": 10,
+          "lastSpawnAt": 150,
+          "datums": [
+            {"x": 330, "z": -395, "radius": 200, "tag": "cat", "label": "синий контейнер"},
+            {"x": 55, "z": -664, "radius": 220, "tag": "cont-b", "label": "красный контейнер"},
+            {"x": 46, "z": -866, "radius": 250, "tag": "raft", "label": "плот «Полярного ветра»"}
+          ],
+          "presets": ["nightStorm"],
+          "chapters": [{"at": 0, "n": 1, "text": "НОЧНОЙ ШТОРМ"}],
+          "windFrom": 280,
+          "card": "ОПЕРАЦИЯ «КОНТЕЙНЕР» · 27 ноября, 02:40 · 70°02′ с.ш. 32°40′ в.д. · ветер З 21\u00a0м/с, волнение 7, видимость 1\u00a0км",
+          "dispatch": {
+            "square": "Женя-шесть",
+            "count": 10,
+            "countWords": "десятеро",
+            "dir": "к северо-востоку",
+            "dist": 500,
+            "distWords": "пятьсот",
+            "x": 330,
+            "z": -395
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 6 из 10",
+            "silver": "Не менее 85\u00a0% — 9 из 10, время до 14:18",
+            "gold": "Всех, время до 11:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "ninth",
+        "opts": {"index": 6, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "ninth",
+          "codename": "ДЕВЯТЫЙ ВАЛ",
+          "title": "Девятый вал",
+          "subtitle": "Последний закат перед полярной ночью",
+          "date": "29 ноября",
+          "clock": "12:20",
+          "coords": "69°58′ с.ш. 35°10′ в.д.",
+          "difficulty": 5,
+          "seed": 707,
+          "theme": "trawler",
+          "tags": ["wave", "storm", "trawler"],
+          "brief": "12:20. Последний закат перед полярной ночью: солнце едва поднялось над горизонтом — и уже садится. Траулер «Вайгач» получил пробоину и тонет в двадцати милях к северу. Шестнадцать человек: шестеро ещё на палубе, с ними раненый тралмейстер, остальные на плотах и в воде.\n\nПока светло, море обманчиво спокойное. Через две минуты с запада придёт шторм, через семь — ночь. В зыби аномальные волны: после четвёртой минуты они будут приходить раз в минуту.\n\nИ ещё. Наблюдатели «Арктура» говорят о большой волне — метров двадцать. Её услышат за пятнадцать секунд до того, как увидят.",
+          "area": {"radius": 1700},
+          "weather": {
+            "start": "clearing",
+            "windFrom": 290,
+            "script": [{"at": 150, "to": "storm", "over": 60}, {"at": 420, "to": "nightStorm", "over": 60}]
+          },
+          "world": {
+            "pads": [
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -1050,
+                "z": -250,
+                "heading": 1.5707963267948966,
+                "drift": {"x": 3, "z": 0},
+                "speed": 3,
+                "route": [[-1050, -250], [-150, -280], [300, -800], [-650, -900]]
+              }
+            ],
+            "props": {"debris": [{"x": -400, "z": -460, "radius": 70, "count": 12, "kind": "nets"}]}
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "raft-b",
+              "type": "raft",
+              "x": -760,
+              "z": -400,
+              "count": 4,
+              "hidden": true,
+              "datumRadius": 200,
+              "since": 25,
+              "label": "плот №2 «Вайгача»",
+              "signals": {"rockets": 2, "mirror": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Степан Макаров",
+                  "first": "Степан",
+                  "surname": "Макаров",
+                  "gender": "m",
+                  "age": 47,
+                  "child": false,
+                  "occupation": "старпом"
+                },
+                {
+                  "name": "Тимофей Нечаев",
+                  "first": "Тимофей",
+                  "surname": "Нечаев",
+                  "gender": "m",
+                  "age": 50,
+                  "child": false,
+                  "occupation": "рыбообработчик"
+                },
+                {
+                  "name": "Борис Крылов",
+                  "first": "Борис",
+                  "surname": "Крылов",
+                  "gender": "m",
+                  "age": 58,
+                  "child": false,
+                  "occupation": "рыбообработчик"
+                },
+                {
+                  "name": "Василий Ардеев",
+                  "first": "Василий",
+                  "surname": "Ардеев",
+                  "gender": "m",
+                  "age": 66,
+                  "child": false,
+                  "occupation": "капитан «Вайгача»"
+                }
+              ],
+              "datum": {"x": -757, "z": -422}
+            },
+            {
+              "tag": "vaygach",
+              "primary": true,
+              "type": "deck",
+              "fallbackType": "deck",
+              "x": -380,
+              "z": -430,
+              "count": 6,
+              "height": 7,
+              "hidden": false,
+              "name": "Вайгач",
+              "heading": 3.490658503988659,
+              "sinkTime": 660,
+              "since": 20,
+              "label": "траулер «Вайгач»",
+              "at": 0,
+              "signals": {},
+              "requestedType": "wreck",
+              "people": [
+                {
+                  "name": "Николай Фёдоров",
+                  "first": "Николай",
+                  "surname": "Фёдоров",
+                  "gender": "m",
+                  "age": 40,
+                  "child": false,
+                  "occupation": "капитан «Вайгача»"
+                },
+                {
+                  "name": "Артём Комаров",
+                  "first": "Артём",
+                  "surname": "Комаров",
+                  "gender": "m",
+                  "age": 21,
+                  "child": false,
+                  "occupation": "кок с траулера"
+                },
+                {
+                  "name": "Надежда Буркова",
+                  "first": "Надежда",
+                  "surname": "Буркова",
+                  "gender": "f",
+                  "age": 20,
+                  "child": false,
+                  "occupation": "кок с траулера"
+                },
+                {
+                  "name": "Борис Калинин",
+                  "first": "Борис",
+                  "surname": "Калинин",
+                  "gender": "m",
+                  "age": 41,
+                  "child": false,
+                  "occupation": "рыбообработчик"
+                },
+                {
+                  "name": "Максим Андреев",
+                  "first": "Максим",
+                  "surname": "Андреев",
+                  "gender": "m",
+                  "age": 46,
+                  "child": false,
+                  "occupation": "кок с траулера"
+                },
+                {
+                  "name": "Сергей Блинов",
+                  "first": "Сергей",
+                  "surname": "Блинов",
+                  "gender": "m",
+                  "age": 46,
+                  "child": false,
+                  "occupation": "тралмейстер"
+                }
+              ]
+            },
+            {
+              "tag": "sw-1",
+              "type": "swimmer",
+              "x": -430,
+              "z": -520,
+              "count": 1,
+              "at": 25,
+              "hidden": true,
+              "datumRadius": 100,
+              "since": 10,
+              "label": "смыло с палубы",
+              "signals": {"whistle": true, "mirror": true},
+              "people": [
+                {
+                  "name": "Дмитрий Двинской",
+                  "first": "Дмитрий",
+                  "surname": "Двинской",
+                  "gender": "m",
+                  "age": 60,
+                  "child": false,
+                  "occupation": "капитан «Вайгача»"
+                }
+              ],
+              "datum": {"x": -420, "z": -497}
+            },
+            {
+              "tag": "raft-a",
+              "type": "raft",
+              "x": -250,
+              "z": -760,
+              "count": 3,
+              "at": 110,
+              "hidden": true,
+              "datumRadius": 220,
+              "since": 25,
+              "label": "плот №1 «Вайгача»",
+              "signals": {"rockets": 2, "epirb": true},
+              "people": [
+                {
+                  "name": "Павел Киселёв",
+                  "first": "Павел",
+                  "surname": "Киселёв",
+                  "gender": "m",
+                  "age": 60,
+                  "child": false,
+                  "occupation": "тралмейстер"
+                },
+                {
+                  "name": "Варвара Рябова",
+                  "first": "Варвара",
+                  "surname": "Рябова",
+                  "gender": "f",
+                  "age": 62,
+                  "child": false,
+                  "occupation": "рыбообработчица"
+                },
+                {
+                  "name": "Илья Каргопольский",
+                  "first": "Илья",
+                  "surname": "Каргопольский",
+                  "gender": "m",
+                  "age": 45,
+                  "child": false,
+                  "occupation": "тралмейстер"
+                }
+              ],
+              "datum": {"x": -283, "z": -762}
+            },
+            {
+              "tag": "injured",
+              "type": "injured",
+              "x": -360,
+              "z": -425,
+              "count": 1,
+              "at": 45,
+              "from": "vaygach",
+              "hidden": false,
+              "since": 0,
+              "label": "раненый тралмейстер",
+              "signals": {"mirror": true},
+              "people": [
+                {
+                  "name": "Екатерина Куликова",
+                  "first": "Екатерина",
+                  "surname": "Куликова",
+                  "gender": "f",
+                  "age": 45,
+                  "child": false,
+                  "occupation": "кок с траулера"
+                }
+              ]
+            },
+            {
+              "tag": "sw-2",
+              "type": "swimmer",
+              "x": -470,
+              "z": -570,
+              "count": 1,
+              "at": 200,
+              "hidden": true,
+              "datumRadius": 100,
+              "since": 0,
+              "label": "прыгнул с кормы",
+              "signals": {"smoke": true, "whistle": true, "strobe": true},
+              "people": [
+                {
+                  "name": "Дмитрий Комаров",
+                  "first": "Дмитрий",
+                  "surname": "Комаров",
+                  "gender": "m",
+                  "age": 44,
+                  "child": false,
+                  "occupation": "матрос-добытчик"
+                }
+              ],
+              "datum": {"x": -490, "z": -576}
+            }
+          ],
+          "hazards": [
+            {
+              "type": "rogue",
+              "at": 240,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 13,
+              "fromDeg": 276
+            },
+            {
+              "type": "rogue",
+              "at": 300,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 16,
+              "fromDeg": 278
+            },
+            {
+              "type": "rogue",
+              "at": 360,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 16,
+              "fromDeg": 308
+            },
+            {
+              "type": "rogue",
+              "at": 420,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 18,
+              "fromDeg": 298
+            },
+            {
+              "type": "rogue",
+              "at": 480,
+              "height": 22,
+              "fromDeg": 290,
+              "target": "heli",
+              "telegraph": 15,
+              "scripted": true,
+              "name": "Девятый вал"
+            },
+            {
+              "type": "rogue",
+              "at": 540,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 12,
+              "fromDeg": 295
+            },
+            {
+              "type": "rogue",
+              "at": 600,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 16,
+              "fromDeg": 308
+            },
+            {
+              "type": "rogue",
+              "at": 660,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 12,
+              "fromDeg": 308
+            },
+            {
+              "type": "rogue",
+              "at": 720,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 16,
+              "fromDeg": 285
+            },
+            {
+              "type": "rogue",
+              "at": 780,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 13,
+              "fromDeg": 279
+            },
+            {
+              "type": "rogue",
+              "at": 840,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 15,
+              "fromDeg": 276
+            },
+            {
+              "type": "rogue",
+              "at": 900,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 14,
+              "fromDeg": 277
+            },
+            {
+              "type": "rogue",
+              "at": 960,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 14,
+              "fromDeg": 307
+            },
+            {
+              "type": "rogue",
+              "at": 1020,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 15,
+              "fromDeg": 284
+            },
+            {
+              "type": "rogue",
+              "at": 1080,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 13,
+              "fromDeg": 287
+            },
+            {
+              "type": "rogue",
+              "at": 1140,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 13,
+              "fromDeg": 301
+            },
+            {
+              "type": "rogue",
+              "at": 1200,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 15,
+              "fromDeg": 306
+            },
+            {
+              "type": "rogue",
+              "at": 1260,
+              "target": "heli",
+              "telegraph": 12,
+              "height": 14,
+              "fromDeg": 301
+            }
+          ],
+          "objectives": {"rescue": 10, "timeLimit": 0, "extra": []},
+          "waterTemp": 9,
+          "current": {"x": 0.4, "z": 0.15},
+          "par": 780,
+          "hazardsRandom": false,
+          "hints": ["climb"],
+          "script": [{"at": 466, "do": "chapter", "text": "ДЕВЯТЫЙ ВАЛ"}],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. «Вайгач» передаёт: оставляют судно. Шестнадцать человек. Солнце сядет через двадцать минут — дальше только прожектор."
+            },
+            {
+              "at": 46,
+              "speaker": "ship",
+              "name": "ВАЙГАЧ",
+              "channel": "ext",
+              "id": "sh_mob",
+              "priority": 3,
+              "text": "Чайка, «Вайгач»! Тралмейстера смыло за борт — он ранен, сам не выплывет. Он у нас под бортом!"
+            },
+            {
+              "at": 128,
+              "speaker": "winchman",
+              "name": "БОРТОПЕРАТОР",
+              "channel": "ics",
+              "id": "w_gulls",
+              "priority": 1,
+              "text": "Чайки снялись все разом. Не к добру."
+            },
+            {
+              "at": 462,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 3,
+              "text": "Командир… посмотри на запад. Это не волна. Это стена."
+            },
+            {
+              "at": 520,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег! Чайка, ответьте… Вижу вас на радаре. Слава богу. Работайте."
+            }
+          ],
+          "index": 6,
+          "number": "07",
+          "timeOfDay": 0.5138888888888888,
+          "total": 16,
+          "lastSpawnAt": 200,
+          "datums": [{"x": -757, "z": -422, "radius": 200, "tag": "raft-b", "label": "плот №2 «Вайгача»"}],
+          "presets": ["clearing", "storm", "nightStorm"],
+          "chapters": [
+            {"at": 0, "n": 1, "text": "ПРОСВЕТ"},
+            {"at": 150, "n": 2, "text": "ШТОРМ"},
+            {"at": 420, "n": 3, "text": "НОЧНОЙ ШТОРМ"},
+            {"at": 466, "n": 4, "text": "ДЕВЯТЫЙ ВАЛ", "script": true}
+          ],
+          "windFrom": 290,
+          "card": "ОПЕРАЦИЯ «ДЕВЯТЫЙ ВАЛ» · 29 ноября, 12:20 · 69°58′ с.ш. 35°10′ в.д. · ветер З 6\u00a0м/с, волнение 4, видимость 15\u00a0км",
+          "dispatch": {
+            "square": "Елена-шесть",
+            "count": 16,
+            "countWords": "16\u00a0человек",
+            "dir": "к востоку",
+            "dist": 700,
+            "distWords": "семьсот",
+            "x": -380,
+            "z": -430
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 10 из 16",
+            "silver": "Не менее 85\u00a0% — 14 из 16, время до 16:54",
+            "gold": "Всех, время до 13:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "eye",
+        "opts": {"index": 7, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "eye",
+          "codename": "ГЛАЗ",
+          "title": "Глаз бури",
+          "subtitle": "Полярный циклон «Ксения»",
+          "date": "2 декабря",
+          "clock": "11:50",
+          "coords": "69°15′ с.ш. 33°40′ в.д.",
+          "difficulty": 5,
+          "seed": 808,
+          "theme": "research",
+          "tags": ["storm", "eye"],
+          "brief": "11:30. Полярный циклон «Ксения». Ветер тридцать метров в секунду, вдоль берега идёт торнадо. Центр циклона пройдёт над районом около полудня: у вас будет минута тишины, а потом ветер ударит с другой стороны.\n\nТри точки. Научный бот «Гидролог-2» перевернулся: трое на днище, четвёртый, раненый, — в воздушном пузыре под корпусом. Плот с исследовательского судна «Профессор Зубов» — шестеро. Баржа «Печора» сидит на банке: шестеро на палубе, одного смыло; шкипер со сломанной ногой — в рубке, а её заливает.\n\nОбоих раненых вынесет в воду как раз к глазу, а в ледяной воде раненый долго не протянет. Носилки — только когда машина стоит: глаз и есть ваше окно. После него все рефлексы удержания будут наоборот.",
+          "area": {"radius": 1700},
+          "weather": {
+            "start": "storm",
+            "windFrom": 20,
+            "script": [
+              {"at": 300, "to": "clearing", "over": 20, "chapter": "ГЛАЗ БУРИ", "eye": true},
+              {"at": 350, "to": "storm", "over": 15, "windShift": 180, "chapter": "ВЕТЕР НАОБОРОТ"},
+              {"at": 780, "to": "clearing", "over": 90}
+            ]
+          },
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -250,
+                "z": 800,
+                "heading": 0.875203349951616,
+                "drift": {"x": 2.3, "z": -1.92},
+                "speed": 3,
+                "route": [[-250, 800], [350, 300], [650, -450], [-300, -450]]
+              }
+            ],
+            "props": {
+              "lighthouse": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ],
+              "debris": [{"x": 480, "z": 520, "radius": 40, "count": 6, "kind": "barrels"}]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "gidrolog",
+              "type": "hull",
+              "x": 330,
+              "z": -370,
+              "count": 3,
+              "hidden": true,
+              "datumRadius": 180,
+              "name": "Гидролог-2",
+              "since": 30,
+              "label": "бот «Гидролог-2»",
+              "signals": {"epirb": true, "rockets": 1, "smoke": true},
+              "sinkTime": 300,
+              "at": 0,
+              "people": [
+                {
+                  "name": "Дмитрий Никитин",
+                  "first": "Дмитрий",
+                  "surname": "Никитин",
+                  "gender": "m",
+                  "age": 19,
+                  "child": false,
+                  "occupation": "аспирант"
+                },
+                {
+                  "name": "Илья Романов",
+                  "first": "Илья",
+                  "surname": "Романов",
+                  "gender": "m",
+                  "age": 56,
+                  "child": false,
+                  "occupation": "океанолог"
+                },
+                {
+                  "name": "Андрей Воробьёв",
+                  "first": "Андрей",
+                  "surname": "Воробьёв",
+                  "gender": "m",
+                  "age": 60,
+                  "child": false,
+                  "occupation": "океанолог"
+                }
+              ],
+              "datum": {"x": 314, "z": -376}
+            },
+            {
+              "tag": "gidrolog-inj",
+              "type": "injured",
+              "x": 338,
+              "z": -364,
+              "count": 1,
+              "at": 302,
+              "from": "gidrolog",
+              "hidden": false,
+              "since": 30,
+              "label": "раненый с «Гидролога-2»",
+              "signals": {},
+              "people": [
+                {
+                  "name": "Егор Рогачёв",
+                  "first": "Егор",
+                  "surname": "Рогачёв",
+                  "gender": "m",
+                  "age": 33,
+                  "child": false,
+                  "occupation": "океанолог"
+                }
+              ]
+            },
+            {
+              "tag": "zubov",
+              "type": "raft",
+              "x": -420,
+              "z": -600,
+              "count": 6,
+              "hidden": true,
+              "datumRadius": 250,
+              "since": 40,
+              "label": "плот «Профессора Зубова»",
+              "signals": {"rockets": 3, "epirb": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Евгений Нечаев",
+                  "first": "Евгений",
+                  "surname": "Нечаев",
+                  "gender": "m",
+                  "age": 48,
+                  "child": false,
+                  "occupation": "капитан бота"
+                },
+                {
+                  "name": "Евгений Виноградов",
+                  "first": "Евгений",
+                  "surname": "Виноградов",
+                  "gender": "m",
+                  "age": 25,
+                  "child": false,
+                  "occupation": "гидролог"
+                },
+                {
+                  "name": "Сергей Канев",
+                  "first": "Сергей",
+                  "surname": "Канев",
+                  "gender": "m",
+                  "age": 35,
+                  "child": false,
+                  "occupation": "океанолог"
+                },
+                {
+                  "name": "Пётр Лазарев",
+                  "first": "Пётр",
+                  "surname": "Лазарев",
+                  "gender": "m",
+                  "age": 53,
+                  "child": false,
+                  "occupation": "аспирант"
+                },
+                {
+                  "name": "Лев Гусев",
+                  "first": "Лев",
+                  "surname": "Гусев",
+                  "gender": "m",
+                  "age": 64,
+                  "child": false,
+                  "occupation": "гидролог"
+                },
+                {
+                  "name": "Савелий Ластин",
+                  "first": "Савелий",
+                  "surname": "Ластин",
+                  "gender": "m",
+                  "age": 25,
+                  "child": false,
+                  "occupation": "аспирант"
+                }
+              ],
+              "datum": {"x": -448, "z": -536}
+            },
+            {
+              "tag": "pechora",
+              "type": "deck",
+              "x": 480,
+              "z": 520,
+              "height": 6,
+              "count": 6,
+              "hidden": false,
+              "name": "Печора",
+              "theme": "barge",
+              "since": 60,
+              "label": "баржа «Печора»",
+              "at": 0,
+              "signals": {},
+              "people": [
+                {
+                  "name": "Григорий Романов",
+                  "first": "Григорий",
+                  "surname": "Романов",
+                  "gender": "m",
+                  "age": 48,
+                  "child": false,
+                  "occupation": "матрос"
+                },
+                {
+                  "name": "Людмила Савельева",
+                  "first": "Людмила",
+                  "surname": "Савельева",
+                  "gender": "f",
+                  "age": 45,
+                  "child": false,
+                  "occupation": "сторож"
+                },
+                {
+                  "name": "Лев Селезнёв",
+                  "first": "Лев",
+                  "surname": "Селезнёв",
+                  "gender": "m",
+                  "age": 21,
+                  "child": false,
+                  "occupation": "вахтовик"
+                },
+                {
+                  "name": "Евгений Миронов",
+                  "first": "Евгений",
+                  "surname": "Миронов",
+                  "gender": "m",
+                  "age": 56,
+                  "child": false,
+                  "occupation": "матрос"
+                },
+                {
+                  "name": "Алексей Голубев",
+                  "first": "Алексей",
+                  "surname": "Голубев",
+                  "gender": "m",
+                  "age": 58,
+                  "child": false,
+                  "occupation": "вахтовик"
+                },
+                {
+                  "name": "Фёдор Яковлев",
+                  "first": "Фёдор",
+                  "surname": "Яковлев",
+                  "gender": "m",
+                  "age": 46,
+                  "child": false,
+                  "occupation": "вахтовик"
+                }
+              ]
+            },
+            {
+              "tag": "pechora-inj",
+              "type": "injured",
+              "x": 530,
+              "z": 580,
+              "count": 1,
+              "at": 290,
+              "hidden": false,
+              "theme": "barge",
+              "since": 0,
+              "label": "шкипер «Печоры», ранен",
+              "signals": {},
+              "people": [
+                {
+                  "name": "Василий Логинов",
+                  "first": "Василий",
+                  "surname": "Логинов",
+                  "gender": "m",
+                  "age": 42,
+                  "child": false,
+                  "occupation": "матрос"
+                }
+              ]
+            },
+            {
+              "tag": "pechora-sw",
+              "type": "swimmer",
+              "x": 445,
+              "z": 485,
+              "count": 1,
+              "hidden": true,
+              "datumRadius": 120,
+              "theme": "barge",
+              "since": 5,
+              "label": "смыт с «Печоры»",
+              "signals": {"smoke": true, "whistle": true, "strobe": true},
+              "at": 0,
+              "people": [
+                {
+                  "name": "Максим Белых",
+                  "first": "Максим",
+                  "surname": "Белых",
+                  "gender": "m",
+                  "age": 62,
+                  "child": false,
+                  "occupation": "шкипер баржи"
+                }
+              ],
+              "datum": {"x": 418, "z": 479}
+            }
+          ],
+          "hazards": [
+            {
+              "type": "tornado",
+              "at": 15,
+              "x": -600,
+              "z": -1050,
+              "headingDeg": 70,
+              "speed": 5,
+              "life": 260,
+              "seed": 13,
+              "scripted": true
+            },
+            {"type": "whirlpool", "at": 420, "x": -720, "z": -260, "radius": 45, "scripted": true}
+          ],
+          "objectives": {
+            "rescue": 11,
+            "timeLimit": 0,
+            "extra": [
+              {
+                "id": "injured",
+                "text": "Оба раненых — на носилках",
+                "tags": ["gidrolog-inj", "pechora-inj"]
+              }
+            ]
+          },
+          "waterTemp": 9,
+          "current": {"x": -0.3, "z": 0.3},
+          "par": 900,
+          "hazardsRandom": true,
+          "hints": ["stretcher", "boost"],
+          "script": [],
+          "radio": [
+            {
+              "at": 5,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "priority": 2,
+              "text": "Чайка, Берег. Торнадо идёт вдоль берега на северо-восток. От воронки — дальше трёхсот метров. Глаз будет у вас через пять минут."
+            },
+            {
+              "at": 291,
+              "speaker": "ship",
+              "name": "ПЕЧОРА",
+              "channel": "ext",
+              "id": "sh_skipper",
+              "priority": 3,
+              "text": "Чайка, «Печора»! Рубку залило, шкипера вынесло за борт — он ранен, в воде у баржи!"
+            },
+            {
+              "at": 302,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_eye",
+              "priority": 3,
+              "text": "Чайка, вы в глазе. У вас минута, не больше. Потом ветер развернётся."
+            },
+            {
+              "at": 306,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_gidrolog",
+              "priority": 3,
+              "text": "Чайка, Берег. «Гидролог» затонул, у его буя всплыл человек — раненый, из-под корпуса!"
+            },
+            {
+              "at": 343,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 3,
+              "text": "Ветер разворачивается… Держи, держи — сейчас ударит с юга!"
+            },
+            {
+              "at": 786,
+              "speaker": "dispatch",
+              "name": "БЕРЕГ",
+              "channel": "ext",
+              "id": "d_clear",
+              "priority": 1,
+              "text": "Фронт уходит на восток. Над вашим районом прояснение."
+            }
+          ],
+          "index": 7,
+          "number": "08",
+          "timeOfDay": 0.4930555555555556,
+          "total": 18,
+          "lastSpawnAt": 302,
+          "datums": [
+            {"x": 314, "z": -376, "radius": 180, "tag": "gidrolog", "label": "бот «Гидролог-2»"},
+            {
+              "x": -448,
+              "z": -536,
+              "radius": 250,
+              "tag": "zubov",
+              "label": "плот «Профессора Зубова»"
+            },
+            {"x": 418, "z": 479, "radius": 120, "tag": "pechora-sw", "label": "смыт с «Печоры»"}
+          ],
+          "presets": ["storm", "clearing", "storm", "clearing"],
+          "chapters": [
+            {"at": 0, "n": 1, "text": "ШТОРМ"},
+            {"at": 300, "n": 2, "text": "ГЛАЗ БУРИ"},
+            {"at": 350, "n": 3, "text": "ВЕТЕР НАОБОРОТ"},
+            {"at": 780, "n": 4, "text": "ПРОСВЕТ"}
+          ],
+          "windFrom": 20,
+          "card": "ОПЕРАЦИЯ «ГЛАЗ» · 2 декабря, 11:50 · 69°15′ с.ш. 33°40′ в.д. · ветер С 24\u00a0м/с, волнение 7, видимость 2\u00a0км",
+          "dispatch": {
+            "square": "Женя-шесть",
+            "count": 18,
+            "countWords": "18\u00a0человек",
+            "dir": "к северо-востоку",
+            "dist": 500,
+            "distWords": "пятьсот",
+            "x": 314,
+            "z": -376
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 11 из 18",
+            "silver": "Не менее 85\u00a0% — 16 из 18, время до 19:30",
+            "gold": "Всех, время до 15:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "moon",
+        "opts": {"index": 8, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "moon",
+          "codename": "ЛУНА",
+          "title": "Лунная дорожка",
+          "subtitle": "Ан-2 в новогоднюю ночь",
+          "star": true,
+          "date": "31 декабря",
+          "clock": "23:10",
+          "coords": "69°19′ с.ш. 34°12′ в.д.",
+          "difficulty": 2,
+          "seed": 909,
+          "theme": "plane",
+          "tags": ["night", "plane", "calm"],
+          "brief": "22:58. У Ан-2 с доктором и новогодней почтой для Дальних Зеленцов отказал двигатель. Пилот посадил машину на воду — прямо в лунную дорожку. Пятеро стоят на крыльях. Самолёт продержится на плаву пару минут, не больше.\n\nШтиль, луна, мороз. Вода светится от каждого движения.\n\nДо Нового года пятьдесят минут. Давайте успеем.",
+          "area": {"radius": 1200},
+          "weather": {"start": "nightCalm", "windFrom": 180, "script": []},
+          "world": {
+            "pads": [
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -150,
+                "z": 250,
+                "heading": 0.973619668702219,
+                "drift": {"x": 2.5, "z": -1.7},
+                "speed": 3,
+                "route": [[-150, 250], [400, -150], [100, -600], [-450, -200]]
+              }
+            ],
+            "props": {"whale": {"x": -320, "z": -520}, "bottle": {"x": 175, "z": -175}}
+          },
+          "heli": {"pad": 0},
+          "survivors": [
+            {
+              "tag": "an2",
+              "type": "raft",
+              "fallbackType": "raft",
+              "x": 100,
+              "z": -250,
+              "count": 5,
+              "hidden": true,
+              "datumRadius": 150,
+              "since": 6,
+              "lead": ["пилот Ан-2", null],
+              "sinkTime": 120,
+              "label": "Ан-2 на воде",
+              "signals": {"strobe": true},
+              "at": 0,
+              "requestedType": "plane",
+              "people": [
+                {
+                  "name": "Максим Ластин",
+                  "first": "Максим",
+                  "surname": "Ластин",
+                  "gender": "m",
+                  "age": 43,
+                  "child": false,
+                  "occupation": "пилот Ан-2"
+                },
+                {
+                  "name": "Валентина Поморцева",
+                  "first": "Валентина",
+                  "surname": "Поморцева",
+                  "gender": "f",
+                  "age": 33,
+                  "child": false,
+                  "occupation": "доктор"
+                },
+                {
+                  "name": "Максим Морозов",
+                  "first": "Максим",
+                  "surname": "Морозов",
+                  "gender": "m",
+                  "age": 35,
+                  "child": false,
+                  "occupation": "доктор"
+                },
+                {
+                  "name": "Павел Яковлев",
+                  "first": "Павел",
+                  "surname": "Яковлев",
+                  "gender": "m",
+                  "age": 35,
+                  "child": false,
+                  "occupation": "ветеринар"
+                },
+                {
+                  "name": "Егор Нечаев",
+                  "first": "Егор",
+                  "surname": "Нечаев",
+                  "gender": "m",
+                  "age": 46,
+                  "child": false,
+                  "occupation": "доктор"
+                }
+              ],
+              "datum": {"x": 57, "z": -232}
+            }
+          ],
+          "hazards": [],
+          "objectives": {"rescue": 3, "timeLimit": 0, "extra": []},
+          "waterTemp": 6,
+          "current": {"x": 0.1, "z": 0.05},
+          "par": 360,
+          "hazardsRandom": false,
+          "hints": [],
+          "script": [],
+          "radio": [
+            {
+              "at": 4,
+              "speaker": "pilot",
+              "name": "ВТОРОЙ ПИЛОТ",
+              "channel": "ics",
+              "priority": 1,
+              "text": "Луна какая… Командир, видишь дорожку? Они прямо на ней."
+            },
+            {
+              "at": 30,
+              "speaker": "survivor",
+              "name": "АН-2",
+              "channel": "handheld",
+              "priority": 2,
+              "text": "Мы на крыле… вода прибывает… сколько вам до нас?"
+            },
+            {
+              "after": "rescued:an2",
+              "delay": 4,
+              "speaker": "winchman",
+              "name": "БОРТОПЕРАТОР",
+              "channel": "ics",
+              "id": "w_bottle",
+              "priority": 1,
+              "text": "Командир, у самолёта что-то блестит на воде… Бутылка! Подцепим корзиной?"
+            }
+          ],
+          "index": 8,
+          "number": "09",
+          "timeOfDay": 0.9652777777777778,
+          "total": 5,
+          "lastSpawnAt": 0,
+          "datums": [{"x": 57, "z": -232, "radius": 150, "tag": "an2", "label": "Ан-2 на воде"}],
+          "presets": ["nightCalm"],
+          "chapters": [{"at": 0, "n": 1, "text": "ЛУННАЯ НОЧЬ"}],
+          "windFrom": 180,
+          "card": "ОПЕРАЦИЯ «ЛУНА» · 31 декабря, 23:10 · 69°19′ с.ш. 34°12′ в.д. · ветер Ю 2\u00a0м/с, волнение 2, видимость 10\u00a0км",
+          "dispatch": {
+            "square": "Женя-шесть",
+            "count": 5,
+            "countWords": "пятеро",
+            "dir": "к северо-востоку",
+            "dist": 500,
+            "distWords": "пятьсот",
+            "x": 57,
+            "z": -232
+          },
+          "medalText": {
+            "bronze": "Спасти не менее 60\u00a0% — 3 из 5",
+            "silver": "Не менее 85\u00a0% — 5 из 5, время до 7:48",
+            "gold": "Всех, время до 6:00, 2 стилевых бонуса",
+            "cross": "Золото — и ни одной царапины"
+          }
+        }
+      },
+      {
+        "id": "endless",
+        "opts": {
+          "index": -1,
+          "seed": 20261016,
+          "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]
+        },
+        "def": {
+          "id": "endless",
+          "endless": true,
+          "codename": "СМЕНА",
+          "title": "Смена",
+          "subtitle": "Дежурство на маяке «Скалистый»",
+          "date": "16 октября",
+          "clock": "08:00",
+          "coords": "69°13′ с.ш. 33°30′ в.д.",
+          "difficulty": 3,
+          "seed": 20261016,
+          "theme": "generic",
+          "tags": [],
+          "brief": "Дежурная смена. Вызовы приходят по одному — с моря, с судов, с берега; Берег называет квадрат и сколько людей.\n\nТопливо и корпус переносятся между вылетами: заправка на любой площадке, ремонт — только на маяке.\n\nПогода будет меняться, к вечеру стемнеет. Смена закончится, когда вы потеряете десятерых — или машину.",
+          "area": {"radius": 2400},
+          "weather": {"start": "calm", "windFrom": 300, "script": []},
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": -700,
+                "z": -500,
+                "heading": 3.141592653589793,
+                "drift": {"x": 0, "z": 0},
+                "speed": 3,
+                "route": [[-700, -500], [-200, -1100], [600, -900], [300, -300]]
+              },
+              {"type": "rig", "name": "Северная-7", "x": 1150, "z": -650, "heading": 0}
+            ],
+            "props": {
+              "lighthouse": true,
+              "rig": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ]
+            }
+          },
+          "heli": {"pad": 0},
+          "survivors": [],
+          "hazards": [],
+          "objectives": {"rescue": 0, "timeLimit": 0, "extra": []},
+          "waterTemp": 8,
+          "current": {"x": 0.25, "z": 0.1},
+          "par": 0,
+          "hazardsRandom": true,
+          "hints": [
+            "takeoff", "move", "descend", "winch", "land", "horn", "searchlight", "flare", "boost", "climb", "deck",
+            "stretcher"
+          ],
+          "script": [],
+          "radio": [],
+          "index": -1,
+          "number": "СМ",
+          "timeOfDay": 0.3333333333333333,
+          "total": 0,
+          "lastSpawnAt": 0,
+          "datums": [],
+          "presets": ["calm"],
+          "chapters": [{"at": 0, "n": 1, "text": "ШТИЛЬ"}],
+          "windFrom": 300,
+          "card": "ДЕЖУРНАЯ СМЕНА · 16 октября, 08:00 · 69°13′ с.ш. 33°30′ в.д. · ветер СЗ 3\u00a0м/с, волнение 2, видимость 20\u00a0км"
+        }
+      },
+      {
+        "id": "title",
+        "opts": {"index": 0, "survivorTypes": ["swimmer", "raft", "hull", "container", "injured", "deck"]},
+        "def": {
+          "id": "title",
+          "attract": true,
+          "codename": "MAYDAY",
+          "title": "MAYDAY",
+          "clock": "05:42",
+          "seed": 77,
+          "area": {"radius": 2000},
+          "weather": {"start": "nightStorm", "windFrom": 270, "script": []},
+          "world": {
+            "pads": [
+              {"type": "lighthouse", "name": "Скалистый", "x": 0, "z": 0, "heading": 0},
+              {
+                "type": "ship",
+                "name": "Арктур",
+                "x": 420,
+                "z": -280,
+                "heading": 3.141592653589793,
+                "drift": {"x": 0, "z": 0},
+                "speed": 3,
+                "route": [[420, -280], [-300, -700], [500, -900]]
+              },
+              {"type": "rig", "name": "Северная-7", "x": -1100, "z": -850, "heading": 0}
+            ],
+            "props": {
+              "lighthouse": true,
+              "rig": true,
+              "rocks": [
+                {"x": -62, "z": 38, "radius": 26, "height": 12},
+                {"x": 74, "z": 52, "radius": 16, "height": 8},
+                {"x": -34, "z": -74, "radius": 12, "height": 6}
+              ]
+            }
+          },
+          "heli": {"x": 160, "z": -120, "heading": 0.9, "altitude": 48},
+          "survivors": [],
+          "hazards": [],
+          "objectives": {"rescue": 0, "timeLimit": 0, "extra": []},
+          "waterTemp": 8,
+          "current": {"x": 0, "z": 0},
+          "par": 0,
+          "hazardsRandom": false,
+          "hints": [],
+          "script": [],
+          "radio": [],
+          "index": 0,
+          "number": "01",
+          "date": "16 октября",
+          "tags": [],
+          "timeOfDay": 0.2375,
+          "total": 0,
+          "lastSpawnAt": 0,
+          "datums": [],
+          "presets": ["nightStorm"],
+          "chapters": [{"at": 0, "n": 1, "text": "НОЧНОЙ ШТОРМ"}],
+          "windFrom": 270,
+          "card": ""
+        }
+      }
+    ]
+  }
+}

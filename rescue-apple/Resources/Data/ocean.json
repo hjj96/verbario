@@ -1,0 +1,80 @@
+{
+  "schema": "mayday.ocean",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/ocean.js", "rescue/src/systems/ocean/waves.js", "rescue/src/systems/ocean/features.js",
+    "rescue/src/systems/ocean/memory.js", "rescue/src/systems/ocean/coast.js", "rescue/src/systems/ocean/grid.js",
+    "rescue/src/systems/ocean/material.js", "rescue/src/systems/ocean/shaders.js",
+    "rescue/src/systems/ocean/selftest.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {
+    "ocean/features": {"glsl": ["FEATURES_GLSL"]},
+    "ocean/memory": {"glsl": ["ADVECT_VS", "ADVECT_FS", "STAMP_VS", "STAMP_FS"]},
+    "ocean/coast": {"scratch": ["_v"]},
+    "ocean/shaders": {
+      "glsl": [
+        "OCEAN_COMMON", "OCEAN_VERTEX_PARS", "OCEAN_VERTEX_BEGINNORMAL", "OCEAN_FRAGMENT_PARS",
+        "OCEAN_FRAGMENT_SURFACE", "OCEAN_FRAGMENT_NORMAL", "OCEAN_FRAGMENT_FINAL", "SELFTEST_VERTEX",
+        "SELFTEST_FRAGMENT"
+      ]
+    }
+  },
+  "data": {
+    "ocean": {
+      "MEMORY_EXTENT": 320,
+      "MAX_SPLASHES": 24,
+      "MAX_GLINTS": 8,
+      "FLASH_DAY": {"hex": "#dce6ff", "lin": [0.7156935005005721, 0.7912979403281553, 1]},
+      "FLASH_NIGHT": {"hex": "#c7d6ff", "lin": [0.5711248294565854, 0.6724431569510133, 1]},
+      "DEG": 0.017453292519943295,
+      "FALLBACK_SEA": {
+        "Hs": 0.6,
+        "swellAdd": 0.4,
+        "Q": 0.3,
+        "detail": 0.3,
+        "whitecaps": 0,
+        "streaks": 0,
+        "foamLines": 0,
+        "roughness": 0.06
+      }
+    },
+    "ocean/waves": {
+      "GRID_EXTENT": 380,
+      "GRID_POW": 1.6,
+      "SKIRT_ROWS": [1200, 3000],
+      "EDGE_FADE": [380, 1200],
+      "WAVE_L": [120, 78, 52, 34, 22, 14.5, 9.5, 6.2],
+      "WAVE_DIR_DEG": [0, 18, -27, 41, -55, 66, -12, 33],
+      "MAX_WAVES": 8,
+      "QUALITY": {
+        "high": {"grid": 300, "waves": 8, "q": 2, "memory": 512, "glints": 8},
+        "medium": {"grid": 224, "waves": 6, "q": 1, "memory": 384, "glints": 4},
+        "low": {"grid": 160, "waves": 4, "q": 0, "memory": 0, "glints": 0}
+      },
+      "TAU": 6.283185307179586,
+      "GRAV": 9.81,
+      "FD": 0.5
+    },
+    "ocean/features": {
+      "FEATURE_TYPE": {"rogue": 1, "vortex": 2, "whirlpool": 3},
+      "MAX_FEATURES": 4,
+      "ROGUE_SCAR_LIFE": 40,
+      "FADE_OUT": 1.6
+    },
+    "ocean/memory": {"MAX_STAMPS": 128, "HALF_LIFE": [3, 240, 0.8, 600], "SHAPE": {"disc": 0, "ring": 1, "wake": 2}},
+    "ocean/coast": {"COAST_MAX": 48},
+    "ocean/grid": {},
+    "ocean/material": {
+      "SUN_SPECULAR": "\nvoid oSunSpecular( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {\n  float dotNL = saturate( dot( geometryNormal, directLight.direction ) );\n  // × visibility of the sun disk (no sharp sun highlights under an overcast sky)\n  reflectedLight.directSpecular += dotNL * directLight.color * uLookK.w * BRDF_GGX_Multiscatter( directLight.direction, geometryViewDir, geometryNormal, material );\n}\n"
+    },
+    "ocean/shaders": {
+      "OCEAN_VERTEX_BEGIN": "\nvec3 transformed = oPos;\n",
+      "OCEAN_FRAGMENT_ROUGHNESS": "\nroughnessFactor = oRough;\n",
+      "OCEAN_FRAGMENT_EMISSIVE": "\ntotalEmissiveRadiance += oEmis;\n"
+    },
+    "ocean/selftest": {}
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schema": "mayday.icons",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/ui/common/icons.js"],
+  "producer": "tools/export/export-data.mjs",
+  "data": {
+    "ui/common/icons": {
+      "CLOUD": "M5.5 13.5h9a3 3 0 0 0 .3-6 4.3 4.3 0 0 0-8.3-.6A3.3 3.3 0 0 0 5.5 13.5z",
+      "BOLT": "<path d=\"M10.5 12.5l-2 3.5h3l-2 3.5\" />",
+      "MOON": "<path d=\"M12.8 3.6a6 6 0 1 0 3.6 8.6 5 5 0 0 1-3.6-8.6z\" />",
+      "WEATHER_ICON": {
+        "calm": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"11\" r=\"3.4\"/><path d=\"M10 3.5v2M3.5 11h2M14.5 11h2M5.4 6.4l1.4 1.4M14.6 6.4l-1.4 1.4M3 16.5h14\"/></svg>",
+        "overcast": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5.5 13.5h9a3 3 0 0 0 .3-6 4.3 4.3 0 0 0-8.3-.6A3.3 3.3 0 0 0 5.5 13.5z\"/><path d=\"M4 16.5h12\" opacity=\".6\"/></svg>",
+        "squall": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5.5 13.5h9a3 3 0 0 0 .3-6 4.3 4.3 0 0 0-8.3-.6A3.3 3.3 0 0 0 5.5 13.5z\"/><path d=\"M6.5 15.5l-1.2 2.5M9.7 15.5l-1.2 2.5M12.9 15.5l-1.2 2.5\"/><path d=\"M15.5 3.8c1.6 0 2.3.9 2 2\" opacity=\".7\"/></svg>",
+        "storm": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5.5 13.5h9a3 3 0 0 0 .3-6 4.3 4.3 0 0 0-8.3-.6A3.3 3.3 0 0 0 5.5 13.5z\"/><path d=\"M10.5 12.5l-2 3.5h3l-2 3.5\" /><path d=\"M5.5 15.5l-1 2M14.5 15.5l-1 2\" opacity=\".7\"/></svg>",
+        "nightStorm": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7.6 2.6a3.8 3.8 0 1 0 4 5.2 3.2 3.2 0 0 1-4-5.2z\"/><path d=\"M7 15h8.5a2.6 2.6 0 0 0 .2-5.2 3.8 3.8 0 0 0-7.3-.5A2.9 2.9 0 0 0 7 15z\"/><path d=\"M11.5 15.5l-1.6 2.6h2.4l-1.4 2\"/></svg>",
+        "fog": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7h11M6 10.5h11M3 14h11M7 17.5h8\"/></svg>",
+        "clearing": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.5 14a5.5 5.5 0 0 1 11 0\"/><path d=\"M10 4.5v2M3.6 8.6l1.3 1M16.4 8.6l-1.3 1M2.5 14h15M5 17h10\" /><path d=\"M1.5 4.5h4\" opacity=\".55\"/></svg>",
+        "nightCalm": "<svg class=\"ico\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12.8 3.6a6 6 0 1 0 3.6 8.6 5 5 0 0 1-3.6-8.6z\" /><path d=\"M4.5 4.2v2M3.5 5.2h2\" opacity=\".7\"/><path d=\"M3 17h14\" opacity=\".5\"/></svg>"
+      },
+      "WMO": {
+        "calm": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"5.5\"/></svg>",
+        "overcast": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"5.5\" fill=\"currentColor\"/></svg>",
+        "squall": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 5.5l5 9 5-9\" /><path d=\"M5 5.5h10\" opacity=\".0\"/></svg>",
+        "storm": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 16V4.5h7\"/><path d=\"M13 4.5l-3 4.5h3.5l-3 5.5\"/><path d=\"M10.5 14.5l-.3-2.3 2 1z\" fill=\"currentColor\"/></svg>",
+        "nightStorm": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 16V4.5h7\"/><path d=\"M12 4.5l-3 4.5h3.5l-3 5.5\"/><circle cx=\"16\" cy=\"15\" r=\"1.5\" fill=\"currentColor\"/></svg>",
+        "fog": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 6.5h12M4 10h12M4 13.5h12\"/></svg>",
+        "clearing": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"5.5\"/><path d=\"M10 4.5a5.5 5.5 0 0 1 0 11z\" fill=\"currentColor\"/></svg>",
+        "nightCalm": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"5.5\"/><path d=\"M8.6 7.2a3 3 0 1 0 3.6 4.2 2.4 2.4 0 0 1-3.6-4.2z\" fill=\"currentColor\" stroke=\"none\"/></svg>"
+      },
+      "MEDAL_COLOR": {"bronze": "#C8814A", "silver": "#C9D3DA", "gold": "#FFD36A", "cross": "#C8102E"},
+      "LOCK": "<svg class=\"ico\" width=\"22\" height=\"22\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4.5\" y=\"9\" width=\"11\" height=\"8\" rx=\"1\"/><path d=\"M7 9V6.5a3 3 0 0 1 6 0V9\"/><path d=\"M10 12v2\"/></svg>",
+      "PAD_H": "<svg class=\"ico\" width=\"16\" height=\"16\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"7.5\"/><path d=\"M7.2 6.5v7M12.8 6.5v7M7.2 10h5.6\"/></svg>",
+      "STAR": "<svg class=\"ico\" width=\"16\" height=\"16\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M10 2.8l2.1 4.5 4.9.6-3.6 3.3 1 4.8L10 13.6 5.6 16l1-4.8L3 7.9l4.9-.6z\"/></svg>",
+      "HELI": "<svg class=\"ico\" width=\"18\" height=\"18\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6.5h14M10 6.5v2.5\"/><path d=\"M6.5 11.5c0-1.6 1.6-2.5 3.5-2.5s4.5.9 4.5 2.5-2.5 2.5-4.5 2.5-3.5-.9-3.5-2.5z\"/><path d=\"M14.5 11.5h3.5M18 10v3\"/></svg>"
+    }
+  }
+}

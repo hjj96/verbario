@@ -1,0 +1,87 @@
+{
+  "schema": "mayday.audio",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/audio.js", "rescue/src/systems/audio/alarms.js", "rescue/src/systems/audio/dsp.js",
+    "rescue/src/systems/audio/environment.js", "rescue/src/systems/audio/extras.js",
+    "rescue/src/systems/audio/graph.js", "rescue/src/systems/audio/music.js", "rescue/src/systems/audio/rotor.js",
+    "rescue/src/systems/audio/sfx.js", "rescue/src/systems/audio/voice.js", "rescue/src/systems/audio/winch.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {"audio/dsp": {"runtime": ["curveCache"]}},
+  "data": {
+    "audio": {"CONTROL_HZ": 30, "EMITTER_HZ": 20},
+    "audio/alarms": {
+      "LEVEL": 0.19952623149688797,
+      "PRIO": {"danger": 6, "lowalt": 5, "obstacle": 4, "tension": 3, "hull": 2, "fuel": 1}
+    },
+    "audio/dsp": {},
+    "audio/environment": {"VORTEX": ["waterspout", "tornado"]},
+    "audio/extras": {"BUOY_R": 260, "HEART_HULL": 0.2},
+    "audio/graph": {
+      "SNAP": {
+        "title": {"rotor": -10, "env": -4, "music": 0, "lp": 20000},
+        "briefing": {"rotor": -6, "env": -8, "music": -3, "lp": 1600},
+        "play": {"rotor": 0, "env": 0, "music": 0, "lp": 20000},
+        "paused": {"rotor": -10, "env": -10, "music": 0, "lp": 500},
+        "debrief": {"rotor": -8, "env": -6, "music": 2, "lp": 2500}
+      }
+    },
+    "audio/music": {
+      "BAR": 13.3,
+      "SIX": 0.20833333333333334,
+      "CALM": [[53, 57, 60, 64], [53, 57, 58, 62], [55, 58, 62, 69], [55, 60, 62, 67]],
+      "STORM": [[53, 57, 58, 62], [51, 55, 62, 69], [50, 53, 58, 62], [50, 55, 58, 64]],
+      "ADD9": [62, 66, 69, 76],
+      "BELLS": [74, 76, 77, 81, 83, 86],
+      "CLUSTER": [69, 70, 74, 76],
+      "OST": [0, 2, 1, 3, 2, 1, 3, 2, 0, 2, 1, 3, 2, 3, 1, 2]
+    },
+    "audio/rotor": {},
+    "audio/sfx": {"BELL_STEPS": [74, 76, 77, 79, 81, 83, 84, 86, 88], "MODES": [1, 2.76, 5.4, 8.93]},
+    "audio/voice": {
+      "CHAR_S": 0.022,
+      "F0": {
+        "dispatch": 215,
+        "pilot": 122,
+        "winchman": 138,
+        "rescuer": 150,
+        "ship": 95,
+        "coastguard": 105,
+        "survivor": 185,
+        "f": 210,
+        "child": 290,
+        "m": 118
+      },
+      "FORMANT_K": {"f": 1.14, "child": 1.3, "dispatch": 1.12, "survivor": 1.05},
+      "VOWEL": {
+        "а": [750, 1250],
+        "я": [750, 1250],
+        "о": [520, 900],
+        "ё": [520, 900],
+        "у": [340, 750],
+        "ю": [340, 750],
+        "э": [470, 1950],
+        "е": [470, 1950],
+        "и": [290, 2250],
+        "ы": [330, 1550]
+      },
+      "FRIC": {
+        "с": 4800,
+        "ш": 2800,
+        "щ": 3600,
+        "ж": 2600,
+        "з": 4200,
+        "ф": 3800,
+        "х": 2000,
+        "ц": 4500,
+        "ч": 3200
+      },
+      "PLOSIVE": {"п": 1400, "т": 2600, "к": 1800, "б": 900, "д": 2000, "г": 1500},
+      "PHRASE_END": {"regexp": "[.!?…]", "flags": ""}
+    },
+    "audio/winch": {}
+  }
+}

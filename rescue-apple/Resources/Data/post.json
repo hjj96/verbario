@@ -1,0 +1,74 @@
+{
+  "schema": "mayday.post",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/post.js", "rescue/src/systems/post/drops.js", "rescue/src/systems/post/thermal.js",
+    "rescue/src/systems/post/photo.js", "rescue/src/systems/post/finalShader.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {"post/thermal": {"glsl": ["VERT", "FRAG"]}, "post/finalShader": {"glsl": ["VERT", "FRAG"]}},
+  "data": {
+    "post": {
+      "SAMPLES": {"low": 0, "medium": 2, "high": 4},
+      "MIN_SCALE": {"low": 0.67, "medium": 0.75, "high": 0.8},
+      "BLOOM_SCALE": {"low": 0.5, "medium": 0.5, "high": 1},
+      "MAX_PIXELS": 2073600,
+      "DAMAGE_RED": {"hex": "#b3121a", "lin": [0.450785782828426, 0.0060488330203860696, 0.010329823026364548]},
+      "AMBER": {"hex": "#ffb547", "lin": [1, 0.46207699964472876, 0.06301001764564068]},
+      "BLACK": {"hex": "#000000", "lin": [0, 0, 0]}
+    },
+    "post/drops": {"GRID_X": 28, "GRID_Y": 16, "N": 448, "MAX_R": 0.4, "MAX_TAIL": 0.55},
+    "post/thermal": {
+      "SCALE": {"low": 0.3, "medium": 0.4, "high": 0.5},
+      "BOOT_ON": 0.55,
+      "BOOT_OFF": 0.2,
+      "SWEEP_EVERY": 1.5,
+      "HEAT": 2,
+      "MASS": 3,
+      "MASS_DEFAULT": 0.5
+    },
+    "post/photo": {
+      "GRADES": [
+        {"id": "none", "name": "Как есть", "mix": 0},
+        {
+          "id": "chronicle",
+          "name": "Хроника",
+          "mix": 1,
+          "sat": 0.42,
+          "contrast": 1.16,
+          "fade": 0.03,
+          "shadow": [0.93, 1, 1.06],
+          "high": [1.05, 1, 0.93],
+          "grain": 0.03
+        },
+        {
+          "id": "bw",
+          "name": "Ч/Б",
+          "mix": 1,
+          "sat": 0,
+          "contrast": 1.24,
+          "fade": 0.015,
+          "shadow": [1, 1, 1],
+          "high": [1, 1, 1],
+          "grain": 0.025
+        },
+        {
+          "id": "film",
+          "name": "Плёнка",
+          "mix": 1,
+          "sat": 0.86,
+          "contrast": 0.9,
+          "fade": 0.06,
+          "shadow": [0.93, 1.03, 1.05],
+          "high": [1.07, 1, 0.88],
+          "grain": 0.02
+        }
+      ],
+      "DOF_TAPS": {"low": 12, "medium": 20, "high": 32},
+      "BLUR_STEPS": [0, 0.35, 0.7, 1]
+    },
+    "post/finalShader": {}
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "schema": "mayday.hazards",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/hazards.js", "rescue/src/systems/hazards/cells.js", "rescue/src/systems/hazards/charges.js",
+    "rescue/src/systems/hazards/common.js", "rescue/src/systems/hazards/curtains.js",
+    "rescue/src/systems/hazards/debris.js", "rescue/src/systems/hazards/rogue.js",
+    "rescue/src/systems/hazards/spout.js", "rescue/src/systems/hazards/vortexfx.js",
+    "rescue/src/systems/hazards/waterrings.js", "rescue/src/systems/hazards/whirlpool.js",
+    "rescue/src/systems/mission/checkpoint.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {
+    "hazards/common": {"glsl": ["HZ_GLSL"]},
+    "hazards/curtains": {"glsl": ["VERT", "FRAG"]},
+    "hazards/rogue": {"glsl": ["CREST_GLSL", "SHEET_VERT", "SHEET_FRAG", "VEIL_VERT", "VEIL_FRAG"]},
+    "hazards/vortexfx": {
+      "glsl": [
+        "FUNNEL_VERT", "FUNNEL_FRAG", "COLLAR_VERT", "COLLAR_FRAG", "SHADOW_VERT", "SHADOW_FRAG", "SPRAY_VERT",
+        "SPRAY_FRAG"
+      ]
+    },
+    "hazards/waterrings": {"glsl": ["VERT", "FRAG_GLOW", "FRAG_FOAM"]}
+  },
+  "data": {
+    "hazards": {
+      "K": 0.4,
+      "C_WIND": 0.6,
+      "MAX_FEATURES": 4,
+      "ALIAS": {"spout": "waterspout", "smerch": "waterspout", "wave": "rogue", "vortex": "waterspout"},
+      "TYPES": ["waterspout", "tornado", "rogue", "whirlpool", "downburst", "hail"],
+      "FEATURE_TYPES": ["waterspout", "tornado", "rogue", "whirlpool"],
+      "VORTEX_TYPES": ["waterspout", "tornado"],
+      "QUALITY_K": {"low": 0.4, "medium": 0.66, "high": 1}
+    },
+    "hazards/cells": {
+      "RAIN": {"hex": "#2a3236", "lin": [0.023153366173251366, 0.031896033067374104, 0.036889450395083165]},
+      "HAILC": {"hex": "#c9cfd2", "lin": [0.5840784178830671, 0.623960391667596, 0.6444796819634361]},
+      "FOAM": {"hex": "#eef3f2", "lin": [0.85499260812105, 0.8962693533719567, 0.8879231178794775]}
+    },
+    "hazards/charges": {
+      "RING_COL": {"hex": "#85c0ff", "lin": [0.23345383314376417, 0.5272522014004742, 1.1]},
+      "FLASH_COL": {"hex": "#dcebff", "lin": [0.7156935005005721, 0.8307698767709715, 1]},
+      "HIT_DAMAGE": 0.2,
+      "EMP_TIME": 4,
+      "NEAR_MIN": 15,
+      "NEAR_MAX": 40,
+      "MIST_OPTS": {"kind": "steam", "alpha": 0.06, "life": 2.4, "size": [2.5, 8]}
+    },
+    "hazards/common": {
+      "DEG": 0.017453292519943295,
+      "TAU": 6.283185307179586,
+      "SPOUT": {
+        "rc": 15,
+        "rinf": 120,
+        "vmax": 50,
+        "inflow": 0.35,
+        "updraft": 6,
+        "damage": 0.06,
+        "spinRate": 3,
+        "stages": [6, 5, 4],
+        "descend": 3,
+        "decay": 6,
+        "life": [60, 120],
+        "drift": [3, 8],
+        "collarY": 110,
+        "collarR": [60, 90],
+        "oceanR": 25,
+        "scale": 1
+      },
+      "TORNADO": {
+        "rc": 35,
+        "rinf": 300,
+        "vmax": 70,
+        "inflow": 0.35,
+        "updraft": 9,
+        "damage": 0.1,
+        "spinRate": 3,
+        "stages": [8, 6, 6],
+        "descend": 4,
+        "decay": 10,
+        "life": [180, 300],
+        "speed": [4, 8],
+        "collarY": 112,
+        "collarR": [230, 290],
+        "oceanR": 70,
+        "scale": 4,
+        "debrisDamage": 0.05
+      },
+      "SATELLITE": {
+        "rc": 6,
+        "rinf": 45,
+        "vmax": 28,
+        "inflow": 0.35,
+        "updraft": 3,
+        "damage": 0.03,
+        "spinRate": 2,
+        "stages": [2, 2, 2],
+        "descend": 2.5,
+        "decay": 5,
+        "life": [35, 70],
+        "scale": 0.42
+      },
+      "ROGUE": {
+        "height": [12, 18],
+        "width": 22,
+        "speed": 15,
+        "length": 500,
+        "telegraph": 12,
+        "bow": 0.0015,
+        "damage": 0.2,
+        "damagePer5m": 0.06,
+        "knock": 18,
+        "sweep": 40
+      },
+      "WHIRL": {
+        "radius": [30, 60],
+        "tangential": 2,
+        "inward": 0.4,
+        "grow": 8,
+        "decay": 10,
+        "life": [180, 300],
+        "core": 8,
+        "coreTime": 5
+      },
+      "DOWNBURST": {"radius": 150, "telegraph": 6, "life": 25, "decay": 4, "outflow": 18, "down": 5},
+      "HAIL": {"radius": 220, "life": [60, 90], "damage": 0.01},
+      "COLORS": {
+        "funnelDark": "#3B4447",
+        "funnelLight": "#A8B3B5",
+        "funnelPale": "#E8EEF0",
+        "tornadoDark": "#1C2326",
+        "tornadoLight": "#5E686B",
+        "collarDark": "#2C3437",
+        "collarLight": "#9AA5A8",
+        "collarPale": "#D2D9DB",
+        "spray": "#DCE6E6",
+        "rogueSpray": "#E4ECEE",
+        "foam": "#EEF3F2",
+        "charge": "#7FB8FF",
+        "chargeCore": "#DCEBFF",
+        "rainColumn": "#2A3236",
+        "hailColumn": "#C9CFD2",
+        "wood": "#5B4B3C",
+        "woodLight": "#7A6A58",
+        "barrelBlue": "#2C4756",
+        "barrelRust": "#5E2B27",
+        "hullWhite": "#C9CDCC",
+        "hullDark": "#2B3236",
+        "buoyWhite": "#E9ECEA",
+        "buoyRed": "#B3262A"
+      },
+      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n",
+      "FROM": [
+        "с севера", "с северо-востока", "с востока", "с юго-востока", "с юга", "с юго-запада", "с запада",
+        "с северо-запада"
+      ],
+      "NBSP": "\u00a0"
+    },
+    "hazards/curtains": {"MAX_CURTAINS": 6},
+    "hazards/debris": {"CAPS": {"board": 48, "barrel": 16, "buoy": 6, "boat": 2}, "DEBRIS_TAU": 6.283185307179586},
+    "hazards/rogue": {"MAX_ROGUE": 2, "SHEET_PER": 500, "VEIL_SEGS": 140, "VEIL_ROWS": 7},
+    "hazards/spout": {
+      "STAGE_NAMES": ["", "spot", "spiral", "spray", "mature", "decay"],
+      "RAIN_COLOR": {"hex": "#2a3236", "lin": [0.023153366173251366, 0.031896033067374104, 0.036889450395083165]}
+    },
+    "hazards/vortexfx": {"MAX_VORTEX": 8, "SPRAY_PER": 300},
+    "hazards/waterrings": {"ROWS": {"glow": [0, 0.4, 0.7, 0.88, 0.96, 1, 1.04, 1.1], "foam": [0.9, 0.97, 1, 1.035, 1.1]}},
+    "hazards/whirlpool": {},
+    "mission/checkpoint": {
+      "COMMON": ["age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius"],
+      "SPOUT": [
+        "age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius", "stageT",
+        "telegraph", "wander", "collarR", "topY", "scale", "spin", "spinRate", "warned600", "warned300", "closePass",
+        "passDamaged"
+      ],
+      "SCALARS": {
+        "waterspout": [
+          "age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius", "stageT",
+          "telegraph", "wander", "collarR", "topY", "scale", "spin", "spinRate", "warned600", "warned300", "closePass",
+          "passDamaged"
+        ],
+        "tornado": [
+          "age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius", "stageT",
+          "telegraph", "wander", "collarR", "topY", "scale", "spin", "spinRate", "warned600", "warned300", "closePass",
+          "passDamaged", "pathAng", "pathCurve", "pathSpeed", "satTimer", "boltTimer", "green"
+        ],
+        "whirlpool": ["age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius", "spin"],
+        "rogue": [
+          "age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius", "speed",
+          "width", "length", "height", "telegraph", "lead", "visual", "threat", "_ue"
+        ],
+        "downburst": ["age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius", "telegraph"],
+        "hail": ["age", "life", "stage", "stageName", "eta", "strength", "scripted", "name", "warned", "radius"]
+      },
+      "VEC2": ["lean", "drift", "dir", "origin"]
+    }
+  }
+}

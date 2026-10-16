@@ -1,0 +1,30 @@
+{
+  "schema": "mayday.camera",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/systems/camera.js", "rescue/src/systems/camera/freecam.js", "rescue/src/systems/camera/shake.js"],
+  "producer": "tools/export/export-data.mjs",
+  "data": {
+    "camera": {
+      "DEG": 0.017453292519943295,
+      "BASE_FOV": 40,
+      "ZOOMS": [1, 0.8, 1.25],
+      "HELI_SCREEN_Y": 0.1,
+      "ATTRACT_LB": 0.47,
+      "SPR": {"x": 0, "v": 0}
+    },
+    "camera/freecam": {
+      "DEG": 0.017453292519943295,
+      "PITCH_MAX": 1.562069680534925,
+      "DIST_MIN": 8,
+      "DIST_MAX": 700,
+      "SEA_REACH": 700
+    },
+    "camera/shake": {
+      "DEG": 0.017453292519943295,
+      "OCT": [[0.21, 1], [0.57, 0.55], [1.3, 0.3]],
+      "NORM": 0.5405405405405405
+    }
+  }
+}

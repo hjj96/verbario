@@ -1,0 +1,254 @@
+{
+  "schema": "mayday.heli",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/heli.js", "rescue/src/systems/heli/crewman.js", "rescue/src/systems/heli/decals.js",
+    "rescue/src/systems/heli/flight.js", "rescue/src/systems/heli/lights.js", "rescue/src/systems/heli/materials.js",
+    "rescue/src/systems/heli/model.js", "rescue/src/systems/heli/ops.js", "rescue/src/systems/heli/searchlight.js",
+    "rescue/src/systems/heli/shapes.js", "rescue/src/systems/heli/winch.js"
+  ],
+  "producer": "tools/export/export-data.mjs",
+  "omitted": {"heli/shapes": {"scratch": ["_a", "_b", "_q", "_up"]}, "heli/winch": {"scratch": ["_qs"]}},
+  "data": {
+    "heli": {
+      "SKID": 1.6,
+      "PRESETS": [15, 40, 90],
+      "ALT_MIN": 4,
+      "ALT_MAX": 120,
+      "IDLE_RPM": 0.55,
+      "MAX_TILT": 0.38,
+      "WHITE": {"hex": "#ffffff", "lin": [1, 1, 1]}
+    },
+    "heli/crewman": {
+      "SUIT": "#1D2226",
+      "SUIT_HI": "#2A3036",
+      "HELMET": "#FF5A1F",
+      "VISOR": "#0B1B26",
+      "GLOVE": "#141618",
+      "TAPE": "#C9CED2",
+      "WEB": "#3B4148",
+      "LIMIT": 1.2217304763960306,
+      "REST": [0.8, -0.6, 0],
+      "X": [1, 0, 0],
+      "ORIGIN": [1.12, -0.9, -0.9],
+      "SCALE": 1.4,
+      "SHOULDER_AIM": [0.2, 0.92, 0.19],
+      "NECK": [0.27, 1, 0]
+    },
+    "heli/decals": {
+      "DECAL_RECT": {"roof": [0, 0, 0.5, 1], "side": [0.5, 0.75, 1, 1], "boom": [0.5, 0.5, 1, 0.75]},
+      "ORANGE": "#FF4F1A",
+      "INK": "#121416",
+      "FONT": "\"Oswald\", Impact, \"Arial Narrow\", \"Roboto Condensed\", sans-serif"
+    },
+    "heli/flight": {
+      "STEP": 0.016666666666666666,
+      "K": 0.4,
+      "C_WIND": 0.6,
+      "A_BASE": 14.4,
+      "SKID": 1.6,
+      "OBSTACLE_MARGIN": 6.5,
+      "D12": 0.20943951023931956,
+      "D5": 0.08726646259971647
+    },
+    "heli/lights": {
+      "STROBE_PERIOD": 1.1,
+      "BEACON_HZ": 0.9,
+      "GAIN": {
+        "nav": 7,
+        "navWhite": 6,
+        "beacon": 10,
+        "strobe": 14,
+        "door": 7,
+        "elmo": 9,
+        "lens": 12,
+        "flir": 0
+      },
+      "BELLY": {"strobe": 3400, "beacon": 1500, "door": 1100},
+      "COL": {
+        "red": {"hex": "#ff2015", "lin": [1, 0.014443843592229466, 0.007499032040460618]},
+        "green": {"hex": "#12ff6e", "lin": [0.0060488330203860696, 1, 0.15592646369776456]},
+        "white": {"hex": "#ffffff", "lin": [1, 1, 1]},
+        "beacon": {"hex": "#ff1a10", "lin": [1, 0.010329823026364548, 0.005181516700061659]},
+        "door": {"hex": "#b3121a", "lin": [0.450785782828426, 0.0060488330203860696, 0.010329823026364548]},
+        "lens": {"hex": "#fff1da", "lin": [1, 0.8796223968851662, 0.7011018919268015]}
+      },
+      "GLINTS": [
+        ["navPort", {"hex": "#ff2015", "lin": [1, 0.014443843592229466, 0.007499032040460618]}, 0, 0.35],
+        ["navStbd", {"hex": "#12ff6e", "lin": [0.0060488330203860696, 1, 0.15592646369776456]}, 1, 0.35],
+        ["navTail", {"hex": "#ffffff", "lin": [1, 1, 1]}, 2, 0.1],
+        ["beacon", {"hex": "#ff1a10", "lin": [1, 0.010329823026364548, 0.005181516700061659]}, 3, 0.6],
+        ["strobeL", {"hex": "#ffffff", "lin": [1, 1, 1]}, 4, 1],
+        ["strobeR", {"hex": "#ffffff", "lin": [1, 1, 1]}, 4, 1],
+        [
+          "door",
+          {
+            "hex": "#b3121a",
+            "lin": [0.450785782828426, 0.0060488330203860696, 0.010329823026364548]
+          },
+          5,
+          0.5
+        ],
+        ["lens", {"hex": "#fff1da", "lin": [1, 0.8796223968851662, 0.7011018919268015]}, 7, 0.25]
+      ],
+      "SPILL": [
+        ["strobeL", {"hex": "#ffffff", "lin": [1, 1, 1]}, 4, 2.4, 0.05],
+        ["strobeR", {"hex": "#ffffff", "lin": [1, 1, 1]}, 4, 2.4, 0.05],
+        ["beacon", {"hex": "#ff1a10", "lin": [1, 0.010329823026364548, 0.005181516700061659]}, 3, 2.2, 0.07],
+        ["beaconLow", {"hex": "#ff1a10", "lin": [1, 0.010329823026364548, 0.005181516700061659]}, 3, 2, 0.06],
+        ["navPort", {"hex": "#ff2015", "lin": [1, 0.014443843592229466, 0.007499032040460618]}, 0, 1.5, 0.05],
+        ["navStbd", {"hex": "#12ff6e", "lin": [0.0060488330203860696, 1, 0.15592646369776456]}, 1, 1.5, 0.05],
+        [
+          "door",
+          {
+            "hex": "#b3121a",
+            "lin": [0.450785782828426, 0.0060488330203860696, 0.010329823026364548]
+          },
+          5,
+          1.8,
+          0.08
+        ],
+        ["lens", {"hex": "#fff1da", "lin": [1, 0.8796223968851662, 0.7011018919268015]}, 7, 1.5, 0.05]
+      ]
+    },
+    "heli/materials": {
+      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n",
+      "HULL_GLOWS": 8,
+      "LIGHT_CHANNELS": 10
+    },
+    "heli/model": {
+      "ROTOR_R": 8.1,
+      "TAIL_R": 1.4,
+      "SKID_Y": -1.6,
+      "C": {
+        "white": "#ECEBE6",
+        "orange": "#FF4F1A",
+        "dark": "#2E3338",
+        "blade": "#22262A",
+        "glass": "#0B1B26",
+        "metal": "#8E969C",
+        "metalDark": "#3A3F44",
+        "exhaust": "#26282A",
+        "soot": "#09090A",
+        "grille": "#1B1E21",
+        "antiGlare": "#1E2226"
+      },
+      "SURF": {
+        "paint": [0.42, 0, 1, 0],
+        "matte": [0.78, 0, 0.25, 0],
+        "metal": [0.42, 0.65, 0.15, 0],
+        "rubber": [0.82, 0, 0, 0],
+        "glass": [0.06, 0, 1, 2],
+        "decal": [0.46, 0, 1, 1]
+      },
+      "POINTS": {
+        "hoist": [2.12, 0.6, -1.45],
+        "door": [1.24, 0.52, -1.45],
+        "lens": [0.55, -1.42, -4.02],
+        "belly": [0, -2.6, -0.2],
+        "exhaustL": [-0.86, 1.36, 2.72],
+        "exhaustR": [0.86, 1.36, 2.72],
+        "navPort": [-2.15, -0.56, 0.62],
+        "navStbd": [2.15, -0.56, 0.62],
+        "navTail": [0, 0.74, 10.12],
+        "beacon": [0, 1.6, 1.8],
+        "beaconLow": [0, -1.1, 0.7],
+        "strobeL": [-1.68, 0.82, 8.56],
+        "strobeR": [1.68, 0.82, 8.56],
+        "probeL": [-0.3, -0.16, -5.95],
+        "probeR": [0.3, -0.16, -5.95],
+        "mast": [0, 2.12, -0.3],
+        "tailRotor": [-0.27, 2.1, 9.95]
+      },
+      "CH": {
+        "navRed": 0,
+        "navGreen": 1,
+        "navWhite": 2,
+        "beacon": 3,
+        "strobe": 4,
+        "door": 5,
+        "elmo": 6,
+        "lens": 7,
+        "flir": 8
+      },
+      "LIGHT_DEFS": [
+        ["navPort", "#FF2015", 0, 0.14, 1.1],
+        ["navStbd", "#12FF6E", 1, 0.14, 1.1],
+        ["navTail", "#FFFFFF", 2, 0.12, 0.9],
+        ["beacon", "#FF1A10", 3, 0.17, 1.8],
+        ["beaconLow", "#FF1A10", 3, 0.15, 1.4],
+        ["strobeL", "#FFFFFF", 4, 0.13, 2.6],
+        ["strobeR", "#FFFFFF", 4, 0.13, 2.6],
+        ["door", "#B3121A", 5, 0.12, 1.3],
+        ["probeL", "#7FB8FF", 6, 0.07, 0.8],
+        ["probeR", "#7FB8FF", 6, 0.07, 0.8],
+        ["lens", "#FFF1DA", 7, 0.2, 1.6]
+      ]
+    },
+    "heli/ops": {
+      "DIFF": {"cadet": 0.6, "pilot": 1, "ace": 1.3},
+      "CRUISE": 30,
+      "UNLOAD_PERSON": 1,
+      "UNLOAD_STRETCHER": 3,
+      "FLARES": 4,
+      "RAFTS": 2,
+      "FLARE_RANGE": 120,
+      "HORN_COOLDOWN": 6
+    },
+    "heli/searchlight": {
+      "MAX_NADIR": 1.0471975511965976,
+      "D10": 0.17453292519943295,
+      "D40": 0.6981317007977318,
+      "RANGE": 300
+    },
+    "heli/shapes": {},
+    "heli/winch": {
+      "SEGS": 14,
+      "N": 15,
+      "G": 14,
+      "MAX_LEN": 30,
+      "SLACK": 1.5,
+      "PAY": 4,
+      "LIFT_PERSON": 3,
+      "LIFT_STRETCHER": 1.5,
+      "BUFFER": 0.4,
+      "DAMP": 0.15,
+      "WINDOW_SPEED": 5,
+      "WINDOW_HEIGHT": 36,
+      "BASKET_FLOAT": 0.25,
+      "HOOK": 1.05,
+      "RING_SEGS": 48,
+      "CAPTURE": {
+        "swimmer": [3, 1],
+        "raft": [4.5, 0.8],
+        "hull": [3, 1],
+        "container": [3, 1],
+        "deck": [3, 1],
+        "wreck": [3, 1],
+        "plane": [3, 1],
+        "injured": [3, 3]
+      },
+      "MAX_CAPTURE_R": 4.5,
+      "SNAG_R_FLOAT": {
+        "plank": 0.9,
+        "barrel": 0.6,
+        "ring": 0.55,
+        "canister": 0.45,
+        "kayak": 1.1,
+        "paddle": 0.7,
+        "suitcase": 0.5,
+        "fender": 0.45,
+        "fishbox": 0.55,
+        "float": 0.35,
+        "sail": 1.6
+      },
+      "SNAG_R_DEBRIS": {"board": 1.2, "barrel": 0.6, "buoy": 0.65, "boat": 2.4},
+      "SNAG_CABLE": 0.55,
+      "SNAG_SETTLE": 0.8,
+      "SNAG_COOLDOWN": 15,
+      "UP": [0, 1, 0]
+    }
+  }
+}

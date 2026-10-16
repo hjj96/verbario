@@ -1,0 +1,131 @@
+{
+  "schema": "mayday.vectors.math.jsmath",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["Node v22.22.0 Math.*"],
+  "producer": "tools/export/export-vectors.mjs",
+  "tolerance": {
+    "class": "bitwise",
+    "note": "JS.<fn> (CJSMath: fdlibm + V8 hypot) must equal Node 22 bit for bit; pow: <= 1 ulp until the V8 ieee754::pow port lands (PLAN §5.2)",
+    "powMaxUlp": 1
+  },
+  "data": {
+    "node": "v22.22.0",
+    "layout": "each sidecar: Float64 LE rows [in0, (in1, in2,) out], shape [count, arity+1]; hypot3 = Math.hypot(a, b, c)",
+    "functions": {
+      "sin": {
+        "arity": 1,
+        "file": "jsmath_sin.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "02c3418f4288ebd247e6999276b0a120b7becc6ee611b515bec4a00d4c742bad"
+      },
+      "cos": {
+        "arity": 1,
+        "file": "jsmath_cos.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "c15dca58a640361a859f98e17a792ab7b2666c2a753e948a3c174df9dabf77b4"
+      },
+      "tan": {
+        "arity": 1,
+        "file": "jsmath_tan.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "2b346b96f646b8d43b91a5b0045471dd6985bd6a21be2a493695eb21eea1e81f"
+      },
+      "exp": {
+        "arity": 1,
+        "file": "jsmath_exp.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "14af62e61de37eb6cfe187c118f693758472cf635a948a503e2d2bc3ef59acab"
+      },
+      "log": {
+        "arity": 1,
+        "file": "jsmath_log.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "dbd628f828ec2310b895b456f544e3352c617128fd85c60796161ddeaae1ca8e"
+      },
+      "atan": {
+        "arity": 1,
+        "file": "jsmath_atan.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "3da408ad05f76d990ef75ca3a5ed1228cbdba7dea8d4bd4f98e6a43d9ee66fa8"
+      },
+      "asin": {
+        "arity": 1,
+        "file": "jsmath_asin.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "3df3b9da9ee312ca5eed788b7c3227f9ab52dacbb98fb424ae19e8cd9ce63a89"
+      },
+      "acos": {
+        "arity": 1,
+        "file": "jsmath_acos.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "80930c518070723ab6160a9a14dd973d280c7eaef9841ab590c23aeb4b3afbc7"
+      },
+      "sinh": {
+        "arity": 1,
+        "file": "jsmath_sinh.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "599017d5bfa6cf2719e44c8a4f32b93024dc14c09619ff51b3e596b91440dbd0"
+      },
+      "tanh": {
+        "arity": 1,
+        "file": "jsmath_tanh.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "c9298ffdc67e800da60ee4542eb4c261594113971b6b1fdc52c27674d4bfe58a"
+      },
+      "expm1": {
+        "arity": 1,
+        "file": "jsmath_expm1.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "0990bb078d11d604a1ea1a8e56f107a4d0144061812267fae2691ab195f8fa2a"
+      },
+      "log1p": {
+        "arity": 1,
+        "file": "jsmath_log1p.f64",
+        "dtype": "f64",
+        "shape": [4096, 2],
+        "sha256": "8d2f3835e5fedfbd8faeb82c7e974ebcfc67a72fc83c4b6ced8d43751f719555"
+      },
+      "atan2": {
+        "arity": 2,
+        "file": "jsmath_atan2.f64",
+        "dtype": "f64",
+        "shape": [4096, 3],
+        "sha256": "7b5d4a5da19a345e83303fd8a25f3abb5f1322991f7d253f1c451b57e485459f"
+      },
+      "pow": {
+        "arity": 2,
+        "file": "jsmath_pow.f64",
+        "dtype": "f64",
+        "shape": [4096, 3],
+        "sha256": "d4166317c25ddef2de7d9d26da03fe800c73445f1dd92168e0a004890cf54bef"
+      },
+      "hypot": {
+        "arity": 2,
+        "file": "jsmath_hypot.f64",
+        "dtype": "f64",
+        "shape": [4096, 3],
+        "sha256": "aaee6141208e299c3bc45d033ac90b3bab6012111fdbb776cd3ce91581d2c6bf"
+      },
+      "hypot3": {
+        "arity": 3,
+        "file": "jsmath_hypot3.f64",
+        "dtype": "f64",
+        "shape": [4096, 4],
+        "sha256": "1b519b932eaa7bb6bd3a5f834a89c4b2b7022f53453183674f9d56a08d6b3f8b"
+      }
+    }
+  }
+}

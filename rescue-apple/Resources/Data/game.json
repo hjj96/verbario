@@ -1,0 +1,170 @@
+{
+  "schema": "mayday.game",
+  "version": 1,
+  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/main.js", "rescue/src/CONTRACT.md"],
+  "producer": "tools/export/export-data.mjs",
+  "data": {
+    "main": {
+      "SYSTEMS": [
+        ["weather", "./systems/weather.js", "Weather"],
+        ["ocean", "./systems/ocean.js", "Ocean"],
+        ["world", "./systems/world.js", "World"],
+        ["hazards", "./systems/hazards.js", "Hazards"],
+        ["heli", "./systems/heli.js", "Helicopter"],
+        ["survivors", "./systems/survivors.js", "Survivors"],
+        ["fx", "./systems/fx.js", "Effects"],
+        ["cameraRig", "./systems/camera.js", "CameraRig"],
+        ["radio", "./systems/radio.js", "Radio"],
+        ["mission", "./systems/mission.js", "Mission"],
+        ["audio", "./systems/audio.js", "AudioEngine"],
+        ["hud", "./systems/hud.js", "Hud"],
+        ["post", "./systems/post.js", "PostFX"]
+      ],
+      "RUN_WHEN_PAUSED": ["cameraRig", "audio", "hud", "post", "radio"]
+    },
+    "derived": {
+      "systems": [
+        {"key": "weather", "module": "rescue/src/systems/weather.js", "export": "Weather"},
+        {"key": "ocean", "module": "rescue/src/systems/ocean.js", "export": "Ocean"},
+        {"key": "world", "module": "rescue/src/systems/world.js", "export": "World"},
+        {"key": "hazards", "module": "rescue/src/systems/hazards.js", "export": "Hazards"},
+        {"key": "heli", "module": "rescue/src/systems/heli.js", "export": "Helicopter"},
+        {"key": "survivors", "module": "rescue/src/systems/survivors.js", "export": "Survivors"},
+        {"key": "fx", "module": "rescue/src/systems/fx.js", "export": "Effects"},
+        {"key": "cameraRig", "module": "rescue/src/systems/camera.js", "export": "CameraRig"},
+        {"key": "radio", "module": "rescue/src/systems/radio.js", "export": "Radio"},
+        {"key": "mission", "module": "rescue/src/systems/mission.js", "export": "Mission"},
+        {"key": "audio", "module": "rescue/src/systems/audio.js", "export": "AudioEngine"},
+        {"key": "hud", "module": "rescue/src/systems/hud.js", "export": "Hud"},
+        {"key": "post", "module": "rescue/src/systems/post.js", "export": "PostFX"}
+      ],
+      "runWhenPaused": ["cameraRig", "audio", "hud", "post", "radio"],
+      "loop": {
+        "dtCap": 0.1,
+        "rule": "realDt = min(frameDelta, dtCap); dt = paused ? 0 : realDt * timeScale; systems in RUN_WHEN_PAUSED get realDt, others dt; time.t is advanced by mission/systems, time.realT += realDt, frame++"
+      },
+      "ctx": {
+        "rngSeed": 1337,
+        "noiseSeed": 1337,
+        "initialMode": "title",
+        "modes": ["title", "briefing", "play", "paused", "debrief"],
+        "timeScale": 1
+      },
+      "camera": {"fovDeg": 40, "near": 2, "far": 1200, "position": [0, 220, 60], "lookAt": [0, 0, 0]},
+      "pixelRatio": {
+        "rule": "min(devicePixelRatio, settings.pixelRatioCap(), max(1, sqrt(budgetW*budgetH / (innerWidth*innerHeight))))",
+        "budgetW": 1920,
+        "budgetH": 1080
+      },
+      "seedSites": [
+        {"file": "rescue/src/core/math.js", "line": 55, "call": "createRng", "seed": "seed"},
+        {"file": "rescue/src/main.js", "line": 90, "call": "createRng", "seed": "1337"},
+        {"file": "rescue/src/main.js", "line": 91, "call": "createNoise2D", "seed": "1337"},
+        {
+          "file": "rescue/src/systems/camera/shake.js",
+          "line": 20,
+          "call": "createNoise2D",
+          "seed": "seed"
+        },
+        {"file": "rescue/src/systems/fx/gusts.js", "line": 106, "call": "rng32", "seed": "5521"},
+        {"file": "rescue/src/systems/fx/life.js", "line": 766, "call": "rng32", "seed": "4040"},
+        {"file": "rescue/src/systems/fx/rain.js", "line": 171, "call": "rng32", "seed": "seed"},
+        {"file": "rescue/src/systems/fx/rain.js", "line": 260, "call": "rng32", "seed": "311"},
+        {"file": "rescue/src/systems/fx/sky.js", "line": 149, "call": "rng32", "seed": "7713"},
+        {
+          "file": "rescue/src/systems/hazards/cells.js",
+          "line": 149,
+          "call": "rng32",
+          "seed": "opts.seed ?? hz.seedFor(this.id)"
+        },
+        {"file": "rescue/src/systems/hazards/rogue.js", "line": 207, "call": "rng32", "seed": "777"},
+        {
+          "file": "rescue/src/systems/hazards/rogue.js",
+          "line": 328,
+          "call": "rng32",
+          "seed": "opts.seed ?? hz.seedFor(this.id)"
+        },
+        {
+          "file": "rescue/src/systems/hazards/spout.js",
+          "line": 29,
+          "call": "rng32",
+          "seed": "opts.seed ?? hz.seedFor(this.id)"
+        },
+        {
+          "file": "rescue/src/systems/hazards/whirlpool.js",
+          "line": 17,
+          "call": "rng32",
+          "seed": "opts.seed ?? hz.seedFor(this.id)"
+        },
+        {"file": "rescue/src/systems/hazards.js", "line": 59, "call": "rng32", "seed": "4711"},
+        {
+          "file": "rescue/src/systems/hazards.js",
+          "line": 442,
+          "call": "rng32",
+          "seed": "((Number(def.seed) || 1) * 2246822519 + 77) >>> 0"
+        },
+        {
+          "file": "rescue/src/systems/heli/flight.js",
+          "line": 54,
+          "call": "createNoise2D",
+          "seed": "9173"
+        },
+        {"file": "rescue/src/systems/heli.js", "line": 186, "call": "createNoise2D", "seed": "5531"},
+        {
+          "file": "rescue/src/systems/mission/endless.js",
+          "line": 22,
+          "call": "createRng",
+          "seed": "((def.seed >>> 0) ^ 0x5eed) + 1"
+        },
+        {
+          "file": "rescue/src/systems/mission/prepare.js",
+          "line": 41,
+          "call": "createRng",
+          "seed": "(def.seed >>> 0) * 7919 + 13"
+        },
+        {
+          "file": "rescue/src/systems/mission/report.js",
+          "line": 63,
+          "call": "createRng",
+          "seed": "(def.seed >>> 0) + 4242"
+        },
+        {"file": "rescue/src/systems/ocean/waves.js", "line": 88, "call": "setSeed", "seed": "1"},
+        {
+          "file": "rescue/src/systems/ocean.js",
+          "line": 145,
+          "call": "setSeed",
+          "seed": "seed + 101"
+        },
+        {"file": "rescue/src/systems/post.js", "line": 77, "call": "createRng", "seed": "911"},
+        {
+          "file": "rescue/src/systems/survivors/bottle.js",
+          "line": 115,
+          "call": "createRng",
+          "seed": "(seed * 97 + 13) >>> 0"
+        },
+        {
+          "file": "rescue/src/systems/survivors/people.js",
+          "line": 45,
+          "call": "createRng",
+          "seed": "(seed >>> 0) * 2654435761 + 977"
+        },
+        {"file": "rescue/src/systems/survivors.js", "line": 99, "call": "createRng", "seed": "4242"},
+        {
+          "file": "rescue/src/systems/survivors.js",
+          "line": 526,
+          "call": "createRng",
+          "seed": "(((def?.seed ?? 1) >>> 0) * 31 + 7) >>> 0"
+        },
+        {"file": "rescue/src/systems/weather.js", "line": 58, "call": "createRng", "seed": "4242"},
+        {
+          "file": "rescue/src/systems/weather.js",
+          "line": 383,
+          "call": "createRng",
+          "seed": "((def.seed ?? 1) * 7919 + 13) >>> 0"
+        }
+      ]
+    }
+  }
+}
