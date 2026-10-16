@@ -27,7 +27,9 @@
 //     only where cSea.z + cSea.w > 0.001 (the per-pixel GLSL condition);
 //   * water memory dye / oil samples: hoisted under the kOceanMemory function constant.
 //   Results are identical to the GLSL wherever the GLSL derivatives were well defined.
-// Shadows (oShadow) arrive in M2 with the shadow map; until then oShadow = 1 like an unshadowed sea.
+// Shadows: material.js patches the directional light loop to capture getShadow() in oShadow (layer 15,
+// coloured shadows); here threeDirShadow() (Common/Shadow.h) under kOceanShadows, with the shadow
+// coordinate from shadowmap_vertex (world position of the displaced vertex + normalBias · world normal).
 #include "../ShaderTypes.h"
 #include "../Common/GL.h"
 #include "../Common/Common.h"
@@ -35,6 +37,7 @@
 #include "../Common/Look.h"
 #include "../Common/Fog.h"
 #include "../Common/ThreePBR.h"
+#include "../Common/Shadow.h"
 #include "OceanCommon.h"
 
 struct OceanVaryings {
@@ -45,6 +48,7 @@ struct OceanVaryings {
   float2 vGrid;          // lagrangian world xz (foam & dye ride the orbits)
   float3 vOWorld;        // displaced world position
   float4 vOAux;          // y/Hs, Jacobian, grid cell size, wave damping
+  float4 vShadowCoord;   // vDirectionalShadowCoord[0] (shadowmap_vertex)
 };
 
 // ---- vertex -----------------------------------------------------------------------------------------
@@ -52,6 +56,7 @@ vertex OceanVaryings ocean_vs(uint vid [[vertex_id]],
                               const device float2* gridPositions [[buffer(MD_BUF_VERTICES)]],
                               constant MDFrameUniforms& F [[buffer(MD_BUF_FRAME)]],
                               constant MDOceanUniforms& U [[buffer(MD_BUF_MATERIAL)]],
+                              constant MDLightsUniforms& LT [[buffer(MD_BUF_LIGHTS)]],
                               texture2d<float> uCoast [[texture(MD_TEX_COAST)]],
                               sampler smpClamp [[sampler(MD_SMP_CLAMP)]]) {
   float2 gl = gridPositions[vid];                         // position.xz (local grid coordinates)
@@ -66,6 +71,8 @@ vertex OceanVaryings ocean_vs(uint vid [[vertex_id]],
   o.vGrid = ov.grid;
   o.vOWorld = ov.pos;
   o.vOAux = ov.aux;
+  // shadowmap_vertex: worldPosition = modelMatrix · transformed (identity model), world normal of the vertex
+  o.vShadowCoord = kOceanShadows ? threeDirShadowCoord(float4(ov.pos, 1.0f), ov.nrm, LT) : float4(0.0f);
   return o;
 }
 
@@ -147,9 +154,11 @@ fragment float4 ocean_fs(OceanVaryings in [[stage_in]],
                          texture2d<float> dfgLUT [[texture(MD_TEX_DFG)]],
                          texture2d<float> uCoast [[texture(MD_TEX_COAST)]],
                          texture2d<float> uMem [[texture(MD_TEX_MEMORY)]],
+                         depth2d<float> shadowMap [[texture(MD_TEX_SHADOW)]],
                          sampler smpLook [[sampler(MD_SMP_LOOK)]],
                          sampler smpOcean [[sampler(MD_SMP_OCEAN)]],
-                         sampler smpClamp [[sampler(MD_SMP_CLAMP)]]) {
+                         sampler smpClamp [[sampler(MD_SMP_CLAMP)]],
+                         sampler smpShadow [[sampler(MD_SMP_SHADOW)]]) {
   // shared look uniforms
   const float uTime = L.timeWindRain.x;
   const float2 uWind = L.timeWindRain.yz;
@@ -179,7 +188,7 @@ fragment float4 ocean_fs(OceanVaryings in [[stage_in]],
   float oNight = U.uSeaE.z;
   float2 oWd = length(uWind) > 0.05f ? normalize(uWind) : float2(1.0f, 0.0f);
   float2 oFlow = uWindOffset * 0.03f;                         // surface drift ≈ 3% of the wind
-  float oShadow = 1.0f;                                       // captured in the light loop (M2: shadow map)
+  float oShadow = 1.0f;                                       // captured in the light loop (sun shadow)
 
   // ---- spatial weather front: the new weather sweeps across the sea as a ragged line
   float3 cDeep = U.uDeep.xyz;
@@ -807,7 +816,10 @@ fragment float4 ocean_fs(OceanVaryings in [[stage_in]],
     MDDirLight sunLight = LT.dir;                            // explicit copy: constant → thread
     IncidentLight directLight = getDirectionalLightInfo(sunLight);
     directLight.color *= oCloudMul;                          // layer 6: cloud shadows on the sun only
-    oShadow = 1.0f;                                          // M2: threeDirShadow() (Common/Shadow.h) under MD_FC_SHADOWS
+    // material.js patchLightsBegin: oShadow = (visible && receiveShadow) ? getShadow(…) : 1.0
+    oShadow = kOceanShadows ? threeDirShadow(LT, shadowMap, smpShadow, in.vShadowCoord, fragCoordGL(in.position, F.timeRes.zw),
+                                             directLight.visible, true)
+                            : 1.0f;
     directLight.color *= oShadow;
     oSunSpecular(directLight, geometryNormal, geometryViewDir, material, reflectedLight, U.uLookK.w, dfgLUT, smpClamp);
   }

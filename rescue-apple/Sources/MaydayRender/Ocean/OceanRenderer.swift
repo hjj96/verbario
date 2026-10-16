@@ -1,6 +1,9 @@
 // OceanRenderer — draws the sea (PLAN §2.9 systems/ocean.js row; R/Ocean/OceanRenderer.swift).
-// Owns the per-quality grid meshes and packs OceanFrameInput (the OceanUniformsCPU snapshot) into
-// MDOceanUniforms. Mesh: renderOrder 10 (after props, for early-z), receiveShadow, never culled.
+// Owns the per-quality grid meshes, the coastline map texture (coast.js bake → r8Unorm, uploaded when
+// the map changes) and packs OceanFrameInput (the OceanUniformsCPU snapshot) into MDOceanUniforms.
+// Mesh: renderOrder 10 (after props, for early-z), receiveShadow, never culled. The water memory
+// (WaterMemoryPass) and the sun's shadow map are bound when present (function constants OCEAN_MEMORY /
+// MD_FC_SHADOWS select the variant, like oceanDefines + USE_SHADOWMAP).
 import Foundation
 import Metal
 import MaydayCore
@@ -13,6 +16,9 @@ public final class OceanRenderer {
   private let constants: WaveConstants
   private var meshes: [Int: OceanGridBuffers] = [:]
   private let depthState: MTLDepthStencilState
+  /// The uploaded coast map and the map it came from (nil = placeholder "far from any coast").
+  private var coastTexture: MTLTexture?
+  private var coastSource: CoastMap?
 
   public init(device: RenderDevice, cache: PipelineCache, look: LookResources, constants: WaveConstants) throws {
     self.rd = device
@@ -30,14 +36,82 @@ public final class OceanRenderer {
     return m
   }
 
-  public func pipeline(quality: RenderQualityConfig, sampleCount: Int) throws -> MTLRenderPipelineState {
-    try OceanPipeline.render(cache: cache, device: rd, variant: OceanVariant(quality: quality, memoryBound: false), sampleCount: sampleCount)
+  public func pipeline(quality: RenderQualityConfig, sampleCount: Int, memory: Bool = false,
+                       shadows: Bool = false) throws -> MTLRenderPipelineState {
+    try OceanPipeline.render(cache: cache, device: rd, variant: OceanVariant(quality: quality, memoryBound: memory, shadows: shadows),
+                             sampleCount: sampleCount)
   }
 
-  /// Encodes the ocean draw. Frame / look / lights uniforms are already in the ring at the given offsets.
+  /// The coast texture to bind: uploads `map` (blit in `cb`) when it differs from the last upload.
+  /// coast.js: R8 DataTexture, linear, clamp, no mips; row j = z0 + (j + .5)·cell (= GL row order).
+  public func coastTexture(for map: CoastMap?, cb: MTLCommandBuffer) throws -> MTLTexture {
+    guard let m = map else {
+      coastSource = nil
+      coastTexture = nil
+      return look.coastPlaceholder
+    }
+    if let t = coastTexture, coastSource == m { return t }
+    let d = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .r8Unorm, width: m.w, height: m.h, mipmapped: false)
+    d.usage = [.shaderRead]
+    d.storageMode = .private
+    guard let tex = rd.device.makeTexture(descriptor: d) else { throw RenderError.resource("ocean coast \(m.w)×\(m.h)") }
+    tex.label = "ocean.coast"
+    // rows padded to 4 bytes: the strictest buffer → texture copy alignment of the Apple GPU families
+    let pitch = (m.w + 3) & ~3
+    guard let staging = rd.device.makeBuffer(length: pitch * m.h, options: [.storageModeShared]) else {
+      throw RenderError.resource("ocean coast staging")
+    }
+    let dst = staging.contents().bindMemory(to: UInt8.self, capacity: pitch * m.h)
+    m.data.withUnsafeBufferPointer { src in
+      for j in 0..<m.h {
+        for i in 0..<m.w { dst[j * pitch + i] = src[j * m.w + i] }
+      }
+    }
+    guard let blit = cb.makeBlitCommandEncoder() else { throw RenderError.resource("ocean coast blit") }
+    blit.label = "ocean.coast.upload"
+    blit.copy(from: staging, sourceOffset: 0, sourceBytesPerRow: pitch, sourceBytesPerImage: pitch * m.h,
+              sourceSize: MTLSize(width: m.w, height: m.h, depth: 1), to: tex, destinationSlice: 0, destinationLevel: 0,
+              destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+    blit.endEncoding()
+    coastTexture = tex
+    coastSource = m
+    return tex
+  }
+
+  /// coast.js window for the shader: (x0, z0, 1 / (w·cell), 1 / (h·cell)); coastOn = 1.
+  public static func coastWindow(_ m: CoastMap) -> SIMD4<Float> {
+    SIMD4<Float>(Float(m.x0), Float(m.z0), Float(1 / (Double(m.w) * m.cell)), Float(1 / (Double(m.h) * m.cell)))
+  }
+
+  /// Pushes the frame's MDOceanUniforms (the memory window and coast state resolved) into the ring.
+  public func pushUniforms(_ input: OceanFrameInput, ring: FrameRing, memoryWindow: SIMD4<Float>?) -> Int {
+    var o = input
+    if let w = memoryWindow { o.memWin = w } else { o.memWin.w = 0 }
+    if let c = o.coast {
+      o.coastWin = OceanRenderer.coastWindow(c)
+      o.coastOn = 1
+    }
+    return ring.push(OceanRenderer.pack(o))
+  }
+
+  /// Textures and samplers the ocean draw binds besides the look set.
+  public struct Bindings {
+    public var coast: MTLTexture
+    public var memory: MTLTexture?
+    public var shadowMap: MTLTexture?
+    public var shadowSampler: MTLSamplerState?
+    public init(coast: MTLTexture, memory: MTLTexture?, shadowMap: MTLTexture?, shadowSampler: MTLSamplerState?) {
+      self.coast = coast
+      self.memory = memory
+      self.shadowMap = shadowMap
+      self.shadowSampler = shadowSampler
+    }
+  }
+
+  /// Encodes the ocean draw. Frame / look / lights / ocean uniforms are already in the ring.
   public func encode(_ enc: MTLRenderCommandEncoder, pipeline pso: MTLRenderPipelineState, mesh: OceanGridBuffers,
-                     ring: FrameRing, frameOffset: Int, lookOffset: Int, lightsOffset: Int, input: OceanFrameInput) {
-    let oceanOffset = ring.push(OceanRenderer.pack(input))
+                     ring: FrameRing, frameOffset: Int, lookOffset: Int, lightsOffset: Int, oceanOffset: Int,
+                     bindings b: Bindings) {
     let buf = ring.buffer
     enc.pushDebugGroup("ocean")
     enc.setRenderPipelineState(pso)
@@ -47,7 +121,8 @@ public final class OceanRenderer {
     enc.setVertexBuffer(mesh.positions, offset: 0, index: Int(MD_BUF_VERTICES))
     enc.setVertexBuffer(buf, offset: frameOffset, index: Int(MD_BUF_FRAME))
     enc.setVertexBuffer(buf, offset: oceanOffset, index: Int(MD_BUF_MATERIAL))
-    enc.setVertexTexture(look.coastPlaceholder, index: Int(MD_TEX_COAST))
+    enc.setVertexBuffer(buf, offset: lightsOffset, index: Int(MD_BUF_LIGHTS))
+    enc.setVertexTexture(b.coast, index: Int(MD_TEX_COAST))
     enc.setVertexSamplerState(look.samplerClamp, index: Int(MD_SMP_CLAMP))
     enc.setFragmentBuffer(buf, offset: frameOffset, index: Int(MD_BUF_FRAME))
     enc.setFragmentBuffer(buf, offset: lookOffset, index: Int(MD_BUF_LOOK))
@@ -57,11 +132,13 @@ public final class OceanRenderer {
     enc.setFragmentTexture(look.detail, index: Int(MD_TEX_DETAIL))
     enc.setFragmentTexture(look.lace, index: Int(MD_TEX_LACE))
     enc.setFragmentTexture(look.dfgLUT, index: Int(MD_TEX_DFG))
-    enc.setFragmentTexture(look.coastPlaceholder, index: Int(MD_TEX_COAST))
-    enc.setFragmentTexture(look.blackRGBA16F, index: Int(MD_TEX_MEMORY))
+    enc.setFragmentTexture(b.coast, index: Int(MD_TEX_COAST))
+    enc.setFragmentTexture(b.memory ?? look.blackRGBA16F, index: Int(MD_TEX_MEMORY))
+    if let sm = b.shadowMap { enc.setFragmentTexture(sm, index: Int(MD_TEX_SHADOW)) }
     enc.setFragmentSamplerState(look.samplerLook, index: Int(MD_SMP_LOOK))
     enc.setFragmentSamplerState(look.samplerOcean, index: Int(MD_SMP_OCEAN))
     enc.setFragmentSamplerState(look.samplerClamp, index: Int(MD_SMP_CLAMP))
+    if let ss = b.shadowSampler { enc.setFragmentSamplerState(ss, index: Int(MD_SMP_SHADOW)) }
     enc.drawIndexedPrimitives(type: .triangle, indexCount: mesh.indexCount, indexType: .uint32,
                               indexBuffer: mesh.indices, indexBufferOffset: 0)
     enc.popDebugGroup()

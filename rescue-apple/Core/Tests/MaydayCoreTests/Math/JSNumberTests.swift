@@ -81,25 +81,65 @@ final class JSNumberTests: XCTestCase {
     assertBitEqual(JSNumber.mod(7.5, -2), 1.5, "7.5 % -2")
   }
 
-  /// Tests/Vectors/math/jsnumber.json (planned: export-vectors 'math' group). Schema assumed:
-  /// data.round [[x, out]], data.toUint32 [[x, out]], data.toInt32 [[x, out]], data.toString [[x, str]].
-  func testVectorFileIfExported() throws {
+  // ---- Tests/Vectors/math/jsnumber.json (export-core.mjs 'jsnumber': V8's own builtins) -------------
+  private func rows(_ key: String) throws -> [[JSONValue]] {
     let v = try VectorLoader.load("math/jsnumber")
-    for row in v.data["round"].array ?? [] {
-      guard let x = row[0].double, let want = row[1].double else { continue }
-      assertBitEqual(JSNumber.round(x), want, "Math.round(\(x))")
+    let a = try v.data[key].requireArray(key).map { try $0.requireArray(key) }
+    XCTAssertFalse(a.isEmpty, "\(key): no rows")
+    return a
+  }
+
+  func testRoundVectors() throws {
+    for r in try rows("round") {
+      let x = try r[0].requireDouble("x")
+      assertBitEqual(JSNumber.round(x), try r[1].requireDouble("out"), "Math.round(\(x))")
     }
-    for row in v.data["toUint32"].array ?? [] {
-      guard let x = row[0].double, let want = row[1].double else { continue }
-      XCTAssertEqual(Double(JSNumber.toUint32(x)), want, "\(x) >>> 0")
+  }
+
+  func testInt32Vectors() throws {
+    for r in try rows("toUint32") {
+      let x = try r[0].requireDouble("x")
+      assertBitEqual(Double(JSNumber.toUint32(x)), try r[1].requireDouble("out"), "\(x) >>> 0")
     }
-    for row in v.data["toInt32"].array ?? [] {
-      guard let x = row[0].double, let want = row[1].double else { continue }
-      XCTAssertEqual(Double(JSNumber.toInt32(x)), want, "\(x) | 0")
+    for r in try rows("toInt32") {
+      let x = try r[0].requireDouble("x")
+      assertBitEqual(Double(JSNumber.toInt32(x)), try r[1].requireDouble("out"), "\(x) | 0")
     }
-    for row in v.data["toString"].array ?? [] {
-      guard let x = row[0].double, let want = row[1].string else { continue }
-      XCTAssertEqual(JSNumber.toString(x), want, "String(\(x))")
+  }
+
+  func testModVectors() throws {
+    for r in try rows("mod") {
+      let a = try r[0].requireDouble("a"), b = try r[1].requireDouble("b")
+      assertBitEqual(JSNumber.mod(a, b), try r[2].requireDouble("out"), "\(a) % \(b)")
+    }
+  }
+
+  func testToStringVectors() throws {
+    for r in try rows("toString") {
+      let x = try r[0].requireDouble("x")
+      XCTAssertEqual(JSNumber.toString(x), try r[1].requireString("out"), "String(\(x))")
+    }
+  }
+
+  func testToFixedVectors() throws {
+    for r in try rows("toFixed") {
+      let x = try r[0].requireDouble("x"), f = try r[1].requireInt("digits")
+      XCTAssertEqual(JSNumber.toFixed(x, f), try r[2].requireString("out"), "(\(x)).toFixed(\(f))")
+    }
+  }
+
+  func testParseVectors() throws {
+    for r in try rows("parseFloat") {
+      let s = try r[0].requireString("s")
+      assertBitEqual(JSNumber.parseFloat(s), try r[1].requireDouble("out"), "parseFloat(\(s.debugDescription))")
+    }
+    for r in try rows("parseInt") {
+      let s = try r[0].requireString("s"), radix = try r[1].requireDouble("radix")
+      assertBitEqual(JSNumber.parseInt(s, radix), try r[2].requireDouble("out"), "parseInt(\(s.debugDescription), \(radix))")
+    }
+    for r in try rows("number") {
+      let s = try r[0].requireString("s")
+      assertBitEqual(JSNumber.fromString(s), try r[1].requireDouble("out"), "Number(\(s.debugDescription))")
     }
   }
 }

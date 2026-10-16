@@ -2,7 +2,9 @@
 //   common (BRDF_Lambert, F_Schlick), lights_pars_begin (getDistanceAttenuation, getSpotAttenuation,
 //   get*LightInfo, getHemisphereLightIrradiance), lights_physical_pars_fragment (V_GGX_SmithCorrelated,
 //   D_GGX, BRDF_GGX, BRDF_GGX_Multiscatter with the DFG LUT, RE_Direct_Physical) and
-//   lights_physical_fragment (PhysicalMaterial setup incl. geometryRoughness).
+//   lights_physical_fragment (PhysicalMaterial setup incl. geometryRoughness), and the indirect half
+//   (computeMultiscattering, RE_IndirectDiffuse_Physical, RE_IndirectSpecular_Physical) fed by the
+//   PMREM environment of Common/IBL.h.
 //
 // Differences from three, all result-neutral:
 //   * lighting runs in WORLD space (three: view space) — only dot products of unit vectors, which a
@@ -193,6 +195,62 @@ inline float3 getHemisphereLightIrradiance(MDHemiLight hemiLight, float3 normal)
   float dotNL = dot(normal, hemiLight.direction.xyz);
   float hemiDiffuseWeight = 0.5f * dotNL + 0.5f;
   return glMix(hemiLight.groundColor.xyz, hemiLight.skyColor.xyz, hemiDiffuseWeight);
+}
+
+// lights_pars_begin: physically correct mode, no π.
+inline float3 getAmbientLightIrradiance(float3 ambientLightColor) {
+  float3 irradiance = ambientLightColor;
+  return irradiance;
+}
+
+// ---- indirect light (lights_physical_pars_fragment; IBL inputs from Common/IBL.h) ---------------------
+// lights_fragment_begin → maps → end, for MeshStandardMaterial with scene.environment:
+//   irradiance  = getAmbientLightIrradiance(ambient) + Σ getHemisphereLightIrradiance(hemi, N)
+//   iblIrradiance = getIBLIrradiance(N);  radiance = getIBLRadiance(V, N, material.roughness)
+//   RE_IndirectDiffuse_Physical(irradiance, …);  RE_IndirectSpecular_Physical(radiance, iblIrradiance, …)
+
+inline void computeMultiscattering(float3 normal, float3 viewDir, float3 specularColor, float specularF90, float roughness,
+                                   thread float3& singleScatter, thread float3& multiScatter,
+                                   texture2d<float> dfgLUT, sampler dfgSampler) {
+  float dotNV = saturate1(dot(normal, viewDir));
+  float2 fab = dfgLUT.sample(dfgSampler, float2(roughness, dotNV), level(0.0f)).rg;
+  float3 Fr = specularColor;
+  float3 FssEss = Fr * fab.x + specularF90 * fab.y;
+  float Ess = fab.x + fab.y;
+  float Ems = 1.0f - Ess;
+  float3 Favg = Fr + (1.0f - Fr) * 0.047619f;
+  float3 Fms = FssEss * Favg / (1.0f - Ems * Favg);
+  singleScatter += FssEss;
+  multiScatter += Fms * Ems;
+}
+
+inline void RE_IndirectDiffuse_Physical(float3 irradiance, thread const PhysicalMaterial& material,
+                                        thread ReflectedLight& reflectedLight) {
+  float3 diffuse = irradiance * BRDF_Lambert(material.diffuseContribution);
+  reflectedLight.indirectDiffuse += diffuse;
+}
+
+inline void RE_IndirectSpecular_Physical(float3 radiance, float3 irradiance, float3 geometryNormal, float3 geometryViewDir,
+                                         thread const PhysicalMaterial& material, thread ReflectedLight& reflectedLight,
+                                         texture2d<float> dfgLUT, sampler dfgSampler) {
+  float3 singleScatteringDielectric = float3(0.0f);
+  float3 multiScatteringDielectric = float3(0.0f);
+  float3 singleScatteringMetallic = float3(0.0f);
+  float3 multiScatteringMetallic = float3(0.0f);
+  computeMultiscattering(geometryNormal, geometryViewDir, material.specularColor, material.specularF90, material.roughness,
+                         singleScatteringDielectric, multiScatteringDielectric, dfgLUT, dfgSampler);
+  computeMultiscattering(geometryNormal, geometryViewDir, material.diffuseColor, material.specularF90, material.roughness,
+                         singleScatteringMetallic, multiScatteringMetallic, dfgLUT, dfgSampler);
+  float3 singleScattering = glMix(singleScatteringDielectric, singleScatteringMetallic, material.metalness);
+  float3 multiScattering = glMix(multiScatteringDielectric, multiScatteringMetallic, material.metalness);
+  float3 totalScatteringDielectric = singleScatteringDielectric + multiScatteringDielectric;
+  float3 diffuse = material.diffuseContribution * (1.0f - totalScatteringDielectric);
+  float3 cosineWeightedIrradiance = irradiance * MD_RECIPROCAL_PI;
+  float3 indirectSpecular = radiance * singleScattering;
+  indirectSpecular += multiScattering * cosineWeightedIrradiance;
+  float3 indirectDiffuse = diffuse * cosineWeightedIrradiance;
+  reflectedLight.indirectSpecular += indirectSpecular;
+  reflectedLight.indirectDiffuse += indirectDiffuse;
 }
 
 #endif // MAYDAY_THREE_PBR_H

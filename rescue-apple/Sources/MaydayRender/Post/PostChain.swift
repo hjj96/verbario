@@ -1,5 +1,6 @@
-// PostChain — Composite+Output (sceneHDR → post) and FinalPass (post → drawable)
-// (PLAN §2.5 passes 6–7, D10, X3/X4). Bloom (pass 5) lands in M2; its strength is carried already.
+// PostChain — Composite+Output (sceneHDR + bloom → post) and FinalPass (post → drawable)
+// (PLAN §2.5 passes 5–7, D10, X3/X4). The bloom chain itself is BloomPass; its composite is added to the
+// scene inside the Composite+Output pass.
 import Foundation
 import Metal
 import MaydayShaderTypes
@@ -9,6 +10,11 @@ public final class PostChain {
   private let cache: PipelineCache
   private let look: LookResources
   public let drawableFormat: MTLPixelFormat
+  /// LensDrops grid (post/drops.js: 28 × 16 rgba, R/G head offset, B radius, A tail; GL row order) once
+  /// the drop simulation exists; nil binds a zero texture (FinalInput.drops must then stay 0).
+  public var lensDrops: MTLTexture?
+  /// Thermal heat / mass target (post/thermal.js) once the heat pass exists; nil binds a zero texture.
+  public var heat: MTLTexture?
 
   public init(device: RenderDevice, cache: PipelineCache, look: LookResources, drawableFormat: MTLPixelFormat) {
     self.rd = device
@@ -40,18 +46,22 @@ public final class PostChain {
     }
   }
 
-  /// post = sRGB_OETF(ACES(exposure · sceneHDR)) over the scene's viewport sub-rectangle.
+  /// post = sRGB_OETF(ACES(exposure · half(sceneHDR + bloom))) over the scene's viewport sub-rectangle.
+  /// bloom: the UnrealBloomPass composite (exact-size texture) or nil (no bloom this frame).
   public func encodeComposite(_ cb: MTLCommandBuffer, pipeline pso: MTLRenderPipelineState, targets: RenderTargets,
-                              viewport: MTLViewport, ring: FrameRing, exposure: Float, bloomStrength: Float) {
+                              viewport: MTLViewport, ring: FrameRing, exposure: Float, bloom: MTLTexture?) {
     var u = MDOutputUniforms()
-    u.params = SIMD4<Float>(exposure, bloomStrength,
+    u.params = SIMD4<Float>(exposure, bloom == nil ? 0 : 1,
                             Float(viewport.width) / Float(targets.width), Float(viewport.height) / Float(targets.height))
+    u.bloom = SIMD4<Float>(1, 1, 0, 0)
     let off = ring.push(u)
     guard let enc = cb.makeRenderCommandEncoder(descriptor: targets.postPassDescriptor()) else { return }
     enc.label = FramePass.compositeOutput.label
     enc.setViewport(viewport)
     enc.setRenderPipelineState(pso)
     enc.setFragmentTexture(targets.sceneHDR, index: Int(MD_TEX_SOURCE))
+    enc.setFragmentTexture(bloom ?? look.blackRGBA16F, index: Int(MD_TEX_BLOOM))
+    enc.setFragmentSamplerState(look.samplerClamp, index: Int(MD_SMP_CLAMP))
     enc.setFragmentBuffer(ring.buffer, offset: off, index: Int(MD_BUF_PASS))
     enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
     enc.endEncoding()
@@ -102,8 +112,8 @@ public final class PostChain {
     enc.setRenderPipelineState(pso)
     enc.setFragmentBuffer(ring.buffer, offset: off, index: Int(MD_BUF_PASS))
     enc.setFragmentTexture(source.post, index: Int(MD_TEX_SOURCE))
-    enc.setFragmentTexture(look.blackRGBA16F, index: Int(MD_TEX_DROPS))   // LensDrops grid: M2
-    enc.setFragmentTexture(look.blackRGBA16F, index: Int(MD_TEX_HEAT))    // thermal heat pass: M3
+    enc.setFragmentTexture(lensDrops ?? look.blackRGBA16F, index: Int(MD_TEX_DROPS))
+    enc.setFragmentTexture(heat ?? look.blackRGBA16F, index: Int(MD_TEX_HEAT))
     enc.setFragmentSamplerState(look.samplerClamp, index: Int(MD_SMP_CLAMP))
     enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
     enc.endEncoding()

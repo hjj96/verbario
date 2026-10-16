@@ -1,18 +1,22 @@
 // Renderer — the single Metal renderer shared by iOS and macOS (PLAN D1, D10, D11, §2.5).
 //
-// Frame graph (fixed, M0 subset):
-//   1. scene pass   MSAA rgba16Float (memoryless) + depth32Float → resolve into sceneHDR;
-//                   viewport sub-rect = internal size × dynamic-resolution scale;
-//                   draws: ocean (renderOrder 10). Props / heli / FX / shadows / env: M2+.
-//   2. composite+output  sceneHDR → post (ACES Filmic × exposure, sRGB OETF), same sub-rect.
-//   3. final        post → drawable (bgra8Unorm, layer colorspace sRGB), full drawable resolution.
-//   (HUD on top of the drawable: M5; frame capture for photo mode: M8.)
+// Frame graph (FrameGraph.swift; fixed order, a pass is encoded or skipped):
+//   1. envRebake       PMREM cube-UV atlas of the weather/env.js sky (EnvironmentProbe; on request and
+//                      once before first use)
+//   2. waterMemory     ocean/memory.js ping-pong advect + stamps (quality.oceanMemory > 0, dt > 0)
+//   4. shadow          the sun's depth map (SunRig / ShadowCamera) when a family casts shadows
+//   6. scene           MSAA rgba16Float (memoryless) + depth32Float → resolve into sceneHDR; viewport
+//                      sub-rect = internal size × dynamic-resolution scale; draws: opaque families,
+//                      the ocean (renderOrder 10), transparent families
+//   7. bloom           UnrealBloomPass (BloomPass) when the tier enables it and strength > 0
+//   8. composite+output sceneHDR + bloom → post (ACES Filmic × exposure, sRGB OETF), same sub-rect
+//   9. final           post → drawable (bgra8Unorm, layer colorspace sRGB), full drawable resolution
+//   (thermal heat pass: M6; HUD on top of the drawable: M5; photo capture: M8.)
 //
 // Frame pacing: triple buffering (FrameRing: semaphore 3, 8 MB per slot); MTKView paces the display
 // link (preferredFramesPerSecond); on iOS the drawable is presented with afterMinimumDuration so a
-// 120 Hz panel holds a steady 60. Dynamic resolution (PLAN D11/X2): GPU time from the command
-// buffer (gpuEndTime − gpuStartTime), 1 s window, > 18 ms → −0.05, < 13 ms → +0.05, floor per tier;
-// the MSAA sample count never changes on the fly.
+// 120 Hz panel holds a steady 60. Dynamic resolution: DynResController (post.js rules on GPU time, X2);
+// the MSAA sample count never changes on the fly (X1).
 import Foundation
 import Metal
 import QuartzCore
@@ -32,8 +36,23 @@ public struct RenderStats {
   public var drawableHeight = 0
   public var sampleCount = 1
   public var frames: Int = 0
+  public var envBakes: Int = 0
+  public var shadowPass = false
+  public var bloomPass = false
+  public var qualityHint: QualityHint?
   public var lastError: String?
   public init() {}
+}
+
+/// RGBA8 readback of an offscreen frame (tests, goldens).
+public struct OffscreenFrame {
+  public let width: Int
+  public let height: Int
+  /// FinalPass output (display sRGB), RGBA8, row 0 = top.
+  public let final: [UInt8]
+  /// Composite+Output result before the FinalPass (ACES + sRGB, bloom included), RGBA8 (rounded from
+  /// half float), row 0 = top, cropped to the dynamic-resolution viewport (= full size at scale 1).
+  public let post: [UInt8]
 }
 
 public final class Renderer {
@@ -42,19 +61,23 @@ public final class Renderer {
   public let ocean: OceanRenderer
   public let post: PostChain
   public let selftest: OceanSelftest
+  public let environment: EnvironmentProbe
+  public let shadow: ShadowPass
+  public let bloom: BloomPass
   private let cache: PipelineCache
   private let ring: FrameRing
   private var targets: RenderTargets?
+  private var memory: WaterMemoryPass?
+  private var families: [RenderFamily] = []
   /// Last render-target allocation that failed (size + sample count) and its error: rethrown while
   /// the request is unchanged instead of re-allocating every frame; a resize / tier change retries.
   private var failedTargets: (width: Int, height: Int, sampleCount: Int, error: Error)?
 
   // dynamic resolution (written on the main thread; GPU samples arrive on Metal's completion thread)
-  private var dynScale: Double = 1
+  public private(set) var dynRes = DynResController(quality: "high")
   private let gpuLock = NSLock()
-  private var gpuAccum: Double = 0
-  private var gpuSamples: Int = 0
-  private var gpuWindowStart: CFTimeInterval = 0
+  private var gpuPending: [Double] = []
+  private var lastFrameTime: CFTimeInterval = 0
   private var statsStore = RenderStats()
   private let statsLock = NSLock()
 
@@ -74,6 +97,21 @@ public final class Renderer {
     self.ocean = ocean
     self.post = PostChain(device: rd, cache: cache, look: look, drawableFormat: drawableFormat)
     self.selftest = OceanSelftest(device: rd, cache: cache, look: look)
+    self.environment = try EnvironmentProbe(device: rd, cache: cache, look: look)
+    self.shadow = try ShadowPass(device: rd, cache: cache)
+    self.bloom = BloomPass(device: rd, cache: cache, look: look)
+  }
+
+  /// The PSO cache shared by every family (keys: PipelineCache).
+  public var pipelineCache: PipelineCache { cache }
+
+  /// Registers a mesh family (drawn in registration order; see RenderFamily).
+  public func addFamily(_ f: RenderFamily) {
+    if !families.contains(where: { $0 === f }) { families.append(f) }
+  }
+
+  public func removeFamily(_ f: RenderFamily) {
+    families.removeAll { $0 === f }
   }
 
   /// Compiles the PSOs of a quality tier ahead of the first frame (boot / quality change).
@@ -81,11 +119,17 @@ public final class Renderer {
     // boot / quality change: give previously failed PSOs and render targets one fresh attempt
     cache.resetFailures()
     failedTargets = nil
+    dynRes.applyQuality(quality.name)
     let sc = device.sampleCount(atMost: quality.sampleCount)
-    _ = try ocean.pipeline(quality: quality, sampleCount: sc)
+    for shadows in [false, true] {
+      _ = try ocean.pipeline(quality: quality, sampleCount: sc, memory: quality.oceanMemory > 0, shadows: shadows)
+    }
     _ = try ocean.mesh(n: quality.oceanGridN)
     _ = try post.compositePipeline()
     _ = try post.finalPipeline()
+    _ = try environment.pipelines()
+    if quality.bloomEnabled { _ = try bloom.pipelines() }
+    if quality.oceanMemory > 0 { _ = try waterMemory(size: quality.oceanMemory).pipelines() }
   }
 
   public var stats: RenderStats {
@@ -97,12 +141,22 @@ public final class Renderer {
     statsLock.lock(); body(&statsStore); statsLock.unlock()
   }
 
+  private func waterMemory(size: Int) throws -> WaterMemoryPass {
+    if let m = memory, m.size == size { return m }
+    let m = try WaterMemoryPass(device: device, cache: cache, look: look, size: size)
+    memory = m
+    return m
+  }
+
   // ---- frame --------------------------------------------------------------------------------------
 
   /// Encodes and commits one frame. `drawable` is called as late as possible (after the off-screen
   /// passes are encoded); a nil drawable still commits the off-screen work to keep the ring balanced.
   public func render(_ frame: RenderFrame, drawable: () -> CAMetalDrawable?) {
     let t0 = CACurrentMediaTime()
+    let realDt = lastFrameTime > 0 ? min(t0 - lastFrameTime, 0.1) : 0
+    lastFrameTime = t0
+    updateDynamicResolution(frame: frame, realDt: realDt)
     ring.beginFrame()
     guard let cb = device.queue.makeCommandBuffer() else {
       ring.abandonFrame()
@@ -112,67 +166,16 @@ public final class Renderer {
     var failure: String?
     var drawableSize = (0, 0)
     do {
-      // everything that can throw happens before the first encoder is opened
-      let sc = device.sampleCount(atMost: frame.quality.sampleCount)
-      let w = max(1, frame.internalWidth)
-      let h = max(1, frame.internalHeight)
-      if targets == nil || !(targets!.matches(width: w, height: h, sampleCount: sc)) {
-        if let f = failedTargets, f.width == w, f.height == h, f.sampleCount == sc { throw f.error }
-        do {
-          targets = try RenderTargets(device: device, width: w, height: h, sampleCount: sc)
-          failedTargets = nil
-        } catch {
-          failedTargets = (w, h, sc, error)
-          throw error
-        }
-      }
-      guard let rt = targets else { throw RenderError.resource("render targets") }
-      let oceanPSO = try ocean.pipeline(quality: frame.quality, sampleCount: sc)
-      let oceanMesh = try ocean.mesh(n: frame.quality.oceanGridN)
-      let compositePSO = try post.compositePipeline()
-      let finalPSO = try post.finalPipeline()
-
-      updateDynamicResolution(enabled: frame.dynamicResolution, minScale: frame.quality.minDynScale)
-      let vpW = max(1, Int((Double(w) * dynScale).rounded()))
-      let vpH = max(1, Int((Double(h) * dynScale).rounded()))
-      let viewport = MTLViewport(originX: 0, originY: 0, width: Double(vpW), height: Double(vpH), znear: 0, zfar: 1)
-
-      // ---- per-frame uniforms (aspect of the full internal size: dynres never changes framing)
-      let cam = CameraMatrices(camera: frame.camera, aspect: Double(w) / Double(h))
-      let frameOffset = ring.push(makeFrameUniforms(frame, cam: cam, vpW: vpW, vpH: vpH))
-      let lookOffset = ring.push(makeLookUniforms(frame, vpW: vpW, vpH: vpH))
-      let lightsOffset = ring.push(makeLightsUniforms(frame))
-
-      // ---- 1. scene
-      if let enc = cb.makeRenderCommandEncoder(descriptor: rt.scenePassDescriptor(clear: frame.fog.color)) {
-        enc.label = FramePass.scene.label
-        enc.setViewport(viewport)
-        ocean.encode(enc, pipeline: oceanPSO, mesh: oceanMesh, ring: ring, frameOffset: frameOffset,
-                     lookOffset: lookOffset, lightsOffset: lightsOffset, input: frame.ocean)
-        enc.endEncoding()
-      }
-      // ---- 2. composite + output
-      post.encodeComposite(cb, pipeline: compositePSO, targets: rt, viewport: viewport, ring: ring,
-                           exposure: frame.post.exposure, bloomStrength: frame.post.bloomStrength)
-      // ---- 3. final → drawable
+      let encoded = try encodeFrame(frame, cb: cb, scale: dynRes.scale)
       if let d = drawable() {
         drawableSize = (d.texture.width, d.texture.height)
-        post.encodeFinal(cb, pipeline: finalPSO, target: d.texture, source: rt, sourceViewport: viewport,
-                         ring: ring, input: frame.post.finalPass, pxScale: frame.pxScale)
+        post.encodeFinal(cb, pipeline: encoded.finalPSO, target: d.texture, source: encoded.targets,
+                         sourceViewport: encoded.viewport, ring: ring, input: frame.post.finalPass, pxScale: frame.pxScale)
         #if os(iOS)
         cb.present(d, afterMinimumDuration: 1.0 / Double(max(1, frame.framesPerSecond)))
         #else
         cb.present(d)
         #endif
-      }
-      let scale = dynScale
-      updateStats { s in
-        s.internalWidth = w
-        s.internalHeight = h
-        s.viewportWidth = vpW
-        s.viewportHeight = vpH
-        s.sampleCount = sc
-        s.dynScale = scale
       }
     } catch let e as RenderError {
       failure = e.description
@@ -194,6 +197,202 @@ public final class Renderer {
       }
       s.lastError = failure   // nil again after the first good frame: a transient error does not stick
     }
+  }
+
+  /// Renders one frame off screen at `frame.internalWidth × internalHeight` (FinalPass at the same size),
+  /// waits for the GPU and reads both the FinalPass result and the post target back (golden tests).
+  /// `dynamicScale` is applied as in a live frame (1 = full size, like the web's `?dynres=0`).
+  public func renderOffscreen(_ frame: RenderFrame, dynamicScale: Double = 1) throws -> OffscreenFrame {
+    let w = max(1, frame.internalWidth)
+    let h = max(1, frame.internalHeight)
+    let d = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: post.drawableFormat, width: w, height: h, mipmapped: false)
+    d.usage = [.renderTarget, .shaderRead]
+    d.storageMode = .private
+    guard let target = device.device.makeTexture(descriptor: d) else { throw RenderError.resource("offscreen target") }
+    target.label = "MAYDAY.offscreen"
+    ring.beginFrame()
+    guard let cb = device.queue.makeCommandBuffer() else {
+      ring.abandonFrame()
+      throw RenderError.resource("offscreen command buffer")
+    }
+    cb.label = "MAYDAY.offscreen"
+    let encoded: EncodedFrame
+    do {
+      encoded = try encodeFrame(frame, cb: cb, scale: dynamicScale)
+    } catch {
+      ring.signal(on: cb)
+      cb.commit()
+      throw error
+    }
+    post.encodeFinal(cb, pipeline: encoded.finalPSO, target: target, source: encoded.targets,
+                     sourceViewport: encoded.viewport, ring: ring, input: frame.post.finalPass, pxScale: frame.pxScale)
+    let vpW = Int(encoded.viewport.width), vpH = Int(encoded.viewport.height)
+    guard let finalBuf = device.device.makeBuffer(length: w * h * 4, options: [.storageModeShared]),
+          let postBuf = device.device.makeBuffer(length: vpW * vpH * 8, options: [.storageModeShared]),
+          let blit = cb.makeBlitCommandEncoder() else {
+      ring.signal(on: cb)
+      cb.commit()
+      throw RenderError.resource("offscreen readback")
+    }
+    blit.copy(from: target, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+              sourceSize: MTLSize(width: w, height: h, depth: 1), to: finalBuf, destinationOffset: 0,
+              destinationBytesPerRow: w * 4, destinationBytesPerImage: w * h * 4)
+    blit.copy(from: encoded.targets.post, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+              sourceSize: MTLSize(width: vpW, height: vpH, depth: 1), to: postBuf, destinationOffset: 0,
+              destinationBytesPerRow: vpW * 8, destinationBytesPerImage: vpW * vpH * 8)
+    blit.endEncoding()
+    ring.signal(on: cb)
+    cb.commit()
+    cb.waitUntilCompleted()
+    if let e = cb.error { throw RenderError.resource("offscreen: \(e.localizedDescription)") }
+    // final: drawable format bgra8Unorm → RGBA
+    let fp = finalBuf.contents().bindMemory(to: UInt8.self, capacity: w * h * 4)
+    var final = [UInt8](repeating: 0, count: w * h * 4)
+    let bgra = post.drawableFormat == .bgra8Unorm
+    for i in 0..<(w * h) {
+      final[i * 4] = fp[i * 4 + (bgra ? 2 : 0)]
+      final[i * 4 + 1] = fp[i * 4 + 1]
+      final[i * 4 + 2] = fp[i * 4 + (bgra ? 0 : 2)]
+      final[i * 4 + 3] = fp[i * 4 + 3]
+    }
+    // post: rgba16Float → RGBA8 (round half to nearest like a canvas readback of a [0, 1] value)
+    let pp = postBuf.contents().bindMemory(to: UInt16.self, capacity: vpW * vpH * 4)
+    var postBytes = [UInt8](repeating: 0, count: vpW * vpH * 4)
+    for i in 0..<(vpW * vpH * 4) {
+      let v = Renderer.halfToFloat(pp[i])
+      postBytes[i] = UInt8(max(0, min(255, (v * 255).rounded())))
+    }
+    return OffscreenFrame(width: w, height: h, final: final, post: postBytes)
+  }
+
+  /// IEEE 754 binary16 → Float (portable: no Float16 dependency).
+  static func halfToFloat(_ h: UInt16) -> Float {
+    let sign: Float = (h & 0x8000) != 0 ? -1 : 1
+    let exp = Int((h >> 10) & 0x1F)
+    let man = Float(h & 0x3FF)
+    if exp == 0 { return sign * man * pow(2, -24) }
+    if exp == 31 { return man == 0 ? sign * Float.infinity : Float.nan }
+    return sign * (1 + man / 1024) * pow(2, Float(exp - 15))
+  }
+
+  private struct EncodedFrame {
+    let targets: RenderTargets
+    let viewport: MTLViewport
+    let finalPSO: MTLRenderPipelineState
+  }
+
+  /// Passes 1–8 (everything before the FinalPass). Throws before opening any encoder when a PSO or a
+  /// render target is unavailable.
+  private func encodeFrame(_ frame: RenderFrame, cb: MTLCommandBuffer, scale: Double) throws -> EncodedFrame {
+    let q = frame.quality
+    let sc = device.sampleCount(atMost: q.sampleCount)
+    let w = max(1, frame.internalWidth)
+    let h = max(1, frame.internalHeight)
+    if targets == nil || !(targets!.matches(width: w, height: h, sampleCount: sc)) {
+      if let f = failedTargets, f.width == w, f.height == h, f.sampleCount == sc { throw f.error }
+      do {
+        targets = try RenderTargets(device: device, width: w, height: h, sampleCount: sc)
+        failedTargets = nil
+      } catch {
+        failedTargets = (w, h, sc, error)
+        throw error
+      }
+    }
+    guard let rt = targets else { throw RenderError.resource("render targets") }
+    let casters = families.filter { $0.castsShadows }
+    let shadowOn = frame.lights.shadow != nil && !casters.isEmpty
+    let memoryOn = q.oceanMemory > 0
+    let oceanPSO = try ocean.pipeline(quality: q, sampleCount: sc, memory: memoryOn, shadows: shadowOn)
+    let oceanMesh = try ocean.mesh(n: q.oceanGridN)
+    let compositePSO = try post.compositePipeline()
+    let finalPSO = try post.finalPipeline()
+    let mem = memoryOn ? try waterMemory(size: q.oceanMemory) : nil
+    if mem == nil { memory = nil }
+
+    let vpW = max(1, Int((Double(w) * scale).rounded()))
+    let vpH = max(1, Int((Double(h) * scale).rounded()))
+    let viewport = MTLViewport(originX: 0, originY: 0, width: Double(vpW), height: Double(vpH), znear: 0, zfar: 1)
+
+    // ---- per-frame uniforms (aspect of the full internal size: dynres never changes framing)
+    let cam = CameraMatrices(camera: frame.camera, aspect: Double(w) / Double(h))
+    let frameOffset = ring.push(makeFrameUniforms(frame, cam: cam, vpW: vpW, vpH: vpH))
+    let lookOffset = ring.push(makeLookUniforms(frame, vpW: vpW, vpH: vpH))
+    let lightsOffset = ring.push(LightRig.pack(frame.lights, shadowMapBound: shadowOn))
+
+    // ---- 1. environment (PMREM) — on request, and before first use
+    if frame.environment.rebake || !environment.baked {
+      try environment.encodeBake(cb, params: frame.environment.sky ?? Renderer.envSky(from: frame.ocean))
+    }
+
+    // ---- coast map upload (blit) and 2. water memory
+    let coast = try ocean.coastTexture(for: frame.ocean.coast, cb: cb)
+    if let m = mem {
+      let featureOffset = ocean.pushUniforms(frame.ocean, ring: ring, memoryWindow: m.window)
+      try m.encode(cb, input: frame.waterMemory, ring: ring, oceanOffset: featureOffset)
+    }
+    let oceanOffset = ocean.pushUniforms(frame.ocean, ring: ring, memoryWindow: mem?.window)
+
+    let shadowMap: MTLTexture? = shadowOn ? try shadow.ensureMap(size: frame.lights.shadow?.mapSize ?? 1024) : nil
+    let ctx = FrameContext(frame: frame, ring: ring, frameOffset: frameOffset, lookOffset: lookOffset,
+                           lightsOffset: lightsOffset, camera: cam, sampleCount: sc, look: look,
+                           environment: environment.baked ? environment.atlas : nil,
+                           shadowMap: shadowMap, shadowSampler: shadow.compareSampler)
+    for f in families { try f.prepare(ctx) }
+
+    // ---- 4. the sun's shadow map
+    if shadowOn, let s = frame.lights.shadow {
+      let layers: RenderLayers = s.shadowOnlyLayer ? [.main, .shadowOnly] : .main
+      try shadow.encode(cb, camera: s.camera, mapSize: s.mapSize, layers: layers, ring: ring,
+                        casters: casters.map { f in { enc, pass in f.encodeShadow(enc, ctx, pass: pass) } })
+    }
+
+    // ---- 6. scene
+    if let enc = cb.makeRenderCommandEncoder(descriptor: rt.scenePassDescriptor(clear: frame.fog.color)) {
+      enc.label = FramePass.scene.label
+      enc.setViewport(viewport)
+      for f in families { f.encodeOpaque(enc, ctx) }
+      enc.setViewport(viewport)
+      ocean.encode(enc, pipeline: oceanPSO, mesh: oceanMesh, ring: ring, frameOffset: frameOffset,
+                   lookOffset: lookOffset, lightsOffset: lightsOffset, oceanOffset: oceanOffset,
+                   bindings: OceanRenderer.Bindings(coast: coast, memory: mem?.texture,
+                                                    shadowMap: shadowMap,
+                                                    shadowSampler: shadowOn ? shadow.compareSampler : nil))
+      for f in families { f.encodeTransparent(enc, ctx) }
+      enc.endEncoding()
+    }
+
+    // ---- 7. bloom
+    var bloomTexture: MTLTexture?
+    if q.bloomEnabled && frame.post.bloomStrength > 0 {
+      bloomTexture = try bloom.encode(cb, ring: ring, scene: rt.sceneHDR, viewportWidth: vpW, viewportHeight: vpH,
+                                      scale: q.bloomScale, strength: frame.post.bloomStrength,
+                                      radius: frame.post.bloomRadius, threshold: frame.post.bloomThreshold)
+    }
+    // ---- 8. composite + output
+    post.encodeComposite(cb, pipeline: compositePSO, targets: rt, viewport: viewport, ring: ring,
+                         exposure: frame.post.exposure, bloom: bloomTexture)
+
+    let s = dynRes.scale
+    let bakes = environment.bakeCount
+    updateStats { st in
+      st.internalWidth = w
+      st.internalHeight = h
+      st.viewportWidth = vpW
+      st.viewportHeight = vpH
+      st.sampleCount = sc
+      st.dynScale = s
+      st.envBakes = bakes
+      st.shadowPass = shadowOn
+      st.bloomPass = bloomTexture != nil
+    }
+    return EncodedFrame(targets: rt, viewport: viewport, finalPSO: finalPSO)
+  }
+
+  /// The env bake inputs implied by the ocean palette of the frame when the sim supplies none
+  /// (weather/env.js reads the same palette: sky, fogColor, deep, sunDirVisual, sun, sunIntensity).
+  static func envSky(from o: OceanFrameInput) -> EnvSkyParams {
+    EnvSkyParams(sky: o.sky, fog: o.fogColor, deep: o.deep, sunDir: o.sunDirV, sunColor: o.sun,
+                 sunIntensity: o.seaB.w, cloud: 0.5)
   }
 
   // ---- uniforms -------------------------------------------------------------------------------------
@@ -228,71 +427,30 @@ public final class Renderer {
     return u
   }
 
-  private func makeLightsUniforms(_ f: RenderFrame) -> MDLightsUniforms {
-    let L = f.lights
-    var u = MDLightsUniforms()
-    u.dir.direction = SIMD4<Float>(L.sunDirection.x, L.sunDirection.y, L.sunDirection.z, 0)
-    u.dir.color = SIMD4<Float>(L.sunColor.x, L.sunColor.y, L.sunColor.z, 0)
-    u.hemi.skyColor = SIMD4<Float>(L.hemiSky.x, L.hemiSky.y, L.hemiSky.z, 0)
-    u.hemi.groundColor = SIMD4<Float>(L.hemiGround.x, L.hemiGround.y, L.hemiGround.z, 0)
-    u.hemi.direction = SIMD4<Float>(0, 1, 0, 0)
-    withUnsafeMutableBytes(of: &u.spot) { raw in
-      let p = raw.bindMemory(to: MDSpotLight.self)
-      for i in 0..<min(p.count, L.spots.count) {
-        let s = L.spots[i]
-        var m = MDSpotLight()
-        m.position = SIMD4<Float>(s.position.x, s.position.y, s.position.z, 1)
-        m.direction = SIMD4<Float>(s.direction.x, s.direction.y, s.direction.z, 0)
-        m.color = SIMD4<Float>(s.color.x, s.color.y, s.color.z, 0)
-        m.params = SIMD4<Float>(s.distance, s.decay, s.coneCos, s.penumbraCos)
-        p[i] = m
-      }
-    }
-    withUnsafeMutableBytes(of: &u.point) { raw in
-      let p = raw.bindMemory(to: MDPointLight.self)
-      for i in 0..<min(p.count, L.points.count) {
-        let s = L.points[i]
-        var m = MDPointLight()
-        m.position = SIMD4<Float>(s.position.x, s.position.y, s.position.z, 1)
-        m.color = SIMD4<Float>(s.color.x, s.color.y, s.color.z, 0)
-        m.params = SIMD4<Float>(s.distance, s.decay, 0, 0)
-        p[i] = m
-      }
-    }
-    u.ambientEnv = SIMD4<Float>(L.ambient.x, L.ambient.y, L.ambient.z, L.environmentIntensity)
-    return u
-  }
-
   // ---- dynamic resolution ------------------------------------------------------------------------------
 
   private func recordGPUTime(_ cb: MTLCommandBuffer) {
     let ms = (cb.gpuEndTime - cb.gpuStartTime) * 1000
     guard ms > 0, ms < 1000 else { return }
     gpuLock.lock()
-    gpuAccum += ms
-    gpuSamples += 1
+    gpuPending.append(ms)
     gpuLock.unlock()
   }
 
-  private func updateDynamicResolution(enabled: Bool, minScale: Double) {
-    let now = CACurrentMediaTime()
-    if gpuWindowStart == 0 { gpuWindowStart = now }
-    guard now - gpuWindowStart >= 1 else { return }
+  private func updateDynamicResolution(frame: RenderFrame, realDt: Double) {
     gpuLock.lock()
-    let mean = gpuSamples > 0 ? gpuAccum / Double(gpuSamples) : 0
-    gpuAccum = 0
-    gpuSamples = 0
+    let samples = gpuPending
+    gpuPending.removeAll(keepingCapacity: true)
     gpuLock.unlock()
-    gpuWindowStart = now
-    if !enabled {
-      dynScale = 1
-    } else if mean > 18 {
-      dynScale = max(minScale, dynScale - 0.05)
-    } else if mean > 0 && mean < 13 {
-      dynScale = min(1, dynScale + 0.05)
+    if dynRes.quality != frame.quality.name { dynRes.applyQuality(frame.quality.name) }
+    dynRes.enabled = frame.dynamicResolution
+    for ms in samples { dynRes.addGPUSample(ms: ms) }
+    let hint = dynRes.update(dt: realDt, paused: frame.dynamicResolutionFrozen)
+    if !frame.dynamicResolution { dynRes.applyQuality(frame.quality.name) }   // off: always full size
+    let ms = dynRes.frameMs
+    updateStats { s in
+      s.gpuMs = ms
+      if let h = hint { s.qualityHint = h }
     }
-    dynScale = min(1, max(minScale, dynScale))
-    let m = mean
-    updateStats { s in s.gpuMs = m }
   }
 }

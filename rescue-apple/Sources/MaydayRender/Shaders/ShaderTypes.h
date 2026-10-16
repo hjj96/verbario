@@ -35,6 +35,19 @@
 #define MD_GUST_FRONTS 4        // core/look.js uGustFronts[4]
 #define MD_SPOT_LIGHTS 2        // CONTRACT light set: heli searchlight, lighthouse beam
 #define MD_POINT_LIGHTS 6       // heli belly, ship deck, 4 fx pools
+#define MD_BLOOM_MIPS 5         // UnrealBloomPass nMips
+#define MD_BLOOM_MAX_KERNEL 24  // ≥ the largest KERNEL_RADIUS (22), multiple of 4
+#define MD_MEMORY_MAX_STAMPS 128 // ocean/memory.js MAX_STAMPS
+
+// ---- PMREM cube-UV atlas (three r185 PMREMGenerator.fromScene(scene, 0, 0.1, 50, { size: 128 }),
+// weather/env.js): cubeSize 128 → lodMax 7; atlas 3·max(128, 16·7) × 4·128 texels; 10 lods
+// (128, 64, 32, 16 + EXTRA_LOD_SIGMA.length = 6 extra 16² lods side by side). Rows are stored in GL
+// order (row 0 = v 0), so the cube_uv_reflection_fragment uv maths applies unchanged.
+#define MD_CUBEUV_SIZE 128
+#define MD_CUBEUV_MAX_MIP 7
+#define MD_CUBEUV_WIDTH 384
+#define MD_CUBEUV_HEIGHT 512
+#define MD_CUBEUV_LODS 10
 
 // ---- buffer indices ([[buffer(n)]]) ---------------------------------------------------------------
 #define MD_BUF_VERTICES 0
@@ -59,8 +72,8 @@
 #define MD_TEX_ATLAS 0          // look atlas 256² (R fbm, G worley F1, B F2−F1, A hash)
 #define MD_TEX_DETAIL 1         // look detail 256² (RG slopes, B height)
 #define MD_TEX_LACE 2           // look lace 512² (R lace, G blotches, B fine lace)
-#define MD_TEX_SHADOW 3         // directional shadow map (not yet: M2)
-#define MD_TEX_ENV 4            // env cube (not yet: M2)
+#define MD_TEX_SHADOW 3         // directional shadow map (depth32Float, compare sampler MD_SMP_SHADOW)
+#define MD_TEX_ENV 4            // PMREM cube-UV atlas (rgba16Float 384 × 512, Common/IBL.h)
 #define MD_TEX_DFG 5            // three r185 DFG LUT 16² rg16Float (BRDF_GGX_Multiscatter)
 #define MD_TEX_COAST 6          // ocean coastline distance map (r8Unorm, R·48 m)
 #define MD_TEX_MEMORY 7         // ocean water memory (rgba16Float: foam, dye, disturbance, oil)
@@ -68,12 +81,15 @@
 #define MD_TEX_SOURCE 0         // pass input (scene HDR / post LDR)
 #define MD_TEX_DROPS 1          // FinalPass lens drops grid (28 × 16)
 #define MD_TEX_HEAT 2           // FinalPass thermal heat/mass target
+#define MD_TEX_BLOOM 1          // Composite+Output: bloom composite (UnrealBloomPass horizontal[0])
+#define MD_TEX_BLUR0 1          // bloom composite: blurTexture1 … blurTexture5 at 1 … 5
+#define MD_TEX_OUTPUT 1         // compute kernels: written texture
 
 // ---- sampler indices ([[sampler(n)]]) -----------------------------------------------------------------
 #define MD_SMP_LOOK 0           // repeat, trilinear, anisotropy 2 (look.* textures; ocean uDetail copy)
 #define MD_SMP_OCEAN 1          // repeat, trilinear, anisotropy 1 (ocean copies of uAtlas / uLace)
 #define MD_SMP_CLAMP 2          // clamp to edge, linear, no mips (render targets, LUTs, coast map)
-#define MD_SMP_SHADOW 3         // compare sampler (not yet: M2)
+#define MD_SMP_SHADOW 3         // compare sampler: lessEqual, linear, clamp to edge (2×2 hardware PCF)
 #define MD_SMP_NEAREST 4        // clamp to edge, nearest
 
 // ---- function constants ([[function_constant(n)]]) ------------------------------------------------------
@@ -82,7 +98,10 @@
 #define MD_FC_OCEAN_RAIN 2      // int  0 / 1 / 2  (OCEAN_RAIN_LAYERS)
 #define MD_FC_OCEAN_GLINTS 3    // int  0 / 4 / 8  (OCEAN_GLINTS)
 #define MD_FC_OCEAN_MEMORY 4    // bool            (OCEAN_MEMORY)
-#define MD_FC_SHADOWS 5         // bool            (shadow map bound; false until M2)
+#define MD_FC_SHADOWS 5         // bool            (USE_SHADOWMAP: the sun's shadow map is bound)
+#define MD_FC_STD_INSTANCED 6   // bool            (Common/Standard.metal: USE_INSTANCING)
+#define MD_FC_STD_ENV 7         // bool            (Common/Standard.metal: scene.environment bound)
+#define MD_FC_STD_DOUBLE_SIDED 8 // bool           (Common/Standard.metal: material.side == DoubleSide)
 
 // =====================================================================================================
 // Frame (buffer 2): camera + fog. Matrices are column-major (three Matrix4.elements order).
@@ -135,10 +154,10 @@ typedef struct {
   MDHemiLight hemi;
   MDSpotLight spot[MD_SPOT_LIGHTS];
   MDPointLight point[MD_POINT_LIGHTS];
-  simd_float4 ambientEnv;          // ambient light rgb, environmentIntensity
-  simd_float4x4 shadowMatrix;      // world → shadow clip (M2)
-  simd_float4 shadowParams;        // bias, normalBias, radius, intensity (M2)
-  simd_float4 shadowMapSize;       // width, height, enabled, 0 (M2)
+  simd_float4 ambientEnv;          // ambient light rgb, environmentIntensity (scene.environmentIntensity)
+  simd_float4x4 shadowMatrix;      // world → shadow map uv + depth (Common/Shadow.h; B · glToMetal · proj · view)
+  simd_float4 shadowParams;        // bias, normalBias, radius, intensity (weather/lights.js sun.shadow)
+  simd_float4 shadowMapSize;       // width, height, enabled (1/0), 0
 } MDLightsUniforms;
 MD_STATIC_ASSERT(sizeof(MDDirLight) == 32, "MDDirLight layout");
 MD_STATIC_ASSERT(sizeof(MDHemiLight) == 48, "MDHemiLight layout");
@@ -155,6 +174,14 @@ typedef struct {
   simd_float4 heatMassLayer;       // heat 0..1, thermal mass 0..1, layer bits (as float), 0
 } MDObjectData;
 MD_STATIC_ASSERT(sizeof(MDObjectData) == 144, "MDObjectData layout");
+
+// Standard material (buffer 5): a plain MeshStandardMaterial (Common/Standard.metal).
+typedef struct {
+  simd_float4 color;               // diffuse rgb (linear), opacity
+  simd_float4 emissive;            // emissive × emissiveIntensity (linear), 0
+  simd_float4 params;              // roughness, metalness, receiveShadow (1/0), BackSide (1/0)
+} MDStandardMaterial;
+MD_STATIC_ASSERT(sizeof(MDStandardMaterial) == 48, "MDStandardMaterial layout");
 
 // Ocean (buffer 5): every uniform of ocean/material.js createOceanUniforms, same names.
 typedef struct {
@@ -221,12 +248,69 @@ typedef struct {
 } MDOceanUniforms;
 MD_STATIC_ASSERT(sizeof(MDOceanUniforms) == 2032, "MDOceanUniforms layout");
 
-// Composite + Output (buffer 7): post.js OutputPass (ACES Filmic + sRGB OETF), bloom composite.
+// Composite + Output (buffer 7): post.js OutputPass (ACES Filmic + sRGB OETF) over the scene with the
+// UnrealBloomPass result added (its additive blend onto the HalfFloat scene target, merged: PLAN X4).
 typedef struct {
-  simd_float4 params;              // toneMappingExposure, bloom strength, uvScale.x, uvScale.y (dynres)
-  simd_float4 bloomFactors;        // UnrealBloom per-mip factors (M2; zero = no bloom)
+  simd_float4 params;              // toneMappingExposure, bloom on (1/0), uvScale.x, uvScale.y (dynres)
+  simd_float4 bloom;               // bloom composite uv scale x, y (1 = exact-size target), 0, 0
 } MDOutputUniforms;
 MD_STATIC_ASSERT(sizeof(MDOutputUniforms) == 32, "MDOutputUniforms layout");
+
+// Bloom (buffer 7): three r185 UnrealBloomPass (LuminosityHighPassShader, separable blur, composite).
+typedef struct {
+  simd_float4 invSizeDirection;    // invSize.xy (1 / target size), direction.xy (1,0 | 0,1)
+  simd_float4 params;              // luminosityThreshold, smoothWidth, KERNEL_RADIUS (as float), 0
+  simd_float4 source;              // source uv scale x, y, max u, max v (high pass reads the dynres sub-rect)
+  simd_float4 gaussianCoefficients[MD_BLOOM_MAX_KERNEL / 4]; // KERNEL_RADIUS coefficients, packed 4 per vec4
+} MDBloomUniforms;
+MD_STATIC_ASSERT(sizeof(MDBloomUniforms) == 144, "MDBloomUniforms layout");
+
+typedef struct {
+  simd_float4 strengthRadius;      // bloomStrength, bloomRadius, 0, 0
+  simd_float4 bloomFactors0;       // bloomFactors[0 … 3]
+  simd_float4 bloomFactors1;       // bloomFactors[4], 0, 0, 0
+  simd_float4 bloomTintColors[MD_BLOOM_MIPS]; // rgb, 0
+} MDBloomCompositeUniforms;
+MD_STATIC_ASSERT(sizeof(MDBloomCompositeUniforms) == 128, "MDBloomCompositeUniforms layout");
+
+// Env bake (buffer 7): weather/env.js FRAG uniforms (sky sphere baked into the PMREM cube-UV atlas).
+typedef struct {
+  simd_float4 uSky;                // rgb (linear), 0
+  simd_float4 uFog;                // rgb, 0
+  simd_float4 uDeep;               // rgb, 0
+  simd_float4 uSunDir;             // xyz (normalised in the shader), w = uSunI
+  simd_float4 uSunColor;           // rgb, w = uCloud
+} MDEnvSkyUniforms;
+MD_STATIC_ASSERT(sizeof(MDEnvSkyUniforms) == 80, "MDEnvSkyUniforms layout");
+
+// PMREM GGX filter / copy (buffer 7): PMREMGenerator._applyGGXFilter, one lod per dispatch.
+typedef struct {
+  simd_float4 region;              // target x0, y0 (GL rows from the bottom), face size f (sizeLod), 0
+  simd_float4 params;              // roughness, mipInt (lod read by bilinearCubeUV), 0, 0
+} MDPmremUniforms;
+MD_STATIC_ASSERT(sizeof(MDPmremUniforms) == 32, "MDPmremUniforms layout");
+
+// Shadow depth pass (buffer 7): the sun's shadow camera (three LightShadow.updateMatrices).
+typedef struct {
+  simd_float4x4 viewProj;          // Metal clip (z ∈ [0, 1]) of the orthographic shadow camera × its view
+} MDShadowPassUniforms;
+MD_STATIC_ASSERT(sizeof(MDShadowPassUniforms) == 64, "MDShadowPassUniforms layout");
+
+// Water memory (ocean/memory.js): advect pass (buffer 7) and instanced stamps (buffer 1).
+typedef struct {
+  simd_float4 shiftCenter;         // uShift.xy (whole texels / extent), uCenter.xy (new centre, world)
+  simd_float4 extentDtWind;        // uExtent, uDt, uWindV.xy (m/s)
+  simd_float4 uDecay;              // per-channel multiplier for this frame
+  simd_float4 texelDiffuse;        // uTexel.xy, uDiffuse, 0
+} MDMemoryAdvectUniforms;
+MD_STATIC_ASSERT(sizeof(MDMemoryAdvectUniforms) == 64, "MDMemoryAdvectUniforms layout");
+
+typedef struct {
+  simd_float4 aA;                  // x, z, radius, strength
+  simd_float4 aB;                  // channel weights: foam, dye, disturbance, oil
+  simd_float4 aC;                  // shape (0 disc, 1 ring, 2 wake), ring inner radius, dirX, dirZ
+} MDMemoryStamp;
+MD_STATIC_ASSERT(sizeof(MDMemoryStamp) == 48, "MDMemoryStamp layout");
 
 // FinalPass (buffer 7): post/finalShader.js uniforms, packed. Colours are sRGB (display space).
 typedef struct {

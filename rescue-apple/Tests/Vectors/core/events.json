@@ -1,0 +1,252 @@
+{
+  "schema": "mayday.vectors.core.events",
+  "version": 1,
+  "source": "d3938139e0a345fd117faa2efc2c61b373e13c71",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/core/events.js"],
+  "producer": "tools/export/export-core.mjs",
+  "tolerance": {"class": "exact", "note": "the handler-call log must be identical (order, handler, event, tag)"},
+  "data": {
+    "grammar": "step/action: ['on', name, hid, offId?] | ['once', name, hid, offId?] | ['off', offId] | ['emit', name, tag] | ['clear'] | ['mark', label]; offId defaults to `${hid}|${name}`; handlers[hid] = [{when?: tag, do: action}] run after the call is logged",
+    "log": "[hid, eventName, tag] per handler call, ['mark', label] for marks",
+    "scripts": [
+      {
+        "id": "registration-order",
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["on", "ui:click", "B"],
+          ["on", "ui:click", "C"],
+          ["on", "ui:hover", "B"],
+          ["emit", "ui:click", 1],
+          ["emit", "ui:hover", 2],
+          ["emit", "ui:back", 3]
+        ],
+        "log": [["A", "ui:click", 1], ["B", "ui:click", 1], ["C", "ui:click", 1], ["B", "ui:hover", 2]]
+      },
+      {
+        "id": "same-listener-twice-is-noop",
+        "steps": [["on", "ui:click", "A"], ["on", "ui:click", "B"], ["on", "ui:click", "A"], ["emit", "ui:click", 1]],
+        "log": [["A", "ui:click", 1], ["B", "ui:click", 1]]
+      },
+      {
+        "id": "off-then-on-moves-to-end",
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["on", "ui:click", "B"],
+          ["off", "A|ui:click"],
+          ["on", "ui:click", "A"],
+          ["emit", "ui:click", 1],
+          ["off", "nobody"],
+          ["off", "B|ui:click"],
+          ["off", "B|ui:click"],
+          ["emit", "ui:click", 2]
+        ],
+        "log": [["B", "ui:click", 1], ["A", "ui:click", 1], ["A", "ui:click", 2]]
+      },
+      {
+        "id": "stale-off-still-removes",
+        "steps": [
+          ["on", "ui:click", "A", "a1"],
+          ["on", "ui:click", "A", "a2"],
+          ["on", "ui:click", "B"],
+          ["off", "a1"],
+          ["emit", "ui:click", 1],
+          ["on", "ui:click", "A", "a3"],
+          ["off", "a1"],
+          ["emit", "ui:click", 2],
+          ["on", "ui:click", "A", "a4"],
+          ["emit", "ui:click", 3]
+        ],
+        "log": [["B", "ui:click", 1], ["B", "ui:click", 2], ["B", "ui:click", 3], ["A", "ui:click", 3]]
+      },
+      {
+        "id": "removed-during-emit-still-runs",
+        "handlers": {"A": [{"when": 1, "do": ["off", "B|ui:click"]}]},
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["on", "ui:click", "B"],
+          ["on", "ui:click", "C"],
+          ["emit", "ui:click", 1],
+          ["mark", "second"],
+          ["emit", "ui:click", 2]
+        ],
+        "log": [
+          ["A", "ui:click", 1],
+          ["B", "ui:click", 1],
+          ["C", "ui:click", 1],
+          ["mark", "second"],
+          ["A", "ui:click", 2],
+          ["C", "ui:click", 2]
+        ]
+      },
+      {
+        "id": "self-removal",
+        "handlers": {"B": [{"do": ["off", "B|ui:click"]}]},
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["on", "ui:click", "B"],
+          ["on", "ui:click", "C"],
+          ["emit", "ui:click", 1],
+          ["emit", "ui:click", 2]
+        ],
+        "log": [["A", "ui:click", 1], ["B", "ui:click", 1], ["C", "ui:click", 1], ["A", "ui:click", 2], ["C", "ui:click", 2]]
+      },
+      {
+        "id": "added-during-emit-runs-next-time",
+        "handlers": {
+          "A": [{"when": 1, "do": ["on", "ui:click", "D"]}, {"when": 1, "do": ["on", "ui:click", "A"]}]
+        },
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["on", "ui:click", "B"],
+          ["emit", "ui:click", 1],
+          ["mark", "second"],
+          ["emit", "ui:click", 2]
+        ],
+        "log": [
+          ["A", "ui:click", 1],
+          ["B", "ui:click", 1],
+          ["mark", "second"],
+          ["A", "ui:click", 2],
+          ["B", "ui:click", 2],
+          ["D", "ui:click", 2]
+        ]
+      },
+      {
+        "id": "once",
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["once", "ui:click", "B"],
+          ["on", "ui:click", "C"],
+          ["emit", "ui:click", 1],
+          ["emit", "ui:click", 2]
+        ],
+        "log": [["A", "ui:click", 1], ["B", "ui:click", 1], ["C", "ui:click", 1], ["A", "ui:click", 2], ["C", "ui:click", 2]]
+      },
+      {
+        "id": "once-unsubscribes-before-call",
+        "handlers": {"B": [{"when": 1, "do": ["emit", "ui:click", 2]}]},
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["once", "ui:click", "B"],
+          ["on", "ui:click", "C"],
+          ["emit", "ui:click", 1],
+          ["mark", "after"],
+          ["emit", "ui:click", 3]
+        ],
+        "log": [
+          ["A", "ui:click", 1],
+          ["B", "ui:click", 1],
+          ["A", "ui:click", 2],
+          ["C", "ui:click", 2],
+          ["C", "ui:click", 1],
+          ["mark", "after"],
+          ["A", "ui:click", 3],
+          ["C", "ui:click", 3]
+        ]
+      },
+      {
+        "id": "once-twice-and-once-plus-on",
+        "steps": [
+          ["once", "ui:click", "A"],
+          ["once", "ui:click", "A"],
+          ["on", "ui:click", "A"],
+          ["emit", "ui:click", 1],
+          ["emit", "ui:click", 2]
+        ],
+        "log": [["A", "ui:click", 1], ["A", "ui:click", 1], ["A", "ui:click", 1], ["A", "ui:click", 2]]
+      },
+      {
+        "id": "once-off-before-fire",
+        "steps": [
+          ["once", "ui:click", "A", "o1"],
+          ["on", "ui:click", "B"],
+          ["off", "o1"],
+          ["emit", "ui:click", 1],
+          ["off", "o1"]
+        ],
+        "log": [["B", "ui:click", 1]]
+      },
+      {
+        "id": "reentrant-emit-completes-first",
+        "handlers": {
+          "A": [{"when": 1, "do": ["emit", "ui:hover", 10]}],
+          "X": [{"when": 10, "do": ["emit", "ui:back", 20]}]
+        },
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["on", "ui:hover", "X"],
+          ["on", "ui:hover", "Y"],
+          ["on", "ui:back", "Z"],
+          ["on", "ui:click", "B"],
+          ["emit", "ui:click", 1]
+        ],
+        "log": [["A", "ui:click", 1], ["X", "ui:hover", 10], ["Z", "ui:back", 20], ["Y", "ui:hover", 10], ["B", "ui:click", 1]]
+      },
+      {
+        "id": "recursive-same-event",
+        "handlers": {
+          "A": [{"when": 1, "do": ["emit", "ui:click", 2]}, {"when": 2, "do": ["emit", "ui:click", 3]}]
+        },
+        "steps": [["on", "ui:click", "A"], ["on", "ui:click", "B"], ["emit", "ui:click", 1]],
+        "log": [
+          ["A", "ui:click", 1],
+          ["A", "ui:click", 2],
+          ["A", "ui:click", 3],
+          ["B", "ui:click", 3],
+          ["B", "ui:click", 2],
+          ["B", "ui:click", 1]
+        ]
+      },
+      {
+        "id": "nested-off-of-outer-listener",
+        "handlers": {"X": [{"do": ["off", "C|ui:click"]}], "A": [{"when": 1, "do": ["emit", "ui:hover", 5]}]},
+        "steps": [
+          ["on", "ui:click", "A"],
+          ["on", "ui:hover", "X"],
+          ["on", "ui:click", "B"],
+          ["on", "ui:click", "C"],
+          ["emit", "ui:click", 1],
+          ["mark", "again"],
+          ["emit", "ui:click", 2]
+        ],
+        "log": [
+          ["A", "ui:click", 1],
+          ["X", "ui:hover", 5],
+          ["B", "ui:click", 1],
+          ["C", "ui:click", 1],
+          ["mark", "again"],
+          ["A", "ui:click", 2],
+          ["B", "ui:click", 2]
+        ]
+      },
+      {
+        "id": "clear-during-emit",
+        "handlers": {"A": [{"when": 1, "do": ["clear"]}]},
+        "steps": [
+          ["on", "ui:click", "A", "a1"],
+          ["on", "ui:click", "B"],
+          ["on", "ui:hover", "H"],
+          ["emit", "ui:click", 1],
+          ["emit", "ui:click", 2],
+          ["emit", "ui:hover", 3],
+          ["on", "ui:click", "A"],
+          ["off", "a1"],
+          ["emit", "ui:click", 4]
+        ],
+        "log": [["A", "ui:click", 1], ["B", "ui:click", 1], ["A", "ui:click", 4]]
+      },
+      {
+        "id": "no-listeners",
+        "steps": [
+          ["emit", "ui:click", 1],
+          ["on", "ui:hover", "A"],
+          ["off", "A|ui:hover"],
+          ["emit", "ui:hover", 2],
+          ["mark", "end"]
+        ],
+        "log": [["mark", "end"]]
+      }
+    ]
+  }
+}

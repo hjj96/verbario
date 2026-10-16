@@ -38,6 +38,8 @@ float4 operator*(const float4x4& m, float4 v);
 float4x4 operator*(const float4x4& a, const float4x4& b);
 float3x3 operator*(const float3x3& a, const float3x3& b);
 
+struct half3 { explicit half3(float3); };   // MSL half3 (16-bit floats): float3(half3(x)) rounds to half
+float3 md_make_float3(half3);
 float2 md_make_float2(float);
 float2 md_make_float2(float, float);
 float2 md_make_float2(float2);
@@ -69,10 +71,12 @@ int2 md_make_int2(float2);
 
 struct sampler {};
 struct level { explicit level(float) {} };
-template <typename T> struct texture2d {
+enum class access { sample, read, write, read_write };
+template <typename T, access A = access::sample> struct texture2d {
   float4 sample(sampler, float2) const;
   float4 sample(sampler, float2, level) const;
   float4 read(uint2, uint lod = 0) const;
+  void write(float4, uint2, uint lod = 0) const;
   uint get_width(uint lod = 0) const;
   uint get_height(uint lod = 0) const;
 };

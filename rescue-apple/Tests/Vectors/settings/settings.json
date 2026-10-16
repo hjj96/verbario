@@ -1,0 +1,1909 @@
+{
+  "schema": "mayday.vectors.settings.settings",
+  "version": 1,
+  "source": "d3938139e0a345fd117faa2efc2c61b373e13c71",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/core/settings.js", "rescue/src/core/input.js"],
+  "producer": "tools/export/export-core.mjs",
+  "tolerance": {
+    "class": "bytes",
+    "note": "stored strings byte-exact (JSON.stringify of the values), listener call order exact, numbers bit-exact"
+  },
+  "data": {
+    "note": "case: {stored (raw localStorage string, absent = nothing stored), unavailable (storage throws), reduced (prefers-reduced-motion), coarse (pointer: coarse), search (location.search), actions}; log rows: ['probe', JSON.stringify(values), stored, pixelRatioCap(), detail(), autoAssist(), BINDINGS] | ['call', listenerId, key, value] | ['stored', string after a set()]; actions: ['listen', id, [{when: key, set|off|listen}]] | ['off', id] | ['set', key, json] | ['setNaN', key] | ['probe']",
+    "cases": [
+      {
+        "id": "defaults",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "first-run-reduced-motion",
+        "reduced": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":true,\"reduceMotion\":true,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "first-run-touch",
+        "coarse": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            1,
+            0.35,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "first-run-touch-reduced",
+        "coarse": true,
+        "reduced": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":true,\"reduceMotion\":true,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            1,
+            0.35,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-assist-off-migrates",
+        "stored": "{\"assist\":\"off\"}",
+        "reduced": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"assist\":\"off\"}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-assist-full-cadet-touch",
+        "stored": "{\"assist\":\"full\",\"difficulty\":\"cadet\"}",
+        "coarse": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":true,\"difficulty\":\"cadet\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"assist\":\"full\",\"difficulty\":\"cadet\"}",
+            2,
+            1,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-assist-standard-cadet",
+        "stored": "{\"assist\":\"standard\",\"difficulty\":\"cadet\"}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"cadet\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"assist\":\"standard\",\"difficulty\":\"cadet\"}",
+            2,
+            1,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-assistExplicit-null",
+        "stored": "{\"assist\":\"off\",\"assistExplicit\":null}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":null,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"assist\":\"off\",\"assistExplicit\":null}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-assistExplicit-false",
+        "stored": "{\"assist\":\"off\",\"assistExplicit\":false}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"assist\":\"off\",\"assistExplicit\":false}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-assist-falsy",
+        "stored": "{\"assist\":0}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"assist\":0}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-garbage",
+        "stored": "{oops",
+        "reduced": true,
+        "coarse": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{oops",
+            2,
+            1,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-null",
+        "stored": "null",
+        "reduced": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "null",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-string",
+        "stored": "\"ab\"",
+        "log": [
+          [
+            "probe",
+            "{\"0\":\"a\",\"1\":\"b\",\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "\"ab\"",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-array",
+        "stored": "[1,{\"x\":2},\"z\"]",
+        "log": [
+          [
+            "probe",
+            "{\"0\":1,\"1\":{\"x\":2},\"2\":\"z\",\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "[1,{\"x\":2},\"z\"]",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-number",
+        "stored": "5",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "5",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-key-order",
+        "stored": "{\"zeta\":1,\"10\":\"a\",\"2\":\"b\",\"quality\":\"medium\",\"alarms\":false,\"01\":\"c\",\"x\":{\"9\":1,\"y\":2,\"1\":3}}",
+        "log": [
+          [
+            "probe",
+            "{\"2\":\"b\",\"10\":\"a\",\"quality\":\"medium\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":false,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{},\"zeta\":1,\"01\":\"c\",\"x\":{\"1\":3,\"9\":1,\"y\":2}}",
+            "{\"zeta\":1,\"10\":\"a\",\"2\":\"b\",\"quality\":\"medium\",\"alarms\":false,\"01\":\"c\",\"x\":{\"9\":1,\"y\":2,\"1\":3}}",
+            1.25,
+            0.65,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-bindings",
+        "stored": "{\"bindings\":{\"up\":[\"KeyI\",\"KeyI\",\"Escape\",\"F5\",\"ControlLeft\",\"KeyK\",\"KeyL\"],\"down\":[\"Mouse2\"],\"flare\":[\"Mouse1\",\"KeyX\",5,\"\"],\"winch\":\"Space\",\"nope\":[\"KeyQ\"],\"climb\":[],\"thermal\":[\"Mouse0\",\"MetaLeft\",\"KeyY\"]}}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{\"up\":[\"KeyI\",\"KeyI\",\"Escape\",\"F5\",\"ControlLeft\",\"KeyK\",\"KeyL\"],\"down\":[\"Mouse2\"],\"flare\":[\"Mouse1\",\"KeyX\",5,\"\"],\"winch\":\"Space\",\"nope\":[\"KeyQ\"],\"climb\":[],\"thermal\":[\"Mouse0\",\"MetaLeft\",\"KeyY\"]}}",
+            "{\"bindings\":{\"up\":[\"KeyI\",\"KeyI\",\"Escape\",\"F5\",\"ControlLeft\",\"KeyK\",\"KeyL\"],\"down\":[\"Mouse2\"],\"flare\":[\"Mouse1\",\"KeyX\",5,\"\"],\"winch\":\"Space\",\"nope\":[\"KeyQ\"],\"climb\":[],\"thermal\":[\"Mouse0\",\"MetaLeft\",\"KeyY\"]}}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["Mouse2"], ["KeyI", "KeyK"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], []]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["Mouse1", "KeyX"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["Mouse0", "KeyY"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-bindings-number",
+        "stored": "{\"bindings\":5}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"bindings\":5}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-bindings-null",
+        "stored": "{\"bindings\":null}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"bindings\":null}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-bindings-array",
+        "stored": "{\"bindings\":[[\"KeyI\"]]}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":[[\"KeyI\"]]}",
+            "{\"bindings\":[[\"KeyI\"]]}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-unknown-quality",
+        "stored": "{\"quality\":\"ultra\"}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"ultra\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"quality\":\"ultra\"}",
+            1.5,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-quality-array",
+        "stored": "{\"quality\":[\"low\"]}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":[\"low\"],\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"quality\":[\"low\"]}",
+            1,
+            0.35,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "stored-quality-number",
+        "stored": "{\"quality\":5}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":5,\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"quality\":5}",
+            1.5,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "storage-unavailable",
+        "unavailable": true,
+        "reduced": true,
+        "actions": [["set", "quality", "low"], ["probe"]],
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":true,\"reduceMotion\":true,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ],
+          ["stored", null],
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":true,\"reduceMotion\":true,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            1,
+            0.35,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "quality-param",
+        "search": "?quality=medium",
+        "coarse": true,
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"medium\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            1.25,
+            0.65,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "quality-param-invalid",
+        "search": "?quality=ultra&debug",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "quality-param-empty",
+        "search": "?quality=",
+        "stored": "{\"quality\":\"low\"}",
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"quality\":\"low\"}",
+            1,
+            0.35,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "set-sequence",
+        "actions": [
+          ["listen", "L1"],
+          ["listen", "L2", [{"when": "quality", "set": ["showFps", true]}]],
+          ["set", "quality", "low"],
+          ["set", "quality", "low"],
+          ["probe"],
+          ["set", "difficulty", "cadet"],
+          ["set", "assistExplicit", true],
+          ["set", "difficulty", "ace"],
+          ["set", "assist", "off"],
+          ["set", "bindings", {"up": ["KeyI"], "left": ["Mouse0", "KeyJ"]}],
+          ["probe"],
+          ["set", "bindings", {"up": ["KeyI"]}],
+          ["set", "bindings", {}],
+          ["probe"],
+          ["setNaN", "masterVolume"],
+          ["setNaN", "masterVolume"],
+          ["set", "masterVolume", 0],
+          ["set", "masterVolume", 0],
+          [
+            "listen",
+            "L3",
+            [
+              {"when": "textScale", "off": "L4"},
+              {"when": "hudScale", "listen": ["L5"]},
+              {"when": "hudScale", "off": "L1"}
+            ]
+          ],
+          ["listen", "L4"],
+          ["set", "textScale", 1.25],
+          ["set", "hudScale", 1.1],
+          ["set", "hudScale", 1.2],
+          ["off", "L2"],
+          ["off", "L2"],
+          ["set", "quality", "medium"],
+          ["set", "newKey", "x"],
+          ["set", "vibration", "loud"],
+          ["set", "subtitles", null],
+          ["probe"]
+        ],
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ],
+          ["call", "L1", "quality", "low"],
+          ["call", "L2", "quality", "low"],
+          ["call", "L1", "showFps", true],
+          ["call", "L2", "showFps", true],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}",
+            1,
+            0.35,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ],
+          ["call", "L1", "difficulty", "cadet"],
+          ["call", "L2", "difficulty", "cadet"],
+          ["call", "L1", "assist", "full"],
+          ["call", "L2", "assist", "full"],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"cadet\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "assistExplicit", true],
+          ["call", "L2", "assistExplicit", true],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":true,\"difficulty\":\"cadet\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "difficulty", "ace"],
+          ["call", "L2", "difficulty", "ace"],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "assist", "off"],
+          ["call", "L2", "assist", "off"],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "bindings", {"up": ["KeyI"], "left": ["Mouse0", "KeyJ"]}],
+          ["call", "L2", "bindings", {"up": ["KeyI"], "left": ["Mouse0", "KeyJ"]}],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{\"up\":[\"KeyI\"],\"left\":[\"Mouse0\",\"KeyJ\"]}}"
+          ],
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{\"up\":[\"KeyI\"],\"left\":[\"Mouse0\",\"KeyJ\"]}}",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{\"up\":[\"KeyI\"],\"left\":[\"Mouse0\",\"KeyJ\"]}}",
+            1,
+            0.35,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["Mouse0", "KeyJ"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyI"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ],
+          ["call", "L1", "bindings", {"up": ["KeyI"]}],
+          ["call", "L2", "bindings", {"up": ["KeyI"]}],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{\"up\":[\"KeyI\"]}}"
+          ],
+          ["call", "L1", "bindings", {}],
+          ["call", "L2", "bindings", {}],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}",
+            1,
+            0.35,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ],
+          ["call", "L1", "masterVolume", null],
+          ["call", "L2", "masterVolume", null],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":null,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "masterVolume", null],
+          ["call", "L2", "masterVolume", null],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":null,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "masterVolume", 0],
+          ["call", "L2", "masterVolume", 0],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "textScale", 1.25],
+          ["call", "L2", "textScale", 1.25],
+          ["call", "L3", "textScale", 1.25],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L1", "hudScale", 1.1],
+          ["call", "L2", "hudScale", 1.1],
+          ["call", "L3", "hudScale", 1.1],
+          ["call", "L5", "hudScale", 1.1],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.1,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L2", "hudScale", 1.2],
+          ["call", "L3", "hudScale", 1.2],
+          ["call", "L5", "hudScale", 1.2],
+          ["call", "L5", "hudScale", 1.2],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.2,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L3", "quality", "medium"],
+          ["call", "L5", "quality", "medium"],
+          ["call", "L5", "quality", "medium"],
+          [
+            "stored",
+            "{\"quality\":\"medium\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.2,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{}}"
+          ],
+          ["call", "L3", "newKey", "x"],
+          ["call", "L5", "newKey", "x"],
+          ["call", "L5", "newKey", "x"],
+          [
+            "stored",
+            "{\"quality\":\"medium\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.2,\"vibration\":1,\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{},\"newKey\":\"x\"}"
+          ],
+          ["call", "L3", "vibration", "loud"],
+          ["call", "L5", "vibration", "loud"],
+          ["call", "L5", "vibration", "loud"],
+          [
+            "stored",
+            "{\"quality\":\"medium\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.2,\"vibration\":\"loud\",\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":true,\"bindings\":{},\"newKey\":\"x\"}"
+          ],
+          ["call", "L3", "subtitles", null],
+          ["call", "L5", "subtitles", null],
+          ["call", "L5", "subtitles", null],
+          [
+            "stored",
+            "{\"quality\":\"medium\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.2,\"vibration\":\"loud\",\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":null,\"invertLift\":false,\"showFps\":true,\"bindings\":{},\"newKey\":\"x\"}"
+          ],
+          [
+            "probe",
+            "{\"quality\":\"medium\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.2,\"vibration\":\"loud\",\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":null,\"invertLift\":false,\"showFps\":true,\"bindings\":{},\"newKey\":\"x\"}",
+            "{\"quality\":\"medium\",\"masterVolume\":0,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1.25,\"hudScale\":1.2,\"vibration\":\"loud\",\"assist\":\"off\",\"assistExplicit\":true,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":null,\"invertLift\":false,\"showFps\":true,\"bindings\":{},\"newKey\":\"x\"}",
+            1.25,
+            0.65,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "difficulty-cascade-not-explicit",
+        "stored": "{\"difficulty\":\"ace\",\"assist\":\"standard\"}",
+        "actions": [
+          ["listen", "L", [{"when": "assist", "set": ["seenFlashWarning", true]}]],
+          ["set", "difficulty", "cadet"],
+          ["set", "difficulty", "pilot"],
+          ["probe"]
+        ],
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"ace\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"difficulty\":\"ace\",\"assist\":\"standard\"}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ],
+          ["call", "L", "difficulty", "cadet"],
+          ["call", "L", "assist", "full"],
+          ["call", "L", "seenFlashWarning", true],
+          [
+            "stored",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"cadet\",\"seenFlashWarning\":true,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}"
+          ],
+          ["call", "L", "difficulty", "pilot"],
+          ["call", "L", "assist", "standard"],
+          [
+            "stored",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":true,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}"
+          ],
+          [
+            "probe",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":true,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"quality\":\"high\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"standard\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":true,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            2,
+            1,
+            "standard",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "touch-difficulty",
+        "coarse": true,
+        "actions": [["set", "difficulty", "pilot"], ["set", "difficulty", "cadet"], ["probe"]],
+        "log": [
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"pilot\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            null,
+            1,
+            0.35,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ],
+          ["stored", null],
+          [
+            "stored",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"cadet\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}"
+          ],
+          [
+            "probe",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"cadet\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            "{\"quality\":\"low\",\"masterVolume\":0.8,\"musicVolume\":0.6,\"sfxVolume\":0.9,\"radioVolume\":0.9,\"envVolume\":0.9,\"uiVolume\":0.8,\"alarms\":true,\"reduceFlashes\":false,\"reduceMotion\":false,\"textScale\":1,\"hudScale\":1,\"vibration\":1,\"assist\":\"full\",\"assistExplicit\":false,\"difficulty\":\"cadet\",\"seenFlashWarning\":false,\"screenShake\":1,\"colorblindMarkers\":false,\"subtitles\":true,\"invertLift\":false,\"showFps\":false,\"bindings\":{}}",
+            1,
+            0.35,
+            "full",
+            {
+              "axes": {
+                "moveX": [["KeyA", "ArrowLeft"], ["KeyD", "ArrowRight"]],
+                "moveY": [["KeyS", "ArrowDown"], ["KeyW", "ArrowUp"]],
+                "lift": [["KeyQ", "KeyF", "PageDown"], ["KeyE", "KeyR", "PageUp"]]
+              },
+              "buttons": {
+                "winch": ["Space"],
+                "boost": ["ShiftLeft", "ShiftRight"],
+                "searchlight": ["KeyL"],
+                "flare": ["KeyG", "Mouse0"],
+                "raftDrop": ["KeyC", "Mouse2"],
+                "horn": ["KeyH"],
+                "altPreset1": ["Digit1", "Numpad1"],
+                "altPreset2": ["Digit2", "Numpad2"],
+                "altPreset3": ["Digit3", "Numpad3"],
+                "altUp": [],
+                "altDown": [],
+                "map": ["KeyM", "Tab"],
+                "pause": ["Escape", "KeyP"],
+                "confirm": ["Enter", "NumpadEnter"],
+                "back": ["Escape", "Backspace"],
+                "zoom": ["KeyZ"],
+                "debug": ["Backquote"],
+                "photo": ["KeyV"],
+                "thermal": ["KeyT"],
+                "navUp": ["ArrowUp", "KeyW"],
+                "navDown": ["ArrowDown", "KeyS"],
+                "navLeft": ["ArrowLeft", "KeyA"],
+                "navRight": ["ArrowRight", "KeyD"]
+              }
+            }
+          ]
+        ]
+      }
+    ],
+    "progress": {
+      "note": "['load', raw, JSON.stringify(loadProgress())] | ['save', data (NaN/±Infinity serialised as null, -0 as 0 here), stored string]; the save rows' data is re-parsed from JSON, see export-core.mjs for the exact inputs",
+      "rows": [
+        ["load", null, "{}"],
+        ["load", "{\"a\":1,\"2\":[true]}", "{\"2\":[true],\"a\":1}"],
+        ["load", "garbage", "{}"],
+        ["load", "0", "{}"],
+        ["load", "5", "5"],
+        ["load", "\"\"", "{}"],
+        ["load", "[]", "[]"],
+        ["load", "false", "{}"],
+        ["load", "null", "{}"],
+        ["load", "\"x\"", "\"x\""],
+        ["load-unavailable", null, "{}"],
+        [
+          "save",
+          {"medals": {"0": ["gold"]}, "best": 1234.5, "s": "ё \"q\" \\ \n\u0001"},
+          "{\"medals\":{\"0\":[\"gold\"]},\"best\":1234.5,\"s\":\"ё \\\"q\\\" \\\\ \\n\\u0001\"}"
+        ],
+        ["save", [], "[]"],
+        ["save", 7, "7"],
+        ["save", null, "null"],
+        ["save", {"nan": null, "inf": null, "nz": 0}, "{\"nan\":null,\"inf\":null,\"nz\":0}"]
+      ],
+      "saveInputs": [
+        "{\"medals\":{\"0\":[\"gold\"]},\"best\":1234.5,\"s\":\"ё \\\"q\\\" \\\\ \\n\\u0001\"}", "[]", "7", "null",
+        "NaN/-Infinity/-0 object"
+      ]
+    }
+  }
+}

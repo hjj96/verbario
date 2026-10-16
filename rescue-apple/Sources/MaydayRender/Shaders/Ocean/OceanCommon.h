@@ -17,6 +17,7 @@ constant int kOceanQ [[function_constant(MD_FC_OCEAN_Q)]];
 constant int kOceanRainLayers [[function_constant(MD_FC_OCEAN_RAIN)]];
 constant int kOceanGlints [[function_constant(MD_FC_OCEAN_GLINTS)]];
 constant bool kOceanMemory [[function_constant(MD_FC_OCEAN_MEMORY)]];
+constant bool kOceanShadows [[function_constant(MD_FC_SHADOWS)]];   // receiveShadow: the sun's shadow map is bound
 
 // Grid constants (ocean/waves.js GRID_EXTENT 380, cellSize 608·step·m^0.375, EDGE_FADE [380, 1200]).
 // Local cell size of the warped grid: derivative of 380·|x|^1.6 (same as waves.js cellSize()).

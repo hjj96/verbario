@@ -6,6 +6,7 @@
 // FinalInput colours are sRGB (post.js uploads display-space colours to the FinalPass).
 import Foundation
 import simd
+import MaydayCore
 
 /// Per-tier render configuration (ocean/waves.js QUALITY, post.js SAMPLES / MIN_SCALE).
 public struct RenderQualityConfig: Equatable {
@@ -32,6 +33,11 @@ public struct RenderQualityConfig: Equatable {
 
   /// ocean/material.js oceanDefines: OCEAN_RAIN_LAYERS = q 2 → 2, q 1 → 1, else 0.
   public var oceanRainLayers: Int { oceanQ == 2 ? 2 : (oceanQ == 1 ? 1 : 0) }
+
+  /// post.js: `this.bloom.enabled = quality !== 'low'` (low relies on emissive halos instead).
+  public var bloomEnabled: Bool { name != "low" }
+  /// post.js BLOOM_SCALE {low .5, medium .5, high 1}: × the composer size; UnrealBloom halves again.
+  public var bloomScale: Double { name == "low" || name == "medium" ? 0.5 : 1 }
 }
 
 /// core/look.js shared uniforms (weather writes them every frame).
@@ -84,9 +90,21 @@ public struct LightsInput {
   public var hemiSky = SIMD3<Float>(0, 0, 0)      // palette.ambient × hemi.intensity
   public var hemiGround = SIMD3<Float>(0, 0, 0)   // palette.ambientGround × hemi.intensity
   public var ambient = SIMD3<Float>(0, 0, 0)
-  public var environmentIntensity: Float = 1
+  public var environmentIntensity: Float = 1      // scene.environmentIntensity (envIntensity · (1 + 3·flash))
   public var spots: [SpotLightInput] = []         // ≤ 2
   public var points: [PointLightInput] = []       // ≤ 6
+  /// The sun's shadow (SunRig → SunShadowInput); nil = no shadow map this frame.
+  public var shadow: SunShadowInput?
+  public init() {}
+}
+
+/// scene.environment (weather/env.js): the PMREM bake inputs and the WeatherEnv.update schedule.
+public struct EnvironmentInput {
+  /// The sky to bake; nil = derived from the ocean palette inputs of the same frame (sky, fog colour,
+  /// deep, visual sun direction, sun colour, sun intensity; cloud 0.5) — the bootstrap path.
+  public var sky: EnvSkyParams?
+  /// EnvRebakePolicy decided to bake this frame. The renderer also bakes once before first use.
+  public var rebake = false
   public init() {}
 }
 
@@ -152,6 +170,9 @@ public struct OceanFrameInput {
   public var prevSea = SIMD4<Float>(0, 0, 0, 0)
   public var nextSea = SIMD4<Float>(0, 0, 0, 0)
   public var lookK = SIMD4<Float>(0.5, 1, 0.9, 0)
+  /// Coastline distance map (coast.js bake; nil = "far from any coast" placeholder). Uploaded as
+  /// r8Unorm when it changes (Array identity makes the unchanged-map check O(1)).
+  public var coast: CoastMap?
   public init() {}
 }
 
@@ -208,7 +229,11 @@ public struct FinalInput {
 
 public struct PostInput {
   public var exposure: Float = 1                 // renderer.toneMappingExposure (post.js)
-  public var bloomStrength: Float = 0            // M2
+  /// UnrealBloomPass strength / radius / threshold as post.js sets them from palette.post (PostState);
+  /// strength 0 skips the bloom passes (adding 0 is exact). Enabled per quality (RenderQualityConfig).
+  public var bloomStrength: Float = 0
+  public var bloomRadius: Float = 0.45
+  public var bloomThreshold: Float = 1.1
   public var finalPass = FinalInput()
   public init() {}
 }
@@ -220,6 +245,9 @@ public struct RenderFrame {
   public var lights = LightsInput()
   public var ocean = OceanFrameInput()
   public var post = PostInput()
+  public var environment = EnvironmentInput()
+  /// Water memory stamps and window for this frame (ocean/memory.js; used when quality.oceanMemory > 0).
+  public var waterMemory = WaterMemoryInput()
   public var quality: RenderQualityConfig
   /// Internal (scene) resolution in pixels — web pixel-ratio rule, computed by the host.
   public var internalWidth: Int
@@ -229,6 +257,8 @@ public struct RenderFrame {
   public var realTime: Double = 0
   /// Dynamic resolution on/off (`-mayday.dynres NO` → off).
   public var dynamicResolution = true
+  /// post.js freezes the scale while paused or in photo mode.
+  public var dynamicResolutionFrozen = false
   /// iOS present pacing (MTKView.preferredFramesPerSecond).
   public var framesPerSecond: Int = 60
 
