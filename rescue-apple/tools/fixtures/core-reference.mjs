@@ -1,6 +1,6 @@
 // Node 22 reference values for MaydayCore tests whose exporter vectors do not exist yet
 // (ocean/features.json, ocean/grid.json — PLAN §5.3). Writes
-// rescue-apple/Tests/MaydayCoreTests/Support/CoreReference.swift (JSON embedded in raw strings;
+// rescue-apple/Core/Tests/MaydayCoreTests/Support/CoreReference.swift (JSON embedded in raw strings;
 // -0/NaN/±Infinity as the exporter's strings). Usage: node rescue-apple/tools/fixtures/core-reference.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -57,6 +57,6 @@ s += 'enum CoreReference {\n';
 s += '  static let featureSetJSON = #"""\n' + fmt({ pts, script: out }) + '\n"""#\n\n';
 s += '  static let oceanGridJSON = #"""\n' + fmt(grid) + '\n"""#\n';
 s += '}\n';
-const dst = path.join(APPLE, 'Tests/MaydayCoreTests/Support/CoreReference.swift');
+const dst = path.join(APPLE, 'Core/Tests/MaydayCoreTests/Support/CoreReference.swift');
 fs.writeFileSync(dst, s);
 console.log(dst, s.length);

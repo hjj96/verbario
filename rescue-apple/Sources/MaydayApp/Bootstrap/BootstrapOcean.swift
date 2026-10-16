@@ -53,8 +53,8 @@ final class BootstrapOcean {
     waveBank.setQuality(q.oceanWaves, q.oceanGridN)
     bank = waveBank
     constants = oceanData.waves
-    flashDay = o["ocean"]["FLASH_DAY"].linearColor ?? SIMD3<Double>(0.7157, 0.7913, 1)
-    flashNight = o["ocean"]["FLASH_NIGHT"].linearColor ?? SIMD3<Double>(0.5711, 0.6724, 1)
+    flashDay = o["ocean"]["FLASH_DAY"].linearColor(or: SIMD3<Double>(0.7157, 0.7913, 1))
+    flashNight = o["ocean"]["FLASH_NIGHT"].linearColor(or: SIMD3<Double>(0.5711, 0.6724, 1))
     maxSplashes = ms
     memoryExtent = oceanData.memoryExtent
     splX = zeros

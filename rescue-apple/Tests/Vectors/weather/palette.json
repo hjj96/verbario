@@ -1,7 +1,7 @@
 {
   "schema": "mayday.vectors.weather.palette",
   "version": 1,
-  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "source": "7e1eba52ccb112c7c3f4883edef404a43b0daf7b",
   "sourceDirty": false,
   "sourceFiles": ["rescue/src/systems/weather/palette.js", "rescue/src/systems/weather/presets.js"],
   "producer": "tools/export/export-vectors.mjs",

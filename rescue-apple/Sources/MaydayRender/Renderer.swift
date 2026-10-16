@@ -45,6 +45,9 @@ public final class Renderer {
   private let cache: PipelineCache
   private let ring: FrameRing
   private var targets: RenderTargets?
+  /// Last render-target allocation that failed (size + sample count) and its error: rethrown while
+  /// the request is unchanged instead of re-allocating every frame; a resize / tier change retries.
+  private var failedTargets: (width: Int, height: Int, sampleCount: Int, error: Error)?
 
   // dynamic resolution (written on the main thread; GPU samples arrive on Metal's completion thread)
   private var dynScale: Double = 1
@@ -75,6 +78,9 @@ public final class Renderer {
 
   /// Compiles the PSOs of a quality tier ahead of the first frame (boot / quality change).
   public func prewarm(quality: RenderQualityConfig) throws {
+    // boot / quality change: give previously failed PSOs and render targets one fresh attempt
+    cache.resetFailures()
+    failedTargets = nil
     let sc = device.sampleCount(atMost: quality.sampleCount)
     _ = try ocean.pipeline(quality: quality, sampleCount: sc)
     _ = try ocean.mesh(n: quality.oceanGridN)
@@ -111,7 +117,14 @@ public final class Renderer {
       let w = max(1, frame.internalWidth)
       let h = max(1, frame.internalHeight)
       if targets == nil || !(targets!.matches(width: w, height: h, sampleCount: sc)) {
-        targets = try RenderTargets(device: device, width: w, height: h, sampleCount: sc)
+        if let f = failedTargets, f.width == w, f.height == h, f.sampleCount == sc { throw f.error }
+        do {
+          targets = try RenderTargets(device: device, width: w, height: h, sampleCount: sc)
+          failedTargets = nil
+        } catch {
+          failedTargets = (w, h, sc, error)
+          throw error
+        }
       }
       guard let rt = targets else { throw RenderError.resource("render targets") }
       let oceanPSO = try ocean.pipeline(quality: frame.quality, sampleCount: sc)
@@ -179,7 +192,7 @@ public final class Renderer {
         s.drawableWidth = drawableSize.0
         s.drawableHeight = drawableSize.1
       }
-      if let e = failure { s.lastError = e }
+      s.lastError = failure   // nil again after the first good frame: a transient error does not stick
     }
   }
 

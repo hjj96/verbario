@@ -1,4 +1,5 @@
-// Static scans of the web sources (acorn): event emit/on sites with payload keys.
+// Static scans of the web sources (acorn): event emit/on sites with payload keys; top-level bindings
+// whose initializer holds a `/* glsl */`-tagged template literal (shader code, never data).
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -81,4 +82,46 @@ export function scanEvents() {
     });
   }
   return events;
+}
+
+/**
+ * Top-level bindings (`const|let|var`, exported or not) of rescue/src/<rel> whose initializer contains
+ * a template literal tagged with the `/* glsl *\/` comment that every web shader string carries, e.g.
+ *   export const OCEAN_VERTEX_BEGIN = /* glsl *\/ `\nvec3 transformed = oPos;\n`;
+ * Returns Set(name). This is the authoritative GLSL test for module tables (the text heuristic in
+ * common.mjs misses short snippets); callers still check that the live value is a string.
+ */
+export function glslTaggedBindings(rel) {
+  if (!acorn) throw new Error('acorn not found (npm i acorn, or set NODE_PATH)');
+  const src = fs.readFileSync(path.join(SRC_DIR, rel), 'utf8');
+  const comments = [];
+  const ast = acorn.parse(src, { ecmaVersion: 'latest', sourceType: 'module', onComment: comments });
+  // start offsets of template literals that directly follow a /* glsl */ comment (whitespace between)
+  const tagged = [];
+  for (const c of comments) {
+    if (c.type !== 'Block' || !/^\s*glsl\s*$/i.test(c.value)) continue;
+    let i = c.end;
+    while (i < src.length && /\s/.test(src[i])) i++;
+    if (src[i] === '`') tagged.push(i);
+  }
+  const out = new Set();
+  if (!tagged.length) return out;
+  const names = (p, acc) => {
+    if (!p) return;
+    if (p.type === 'Identifier') acc.push(p.name);
+    else if (p.type === 'ObjectPattern') p.properties.forEach((q) => names(q.type === 'RestElement' ? q.argument : q.value, acc));
+    else if (p.type === 'ArrayPattern') p.elements.forEach((q) => names(q, acc));
+    else if (p.type === 'AssignmentPattern') names(p.left, acc);
+  };
+  for (let n of ast.body) {
+    if ((n.type === 'ExportNamedDeclaration' || n.type === 'ExportDefaultDeclaration') && n.declaration) n = n.declaration;
+    if (n.type !== 'VariableDeclaration') continue;
+    for (const d of n.declarations) {
+      if (!d.init || !tagged.some((t) => t >= d.init.start && t < d.init.end)) continue;
+      const acc = [];
+      names(d.id, acc);
+      for (const x of acc) out.add(x);
+    }
+  }
+  return out;
 }

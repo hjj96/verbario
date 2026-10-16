@@ -1,7 +1,7 @@
 {
   "schema": "mayday.hazards",
   "version": 1,
-  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "source": "7e1eba52ccb112c7c3f4883edef404a43b0daf7b",
   "sourceDirty": false,
   "sourceFiles": [
     "rescue/src/systems/hazards.js", "rescue/src/systems/hazards/cells.js", "rescue/src/systems/hazards/charges.js",
@@ -13,7 +13,7 @@
   ],
   "producer": "tools/export/export-data.mjs",
   "omitted": {
-    "hazards/common": {"glsl": ["HZ_GLSL"]},
+    "hazards/common": {"glsl": ["HZ_GLSL", "FINISH"]},
     "hazards/curtains": {"glsl": ["VERT", "FRAG"]},
     "hazards/rogue": {"glsl": ["CREST_GLSL", "SHEET_VERT", "SHEET_FRAG", "VEIL_VERT", "VEIL_FRAG"]},
     "hazards/vortexfx": {
@@ -152,7 +152,6 @@
         "buoyWhite": "#E9ECEA",
         "buoyRed": "#B3262A"
       },
-      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n",
       "FROM": [
         "с севера", "с северо-востока", "с востока", "с юго-востока", "с юга", "с юго-запада", "с запада",
         "с северо-запада"

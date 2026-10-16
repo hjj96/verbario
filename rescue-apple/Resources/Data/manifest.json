@@ -2,7 +2,7 @@
   "schema": "mayday.manifest",
   "version": 1,
   "formatVersion": 1,
-  "webRevision": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "webRevision": "7e1eba52ccb112c7c3f4883edef404a43b0daf7b",
   "webDirty": false,
   "files": [
     {
@@ -11,7 +11,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 3031,
-      "sha256": "84c5184d282e41784b2787bf9b1d01c2b3bd6629264452a25573fa88b4fa8a4a"
+      "sha256": "4390b2395533ffcea1e224e4ccffbaea291f4907c35efab3e585ca34709fbfb1"
     },
     {
       "path": "Resources/Data/camera.json",
@@ -19,7 +19,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 834,
-      "sha256": "da0103fec8dc26f77c03df30e846dc2998d9750ffaba70a6d7bc0fcf4c347089"
+      "sha256": "f69f68e1d6d73f8a8942405f9983adf74a94caed4e22347934bdaf9a1b08f407"
     },
     {
       "path": "Resources/Data/campaign.json",
@@ -27,7 +27,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 61174,
-      "sha256": "3630b8b498a02144d1b536270480d45f3bff1cafb6b0bbc88f2ea6cd3a06692f"
+      "sha256": "c9f9867e2efcf9d5a243a8e148adfee25404f251baced3d6d42235e953020028"
     },
     {
       "path": "Resources/Data/events.json",
@@ -35,15 +35,15 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 37209,
-      "sha256": "d1fce0de02e0ea1b238f1b78333204326b18ab6bedbced5730dec2248f37ba86"
+      "sha256": "f67d10ffc388b076b4b3c63b30311060c3653decdadcd76a64e0775efaa3d48e"
     },
     {
       "path": "Resources/Data/fx.json",
       "schema": "mayday.fx",
       "version": 1,
       "producer": "tools/export/export-data.mjs",
-      "bytes": 7234,
-      "sha256": "76fe005541979f3499ce2c7704b693d70b38187815e4bf360462c7bcb8951ee7"
+      "bytes": 7153,
+      "sha256": "6a6aef57fbf7a9fd3cb693e0375427af94eb319af62497178aeb5671c688c9b9"
     },
     {
       "path": "Resources/Data/game.json",
@@ -51,23 +51,23 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 7254,
-      "sha256": "75874d5bf0495620559bd3e94b7185c88dc12dcc3fb39b01d3e58a0670ab173c"
+      "sha256": "4d0a89a3b16b943233241f38492d1af3e02640b473f2d5d63e9d0b168d98f514"
     },
     {
       "path": "Resources/Data/hazards.json",
       "schema": "mayday.hazards",
       "version": 1,
       "producer": "tools/export/export-data.mjs",
-      "bytes": 7808,
-      "sha256": "440043e4ad82231762d46885b3ba0f77a5f3ddd7d7824e3d0aaab4921f06a560"
+      "bytes": 7727,
+      "sha256": "e28da9c184748cf31bae622c6ca371bbf154bb8fec41ed0796cf9aa06d4c7f10"
     },
     {
       "path": "Resources/Data/heli.json",
       "schema": "mayday.heli",
       "version": 1,
       "producer": "tools/export/export-data.mjs",
-      "bytes": 8294,
-      "sha256": "d969f74a0638882bd94ee041a960e9bedd24c74b3557731f3a482fd8b0d5891d"
+      "bytes": 8241,
+      "sha256": "8e9ff4ad1f704899f4661085b769b2c9f8202ddc2f30dca80399af93dddc90ab"
     },
     {
       "path": "Resources/Data/hud.json",
@@ -75,7 +75,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 6837,
-      "sha256": "2c95ba1a2f245b7b9aaedade780d93a13f7db2196f661bc21b83028f8dd80089"
+      "sha256": "b8e67a2e835a1809c683dd56271607fd03e0b41fdda979733cc18e8924a17701"
     },
     {
       "path": "Resources/Data/icons.json",
@@ -83,7 +83,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 7522,
-      "sha256": "db98b0573f0f44add2771d74884addad3895eaf3155cb995f04b32172b1418f0"
+      "sha256": "aff870025f77a1f623064c6ff3f34ca4c2616284a897678cb29d772c759a6cf5"
     },
     {
       "path": "Resources/Data/input.json",
@@ -91,7 +91,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 9072,
-      "sha256": "520178c05daafb6b4539d4c7fe90d61ec6e2514ff8222476079b80c7ceb14357"
+      "sha256": "1ab58b7c732fc2965ec7343628281e2111600cc3b0d5a0e9d0ab50a31b7287a5"
     },
     {
       "path": "Resources/Data/look.json",
@@ -99,7 +99,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 3298,
-      "sha256": "aa6977006a565b8199df7b637621a3249058c442237961330696688a8758a5a6"
+      "sha256": "55fb35fc23d0c4204192a48590d4a7cde00b10bab32fb0ca885d477d2133b294"
     },
     {
       "path": "Resources/Data/mission.json",
@@ -107,7 +107,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 14886,
-      "sha256": "b4832a0eee9687bb3b4cf2b96b445733fb783c1a0155f4a2f0748b46f737b243"
+      "sha256": "295c871f3fbb09564dedbbd7ccdfd6db90b282324b9f180de152cf45a7a29754"
     },
     {
       "path": "Resources/Data/names_ru.json",
@@ -115,15 +115,15 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 27421,
-      "sha256": "492e98eb711076f4dbbc46bc9447da361f6596c595505d4bb9cded16a1d0c1b5"
+      "sha256": "753eb7a8a20c5e8615d1082340a861bd3e8c75b000a397ab44490285847c396e"
     },
     {
       "path": "Resources/Data/ocean.json",
       "schema": "mayday.ocean",
       "version": 1,
       "producer": "tools/export/export-data.mjs",
-      "bytes": 3432,
-      "sha256": "974635f44f5dd43f1fccc40c17b1a89ab62fa44e591b28219814dc23d05b4072"
+      "bytes": 2732,
+      "sha256": "f1d82d809857d161f8c899464cc5517b133b494041e211e745f43b5933da594f"
     },
     {
       "path": "Resources/Data/palette.json",
@@ -131,7 +131,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 24760,
-      "sha256": "07c6d025f4b50c5a25fe28d7b264b0130c844596064dfe4255354f34b1b02d52"
+      "sha256": "1df78ece349bc8e2618a696ed76331820055ac5488f9b4e403f2c1dc13a838df"
     },
     {
       "path": "Resources/Data/post.json",
@@ -139,7 +139,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 2331,
-      "sha256": "08851fa3b63611b62eeccabcdc6886ca48ac0a29c718cad46de504760b83395e"
+      "sha256": "05f8ee1ffa8aeaeb610c8b12619495375a6fcea011c4be3c579d90e71de10919"
     },
     {
       "path": "Resources/Data/radio.json",
@@ -147,7 +147,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 16486,
-      "sha256": "3752eeea84aeb07e2ec239fd6166da4453c50994461864e747662a8400886c14"
+      "sha256": "8cf6ccc14424b21ed909b297c90ea3c8cd003c1b4b06f009994718a3e59f68ce"
     },
     {
       "path": "Resources/Data/settings.json",
@@ -155,7 +155,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 9980,
-      "sha256": "4b7ffc3a031e2458c16d0d518def80438a6a4564d30fbb5f23657b9781bea1a9"
+      "sha256": "2c637e3ad98e5f466f6a69519dfcc5237d249e736d2899812b95fe6a9632c7f5"
     },
     {
       "path": "Resources/Data/survivors.json",
@@ -163,7 +163,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 7671,
-      "sha256": "34757d13abd5e26dcd2202897c7944eafd3c31f8452c547e5b4b10cbfa3f19a7"
+      "sha256": "2d7e0167e0b67610052a70a39e3434ef3e3734c0b18b5ff035f0bc3b1544704e"
     },
     {
       "path": "Resources/Data/text_ru.json",
@@ -171,7 +171,7 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 13483,
-      "sha256": "fe96f9704322a9b846e553c100616480770563b6e35685a2c66d51d3deb83a6d"
+      "sha256": "14c90707823833293241fccdb93da23a7bdff4b3044d01c244d29e4b383874e5"
     },
     {
       "path": "Resources/Data/weather.json",
@@ -179,15 +179,15 @@
       "version": 1,
       "producer": "tools/export/export-data.mjs",
       "bytes": 20760,
-      "sha256": "e1a3fcb73da6b89b06548ed4bd7993f9a0d79ecab3b927694a5de7ded935d4ab"
+      "sha256": "826a7f28c111bc4f225af7c8dbdb1224f7136d48ca68aadb199c6c6bd65cebda"
     },
     {
       "path": "Resources/Data/world.json",
       "schema": "mayday.world",
       "version": 1,
       "producer": "tools/export/export-data.mjs",
-      "bytes": 23122,
-      "sha256": "684ba5f90ddbef8b9846d3f231876a5c774b1f03924330fa93fd628cfd07a0ef"
+      "bytes": 22024,
+      "sha256": "fced215dcca69a5d2f46629334a13e15d0546db07158159749fd2a80742e9aa7"
     },
     {
       "path": "Resources/Textures/atlas.rgba",
@@ -204,6 +204,14 @@
       "producer": "tools/export/export-data.mjs",
       "bytes": 262144,
       "sha256": "c8ede53ac3b88b8eec0cb034b5d9484d3ade3ebdd33965e10b7291df952ceefc"
+    },
+    {
+      "path": "Resources/Textures/dfg_lut.rg16f",
+      "schema": "raw.rg16f",
+      "version": 1,
+      "producer": "tools/export/export-render.mjs",
+      "bytes": 1024,
+      "sha256": "b41ba8e2bd29fa007dfbf034d4d58b853f378062183847846b1f6d228f2c7e79"
     },
     {
       "path": "Resources/Textures/lace.rgba",

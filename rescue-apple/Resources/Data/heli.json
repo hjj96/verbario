@@ -1,7 +1,7 @@
 {
   "schema": "mayday.heli",
   "version": 1,
-  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "source": "7e1eba52ccb112c7c3f4883edef404a43b0daf7b",
   "sourceDirty": false,
   "sourceFiles": [
     "rescue/src/systems/heli.js", "rescue/src/systems/heli/crewman.js", "rescue/src/systems/heli/decals.js",
@@ -10,7 +10,11 @@
     "rescue/src/systems/heli/shapes.js", "rescue/src/systems/heli/winch.js"
   ],
   "producer": "tools/export/export-data.mjs",
-  "omitted": {"heli/shapes": {"scratch": ["_a", "_b", "_q", "_up"]}, "heli/winch": {"scratch": ["_qs"]}},
+  "omitted": {
+    "heli/materials": {"glsl": ["FINISH"]},
+    "heli/shapes": {"scratch": ["_a", "_b", "_q", "_up"]},
+    "heli/winch": {"scratch": ["_qs"]}
+  },
   "data": {
     "heli": {
       "SKID": 1.6,
@@ -113,11 +117,7 @@
         ["lens", {"hex": "#fff1da", "lin": [1, 0.8796223968851662, 0.7011018919268015]}, 7, 1.5, 0.05]
       ]
     },
-    "heli/materials": {
-      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n",
-      "HULL_GLOWS": 8,
-      "LIGHT_CHANNELS": 10
-    },
+    "heli/materials": {"HULL_GLOWS": 8, "LIGHT_CHANNELS": 10},
     "heli/model": {
       "ROTOR_R": 8.1,
       "TAIL_R": 1.4,

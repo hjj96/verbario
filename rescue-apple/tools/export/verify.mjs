@@ -2,7 +2,8 @@
 //
 //   1. every Resources/Data/*.json and Tests/Vectors/**/*.json parses, carries the wrapper
 //      (schema, version, source), stays within the size budget (vectors < 1 MB per file);
-//   2. manifest.json hashes match the files; sidecar hashes match their JSON references;
+//   2. manifest.json lists every Resources/Data/*.json and Resources/Textures/* file and its sizes and
+//      hashes match; sidecar hashes match their JSON references;
 //   3. --browser: loads the game in headless Chromium (?mission=0&autostart&quality=low) and
 //        a) re-serialises every EXPORTED table of every module from the page's own module instances and
 //           compares with Resources/Data (exact / libm-ulp / mismatch);
@@ -66,11 +67,25 @@ for (const f of jsons) {
 }
 const manifest = loaded.get('Resources/Data/manifest.json');
 if (manifest) {
+  const listed = new Set();
   for (const e of manifest.files) {
+    listed.add(e.path);
     const p = path.join(APPLE, e.path);
     if (!fs.existsSync(p)) { problems.push(`manifest: ${e.path} missing`); continue; }
-    if (sha256(fs.readFileSync(p)) !== e.sha256) problems.push(`manifest: ${e.path} sha mismatch (re-run export-data)`);
+    const buf = fs.readFileSync(p);
+    if (typeof e.bytes === 'number' && e.bytes !== buf.length) problems.push(`manifest: ${e.path} is ${buf.length} bytes, manifest says ${e.bytes} (re-run run-all.mjs)`);
+    if (sha256(buf) !== e.sha256) problems.push(`manifest: ${e.path} sha mismatch (re-run run-all.mjs)`);
   }
+  // coverage: every shipped data / texture file is listed (DataCatalog.verifyAll only checks listed files)
+  const shipped = [
+    ...walk(dataDir).filter((f) => f.endsWith('.json') && path.basename(f) !== 'manifest.json'),
+    ...(fs.existsSync(path.join(APPLE, 'Resources/Textures')) ? fs.readdirSync(path.join(APPLE, 'Resources/Textures')) : [])
+      .map((f) => path.join(APPLE, 'Resources/Textures', f))
+      .filter((f) => !path.basename(f).startsWith('.') && fs.statSync(f).isFile()),
+  ].map((f) => path.relative(APPLE, f).split(path.sep).join('/'));
+  for (const rel of shipped) if (!listed.has(rel)) problems.push(`manifest: ${rel} is not listed (re-run run-all.mjs)`);
+  const lut = manifest.files.find((e) => e.path === 'Resources/Textures/dfg_lut.rg16f');
+  if (!lut || lut.schema !== 'raw.rg16f' || lut.bytes !== 1024) problems.push('manifest: Resources/Textures/dfg_lut.rg16f must be listed as raw.rg16f, 1024 bytes');
 } else problems.push('Resources/Data/manifest.json missing');
 console.log(`files: ${jsons.length} JSON (+ sidecars), ${(totalBytes / 1024 / 1024).toFixed(2)} MB total`);
 

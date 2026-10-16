@@ -1,8 +1,9 @@
 // One command for the whole web -> port export: data, vectors, (optionally) browser vectors, verify.
 //
-//   node rescue-apple/tools/export/run-all.mjs                 data + vectors + verify (Node only, ~5 s)
+//   node rescue-apple/tools/export/run-all.mjs                 render + data + vectors + verify (Node only, ~5 s)
 //   node rescue-apple/tools/export/run-all.mjs --browser       + coast maps from Chromium + live spot checks
-//   node rescue-apple/tools/export/run-all.mjs --only data     data | vectors | browser | verify
+//   node rescue-apple/tools/export/run-all.mjs --only data     render | data | vectors | browser | verify
+// render (three's DFG LUT) runs before data, whose manifest.json then hashes the fresh dfg_lut.rg16f.
 //
 // Each step is a separate Node process (the loader hooks and DOM shims stay per-process).
 import { spawnSync } from 'node:child_process';
@@ -16,6 +17,7 @@ const onlyArg = argv.find((a) => a.startsWith('--only'));
 const only = onlyArg ? (onlyArg.includes('=') ? onlyArg.split('=')[1] : argv[argv.indexOf(onlyArg) + 1]).split(',') : null;
 
 const steps = [
+  ['render', ['export-render.mjs']],
   ['data', ['export-data.mjs']],
   ['vectors', ['export-vectors.mjs']],
   ['browser', ['export-browser.mjs'], true],

@@ -1,11 +1,18 @@
 // CameraMatrices — three.js camera conventions → Metal (PLAN §2.5 «Конвенции координат»).
 //
 // The CPU keeps the GL projection of three (makePerspective, z ∈ [−1, 1]) in Double — the same matrix
-// Core uses for worldToScreen / screenToWater / HUD — and only the GPU copy is multiplied by
+// Core will use for worldToScreen / screenToWater / HUD — and only the GPU copy is multiplied by
 // glToMetal (z' = 0.5·z + 0.5·w). No reverse-Z (near 2, far 1200, depth32Float).
 // World: Y up, north = −Z, east = +X. Faces: CCW = front.
+// Parity: tan comes from MaydayCore.JS (fdlibm, = V8's Math.tan) and the vector steps of lookAt are
+// written out in three's operation order (Vector3.crossVectors, length = √(x²+y²+z²) summed left to
+// right, normalize = multiplyScalar(1 / (length || 1))) instead of simd_cross / simd_normalize, which
+// may fuse or use rsqrt on Apple. TODO(before Core uses it): move this file into MaydayCore with a
+// test vector exported from three's PerspectiveCamera (lookAt + updateProjectionMatrix; three also
+// round-trips the rotation through a quaternion, which this direct basis does not reproduce).
 import Foundation
 import simd
+import MaydayCore
 
 public struct CameraState {
   public var position: SIMD3<Double>
@@ -52,7 +59,8 @@ public struct CameraMatrices {
 
   /// three PerspectiveCamera.updateProjectionMatrix() + Matrix4.makePerspective (WebGL coordinate system).
   public static func perspectiveGL(fovDeg: Double, aspect: Double, near: Double, far: Double, zoom: Double = 1) -> simd_double4x4 {
-    let top = near * tan(fovDeg * Double.pi / 180 * 0.5) / zoom
+    // three: near * Math.tan(DEG2RAD * 0.5 * fov) / zoom, DEG2RAD = Math.PI / 180
+    let top = near * JS.tan((JS.PI / 180) * 0.5 * fovDeg) / zoom
     let height = 2 * top
     let width = aspect * height
     let left = -0.5 * width
@@ -74,22 +82,43 @@ public struct CameraMatrices {
   /// three Matrix4.lookAt(eye, target, up) as used by Object3D.lookAt for cameras, with the
   /// camera position as translation (camera.matrixWorld for an unparented camera, scale 1).
   public static func lookAtWorld(eye: SIMD3<Double>, target: SIMD3<Double>, up: SIMD3<Double>) -> simd_double4x4 {
-    var z = eye - target
-    if simd_length_squared(z) == 0 { z.z = 1 }
-    z = simd_normalize(z)
-    var x = simd_cross(up, z)
-    if simd_length_squared(x) == 0 {
-      if abs(up.z) == 1 { z.x += 0.0001 } else { z.z += 0.0001 }
-      z = simd_normalize(z)
-      x = simd_cross(up, z)
+    var z = SIMD3<Double>(eye.x - target.x, eye.y - target.y, eye.z - target.z)
+    if lengthSq3(z) == 0 { z.z = 1 }
+    z = normalize3(z)
+    var x = cross3(up, z)
+    if lengthSq3(x) == 0 {
+      if Swift.abs(up.z) == 1 { z.x += 0.0001 } else { z.z += 0.0001 }
+      z = normalize3(z)
+      x = cross3(up, z)
     }
-    x = simd_normalize(x)
-    let y = simd_cross(z, x)
+    x = normalize3(x)
+    let y = cross3(z, x)
     return simd_double4x4(columns: (
       SIMD4<Double>(x.x, x.y, x.z, 0),
       SIMD4<Double>(y.x, y.y, y.z, 0),
       SIMD4<Double>(z.x, z.y, z.z, 0),
       SIMD4<Double>(eye.x, eye.y, eye.z, 1)))
+  }
+
+  /// three Vector3.lengthSq: x·x + y·y + z·z, left to right, no fused multiply-add.
+  @inline(__always) static func lengthSq3(_ v: SIMD3<Double>) -> Double {
+    let xx = v.x * v.x, yy = v.y * v.y, zz = v.z * v.z
+    return xx + yy + zz
+  }
+
+  /// three Vector3.normalize: divideScalar(length() || 1) = multiplyScalar(1 / (length || 1)).
+  @inline(__always) static func normalize3(_ v: SIMD3<Double>) -> SIMD3<Double> {
+    let len = JS.sqrt(lengthSq3(v))
+    let s = 1 / (len == 0 || len.isNaN ? 1 : len)
+    return SIMD3<Double>(v.x * s, v.y * s, v.z * s)
+  }
+
+  /// three Vector3.crossVectors(a, b), component by component.
+  @inline(__always) static func cross3(_ a: SIMD3<Double>, _ b: SIMD3<Double>) -> SIMD3<Double> {
+    let ayb = a.y * b.z, azb = a.z * b.y
+    let azx = a.z * b.x, axz = a.x * b.z
+    let axy = a.x * b.y, ayx = a.y * b.x
+    return SIMD3<Double>(ayb - azb, azx - axz, axy - ayx)
   }
 
   /// Inverse of a rigid camera matrix [R | eye]: [Rᵀ | −Rᵀ·eye].

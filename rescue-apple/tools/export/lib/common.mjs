@@ -33,7 +33,12 @@ export function makeSerializer() {
     if (Object.is(n, -0)) return '-0';
     return n;
   }
-  const GLSL_HINT = /\b(void\s+main|uniform\s|varying\s|vec[234]\s*\(|gl_FragColor|gl_Position|#include\s*<|float\s+\w+\s*\()/;
+  // Text heuristic for GLSL inside serialised values (nested strings, the live-page re-serialisation in
+  // verify --browser). Top-level module bindings are classified by their `/* glsl */` source tag first
+  // (lib/ast.mjs glslTaggedBindings), which also catches snippets too short for this test.
+  // Matches: main / any void function, uniform / varying, vecN constructors and declarations,
+  // `const in` / `inout` parameters, gl_* outputs, #include <chunk>, float-returning functions.
+  const GLSL_HINT = /\b(void\s+\w+\s*\(|uniform\s|varying\s|vec[234]\s*\(|vec[234]\s+\w+\s*[=;]|const\s+in\s|inout\s|gl_FragColor|gl_Position|float\s+\w+\s*\()|#include\s*</;
   const isGlslString = (s) => typeof s === 'string' && s.length > 40 && s.includes('\n') && GLSL_HINT.test(s);
   const fnName = (f) => f.name || 'anonymous';
   // Functions are described, never executed: name, plus the source when it is a short rule (<= 400 chars).
@@ -215,4 +220,39 @@ export function writeSidecar(absPath, typed, shape) {
 
 export function relSrc(rel) {
   return 'rescue/src/' + rel;
+}
+
+// ------------------------------------------------------------------------------------------ manifest
+// Raw texture files and the exporter that owns each kind. Every file in Resources/Textures must have a
+// known extension: an unlisted binary would ship without a size / sha256 check (DataCatalog.verifyAll).
+export const TEXTURE_KINDS = {
+  '.rgba': { schema: 'raw.rgba8', producer: 'tools/export/export-data.mjs' },
+  '.rg16f': { schema: 'raw.rg16f', producer: 'tools/export/export-render.mjs' },
+};
+
+/**
+ * Resources/Data/manifest.json: every Resources/Data/*.json (except the manifest itself) and every
+ * Resources/Textures/* file with schema, version, producer, bytes and sha256. Rebuilt from the
+ * directories, so any exporter that writes into them (export-data, export-render) calls it last.
+ */
+export function writeManifest({ dataDir = path.join(APPLE, 'Resources/Data'), texDir = path.join(APPLE, 'Resources/Textures') } = {}) {
+  const g = gitInfo();
+  const entries = [];
+  for (const f of fs.readdirSync(dataDir).sort()) {
+    if (!f.endsWith('.json') || f === 'manifest.json') continue;
+    const text = fs.readFileSync(path.join(dataDir, f));
+    let schema = null, version = null, producer = null;
+    try { const j = JSON.parse(text); schema = j.schema; version = j.version; producer = j.producer; } catch {}
+    entries.push({ path: `Resources/Data/${f}`, schema, version, producer, bytes: text.length, sha256: sha256(text) });
+  }
+  for (const f of fs.existsSync(texDir) ? fs.readdirSync(texDir).sort() : []) {
+    if (f.startsWith('.') || !fs.statSync(path.join(texDir, f)).isFile()) continue; // top-level files only
+    const kind = TEXTURE_KINDS[path.extname(f)];
+    if (!kind) throw new Error(`manifest: Resources/Textures/${f} has no known kind (TEXTURE_KINDS in lib/common.mjs)`);
+    const buf = fs.readFileSync(path.join(texDir, f));
+    entries.push({ path: `Resources/Textures/${f}`, schema: kind.schema, version: 1, producer: kind.producer, bytes: buf.length, sha256: sha256(buf) });
+  }
+  const manifest = { schema: 'mayday.manifest', version: 1, formatVersion: 1, webRevision: g.rev, webDirty: g.dirty, files: entries };
+  fs.writeFileSync(path.join(dataDir, 'manifest.json'), pretty(manifest) + '\n');
+  return { entries, git: g };
 }

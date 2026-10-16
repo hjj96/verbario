@@ -4,7 +4,8 @@
 // read through the injected __scope() — exported or not. Each output file collects whole modules:
 //   data["<module key>"]["<NAME>"] = serialised live value      (module key = path under src/, no systems/, no .js)
 // plus a few evaluated tables under data["derived"]. Functions are described ({fn, src}), never run;
-// GLSL strings, `let` (mutable runtime state) and scratch (_name) bindings are listed in "omitted".
+// GLSL strings (the `/* glsl */` source tag, or the text heuristic for untagged ones), `let` (mutable
+// runtime state) and scratch (_name) bindings are listed in "omitted".
 // Every module must be claimed by exactly one output file (or by NO_DATA) — a new web module makes the
 // exporter fail until it is assigned.
 //
@@ -15,8 +16,8 @@ import { gameImport } from './shims/loader.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { APPLE, SRC_DIR, serialize, isGlslString, writeWrapped, relSrc, sha256, gitInfo, pretty } from './lib/common.mjs';
-import { listSources, scanEvents } from './lib/ast.mjs';
+import { APPLE, SRC_DIR, serialize, isGlslString, writeWrapped, relSrc, sha256, writeManifest } from './lib/common.mjs';
+import { listSources, scanEvents, glslTaggedBindings } from './lib/ast.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, all) => (a.startsWith('--') ? [a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true] : null)).filter(Boolean));
 const OUT = path.resolve(args.out || path.join(APPLE, 'Resources/Data'));
@@ -93,6 +94,7 @@ async function moduleData(rel, { include, exclude } = {}) {
   const mod = await gameImport(rel);
   const scope = mod.__scope();
   const kinds = declKinds(rel);
+  const glslTagged = glslTaggedBindings(rel); // `/* glsl */` template literals: shader code, never data
   const data = {};
   const omitted = { glsl: [], mutable: [], scratch: [], three: [], runtime: [] };
   for (const name of Object.keys(scope)) {
@@ -103,7 +105,7 @@ async function moduleData(rel, { include, exclude } = {}) {
     if (name.startsWith('_')) { omitted.scratch.push(name); continue; }
     const k = kinds.get(name);
     if (k && k.kind !== 'const') { omitted.mutable.push(name); continue; }
-    if (isGlslString(v)) { omitted.glsl.push(name); continue; }
+    if ((typeof v === 'string' && glslTagged.has(name)) || isGlslString(v)) { omitted.glsl.push(name); continue; }
     if (v && typeof v === 'object' && (v.isObject3D || v.isMaterial || v.isTexture || v.isBufferGeometry)) { omitted.three.push(name); continue; }
     if (v instanceof Map && /cache/i.test(name)) { omitted.runtime.push(name); continue; }
     if (v === null || v === undefined) { omitted.runtime.push(name); continue; }
@@ -300,23 +302,9 @@ async function main() {
     data: { events },
   }));
 
-  // manifest.json: every file in Resources/Data (except itself) with sha256
-  const g = gitInfo();
-  const entries = [];
-  for (const f of fs.readdirSync(OUT).sort()) {
-    if (!f.endsWith('.json') || f === 'manifest.json') continue;
-    const text = fs.readFileSync(path.join(OUT, f));
-    let schema = null, version = null, producer = null;
-    try { const j = JSON.parse(text); schema = j.schema; version = j.version; producer = j.producer; } catch {}
-    entries.push({ path: `Resources/Data/${f}`, schema, version, producer, bytes: text.length, sha256: sha256(text) });
-  }
-  for (const f of fs.existsSync(TEX_OUT) ? fs.readdirSync(TEX_OUT).sort() : []) {
-    if (!f.endsWith('.rgba')) continue;
-    const buf = fs.readFileSync(path.join(TEX_OUT, f));
-    entries.push({ path: `Resources/Textures/${f}`, schema: 'raw.rgba8', version: 1, producer: PRODUCER, bytes: buf.length, sha256: sha256(buf) });
-  }
-  const manifest = { schema: 'mayday.manifest', version: 1, formatVersion: 1, webRevision: g.rev, webDirty: g.dirty, files: entries };
-  fs.writeFileSync(path.join(OUT, 'manifest.json'), pretty(manifest) + '\n');
+  // manifest.json: every Resources/Data/*.json and Resources/Textures/* (incl. export-render's
+  // dfg_lut.rg16f) with size + sha256
+  const { entries, git: g } = writeManifest({ dataDir: OUT, texDir: TEX_OUT });
 
   for (const r of results) console.log(`${r.path}\t${r.bytes}`);
   console.log(`manifest: ${entries.length} files, web ${g.rev.slice(0, 12)}${g.dirty ? ' (dirty)' : ''}`);

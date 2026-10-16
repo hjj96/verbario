@@ -1,6 +1,6 @@
 #!/bin/sh
 # Pre-flight for the Xcode-only Swift (MaydayRender + MaydayApp + AppIOS / AppMac + MaydayRenderTests)
-# on Linux: builds MaydayCore with SwiftPM, builds stub modules for the Apple frameworks the app
+# on Linux: builds MaydayCore with SwiftPM (package in Core/), builds stub modules for the Apple frameworks the app
 # imports (stubs/src: Metal, MetalKit, QuartzCore, simd, CoreGraphics, Combine, GameController,
 # UIKit | AppKit, SwiftUI — the API surface the code uses, with the Swift names and signatures of the
 # Apple SDK), then type-checks the app module twice (iOS pass: os(iOS) = true; macOS pass) in Swift 5
@@ -18,7 +18,7 @@ mkdir -p "$out"
 cd "$out"
 
 echo "== MaydayCore (swift build)"
-swift build --package-path "$repo" --scratch-path "$out/core" --target MaydayCore 2>&1 | grep -E "error|warning: |Compiling|Build" | tail -3
+swift build --package-path "$repo/Core" --scratch-path "$out/core" --target MaydayCore 2>&1 | grep -E "error|warning: |Compiling|Build" | tail -3
 core=$(dirname "$(find "$out/core" -path '*/debug/Modules/MaydayCore.swiftmodule' | head -1)")/..
 core=$(cd "$core" && pwd)
 
@@ -33,7 +33,7 @@ stubs() { # pass
 }
 
 common() { # stub dir
-  echo "-swift-version 5 -I $1 -I $here/stubs/cinclude -I $core/Modules -Xcc -fmodule-map-file=$core/CJSMath.build/module.modulemap -Xcc -I$repo/Sources/CJSMath/include -I $repo/Sources/MaydayRender/Shaders -Xcc -I$here/stubs/cinclude -D DEBUG"
+  echo "-swift-version 5 -I $1 -I $here/stubs/cinclude -I $core/Modules -Xcc -fmodule-map-file=$core/CJSMath.build/module.modulemap -Xcc -I$repo/Core/Sources/CJSMath/include -I $repo/Sources/MaydayRender/Shaders -Xcc -I$here/stubs/cinclude -D DEBUG"
 }
 
 for p in ios mac; do

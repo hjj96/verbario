@@ -70,11 +70,16 @@ public final class LookResources {
 
 /// Uploads CPU bytes into .private textures through one staging blit (works on every Apple GPU,
 /// including Macs where shared textures are not allowed), generating mips where requested.
+/// The encoder is ended on every path: by finish(), or by deinit when a texture(…) call threw first
+/// (a missing / short file) — Metal API validation asserts on an encoder released without
+/// endEncoding, which would crash instead of surfacing the RenderError. The command buffer is then
+/// dropped uncommitted, which is legal.
 final class TextureUploader {
   private let rd: RenderDevice
   private let commandBuffer: MTLCommandBuffer
   private let blit: MTLBlitCommandEncoder
   private var staging: [MTLBuffer] = []
+  private var finished = false
 
   init(device rd: RenderDevice) {
     self.rd = rd
@@ -82,6 +87,10 @@ final class TextureUploader {
     commandBuffer = rd.queue.makeCommandBuffer()!
     commandBuffer.label = "MAYDAY.upload"
     blit = commandBuffer.makeBlitCommandEncoder()!
+  }
+
+  deinit {
+    if !finished { blit.endEncoding() }
   }
 
   func texture(file: URL, width: Int, height: Int, format: MTLPixelFormat, bytesPerPixel: Int,
@@ -120,6 +129,8 @@ final class TextureUploader {
 
   /// Submits the uploads and waits (boot time only).
   func finish() throws {
+    precondition(!finished, "TextureUploader.finish() called twice")
+    finished = true
     blit.endEncoding()
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()

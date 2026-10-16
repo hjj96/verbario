@@ -1,4 +1,4 @@
-// Generates Sources/MaydayCore/Weather/Palette+Fields.swift (the typed, contract-shaped palette and
+// Generates Core/Sources/MaydayCore/Weather/Palette+Fields.swift (the typed, contract-shaped palette and
 // its unpack()) from the exported layout in Resources/Data/palette.json (weather/palette.js LAYOUT).
 // Re-run after the web palette layout changes: node rescue-apple/tools/codegen/palette-swift.mjs
 import fs from 'node:fs';
@@ -58,6 +58,6 @@ for (const [g, T] of Object.entries(GROUPS)) s += `  public var ${g} = ${T}()\n`
 for (const e of L.filter((x) => !x.group)) s += `  public var ${e.key}: ${typeOf(e.kind)} = ${initOf(e.kind)}\n`;
 s += '  public init() {}\n}\n';
 
-const dst = path.join(APPLE, 'Sources/MaydayCore/Weather/Palette+Fields.swift');
+const dst = path.join(APPLE, 'Core/Sources/MaydayCore/Weather/Palette+Fields.swift');
 fs.writeFileSync(dst, s);
 console.log(dst, L.length, 'entries');

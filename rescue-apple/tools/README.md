@@ -5,9 +5,13 @@
 
 - данные в `Resources/Data/*.json`;
 - текстуры look-атласа в `Resources/Textures/*.rgba`;
+- DFG LUT three.js в `Resources/Textures/dfg_lut.rg16f` (`export-render.mjs`, из вендорного бандла three);
 - векторы паритета в `Tests/Vectors/**`.
 
-Swift-тесты (`MaydayCoreTests`) сверяются с этими векторами.
+Swift-тесты (`MaydayCoreTests`) сверяются с этими векторами. SwiftPM-пакет лежит в `rescue-apple/Core`
+(`swift test --package-path rescue-apple/Core`), а не в корне `rescue-apple`: Xcode не принимает локальный
+пакет, который является предком проекта. Данные и векторы остаются в `rescue-apple/Resources` и
+`rescue-apple/Tests/Vectors`; тесты находят их, поднимаясь от `#filePath` до каталога с `Resources/Data/manifest.json`.
 
 В `rescue/` ничего не меняется: модули только читаются.
 
@@ -24,25 +28,30 @@ Swift-тесты (`MaydayCoreTests`) сверяются с этими векто
 Запуски Chromium сериализуются lock-каталогом, потому что SwiftShader грузит CPU:
 
 - путь по умолчанию — `$TMPDIR/mayday-chromium.lock`;
-- чтобы делить lock с `scratchpad/tools/shot.mjs`, задайте `MAYDAY_CHROMIUM_LOCK=<scratchpad>/tools/.chromium.lock`.
+- чтобы делить lock с `scratchpad/tools/shot.mjs`, задайте `MAYDAY_CHROMIUM_LOCK=<scratchpad>/tools/.chromium.lock`;
+- ожидание ограничено `MAYDAY_CHROMIUM_LOCK_WAIT_MS` (по умолчанию 12 мин); по истечении экспортёр падает с
+  `chromium lock busy`, а не запускает Chromium параллельно с владельцем;
+- чужой lock снимается, только если владелец точно мёртв: его PID не существует или его heartbeat
+  (владелец обновляет `hb` и `t` каждые 15 с) старше 2 мин. Возраст самого lock роли не играет.
 
 ## Команды
 
 Все команды запускаются из корня репозитория (`verbario/`).
 
 ```sh
-# всё, что считается в Node: данные + векторы + проверка (≈ 5 с)
+# всё, что считается в Node: DFG LUT + данные + векторы + проверка (≈ 5 с)
 node rescue-apple/tools/export/run-all.mjs
 
 # плюс Chromium: карты берега (ocean/coast_*) и сверка с живой игрой (≈ 1 мин)
 node rescue-apple/tools/export/run-all.mjs --browser
 
-# по шагам
+# по шагам (render идёт до data: manifest.json хеширует свежий dfg_lut.rg16f)
+node rescue-apple/tools/export/export-render.mjs      # Resources/Textures/dfg_lut.rg16f (+ переписывает manifest.json)
 node rescue-apple/tools/export/export-data.mjs        # Resources/Data/*.json, manifest.json, Resources/Textures/*.rgba
 node rescue-apple/tools/export/export-vectors.mjs     # Tests/Vectors/** (Node)
 node rescue-apple/tools/export/export-vectors.mjs --only ocean,heli   # группы: math,look,palette,ocean,heli,mission,text
 node rescue-apple/tools/export/export-browser.mjs     # Tests/Vectors/ocean/coast_<id>.json + .u8 (по умолчанию --missions 0,2)
-node rescue-apple/tools/export/verify.mjs             # разбор, обёртки, размеры, хеши manifest и сайдкаров
+node rescue-apple/tools/export/verify.mjs             # разбор, обёртки, размеры, полнота и хеши manifest, сайдкары
 node rescue-apple/tools/export/verify.mjs --browser   # + сверка с живой игрой в Chromium, 0 ошибок консоли
 ```
 
@@ -107,12 +116,12 @@ node rescue-apple/tools/export/verify.mjs --browser   # + сверка с жив
 | `Set` | массив |
 | `RegExp` | `{regexp, flags}` |
 | Функция | `{fn, src}`; функция не исполняется, `src` — текст правила длиной ≤ 400 символов |
-| GLSL-строка | не попадает в данные, её имя перечислено в `omitted.glsl`. Шейдеры выгружает будущий `dump-glsl` |
+| GLSL-строка | не попадает в данные, её имя перечислено в `omitted.glsl`. Привязка верхнего уровня считается GLSL по тегу `/* glsl */` перед шаблонной строкой (`lib/ast.mjs` `glslTaggedBindings`), вложенные строки — по текстовой эвристике `GLSL_HINT`. Шейдеры выгружает будущий `dump-glsl` |
 | Привязки `let` (состояние) и `_scratch` | перечислены в `omitted` |
 
 `events.json` строится статическим разбором всех вызовов `emit/on`. В нём есть эмиттеры, слушатели, ключи payload и отметка `inContract`, если событие упомянуто в CONTRACT.md.
 
-`manifest.json` хранит sha256 всех файлов данных и текстур.
+`manifest.json` хранит размер и sha256 всех файлов данных и текстур, включая `dfg_lut.rg16f` (schema `raw.rg16f`, 1024 байта). Его пишет `writeManifest` из `lib/common.mjs` (вызывают `export-data` и `export-render`); `verify.mjs` падает, если какой-то файл `Resources/Data/*.json` или `Resources/Textures/*` в нём не указан.
 
 `Resources/Textures/{atlas,detail,lace}.rgba` — сырые RGBA8, `Look(7)`, строка 0 соответствует v = 0. SHA совпадают с PLAN: `dbc12a36…`, `c8ede53a…`, `a4ce9ae9…`.
 

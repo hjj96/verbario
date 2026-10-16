@@ -1,7 +1,7 @@
 {
   "schema": "mayday.world",
   "version": 1,
-  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "source": "7e1eba52ccb112c7c3f4883edef404a43b0daf7b",
   "sourceDirty": false,
   "sourceFiles": [
     "rescue/src/systems/world.js", "rescue/src/systems/world/boats.js", "rescue/src/systems/world/contact.js",
@@ -20,7 +20,7 @@
     "world/geo": {"scratch": ["_sc", "_ma", "_mb", "_md", "_mq", "_UP", "_tint", "_ts", "_tp", "_tq", "_tb"]},
     "world/lamps": {"scratch": ["_v", "_c"]},
     "world/lighthouse": {"scratch": ["_c"]},
-    "world/materials": {"glsl": ["FOG_FADE", "PROP_LIGHTS_BEGIN", "WX_PRESETS"]},
+    "world/materials": {"glsl": ["FINISH", "FOG_FADE", "PROP_LIGHTS_BEGIN", "WX_PRESETS", "WX_DECODE"]},
     "world/rig": {"glsl": ["FLAME_VS", "FLAME_FS", "PLUME_VS", "PLUME_FS"], "scratch": ["_v", "_w", "_growth"]},
     "world/rigging": {"scratch": ["_m", "_q", "_s", "_d", "_UP"]},
     "world/ship": {"glsl": ["SHEET_VS", "SHEET_FS"], "scratch": ["_v", "_w", "_d", "_q", "_v2", "_funnel"]},
@@ -365,7 +365,6 @@
       }
     },
     "world/materials": {
-      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n",
       "CH": {
         "ALWAYS": 0,
         "WINDOWS": 1,
@@ -386,8 +385,7 @@
         "BEACON": 23
       },
       "CH_COUNT": 24,
-      "GLOWS": 6,
-      "WX_DECODE": "\nvec4 wxA = uWxA;\nvec4 wxB = uWxB;\nif (vSurf.z < -0.02 && vSurf.z > -0.5) {\n  float wl = clamp((-vSurf.z - 0.05) / 0.4, 0.0, 1.0) * 3.0;\n  float wf = fract(min(wl, 2.999));\n  vec4 a0 = wl < 1.0 ? WXA0 : (wl < 2.0 ? WXA1 : WXA2);\n  vec4 a1 = wl < 1.0 ? WXA1 : (wl < 2.0 ? WXA2 : WXA3);\n  vec2 b0 = wl < 1.0 ? WXB0 : (wl < 2.0 ? WXB1 : WXB2);\n  vec2 b1 = wl < 1.0 ? WXB1 : (wl < 2.0 ? WXB2 : WXB3);\n  wxA = mix(a0, a1, wf);\n  wxB.xy = mix(b0, b1, wf);\n}\nfloat wxOn = (vSurf.z > 0.0 || vSurf.z < -0.5) ? 0.0 : 1.0;\nwxA *= wxOn;\nwxB.xy *= wxOn;\nif (vSurf.w > -0.5 && vPropG.y > 0.5) {\n  wxB.w = vPropG.x; // standing on land: base grime + a thin splash / algae line above the ground\n  wxA.w *= 0.5;\n}\nfloat wxMx = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));\nfloat wxSat = (wxMx - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b))) / max(wxMx, 1e-3);\nvec3 wxStreak = mix(uWxGrime * 1.35, uWxStreak, max(smoothstep(0.15, 0.4, vSurf.y), smoothstep(0.12, 0.35, wxSat)));\n"
+      "GLOWS": 6
     },
     "world/rig": {
       "LOWER_Y": 22,

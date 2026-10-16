@@ -1,6 +1,7 @@
 // Finds and reads the parity vectors exported from the web game (rescue-apple/Tests/Vectors) and the
-// exported data (rescue-apple/Resources). Located through #filePath, so no SwiftPM resources are
-// needed: works the same with `swift test` on Linux/macOS and in Xcode.
+// exported data (rescue-apple/Resources). Located by walking up from #filePath (this file lives in
+// rescue-apple/Core/Tests/MaydayCoreTests/Support) to the directory holding Resources/Data/manifest.json,
+// so no SwiftPM resources are needed: works the same with `swift test` on Linux/macOS and in Xcode.
 import Foundation
 import XCTest
 @testable import MaydayCore
@@ -79,12 +80,19 @@ struct VectorError: Error, CustomStringConvertible {
 }
 
 enum VectorLoader {
-  /// rescue-apple/
-  static let appleRoot: URL = URL(fileURLWithPath: #filePath)
-    .deletingLastPathComponent() // Support
-    .deletingLastPathComponent() // MaydayCoreTests
-    .deletingLastPathComponent() // Tests
-    .deletingLastPathComponent() // rescue-apple
+  /// rescue-apple/ — the first ancestor of this file that holds Resources/Data/manifest.json
+  /// (Core/Tests/MaydayCoreTests/Support → rescue-apple). Fallback when the manifest is not exported
+  /// yet: four levels up from Support (DataCatalogTests then report the missing manifest).
+  static let appleRoot: URL = {
+    let here = URL(fileURLWithPath: #filePath)
+    if let root = DataCatalog.locateRoot(from: here.deletingLastPathComponent()) { return root }
+    return here
+      .deletingLastPathComponent() // Support
+      .deletingLastPathComponent() // MaydayCoreTests
+      .deletingLastPathComponent() // Tests
+      .deletingLastPathComponent() // Core
+      .deletingLastPathComponent() // rescue-apple
+  }()
 
   /// rescue-apple/Tests/Vectors
   static let vectorsRoot: URL = appleRoot.appendingPathComponent("Tests").appendingPathComponent("Vectors")

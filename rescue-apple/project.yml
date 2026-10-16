@@ -1,7 +1,11 @@
 # XcodeGen spec for the Apple targets of the MAYDAY native port (PLAN §2.1, §9).
 #   xcodegen generate --spec rescue-apple/project.yml      (→ rescue-apple/Mayday.xcodeproj)
 #
-# SwiftPM (Package.swift, builds on Linux): CJSMath, MaydayCore (+ CMaydayDSP, MaydaySynth later).
+# SwiftPM (Core/Package.swift, builds on Linux): CJSMath, MaydayCore (+ CMaydayDSP, MaydaySynth later).
+#   The package sits in the child directory Core/: Xcode rejects a local package that is an ancestor of
+#   the project ("cannot be a direct ancestor of the project"), and this file's directory holds the
+#   generated Mayday.xcodeproj. First Mac step after `xcodegen generate`:
+#     xcodebuild -resolvePackageDependencies -project rescue-apple/Mayday.xcodeproj
 # Xcode (this file, Apple only):
 #   Mayday-iOS / Mayday-macOS  app targets that both compile
 #       Sources/MaydayApp     shared app code (GameHost, MetalView, RootView, input, bootstrap sim)
@@ -10,7 +14,9 @@
 #     and link the local package product MaydayCore.
 #   MaydayRenderTests          macOS unit tests hosted by Mayday-macOS (ShaderTypes layout, ocean self-test).
 # MaydayAudio / MaydayUI / MaydayUITests join when their sources exist (M3 / M5).
-# Shaders: Sources/MaydayRender/Shaders/**/*.metal (MTL_FAST_MATH = NO, Metal 3.1 — Configs/Base.xcconfig);
+# Shaders: Sources/MaydayRender/Shaders/**/*.metal (MTL_FAST_MATH = NO, Metal 3.1 — Configs/Base.xcconfig,
+# pinned again in `settings` below); check after generating:
+#   xcodebuild -project Mayday.xcodeproj -target Mayday-macOS -showBuildSettings | grep MTL_FAST_MATH   → NO
 # ShaderTypes.h reaches Swift as `import MaydayShaderTypes` through SWIFT_INCLUDE_PATHS.
 name: Mayday
 
@@ -33,10 +39,17 @@ configFiles:
 settings:
   base:
     DEVELOPMENT_TEAM: ""
+    # PLAN §3.1 rule 5 (ANGLE parity: NaN/Inf, pow/exp/normalize precision). Same values as
+    # Configs/Base.xcconfig, pinned here because project-level buildSettings outrank the project's
+    # xcconfig: XcodeGen's base preset carries Xcode's new-project `MTL_FAST_MATH: YES`. XcodeGen
+    # (2.46) already drops a preset key that the configFiles define, but this pin does not depend on
+    # that behaviour. Target presets do not touch MTL_*.
+    MTL_FAST_MATH: NO
+    MTL_LANGUAGE_REVISION: Metal31
 
 packages:
   Mayday:
-    path: .
+    path: Core
 
 targets:
   Mayday-iOS:

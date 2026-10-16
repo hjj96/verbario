@@ -1,8 +1,10 @@
 // Headless Chromium for the exporters that need the live game (Playwright + SwiftShader WebGL2).
 //   - serves the repo root itself (built-in static server on a free port; no http-server needed)
-//   - serialises runs machine-wide with a lock directory (SwiftShader is CPU-bound; parallel runs thrash)
+//   - serialises runs machine-wide with a lock directory (SwiftShader is CPU-bound; parallel runs thrash);
+//     waits up to MAYDAY_CHROMIUM_LOCK_WAIT_MS (12 min) and then fails instead of running unlocked
 //   - collects console errors / page errors / failed requests (Google Fonts are allowed to fail offline)
-// Env: PLAYWRIGHT_MODULE (path to playwright's index.mjs), MAYDAY_CHROMIUM_LOCK (lock directory).
+// Env: PLAYWRIGHT_MODULE (path to playwright's index.mjs), MAYDAY_CHROMIUM_LOCK (lock directory),
+//      MAYDAY_CHROMIUM_LOCK_WAIT_MS (how long to wait for the lock).
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -24,30 +26,67 @@ async function loadPlaywright() {
 }
 
 const LOCK = process.env.MAYDAY_CHROMIUM_LOCK || path.join(os.tmpdir(), 'mayday-chromium.lock');
+const LOCK_WAIT_MS = Number(process.env.MAYDAY_CHROMIUM_LOCK_WAIT_MS) || 12 * 60 * 1000;
+const HEARTBEAT_MS = 15 * 1000;           // the owner refreshes owner.hb while it holds the lock
+const HEARTBEAT_STALE_MS = 2 * 60 * 1000; // an owner whose heartbeat is this old is gone (PID reused)
+let heartbeat = null;
+
+// owner = {pid, since (acquired), t = hb (last heartbeat)}; written to a temp file and renamed so a reader
+// never sees a half-written owner. `t` is refreshed too, so lock users that still judge staleness by
+// the age of `t` (scratchpad/tools/shot.mjs: > 6 min) never take a lock from a live exporter. Owners
+// without `hb` (shot.mjs) are judged by PID only.
+function writeOwner(o) {
+  const tmp = path.join(LOCK, `owner.${process.pid}.tmp`);
+  fs.writeFileSync(tmp, JSON.stringify(o));
+  fs.renameSync(tmp, path.join(LOCK, 'owner'));
+}
+
+function pidAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } // EPERM: alive, other user
+}
+
+// Stale only when the owner is provably gone: its PID is dead, or its heartbeat stopped (PID reuse).
+// A long-running live owner is never stolen from, whatever the lock's age. A lock directory without
+// an owner file (crash between mkdir and the first write) is stale after 30 s.
+function lockIsStale() {
+  let o;
+  try { o = JSON.parse(fs.readFileSync(path.join(LOCK, 'owner'), 'utf8')); } catch {
+    try { return Date.now() - fs.statSync(LOCK).mtimeMs > 30000; } catch { return false; }
+  }
+  if (!Number.isInteger(o.pid) || !pidAlive(o.pid)) return true;
+  return typeof o.hb === 'number' && Date.now() - o.hb > HEARTBEAT_STALE_MS;
+}
 
 async function acquireLock() {
   const t0 = Date.now();
+  let announced = false;
   for (;;) {
     try {
       fs.mkdirSync(LOCK);
-      fs.writeFileSync(path.join(LOCK, 'owner'), JSON.stringify({ pid: process.pid, t: Date.now() }));
-      return;
     } catch {
-      let stale = false;
+      if (lockIsStale()) { try { fs.rmSync(LOCK, { recursive: true, force: true }); } catch {} continue; }
+      if (Date.now() - t0 > LOCK_WAIT_MS) {
+        throw new Error(`chromium lock busy: ${LOCK} (waited ${Math.round(LOCK_WAIT_MS / 1000)} s; owner: ${(() => { try { return fs.readFileSync(path.join(LOCK, 'owner'), 'utf8'); } catch { return '?'; } })()})`);
+      }
+      if (!announced) { console.log(`waiting for the chromium lock ${LOCK} …`); announced = true; }
+      await new Promise((r) => setTimeout(r, 700));
+      continue;
+    }
+    const since = Date.now();
+    writeOwner({ pid: process.pid, since, t: since, hb: since });
+    heartbeat = setInterval(() => {
       try {
         const o = JSON.parse(fs.readFileSync(path.join(LOCK, 'owner'), 'utf8'));
-        try { process.kill(o.pid, 0); } catch { stale = true; }
-        if (Date.now() - o.t > 6 * 60 * 1000) stale = true;
-      } catch {
-        try { if (Date.now() - fs.statSync(LOCK).mtimeMs > 30000) stale = true; } catch {}
-      }
-      if (stale) { try { fs.rmSync(LOCK, { recursive: true, force: true }); } catch {} continue; }
-      if (Date.now() - t0 > 12 * 60 * 1000) return;
-      await new Promise((r) => setTimeout(r, 700));
-    }
+        const now = Date.now();
+        if (o.pid === process.pid) writeOwner({ ...o, t: now, hb: now });
+      } catch {}
+    }, HEARTBEAT_MS);
+    heartbeat.unref();
+    return;
   }
 }
 function releaseLock() {
+  if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
   try {
     const o = JSON.parse(fs.readFileSync(path.join(LOCK, 'owner'), 'utf8'));
     if (o.pid === process.pid) fs.rmSync(LOCK, { recursive: true, force: true });
@@ -77,13 +116,15 @@ function startServer() {
  */
 export async function withBrowser(fn, { width = 960, height = 540 } = {}) {
   const { chromium } = await loadPlaywright();
-  const srv = await startServer();
-  const base = `http://127.0.0.1:${srv.address().port}`;
-  await acquireLock();
+  await acquireLock(); // throws when the lock stays busy: never run Chromium beside another holder
   process.on('exit', releaseLock);
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+  let srv = null;
+  let browser = null;
   const errors = [];
   try {
+    srv = await startServer();
+    const base = `http://127.0.0.1:${srv.address().port}`;
+    browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
     const page = await browser.newPage({ viewport: { width, height } });
     const ignorable = (u) => /fonts\.(googleapis|gstatic)\.com/.test(u);
     page.on('console', (m) => { if (m.type() === 'error' && !ignorable(m.location()?.url || '') && !/fonts\.(googleapis|gstatic)/.test(m.text())) errors.push('console: ' + m.text()); });
@@ -96,8 +137,8 @@ export async function withBrowser(fn, { width = 960, height = 540 } = {}) {
     };
     return await fn({ page, open, errors, base });
   } finally {
-    await browser.close();
-    srv.close();
+    if (browser) await browser.close();
+    if (srv) srv.close();
     releaseLock();
   }
 }

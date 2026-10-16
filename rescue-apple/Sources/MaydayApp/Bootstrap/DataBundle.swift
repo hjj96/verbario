@@ -21,35 +21,69 @@ enum DataBundleError: Error, CustomStringConvertible {
   }
 }
 
-/// Minimal JSON navigator over JSONSerialization output.
+/// Navigator over MaydayCore's exact JSONValue, as served by DataCatalog: every boot file is checked
+/// against the manifest (size + sha256), numbers are bit-exact, and the exporter's "NaN" /
+/// "Infinity" / "-Infinity" / "-0" strings read back as numbers. Missing keys / indices give a null
+/// node, so chains never trap; `path` names the node for error messages.
+/// DEBUG builds stop at a typed read with a fallback (`double(or:)`, `int(or:)`, `linearColor(or:)`)
+/// whose path the data does not have or holds the wrong kind: a renamed key or a wrong path is a bug,
+/// not a default. Release builds use the fallback.
 struct BootJSON {
-  let raw: Any?
+  let value: JSONValue
+  let path: String
 
-  init(_ raw: Any?) { self.raw = raw }
-
-  subscript(_ key: String) -> BootJSON { BootJSON((raw as? [String: Any])?[key]) }
-  subscript(_ index: Int) -> BootJSON {
-    guard let a = raw as? [Any], index >= 0, index < a.count else { return BootJSON(nil) }
-    return BootJSON(a[index])
+  init(_ value: JSONValue, path: String = "$") {
+    self.value = value
+    self.path = path
   }
 
-  var isNull: Bool { raw == nil || raw is NSNull }
-  var double: Double? { (raw as? NSNumber)?.doubleValue }
-  var int: Int? { (raw as? NSNumber)?.intValue }
-  var bool: Bool? { (raw as? NSNumber)?.boolValue }
-  var string: String? { raw as? String }
-  var array: [BootJSON] { (raw as? [Any])?.map { BootJSON($0) } ?? [] }
-  var doubles: [Double] { array.compactMap { $0.double } }
-  var strings: [String] { array.compactMap { $0.string } }
-  var keys: [String] { (raw as? [String: Any]).map { Array($0.keys) } ?? [] }
+  subscript(_ key: String) -> BootJSON { BootJSON(value[key], path: path + "." + key) }
+  subscript(_ index: Int) -> BootJSON { BootJSON(value[index], path: path + "[\(index)]") }
 
-  func double(or fallback: Double) -> Double { double ?? fallback }
-  func int(or fallback: Int) -> Int { int ?? fallback }
+  var isNull: Bool { value.isNull }
+  var double: Double? { value.double }
+  /// Integral number only (JSONValue.int: nil for 2.5, never truncated).
+  var int: Int? { value.int }
+  var bool: Bool? { value.bool }
+  var string: String? { value.string }
+  var array: [BootJSON] {
+    (value.array ?? []).enumerated().map { BootJSON($0.element, path: path + "[\($0.offset)]") }
+  }
+  /// All elements as JS numbers; [] when this is not an array of numbers (no silent skipping).
+  var doubles: [Double] { value.doubles ?? [] }
+  /// All elements as strings; [] when this is not an array of strings.
+  var strings: [String] { value.strings ?? [] }
+  /// Object keys in document order (JS Object.keys order for these exports).
+  var keys: [String] { value.object?.keys ?? [] }
+
+  func double(or fallback: Double) -> Double {
+    if let d = double { return d }
+    missing("a number")
+    return fallback
+  }
+
+  func int(or fallback: Int) -> Int {
+    if let i = int { return i }
+    missing("an integer")
+    return fallback
+  }
 
   /// Exported colour {hex, lin: [r, g, b]} → linear rgb.
   var linearColor: SIMD3<Double>? {
     let l = self["lin"].doubles
     return l.count == 3 ? SIMD3<Double>(l[0], l[1], l[2]) : nil
+  }
+
+  func linearColor(or fallback: SIMD3<Double>) -> SIMD3<Double> {
+    if let c = linearColor { return c }
+    missing("a colour {lin: [r, g, b]}")
+    return fallback
+  }
+
+  private func missing(_ expected: String) {
+    #if DEBUG
+    preconditionFailure("data \(path): expected \(expected), got \(value.kindName)")
+    #endif
   }
 }
 
@@ -59,7 +93,6 @@ final class DataBundle {
   let root: URL
   let dataDirectory: URL
   let texturesDirectory: URL
-  private var cache: [String: BootJSON] = [:]
   private var catalogStore: DataCatalog?
 
   init(bundle: Bundle = .main) throws {
@@ -84,20 +117,11 @@ final class DataBundle {
     return c
   }
 
-  /// The `data` payload of Resources/Data/<name>.json ({schema, version, source, producer, data}).
+  /// The `data` payload of Resources/Data/<name>.json ({schema, version, source, producer, data}),
+  /// read through DataCatalog (manifest size / sha256 / schema / version checked, parsed once, cached).
   func data(_ name: String) throws -> BootJSON {
-    if let v = cache[name] { return v }
-    let url = dataDirectory.appendingPathComponent("\(name).json")
-    let bytes: Data
-    do { bytes = try Data(contentsOf: url) } catch { throw DataBundleError.missing("\(name).json") }
-    let obj: Any
-    do { obj = try JSONSerialization.jsonObject(with: bytes, options: []) } catch {
-      throw DataBundleError.malformed("\(name).json: \(error.localizedDescription)")
-    }
-    let wrapper = BootJSON(obj)
-    let payload = wrapper["data"]
+    let payload = try catalog().data(name)
     if payload.isNull { throw DataBundleError.malformed("\(name).json: no data") }
-    cache[name] = payload
-    return payload
+    return BootJSON(payload, path: "\(name).json:data")
   }
 }

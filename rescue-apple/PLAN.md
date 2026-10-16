@@ -110,7 +110,7 @@
                    └──────────────────┘
 ```
 
-- Цели SwiftPM (`Package.swift`, собираются на Linux): `CJSMath`, `MaydayCore`, `CMaydayDSP`, `MaydaySynth`, `mayday-vectors` (CLI для сверки), тесты.
+- Цели SwiftPM (`Core/Package.swift`, собираются на Linux): `CJSMath`, `MaydayCore`, `CMaydayDSP`, `MaydaySynth`, `mayday-vectors` (CLI для сверки), тесты.
 - Цели XcodeGen (`project.yml`, только Apple): `MaydayRender`, `MaydayAudio`, `MaydayUI`, `MaydayApp` (общий код приложения), `Mayday-iOS`, `Mayday-macOS`, `MaydayRenderTests`, `MaydayUITests`.
 - Зависимости однонаправленные: Core ← Render/UI/Synth/App. Core никогда не импортирует Apple‑модули.
 
@@ -367,7 +367,7 @@
 
 ### 2.9 Соответствие веб → Swift (все модули)
 
-Пути Swift даны относительно `rescue-apple/Sources/`. «baked» — запекается из веба (§6). `C/` — `MaydayCore/`, `R/` — `MaydayRender/`, `S/` — `MaydaySynth/`, `U/` — `MaydayUI/`, `A/` — `MaydayApp/`.
+Пути Swift даны относительно `rescue-apple/Sources/` (для `C/` — относительно `rescue-apple/Core/Sources/`). «baked» — запекается из веба (§6). `C/` — `MaydayCore/`, `R/` — `MaydayRender/`, `S/` — `MaydaySynth/`, `U/` — `MaydayUI/`, `A/` — `MaydayApp/`.
 
 **Каркас, core/\*, пост‑обработка, оболочка**
 
@@ -879,7 +879,7 @@ typedef struct {
 
 ### 5.4 Как XCTest использует векторы
 
-- **`VectorLoader`** (`Tests/MaydayCoreTests/Support/VectorLoader.swift`) находит `Tests/Vectors` через `#filePath`. Ресурсы SwiftPM не нужны, и это работает на Linux, macOS и в Xcode. Загрузчик декодирует обёртку и сайдкары (`Data` → `[Double]`/`[Float]`, little‑endian).
+- **`VectorLoader`** (`Core/Tests/MaydayCoreTests/Support/VectorLoader.swift`) находит `Tests/Vectors`, поднимаясь от `#filePath` до каталога с `Resources/Data/manifest.json` (`DataCatalog.locateRoot`). Ресурсы SwiftPM не нужны, и это работает на Linux, macOS и в Xcode. Загрузчик декодирует обёртку и сайдкары (`Data` → `[Double]`/`[Float]`, little‑endian).
 - **Ассерты** (`Support/Asserts.swift`):
   - `assertBitEqual(_:_:)`: сравнение `bitPattern` с отчётом первого расхождения (индекс, оба значения, hex, ulp);
   - `assertULP(_:_:max:)`, `assertClose(rel:abs:)`, `assertTraceEqual(prefix:then:tol:)`;
@@ -1017,17 +1017,22 @@ f32 bounds[8] (sphere xyzr, box min xyz… сокращённо) | u32 metaLen |
 rescue-apple/
 ├── PLAN.md                         ← этот документ
 ├── README.md                       сборка, экспорт, тесты (M0)
-├── Package.swift                   SwiftPM: CJSMath, MaydayCore, CMaydayDSP, MaydaySynth, mayday-vectors, тесты (Linux+Apple)
+├── Core/                           SwiftPM‑пакет (дочерний каталог: Xcode не принимает локальный пакет‑предок проекта)
+│   ├── Package.swift               CJSMath, MaydayCore, CMaydayDSP, MaydaySynth, mayday-vectors, тесты (Linux+Apple)
+│   ├── Sources/
+│   │   ├── CJSMath/                include/jsmath.h, fdlibm.c, v8math.c (hypot, pow) — #pragma STDC FP_CONTRACT OFF
+│   │   ├── MaydayCore/             Math/ Core/ Data/(Schemas/) Input/ Look/ Mesh/ Ocean/ Weather/ World/(Terrain/ Places/)
+│   │   │                                  Hazards/ FX/ Heli/ Camera/ Survivors/ Mission/ Radio/ Post/ HUD/(Flight/ Chart/ Screens/) Text/
+│   │   ├── CMaydayDSP/             include/mdsp.h, graph.c, param.c, nodes_*.c, convolver.c, compressor.c, fft.c, spsc.c
+│   │   ├── MaydaySynth/            Graph/ Sounds/ DSPResources.swift AudioDirector.swift Offline.swift
+│   │   └── mayday-vectors/         CLI: прогон векторов и печать расхождений (для отладки на Linux/Mac)
+│   └── Tests/
+│       ├── MaydayCoreTests/        Support/(VectorLoader Asserts SHA256) + тесты по доменам
+│       └── MaydaySynthTests/
 ├── project.yml                     XcodeGen: Mayday-iOS, Mayday-macOS, MaydayRender/Audio/UI/App, тестовые цели
 ├── Configs/                        Base.xcconfig, Debug.xcconfig, Release.xcconfig (MTL_FAST_MATH=NO, Metal31, SWIFT_VERSION)
 ├── .swiftlint.yml                  custom_rules: no_libm_in_core, no_math_random, no_force_unwrap_in_core
 ├── Sources/
-│   ├── CJSMath/                    [SwiftPM] include/jsmath.h, fdlibm.c, v8math.c (hypot, pow) — #pragma STDC FP_CONTRACT OFF
-│   ├── MaydayCore/                 [SwiftPM] Math/ Core/ Data/(Schemas/) Input/ Look/ Mesh/ Ocean/ Weather/ World/(Terrain/ Places/)
-│   │                                          Hazards/ FX/ Heli/ Camera/ Survivors/ Mission/ Radio/ Post/ HUD/(Flight/ Chart/ Screens/) Text/
-│   ├── CMaydayDSP/                 [SwiftPM] include/mdsp.h, graph.c, param.c, nodes_*.c, convolver.c, compressor.c, fft.c, spsc.c
-│   ├── MaydaySynth/                [SwiftPM] Graph/ Sounds/ DSPResources.swift AudioDirector.swift Offline.swift
-│   ├── mayday-vectors/             [SwiftPM] CLI: прогон векторов и печать расхождений (для отладки на Linux/Mac)
 │   ├── MaydayRender/               [Xcode] Core/ Look/ Lighting/ Ocean/ Weather/ World/ Hazards/ FX/ Heli/ Survivors/ Post/ Hud/ Scene/ Textures/ Pipelines/
 │   │   └── Shaders/                ShaderTypes.h, module.modulemap, Common/(GL.h Common.h ThreeVertex.h ThreePBR.h Shadow.h IBL.h Fog.h
 │   │                               Look.h Noise.h ACES.h Weathering.h Keyline.metal Standard.metal Basic.metal Line.metal) Ocean/ Lighting/
@@ -1038,8 +1043,6 @@ rescue-apple/
 │   ├── AppIOS/                     [Xcode] MaydayIOSApp.swift, Info.plist, LaunchScreen.storyboard, PrivacyInfo.xcprivacy, Assets.xcassets
 │   └── AppMac/                     [Xcode] MaydayMacApp.swift, Info.plist, Mayday.entitlements, PrivacyInfo.xcprivacy, Assets.xcassets
 ├── Tests/
-│   ├── MaydayCoreTests/            [SwiftPM] Support/(VectorLoader Asserts SHA256) + тесты по доменам
-│   ├── MaydaySynthTests/           [SwiftPM]
 │   ├── MaydayRenderTests/          [Xcode] OceanSelftestTests, PostGoldenTests, ShaderTypesLayoutTests, PipelineCoverageTests
 │   ├── MaydayUITests/              [Xcode] снапшоты экранов
 │   ├── Vectors/                    экспорт (§5.3): math/ look/ weather/ ocean/ world/ hazards/ fx/ heli/ camera/ survivors/ mission/ radio/ text/ input/ settings/ post/ hud/ audio/
@@ -1060,7 +1063,7 @@ rescue-apple/
     └── ci/                         linux-core.sh (docker swift:6.0-jammy), export-drift.sh, apple.sh
 ```
 
-`Package.swift` (создаётся в M0 ровно в таком виде):
+`Core/Package.swift` (создаётся в M0 в таком виде; пути целей — относительно `Core/`):
 
 ```swift
 // swift-tools-version:5.10
@@ -1086,8 +1089,9 @@ let package = Package(
 )
 ```
 
-- Каталоги `Sources/MaydayRender|MaydayAudio|MaydayUI|MaydayApp|AppIOS|AppMac` в манифест не входят, и SwiftPM их не собирает. Их собирает только XcodeGen.
-- `project.yml` подключает пакет как локальный (`packages: Mayday: {path: .}`) и задаёт мультиплатформенные цели через `supportedDestinations: [iOS, macOS]`. Метал‑библиотека собирается из `Sources/MaydayRender/Shaders/**/*.metal`, ресурсы `Resources/**` копируются в приложения.
+- Каталоги `Sources/MaydayRender|MaydayAudio|MaydayUI|MaydayApp|AppIOS|AppMac` лежат вне пакета, и SwiftPM их не собирает. Их собирает только XcodeGen.
+- `project.yml` подключает пакет как локальный (`packages: Mayday: {path: Core}`) и задаёт мультиплатформенные цели через `supportedDestinations: [iOS, macOS]`. Метал‑библиотека собирается из `Sources/MaydayRender/Shaders/**/*.metal`, ресурсы `Resources/**` копируются в приложения.
+- Пакет вынесен в дочерний каталог `Core/`, потому что `Mayday.xcodeproj` генерируется в `rescue-apple/`, а Xcode отвергает локальный пакет, который является предком проекта. Первый шаг на Mac после `xcodegen generate` — `xcodebuild -resolvePackageDependencies -project Mayday.xcodeproj`.
 
 ---
 
@@ -1114,6 +1118,8 @@ let package = Package(
 ## Приложение A. Первые файлы, которые создают сборщики
 
 **Core (неделя 1–2 M0, порядок важен):**
+
+Пути пунктов 1–9 — внутри `Core/`.
 
 1. `Package.swift`
 2. `Sources/CJSMath/include/jsmath.h`, `Sources/CJSMath/fdlibm.c`, `Sources/CJSMath/v8math.c`

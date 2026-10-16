@@ -1,7 +1,7 @@
 {
   "schema": "mayday.ocean",
   "version": 1,
-  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "source": "7e1eba52ccb112c7c3f4883edef404a43b0daf7b",
   "sourceDirty": false,
   "sourceFiles": [
     "rescue/src/systems/ocean.js", "rescue/src/systems/ocean/waves.js", "rescue/src/systems/ocean/features.js",
@@ -14,11 +14,12 @@
     "ocean/features": {"glsl": ["FEATURES_GLSL"]},
     "ocean/memory": {"glsl": ["ADVECT_VS", "ADVECT_FS", "STAMP_VS", "STAMP_FS"]},
     "ocean/coast": {"scratch": ["_v"]},
+    "ocean/material": {"glsl": ["SUN_SPECULAR"]},
     "ocean/shaders": {
       "glsl": [
-        "OCEAN_COMMON", "OCEAN_VERTEX_PARS", "OCEAN_VERTEX_BEGINNORMAL", "OCEAN_FRAGMENT_PARS",
-        "OCEAN_FRAGMENT_SURFACE", "OCEAN_FRAGMENT_NORMAL", "OCEAN_FRAGMENT_FINAL", "SELFTEST_VERTEX",
-        "SELFTEST_FRAGMENT"
+        "OCEAN_COMMON", "OCEAN_VERTEX_PARS", "OCEAN_VERTEX_BEGINNORMAL", "OCEAN_VERTEX_BEGIN", "OCEAN_FRAGMENT_PARS",
+        "OCEAN_FRAGMENT_SURFACE", "OCEAN_FRAGMENT_ROUGHNESS", "OCEAN_FRAGMENT_NORMAL", "OCEAN_FRAGMENT_EMISSIVE",
+        "OCEAN_FRAGMENT_FINAL", "SELFTEST_VERTEX", "SELFTEST_FRAGMENT"
       ]
     }
   },
@@ -67,14 +68,8 @@
     "ocean/memory": {"MAX_STAMPS": 128, "HALF_LIFE": [3, 240, 0.8, 600], "SHAPE": {"disc": 0, "ring": 1, "wake": 2}},
     "ocean/coast": {"COAST_MAX": 48},
     "ocean/grid": {},
-    "ocean/material": {
-      "SUN_SPECULAR": "\nvoid oSunSpecular( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {\n  float dotNL = saturate( dot( geometryNormal, directLight.direction ) );\n  // × visibility of the sun disk (no sharp sun highlights under an overcast sky)\n  reflectedLight.directSpecular += dotNL * directLight.color * uLookK.w * BRDF_GGX_Multiscatter( directLight.direction, geometryViewDir, geometryNormal, material );\n}\n"
-    },
-    "ocean/shaders": {
-      "OCEAN_VERTEX_BEGIN": "\nvec3 transformed = oPos;\n",
-      "OCEAN_FRAGMENT_ROUGHNESS": "\nroughnessFactor = oRough;\n",
-      "OCEAN_FRAGMENT_EMISSIVE": "\ntotalEmissiveRadiance += oEmis;\n"
-    },
+    "ocean/material": {},
+    "ocean/shaders": {},
     "ocean/selftest": {}
   }
 }

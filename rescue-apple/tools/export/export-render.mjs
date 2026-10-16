@@ -6,7 +6,10 @@
 //                                      LinearFilter, ClampToEdge, no mips, flipY false → row 0 = v 0).
 //                                      16 × 16 × 2 IEEE half floats, little endian, 1024 bytes.
 //
-//   node rescue-apple/tools/export/export-render.mjs          (re-run when the vendored three changes)
+//   node rescue-apple/tools/export/export-render.mjs          (re-run when the vendored three changes;
+//                                                              run-all.mjs runs it before export-data)
+// The file is registered in Resources/Data/manifest.json (schema raw.rg16f, bytes, sha256): this script
+// rewrites the manifest after writing the LUT, so verify.mjs and DataCatalog.verifyAll() cover it.
 //
 // MaydayRender (LookResources.swift) uploads the file as an .rg16Float texture; Shaders/Common/ThreePBR.h
 // samples it exactly like three (texture2D(dfgLUT, vec2(roughness, dotNV)).rg).
@@ -14,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { writeManifest } from './lib/common.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../../..');
@@ -57,3 +61,8 @@ fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, buf);
 const sha = crypto.createHash('sha256').update(buf).digest('hex');
 console.log(`export-render: ${path.relative(repo, outPath)} ${buf.length} bytes sha256 ${sha}`);
+// keep manifest.json in step (the data export may have run before, or not at all yet)
+if (fs.existsSync(path.join(repo, 'rescue-apple/Resources/Data'))) {
+  const { entries } = writeManifest();
+  console.log(`export-render: manifest.json rewritten (${entries.length} files)`);
+}

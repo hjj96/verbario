@@ -1,7 +1,7 @@
 {
   "schema": "mayday.fx",
   "version": 1,
-  "source": "7a8a3411235111e979fa4affe6a5b195e137b3ca",
+  "source": "7e1eba52ccb112c7c3f4883edef404a43b0daf7b",
   "sourceDirty": false,
   "sourceFiles": [
     "rescue/src/systems/fx.js", "rescue/src/systems/fx/common.js", "rescue/src/systems/fx/gusts.js",
@@ -11,7 +11,7 @@
   ],
   "producer": "tools/export/export-data.mjs",
   "omitted": {
-    "fx/common": {"glsl": ["AIR_GLSL", "FOG_PARS"], "scratch": ["_c"], "runtime": ["cache"]},
+    "fx/common": {"glsl": ["AIR_GLSL", "FOG_PARS", "FINISH"], "scratch": ["_c"], "runtime": ["cache"]},
     "fx/gusts": {"glsl": ["VERT", "FRAG"]},
     "fx/life": {"glsl": ["FLAP_HEAD", "JELLY_VERT", "JELLY_FRAG", "SHADE_FRAG"]},
     "fx/lightning": {"glsl": ["VERT", "FRAG_CORE", "FRAG_HALO"]},
@@ -128,8 +128,7 @@
         "gullTip": "#23272A",
         "searchlight": "#FFF1DA",
         "elmo": "#7FB8FF"
-      },
-      "FINISH": "\n  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n"
+      }
     },
     "fx/gusts": {"SLOTS": 4, "PER": 80},
     "fx/life": {
