@@ -76,6 +76,13 @@ template <typename T> struct texture2d {
   uint get_width(uint lod = 0) const;
   uint get_height(uint lod = 0) const;
 };
+template <typename T> struct depth2d {
+  float sample_compare(sampler, float2, float) const;
+  float sample_compare(sampler, float2, float, level) const;
+  float read(uint2, uint lod = 0) const;
+  uint get_width(uint lod = 0) const;
+  uint get_height(uint lod = 0) const;
+};
 
 namespace metal {
 #define MD_UN(f) float f(float); float2 f(float2); float3 f(float3); float4 f(float4);

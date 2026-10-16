@@ -36,6 +36,8 @@
 	<string>MAYDAY</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
 	<key>GCSupportsControllerUserInteraction</key>
 	<true/>
 	<key>GCSupportedGameControllers</key>

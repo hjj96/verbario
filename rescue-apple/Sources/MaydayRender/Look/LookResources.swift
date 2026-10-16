@@ -18,7 +18,7 @@ public final class LookResources {
   public let detail: MTLTexture
   public let lace: MTLTexture
   public let dfgLUT: MTLTexture
-  /// 1×1 R8 = 255: "far from any coast" (ocean/material.js coastPlaceholder).
+  /// R8 = 255 everywhere: "far from any coast" (ocean/material.js coastPlaceholder).
   public let coastPlaceholder: MTLTexture
   /// 1×1 RGBA16F zero: water memory / drops / heat stand-in until those passes exist.
   public let blackRGBA16F: MTLTexture
@@ -40,8 +40,10 @@ public final class LookResources {
                                 format: .rgba8Unorm, bytesPerPixel: 4, mipmapped: true, label: "look.lace")
     dfgLUT = try uploader.texture(file: dir.appendingPathComponent("dfg_lut.rg16f"), width: 16, height: 16,
                                   format: .rg16Float, bytesPerPixel: 4, mipmapped: false, label: "three.dfgLUT")
-    coastPlaceholder = try uploader.texture(bytes: [255], width: 1, height: 1, format: .r8Unorm, bytesPerPixel: 1,
-                                            mipmapped: false, label: "ocean.coastNone")
+    // 4×4 rather than 1×1: keeps the staging copy's bytesPerRow at 4 (the strictest alignment any
+    // Apple GPU family asks of buffer → texture copies); every texel is 255, so sampling is identical.
+    coastPlaceholder = try uploader.texture(bytes: [UInt8](repeating: 255, count: 16), width: 4, height: 4, format: .r8Unorm,
+                                            bytesPerPixel: 1, mipmapped: false, label: "ocean.coastNone")
     blackRGBA16F = try uploader.texture(bytes: [UInt8](repeating: 0, count: 8), width: 1, height: 1, format: .rgba16Float,
                                         bytesPerPixel: 8, mipmapped: false, label: "black16F")
     try uploader.finish()

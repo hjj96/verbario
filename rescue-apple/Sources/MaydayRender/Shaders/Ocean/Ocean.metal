@@ -804,9 +804,10 @@ fragment float4 ocean_fs(OceanVaryings in [[stage_in]],
     RE_Direct_Physical(directLight, geometryNormal, geometryViewDir, material, reflectedLight, dfgLUT, smpClamp);
   }
   {
-    IncidentLight directLight = getDirectionalLightInfo(LT.dir);
+    MDDirLight sunLight = LT.dir;                            // explicit copy: constant → thread
+    IncidentLight directLight = getDirectionalLightInfo(sunLight);
     directLight.color *= oCloudMul;                          // layer 6: cloud shadows on the sun only
-    oShadow = 1.0f;                                          // M2: getShadow(directionalShadowMap, …)
+    oShadow = 1.0f;                                          // M2: threeDirShadow() (Common/Shadow.h) under MD_FC_SHADOWS
     directLight.color *= oShadow;
     oSunSpecular(directLight, geometryNormal, geometryViewDir, material, reflectedLight, U.uLookK.w, dfgLUT, smpClamp);
   }

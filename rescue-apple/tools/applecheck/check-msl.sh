@@ -15,6 +15,11 @@ for f in $(find "$shaders" -name '*.metal' | sort); do
         -Wno-unused-function -Wimplicit-float-conversion -Wdouble-promotion -Wshadow -I "$here/msl/include" -x c++ "$f" 2>&1)
   if [ -n "$out" ]; then echo "FAIL ${f#$shaders/}"; echo "$out" | grep -E "error|warning" | head -40; rc=1; else echo "ok   ${f#$shaders/}"; fi
 done
+# shared headers whose functions no family calls yet (Shadow.h, parts of ThreePBR.h / ThreeVertex.h)
+f="$here/msl/headers_check.metal"
+out=$(clang++ -std=c++14 -fsyntax-only -fno-builtin -Wall -Wextra -Wno-unused-parameter -Wno-unknown-attributes \
+      -Wno-unused-function -Wimplicit-float-conversion -Wdouble-promotion -Wshadow -I "$here/msl/include" -I "$shaders" -x c++ "$f" 2>&1)
+if [ -n "$out" ]; then echo "FAIL headers_check.metal"; echo "$out" | grep -E "error|warning" | head -40; rc=1; else echo "ok   headers_check.metal (Common/*.h)"; fi
 tmp=$(mktemp -d)
 printf '#include "ShaderTypes.h"\nint main(void) { return 0; }\n' > "$tmp/layout.c"
 if clang -std=c11 -fsyntax-only -Wall -I "$here/stubs/cinclude" -I "$shaders" "$tmp/layout.c"; then echo "ok   ShaderTypes.h (C11 layouts)"; else rc=1; fi
