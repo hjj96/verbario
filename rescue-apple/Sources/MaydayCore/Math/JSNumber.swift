@@ -80,15 +80,22 @@ public enum JSNumber {
       out += digits + String(repeating: "0", count: n - k)
     } else if 0 < n && n <= 21 {
       let idx = digits.index(digits.startIndex, offsetBy: n)
-      out += digits[..<idx] + "." + digits[idx...]
+      out += String(digits[..<idx])
+      out += "."
+      out += String(digits[idx...])
     } else if -6 < n && n <= 0 {
-      out += "0." + String(repeating: "0", count: -n) + digits
+      out += "0."
+      out += String(repeating: "0", count: -n)
+      out += digits
     } else {
       let e = n - 1
-      let first = digits[digits.startIndex]
-      out.append(first)
-      if k > 1 { out += "." + digits.dropFirst() }
-      out += "e" + (e >= 0 ? "+" : "-") + String(e >= 0 ? e : -e)
+      out.append(digits[digits.startIndex])
+      if k > 1 {
+        out += "."
+        out += String(digits.dropFirst())
+      }
+      out += e >= 0 ? "e+" : "e-"
+      out += String(e >= 0 ? e : -e)
     }
     return out
   }

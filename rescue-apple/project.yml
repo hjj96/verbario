@@ -1,0 +1,128 @@
+# XcodeGen spec for the Apple targets of the MAYDAY native port (PLAN §2.1, §9).
+#   xcodegen generate --spec rescue-apple/project.yml      (→ rescue-apple/Mayday.xcodeproj)
+#
+# SwiftPM (Package.swift, builds on Linux): CJSMath, MaydayCore (+ CMaydayDSP, MaydaySynth later).
+# Xcode (this file, Apple only):
+#   Mayday-iOS / Mayday-macOS  app targets that both compile
+#       Sources/MaydayApp     shared app code (GameHost, MetalView, RootView, input, bootstrap sim)
+#       Sources/MaydayRender  the Metal renderer: Swift + .metal → the app's default.metallib
+#       Sources/AppIOS | Sources/AppMac   platform entry point, Info.plist, privacy manifest
+#     and link the local package product MaydayCore.
+#   MaydayRenderTests          macOS unit tests hosted by Mayday-macOS (ShaderTypes layout, ocean self-test).
+# MaydayAudio / MaydayUI / MaydayUITests join when their sources exist (M3 / M5).
+# Shaders: Sources/MaydayRender/Shaders/**/*.metal (MTL_FAST_MATH = NO, Metal 3.1 — Configs/Base.xcconfig);
+# ShaderTypes.h reaches Swift as `import MaydayShaderTypes` through SWIFT_INCLUDE_PATHS.
+name: Mayday
+
+options:
+  bundleIdPrefix: app.mayday
+  developmentLanguage: ru
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+
+configs:
+  Debug: debug
+  Release: release
+
+configFiles:
+  Debug: Configs/Debug.xcconfig
+  Release: Configs/Release.xcconfig
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+
+packages:
+  Mayday:
+    path: .
+
+targets:
+  Mayday-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/MaydayApp
+      - path: Sources/MaydayRender
+        excludes:
+          - "Shaders/module.modulemap"
+      - path: Sources/AppIOS
+      # the whole Resources/ tree as one folder reference → <bundle resources>/Resources/{Data,Textures,…}
+      # (MaydayCore DataCatalog resolves the manifest paths "Resources/Data/…" from there)
+      - path: Resources
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: Mayday
+        product: MaydayCore
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: GameController.framework
+    settings:
+      base:
+        PRODUCT_NAME: MAYDAY
+        PRODUCT_MODULE_NAME: MaydayApp
+        PRODUCT_BUNDLE_IDENTIFIER: app.mayday.game
+        INFOPLIST_FILE: Sources/AppIOS/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+    scheme:
+      commandLineArguments:
+        "-mayday.debug YES": false
+        "-mayday.quality high": false
+        "-mayday.weather storm": false
+        "-mayday.dynres NO": false
+
+  Mayday-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/MaydayApp
+      - path: Sources/MaydayRender
+        excludes:
+          - "Shaders/module.modulemap"
+      - path: Sources/AppMac
+      # the whole Resources/ tree as one folder reference → <bundle resources>/Resources/{Data,Textures,…}
+      # (MaydayCore DataCatalog resolves the manifest paths "Resources/Data/…" from there)
+      - path: Resources
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: Mayday
+        product: MaydayCore
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: GameController.framework
+    settings:
+      base:
+        PRODUCT_NAME: MAYDAY
+        PRODUCT_MODULE_NAME: MaydayApp
+        PRODUCT_BUNDLE_IDENTIFIER: app.mayday.game.mac
+        INFOPLIST_FILE: Sources/AppMac/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/AppMac/Mayday.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+    scheme:
+      testTargets:
+        - MaydayRenderTests
+      commandLineArguments:
+        "-mayday.debug YES": false
+        "-mayday.quality medium": false
+        "-mayday.weather nightStorm": false
+        "-mayday.dynres NO": false
+
+  MaydayRenderTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/MaydayRenderTests
+    dependencies:
+      - target: Mayday-macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.mayday.render-tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/MAYDAY.app/Contents/MacOS/MAYDAY"
+        BUNDLE_LOADER: "$(TEST_HOST)"

@@ -48,6 +48,10 @@ public enum JS {
   /// True when CJSMath's pow is the exact V8 algorithm (parity tests use it).
   public static var powIsExact: Bool { jsm_pow_is_exact() != 0 }
 
+  /// False when CJSMath was built with FP contraction (-ffp-contract=fast / -ffast-math): FMAs would
+  /// break bit parity. The apps assert it at launch, the tests check it.
+  public static var fpContractionOff: Bool { jsm_fp_contract_ok() != 0 }
+
   // ---- exact operations (IEEE-754 defines the result) ------------------------------------------
   @inline(__always) public static func sqrt(_ x: Double) -> Double { x.squareRoot() }
   /// Math.abs (abs(-0) = +0, abs(NaN) = NaN).

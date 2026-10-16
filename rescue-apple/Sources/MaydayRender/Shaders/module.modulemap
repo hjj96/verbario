@@ -1,0 +1,6 @@
+// Exposes ShaderTypes.h to Swift as `import MaydayShaderTypes`.
+// Found through SWIFT_INCLUDE_PATHS = $(SRCROOT)/Sources/MaydayRender/Shaders (Configs/Base.xcconfig).
+module MaydayShaderTypes {
+  header "ShaderTypes.h"
+  export *
+}

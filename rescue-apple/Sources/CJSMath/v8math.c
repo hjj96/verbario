@@ -269,3 +269,14 @@ static double fdlibm_pow(double x, double y)
 double jsm_pow(double x, double y) { return fdlibm_pow(x, y); }
 
 int jsm_pow_is_exact(void) { return 1; }
+
+/* Build-setting guard. `#pragma STDC FP_CONTRACT OFF` is honoured with clang's default
+ * -ffp-contract=on, but -ffp-contract=fast / -ffast-math override it and fuse a*b+c into FMA
+ * (measured on aarch64: 0 vs 188 fused ops in this target). An FMA-contracted a*a - c below yields
+ * 2^-60 instead of 0, so this returns 0 when the C target was built with contraction. */
+int jsm_fp_contract_ok(void) {
+  volatile double va = 1.0 + 0x1p-30, vc = 1.0 + 0x1p-29;
+  double a = va, c = vc;
+  double r = a * a - c;
+  return r == 0.0;
+}

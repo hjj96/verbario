@@ -1,0 +1,28 @@
+// Base.xcconfig — shared by every Xcode target of rescue-apple (PLAN §2.5, §3.1, §9).
+
+// Platforms (PLAN D14): iOS/iPadOS 17+, macOS 14+ Apple silicon only (no Catalyst).
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+MACOSX_DEPLOYMENT_TARGET = 14.0
+ARCHS[sdk=macosx*] = arm64
+SUPPORTS_MACCATALYST = NO
+TARGETED_DEVICE_FAMILY = 1,2
+
+// Swift: language mode 5 (no Swift 6 strict concurrency yet), minimal checking.
+SWIFT_VERSION = 5.0
+SWIFT_STRICT_CONCURRENCY = minimal
+// ShaderTypes.h → `import MaydayShaderTypes` (Sources/MaydayRender/Shaders/module.modulemap).
+SWIFT_INCLUDE_PATHS = $(inherited) $(SRCROOT)/Sources/MaydayRender/Shaders
+
+// Metal (PLAN §3.1 rule 5): no fast math (ANGLE parity: the web's GLSL runs without it),
+// Metal 3.1, shared headers next to the shaders.
+MTL_FAST_MATH = NO
+MTL_LANGUAGE_REVISION = Metal31
+MTL_HEADER_SEARCH_PATHS = $(inherited) $(SRCROOT)/Sources/MaydayRender/Shaders
+
+CLANG_ENABLE_MODULES = YES
+GCC_C_LANGUAGE_STANDARD = gnu11
+ENABLE_USER_SCRIPT_SANDBOXING = YES
+GENERATE_INFOPLIST_FILE = NO
+CODE_SIGN_STYLE = Automatic
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1

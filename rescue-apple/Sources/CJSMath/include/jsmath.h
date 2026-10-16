@@ -45,6 +45,10 @@ double jsm_pow(double x, double y);
 /* 1 when pow is the exact V8 port, 0 while it falls back to the platform libm (tests use this). */
 int jsm_pow_is_exact(void);
 
+/* 1 when CJSMath was compiled without floating-point contraction (no FMA), 0 otherwise.
+ * Fails if the build uses -ffp-contract=fast or -ffast-math, which override the pragma. */
+int jsm_fp_contract_ok(void);
+
 #ifdef __cplusplus
 }
 #endif
