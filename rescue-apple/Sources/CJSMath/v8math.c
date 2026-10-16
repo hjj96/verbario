@@ -6,9 +6,13 @@
  * order; result = sqrt(sum) * max. Re-implemented from that description; reproduced Node 22
  * bit for bit on 400k random 2- and 3-argument cases (PLAN §5.2).
  *
- * pow: fdlibm 5.3 e_pow.c (see below). Node 22's Math.pow is neither fdlibm nor glibc (measured:
- * 4.2 % / 9.7 % of the exporter vectors differ by 1 ulp), so until V8's algorithm is identified and
- * ported (TODO(M0)), pow parity is "<= 1 ulp" and jsm_pow_is_exact() returns 0.
+ * pow: V8's base::ieee754::pow (src/base/ieee754.cc, V8 12.4 = Node 22). It is fdlibm 5.3 e_pow.c
+ * with ONE change in the final 2**z polynomial step:
+ *     fdlibm: r = (z*t1)/(t1-two) - (w+z*w);
+ *     V8:     r = (z*t1) / ((t1-two) - (w+z*w));
+ * That single line is why Node's Math.pow differed from fdlibm on ~4-5 % of inputs. With it the port
+ * matches Node 22 bit for bit: 0/4096 exporter vectors (math/jsmath_pow.f64, specials included) and
+ * 0/200000 random cases (half with y = 0.375, the ocean cellSize exponent). jsm_pow_is_exact() = 1.
  */
 #pragma STDC FP_CONTRACT OFF
 
@@ -74,9 +78,8 @@ double jsm_hypotn(const double *values, int count) { return hypot_core(values, c
  * is preserved.
  * ====================================================
  * fdlibm 5.3 already has the ECMAScript special values (x**±0 = 1, NaN exponent → NaN,
- * (±1)**±Infinity → NaN). Node 22 is NOT bit-identical to it (174/4096 exporter vectors differ by
- * 1 ulp; glibc/correctly-rounded pow differs on 398/4096), but it is the closest portable,
- * deterministic candidate: Linux CI and Apple devices get identical results.
+ * (±1)**±Infinity → NaN). The only arithmetic change is V8's grouping of the r = ... line near the
+ * end (marked "V8:"), see the file header.
  */
 static inline int32_t HI(double d) { uint64_t u; memcpy(&u, &d, 8); return (int32_t)(uint32_t)(u >> 32); }
 static inline uint32_t LO(double d) { uint64_t u; memcpy(&u, &d, 8); return (uint32_t)u; }
@@ -254,7 +257,7 @@ static double fdlibm_pow(double x, double y)
   w = v-(z-u);
   t  = z*z;
   t1  = z - t*(P1+t*(P2+t*(P3+t*(P4+t*P5))));
-  r  = (z*t1)/(t1-two)-(w+z*w);
+  r  = (z*t1)/((t1-two)-(w+z*w)); /* V8: fdlibm has (z*t1)/(t1-two)-(w+z*w) */
   z  = one-(r-z);
   j  = HI(z);
   j += (int32_t)((uint32_t)n<<20);
@@ -265,4 +268,4 @@ static double fdlibm_pow(double x, double y)
 
 double jsm_pow(double x, double y) { return fdlibm_pow(x, y); }
 
-int jsm_pow_is_exact(void) { return 0; }
+int jsm_pow_is_exact(void) { return 1; }

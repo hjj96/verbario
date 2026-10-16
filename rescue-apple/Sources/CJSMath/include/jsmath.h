@@ -5,8 +5,8 @@
  *    sinh tanh: V8's src/base/ieee754.cc is a port of the same code, Node 22 matched it 0/400k
  *    (PLAN §5.2);
  *  - V8's Math.hypot algorithm (max-scaled Kahan sum, then sqrt(sum) * max);
- *  - pow: ECMAScript special cases + the exact cases (y = ±1, 2, 0.5) natively, everything else
- *    through the platform libm for now (<= 1 ulp from Node until the V8 ieee754::pow port, M0).
+ *  - pow: V8's base::ieee754::pow = fdlibm e_pow.c with V8's grouping of the final r = ... step
+ *    (v8math.c); bit-identical to Node 22 on all exporter vectors.
  *
  * Every .c file is compiled with `#pragma STDC FP_CONTRACT OFF`: no fused multiply-add anywhere,
  * otherwise clang on arm64 would contract a*b+c and break bit parity.
