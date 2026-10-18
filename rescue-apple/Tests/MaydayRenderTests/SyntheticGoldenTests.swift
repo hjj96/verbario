@@ -145,7 +145,7 @@ final class SyntheticGoldenTests: XCTestCase {
   /// (three's ACESFilmicToneMapping + sRGBTransferOETF) over SyntheticInputs reproduces the web's OutputPass
   /// images — so the input formulas, their row order and the tone-mapping constants agree with the web.
   func testInputsAndOutputFormulas() throws {
-    let d = try Goldens.data("synthetic/passes.json")
+    let d = try Goldens.browserData("synthetic/passes.json")
     let size = try d["size"].nums()
     let w = Int(size[0]), h = Int(size[1])
     for f in [SyntheticInputs.hdrRamp, SyntheticInputs.spots, SyntheticInputs.ldr] {
@@ -191,7 +191,7 @@ final class SyntheticGoldenTests: XCTestCase {
 
   func testOutputAndBloom() throws {
     let g = try gpu()
-    let d = try Goldens.data("synthetic/passes.json")
+    let d = try Goldens.browserData("synthetic/passes.json")
     let size = try d["size"].nums()
     let w = Int(size[0]), h = Int(size[1])
     let rt = try RenderTargets(device: g.renderer.device, width: w, height: h, sampleCount: 1)
@@ -225,7 +225,7 @@ final class SyntheticGoldenTests: XCTestCase {
 
   func testFinalPass() throws {
     let g = try gpu()
-    let d = try Goldens.data("synthetic/passes.json")
+    let d = try Goldens.browserData("synthetic/passes.json")
     let size = try d["size"].nums()
     let w = Int(size[0]), h = Int(size[1])
     let rt = try RenderTargets(device: g.renderer.device, width: w, height: h, sampleCount: 1)
@@ -260,7 +260,7 @@ final class SyntheticGoldenTests: XCTestCase {
 
   func testPmremAtlas() throws {
     let g = try gpu()
-    let d = try Goldens.data("synthetic/passes.json")
+    let d = try Goldens.browserData("synthetic/passes.json")
     // texels the bake writes: lod 0 (3·128 × 2·128 at the origin) and every GGX lod's 3f × 2f block
     var regions: [(x: Int, y: Int, w: Int, h: Int)] = [(0, 0, 3 * Int(MD_CUBEUV_SIZE), 2 * Int(MD_CUBEUV_SIZE))]
     for l in EnvironmentProbe.lods { regions.append((l.x, l.y, 3 * l.size, 2 * l.size)) }

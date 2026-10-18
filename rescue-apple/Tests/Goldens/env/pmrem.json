@@ -1,7 +1,7 @@
 {
   "schema": "mayday.goldens.env.pmrem",
   "version": 1,
-  "source": "897fa86e5a87ec08b41cf7011e2e83f41feec11c",
+  "source": "d85d1ab3e54dd3031827218c31d7a89299ebc57a",
   "sourceDirty": false,
   "sourceFiles": ["rescue/vendor/three (PMREMGenerator r185)", "rescue/src/systems/weather/env.js"],
   "producer": "tools/export/render-goldens.mjs",

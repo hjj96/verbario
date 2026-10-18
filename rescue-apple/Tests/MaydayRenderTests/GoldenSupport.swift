@@ -43,11 +43,23 @@ enum Goldens {
     return d
   }
 
-  /// Golden files of one directory (sorted relative paths with the given extension).
+  /// Golden files of one directory (sorted relative paths with the given extension). A directory that only
+  /// `render-goldens.mjs --browser` produces (scenes/, synthetic/) may be absent: the test skips then.
   static func list(_ dir: String, ext: String = "json") throws -> [String] {
     let base = try url(dir)
+    guard FileManager.default.fileExists(atPath: base.path) else {
+      throw XCTSkip("Tests/Goldens/\(dir) not found (run tools/export/render-goldens.mjs --browser)")
+    }
     let names = try FileManager.default.contentsOfDirectory(atPath: base.path).filter { $0.hasSuffix("." + ext) }.sorted()
     return names.map { dir + "/" + $0 }
+  }
+
+  /// `data(rel)` of a golden written by the `--browser` part of render-goldens.mjs: skips when absent.
+  static func browserData(_ rel: String) throws -> JSONValue {
+    guard FileManager.default.fileExists(atPath: try url(rel).path) else {
+      throw XCTSkip("Tests/Goldens/\(rel) not found (run tools/export/render-goldens.mjs --browser)")
+    }
+    return try data(rel)
   }
 }
 
