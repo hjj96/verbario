@@ -8,7 +8,7 @@
 //         right one — or both on the default locality when the pad has no per-handle actuators. A new
 //         effect replaces the running one (Chromium's playEffect does too). Engines are made per pad,
 //         restarted after a reset / stop and when the app returns to the foreground, dropped on disconnect.
-//   touch iPhone (PLAN §10 X9 — the web has no touch haptics): UIImpactFeedbackGenerator for the same rules
+//   touch iPhone (PLAN §10 X9 / X18 — the web has no touch haptics): UIImpactFeedbackGenerator for the same rules
 //         when the touch screen is the active device (strength ≥ 0.3: lighter rules are below what a
 //         phone's taptic engine conveys), intensity = strength × vibration, heavy for ≥ 300 ms effects; plus
 //         a light tap on every touch-control press.
@@ -20,6 +20,8 @@ import CoreHaptics
 import MaydayCore
 #if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
 #endif
 
 final class HapticsDriver {
@@ -65,7 +67,7 @@ final class HapticsDriver {
     #if os(iOS)
     let foreground = UIApplication.didBecomeActiveNotification
     #else
-    let foreground = NSNotification.Name("NSApplicationDidBecomeActiveNotification")
+    let foreground = NSApplication.didBecomeActiveNotification
     #endif
     observers.append(nc.addObserver(forName: foreground, object: nil, queue: .main) { [weak self] _ in
       for (_, e) in self?.engines ?? [:] { e.needsStart = true }
@@ -118,7 +120,7 @@ final class HapticsDriver {
 }
 
 #if os(iOS)
-/// iPhone touch haptics (PLAN §10 X9): HapticRules played through UIImpactFeedbackGenerator.
+/// iPhone touch haptics (PLAN §10 X9 / X18): HapticRules played through UIImpactFeedbackGenerator.
 final class TouchHaptics {
   /// Rules below this strength are not played on the phone.
   static let minStrength = 0.3

@@ -10,7 +10,7 @@
 //                       while flying (update / _setMode), Esc / Start → pause and the rAF pause poll that
 //                       resumes on the next pause press (_updatePlay, pause, resume, _startPausePoll),
 //                       ui:pause / ui:resume, heli:crash → 'crash' and CRASH_TO_DEBRIEF_S later a fresh
-//                       start (where the web opens the debrief screen; PLAN §10 X14).
+//                       start (where the web opens the debrief screen; PLAN §10 X16).
 // Both are checked against the web: Tests/Vectors/app/session_*.json records the stub World's pads and the
 // stub Mission's def as the web builds them (tools/export/export-app.mjs, harness `session` check).
 import Foundation

@@ -4,7 +4,7 @@
 //   * the helicopter: the web's stub airframe, BoxGeometry(3, 2, 10) #FF5A2A (stubs.js Helicopter), placed
 //     with the real Helicopter's body matrix (interpolated position, heading, pitch / bank springs) and
 //     casting the sun's shadow (the «shadow altimeter», DESIGN §2.7.2) — until MaydayRender's HeliRenderer
-//     draws the baked airframe (PLAN §2.9 heli/model.js row, M3 render-heli).
+//     draws the baked airframe (PLAN §2.9 heli/model.js row, M3 render-heli; §10 X20).
 // Transforms are plain values (`placements`) so the harness can check them without a GPU.
 import Foundation
 import Metal

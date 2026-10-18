@@ -41,7 +41,8 @@ public final class MMesh {
   }
 
   public let label: String
-  public let meta: MMeshMeta
+  public let info: MMeshInfo
+  public var meta: MMeshMeta { info.meta }
   public let vertexBuffer: MTLBuffer
   public let vertexCount: Int
   public let stride: Int
@@ -50,11 +51,11 @@ public final class MMesh {
   public let indexCount: Int
   public let ranges: [String: MeshRange]
   /// three geometry.boundingSphere (object space) — DrawItem culling input.
-  public let boundsCenter: SIMD3<Double>
-  public let boundsRadius: Double
+  public var boundsCenter: SIMD3<Double> { info.boundsCenter }
+  public var boundsRadius: Double { info.boundsRadius }
 
   public init(device: MTLDevice, file: MMeshFile, label: String) throws {
-    meta = try MMeshMeta(data: file.metaJSON)
+    info = try MMeshInfo(file: file)
     var elems: [Element] = []
     var off = 0
     for a in file.attributes {
@@ -97,8 +98,6 @@ public final class MMesh {
     indexBuffer = ib
     indexCount = file.indexCount
     ranges = rs
-    boundsCenter = SIMD3<Double>(Double(file.sphereCenter.x), Double(file.sphereCenter.y), Double(file.sphereCenter.z))
-    boundsRadius = Double(file.sphereRadius)
   }
 
   public func element(_ name: String) -> Element? { elements.first { $0.name == name } }

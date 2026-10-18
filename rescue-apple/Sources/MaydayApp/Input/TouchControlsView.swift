@@ -6,7 +6,7 @@
 // difference. Geometry and the stick / slider arithmetic: TouchLayout / TouchMapping (harness-checked
 // against the web class). Shown while flying with touch as the active device (TouchControls.update);
 // hidden, it lets every touch through to the game view (whose touchstart makes touch the active device).
-// Safe-area insets are added to the web's margins; a press plays a light tap (TouchHaptics, PLAN X9).
+// Safe-area insets are added to the web's margins (PLAN §10 X17); a press plays a light tap (TouchHaptics, X18).
 #if os(iOS)
 import UIKit
 import MaydayCore

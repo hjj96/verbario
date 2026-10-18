@@ -35,6 +35,12 @@ public final class HeliMeshes {
   public let heatPlume: MMesh
   public let flare: MMesh
   public let raftPack: MMesh
+  /// Every mesh by file stem.
+  public let byName: [String: MMesh]
+
+  public subscript(name: String) -> MMesh? { byName[name] }
+  /// The GPU-free view (meta + bounds) the planner works on.
+  public var infos: [String: MMeshInfo] { byName.mapValues { $0.info } }
 
   /// From the app bundle through the data catalog (bytes and sha256 checked against the manifest).
   public convenience init(device: MTLDevice, catalog: DataCatalog) throws {
@@ -70,6 +76,7 @@ public final class HeliMeshes {
     heatPlume = get("heli_heat_plume")
     flare = get("heli_flare")
     raftPack = get("heli_raft_pack")
+    byName = m
     // the per-frame shader inputs index these meshes' vertices directly
     guard cable.vertexCount == 2 * HeliShaderLayout.cablePoints else {
       throw RenderError.resource("heli_cable: \(cable.vertexCount) vertices, the cable shader expects \(2 * HeliShaderLayout.cablePoints)")

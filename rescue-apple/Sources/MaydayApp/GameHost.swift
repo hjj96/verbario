@@ -11,7 +11,7 @@
 //           renderer owns its targets), 60 fps (120 Hz is a later setting, PLAN X11).
 // Launch arguments (NSArgumentDomain, PLAN §2.8): -mayday.quality, -mayday.weather, -mayday.tod,
 // -mayday.persist NO (SettingsStore), -mayday.dynres NO, -mayday.debug YES|NO, -mayday.fps 60|120.
-// Debug controls (outside the game's bindings): ` (the game's `debug` action) / pad View+R3 — overlay;
+// Debug controls (outside the game's bindings, PLAN §10 X19): ` (the `debug` action) / pad View+R3 — overlay;
 // [ ] / View+LB / View+RB — weather preset; F2 / View+Y — quality; F5 / View+Menu — restart the flight;
 // the overlay's buttons on touch devices.
 //
@@ -54,6 +54,8 @@ final class GameHost: ObservableObject {
   @Published private(set) var overlay = OverlayInfo()
   @Published var showOverlay: Bool
   @Published private(set) var fatalMessage: String? = nil
+  /// ctx.mode == 'paused' (RootView shows the stand-in pause card until MaydayUI's PauseScreen, M4).
+  @Published private(set) var paused = false
 
   let pads = GamepadAdapter()
   private(set) var session: GameSession?
@@ -175,6 +177,9 @@ final class GameHost: ObservableObject {
   /// The touch pause button (touch.js: hud.emit('ui:pause')).
   func touchPause() { session?.events.emit(GameEvent.UiPause()) }
 
+  /// The pause card's «ПРОДОЛЖИТЬ» (ui/screens/pause.js: emit('ui:resume')).
+  func resume() { session?.events.emit(GameEvent.UiResume()) }
+
   private func screenScale(_ view: MTKView) -> Double {
     #if os(macOS)
     return Double(view.window?.backingScaleFactor ?? 2)
@@ -196,16 +201,21 @@ final class GameHost: ObservableObject {
       s.resize(width: w, height: h)
     }
 
+    // internal size first: post.js reads the drawing-buffer height during its update (uCA)
+    let ratio = s.pixelRatio(devicePixelRatio: screenScale(view), width: w, height: h)
+    let iw = max(1, Int((w * ratio).rounded(.down)))
+    let ih = max(1, Int((h * ratio).rounded(.down)))
+    s.post.bufferHeight = Double(ih)
+
     let t0 = CACurrentMediaTime()
     s.frame(nowMs: nowMs)
     if s.input.rawPressed(.debug) { showOverlay.toggle() }
+    let isPaused = s.loop.mode == .paused
+    if isPaused != paused { paused = isPaused }
     #if os(iOS)
     (view as? GameMTKView)?.touchControls?.setOn(TouchMapping.visible(mode: s.loop.mode, lastDevice: s.input.lastDevice))
     #endif
 
-    let ratio = s.pixelRatio(devicePixelRatio: screenScale(view), width: w, height: h)
-    let iw = max(1, Int((w * ratio).rounded(.down)))
-    let ih = max(1, Int((h * ratio).rounded(.down)))
     let pxScale = pts.width > 0 ? Float(view.drawableSize.width / pts.width) : Float(screenScale(view))
     var f = s.renderFrame(internalWidth: iw, internalHeight: ih, pxScale: pxScale)
     f.dynamicResolution = dynamicResolution

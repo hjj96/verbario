@@ -53,6 +53,7 @@ node rescue-apple/tools/export/export-vectors.mjs --only ocean,heli   # груп
 node rescue-apple/tools/export/export-core.mjs       # Tests/Vectors/{math/jsnumber,math/three_*,core/*,settings/*,input/*} (ядро: JSNumber, three, шина, цикл, настройки, ввод, вибрация)
 node rescue-apple/tools/export/export-sim.mjs        # Tests/Vectors/{weather,ocean}/run_*, endless*, gusts, lightning, sunrig, features (погода и океан по кадрам)
 node rescue-apple/tools/export/export-heli.mjs       # Tests/Vectors/heli/heli_*, camera/* (настоящие Helicopter и CameraRig на стабах; --only heli,camera)
+node rescue-apple/tools/export/export-app.mjs        # Tests/Vectors/app/* (слой приложения: boot + кадр main.js на настоящих системах с настоящим Input — session_flight; touch.js — touch)
 node rescue-apple/tools/export/export-browser.mjs     # Tests/Vectors/ocean/coast_<id>.json + .u8 (по умолчанию --missions 0,2)
 node rescue-apple/tools/export/verify.mjs             # разбор, обёртки, размеры, полнота и хеши manifest, сайдкары
 node rescue-apple/tools/export/verify.mjs --browser   # + сверка с живой игрой в Chromium, 0 ошибок консоли

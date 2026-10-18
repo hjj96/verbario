@@ -7,7 +7,7 @@
 //   lights   WeatherLights.state (sun + hemisphere + shadow box; MaydayRender LightRig packs it) and the
 //            heli's lamps: spot[0] = the searchlight SpotLight, point[0] = the belly PointLight
 //   env      WeatherEnv's bake decision with the palette sky (weather/env.js)
-//   ocean    OceanSim.uniforms after lateUpload() (Mesh.onBeforeRender), the coast map, water memory
+//   ocean    OceanSim.uniforms after the late upload (Mesh.onBeforeRender), the coast map, water memory
 //   post     PostFX: exposure, bloom, the FinalPass uniforms
 // Float conversions happen here, at the GPU boundary (D3).
 import Foundation
@@ -15,10 +15,9 @@ import simd
 import MaydayCore
 
 extension GameSession {
-  /// The frame to draw now. Runs ocean.lateUpload() first (values heli / survivors wrote after update).
+  /// The frame to draw now. Runs the ocean's late upload first (values heli / survivors wrote after update).
   func renderFrame(internalWidth: Int, internalHeight: Int, pxScale: Float) -> RenderFrame {
-    ocean.lateUpload()
-    post.bufferHeight = Double(internalHeight)
+    lateUpload()
     var f = RenderFrame(camera: renderCamera(), quality: quality, internalWidth: internalWidth, internalHeight: internalHeight)
     f.pxScale = pxScale
     f.realTime = loop.time.realT

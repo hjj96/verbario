@@ -12,8 +12,9 @@
 //            lights begin / maps / end (+ clearcoat accumulators) → uSunScale on ALL direct light →
 //            outgoingLight + clearcoat layering → fog. Tone mapping / colour space: dropped (HDR target, D10).
 // aSurf = (roughness, metalness, clearcoat weight, flags: 0 paint/metal, 1 decal, 2 glass + instruments).
-// Deviations (PLAN §10): the soot plume's pow(x, 2.0) with a possibly negative base → sq() (rule 2 / X12);
-// the decal atlas texel is fetched before the decal branch (rule 3: implicit LOD out of a branch).
+// Deviations (PLAN §10): X14 — the soot plume's pow(x, 2.0) with a possibly negative base → sq() (rule 2);
+// X15 — the livery atlas is a transparent placeholder until bake-canvas. Result-neutral: the decal texel is
+// fetched before the decal branch (rule 3: implicit LOD out of a branch).
 #include "../ShaderTypes.h"
 #include "../Common/Common.h"
 #include "../Common/ThreeVertex.h"

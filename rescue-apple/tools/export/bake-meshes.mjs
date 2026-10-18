@@ -18,7 +18,7 @@ import { gameImport, scopeOf } from './shims/loader.mjs';
 import path from 'node:path';
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { APPLE, REPO, gitInfo, writeManifest } from './lib/common.mjs';
+import { APPLE, REPO, gitInfo, writeManifest, writeWrapped, relSrc } from './lib/common.mjs';
 import { writeMMesh } from '../meshfmt/write.mjs';
 
 export const PRODUCER = 'tools/export/bake-meshes.mjs';
@@ -30,6 +30,7 @@ const { EventBus } = await gameImport('core/events.js');
 const { Helicopter } = await gameImport('systems/heli.js');
 const { ThermalView } = await gameImport('systems/post/thermal.js');
 const thermalScope = (await scopeOf('systems/post/thermal.js')).scope;
+const mathModule = await gameImport('core/math.js');
 // three's MeshPhysicalMaterial program text (only its #include tokens matter to the web's patches)
 const ShaderLib = (await import(pathToFileURL(path.join(REPO, 'rescue/vendor/three/three.module.min.js')).href)).ShaderLib;
 
@@ -164,22 +165,15 @@ function roleMap(h) {
   return roles;
 }
 
-/**
- * Every heli mesh as { name, objects, mesh (encodeMMesh input) } — also used by tools/meshfmt/verify.mjs
- * --web to compare the files with the live geometry.
- */
-export function heliMeshes() {
-  const hi = buildHeli('high');
-  const lo = buildHeli('low');
-  const { h } = hi;
+// The baked meshes and the web objects drawn with each (one file per geometry), construction order.
+function meshList(h, low) {
   const m = h.model;
-  const shared = new Set([...Object.values(hi.look.uniforms), ...Object.values(lo.look.uniforms)]);
-  const list = [
+  return [
     ['heli_hull', [m.hull]],
     ['heli_hub', [m.hub]],
     ['heli_lights', [m.lights]],
     ['heli_rotor_main', [m.rotor]],
-    ['heli_rotor_main_low', [lo.h.model.rotor], lo.h],
+    ['heli_rotor_main_low', [low.model.rotor], low],
     ['heli_rotor_tail', [m.tail]],
     ['heli_blades_shadow', [m.blades]],
     ['heli_float', m.floats],
@@ -195,10 +189,22 @@ export function heliMeshes() {
     ['heli_searchlight_cone', [h.searchlightCtl.cone]],
     ['heli_flare', h.flareMeshes],
     ['heli_raft_pack', h.raftMeshes],
-  ];
+  ].map(([name, objects, owner = h]) => ({ name, objects, owner }));
+}
+
+/**
+ * Every heli mesh as { name, objects, mesh (encodeMMesh input) } — also used by tools/meshfmt/verify.mjs
+ * --web to compare the files with the live geometry.
+ */
+export function heliMeshes() {
+  const hi = buildHeli('high');
+  const lo = buildHeli('low');
+  const { h } = hi;
+  const shared = new Set([...Object.values(hi.look.uniforms), ...Object.values(lo.look.uniforms)]);
+  const list = meshList(h, lo.h);
   const g = gitInfo();
   const out = [];
-  for (const [name, objects, owner = h] of list) {
+  for (const { name, objects, owner } of list) {
     const roles = roleMap(owner);
     const o0 = objects[0];
     for (const o of objects.slice(1)) {
@@ -239,6 +245,90 @@ function moduleOf(name) {
   return 'systems/heli/model.js';
 }
 
+// --------------------------------------------------------------------------------- transform vectors
+// Parity vector for MaydayRender's HeliTransforms: deterministic poses applied to the REAL web model the
+// way systems/heli.js _visuals, crewman.js, winch.js render(), searchlight.js and heli.js (flares, rafts)
+// write them, then three's scene.updateMatrixWorld(true); every baked object's matrixWorld is recorded.
+// The Swift check rebuilds each matrix from the baked chains + the recorded pose and compares bitwise.
+export const TRANSFORMS_VECTOR = path.join(APPLE, 'tools/meshfmt/vectors/heli_transforms.json');
+
+export function heliTransformVectors(poseCount = 6) {
+  const M = mathModule;
+  const rng = M.createRng(424242);
+  const r = (a, b) => a + (b - a) * rng.next();
+  const unitQuat = () => new THREE.Quaternion(r(-1, 1), r(-1, 1), r(-1, 1), r(-1, 1)).normalize();
+  const v3 = (s) => new THREE.Vector3(r(-s, s), r(0, s), r(-s, s));
+  const builds = { high: buildHeli('high'), low: buildHeli('low') };
+  const poses = [];
+  for (let k = 0; k < poseCount; k++) {
+    const P = {
+      position: v3(400), heading: r(-Math.PI, Math.PI), pitch: r(-0.4, 0.4), bank: r(-0.4, 0.4),
+      hubAngle: r(0, 200), shadowAngle: r(0, 300), floatScale: [r(0.3, 1), r(0.3, 1), r(0.6, 1)],
+      crewPosition: [1.12 - 0.55 * r(0, 1), -0.9, -0.9], crewArm: unitQuat(), crewHead: unitQuat(),
+      basketPosition: v3(300), basketQuaternion: unitQuat(), rescuerPosition: v3(300), rescuerQuaternion: unitQuat(),
+      conePosition: v3(300), coneQuaternion: unitQuat(), coneScale: [r(1, 20), r(5, 120), r(1, 20)],
+      flares: [v3(300), v3(300), v3(300), v3(300)],
+      rafts: [0, 1].map(() => ({ position: v3(300), spin: r(-20, 20) })),
+    };
+    const objects = {};
+    let rootMatrix = null, bodyMatrix = null;
+    for (const [q, { h, ctx }] of Object.entries(builds)) {
+      const m = h.model;
+      m.root.position.copy(P.position);
+      m.root.rotation.set(0, -P.heading, 0);
+      m.body.rotation.set(P.pitch, 0, -P.bank);
+      m.rotorPivot.rotation.set(P.pitch * 0.3, 0, -P.bank * 0.3);
+      m.hub.rotation.y = P.hubAngle;
+      m.blades.rotation.y = -P.shadowAngle;
+      for (const f of m.floats) f.scale.set(...P.floatScale);
+      h.crewman.group.position.set(...P.crewPosition);
+      h.crewman.arm.quaternion.copy(P.crewArm);
+      h.crewman.head.quaternion.copy(P.crewHead);
+      h.winchCtl.basketMesh.position.copy(P.basketPosition);
+      h.winchCtl.basketMesh.quaternion.copy(P.basketQuaternion);
+      h.winchCtl.rescuer.position.copy(P.rescuerPosition);
+      h.winchCtl.rescuer.quaternion.copy(P.rescuerQuaternion);
+      const cone = h.searchlightCtl.cone;
+      cone.position.copy(P.conePosition);
+      cone.quaternion.copy(P.coneQuaternion);
+      cone.scale.set(...P.coneScale);
+      h.flareMeshes.forEach((f, i) => f.position.copy(P.flares[i]));
+      h.raftMeshes.forEach((f, i) => {
+        const d = P.rafts[i];
+        f.position.copy(d.position);
+        f.rotation.set(d.spin * 0.7, d.spin, d.spin * 0.4);
+      });
+      ctx.scene.updateMatrixWorld(true);
+      if (q === 'high') {
+        rootMatrix = m.root.matrixWorld.elements.slice();
+        bodyMatrix = m.body.matrixWorld.elements.slice();
+      }
+      for (const { name, objects: objs } of meshList(h, builds.low.h)) {
+        if ((name === 'heli_rotor_main_low') !== (q === 'low')) continue;
+        objects[name] = objs.map((o) => o.matrixWorld.elements.slice());
+      }
+    }
+    poses.push({
+      pose: {
+        rootMatrix, bodyMatrix, pitch: P.pitch, bank: P.bank, hubAngle: P.hubAngle, shadowBladesAngle: -P.shadowAngle,
+        floatScale: P.floatScale, crewPosition: P.crewPosition, crewArm: vec(P.crewArm), crewHead: vec(P.crewHead),
+        basketPosition: vec(P.basketPosition), basketQuaternion: vec(P.basketQuaternion),
+        rescuerPosition: vec(P.rescuerPosition), rescuerQuaternion: vec(P.rescuerQuaternion),
+        conePosition: vec(P.conePosition), coneQuaternion: vec(P.coneQuaternion), coneScale: P.coneScale,
+        flares: P.flares.map(vec), rafts: P.rafts.map((d) => ({ position: vec(d.position), rotation: [d.spin * 0.7, d.spin, d.spin * 0.4] })),
+      },
+      matrixWorld: objects,
+    });
+  }
+  return {
+    setup: 'bake-meshes buildHeli(high | low); per pose: root.position / rotation (0, −heading, 0), body.rotation (pitch, 0, −bank), ' +
+      'rotorPivot.rotation (0.3·pitch, 0, −0.3·bank), hub.rotation.y, blades.rotation.y, floats.scale, crewman group position / arm / head ' +
+      'quaternion, basket / rescuer position + quaternion, cone position / quaternion / scale, flare positions, raft position + rotation ' +
+      '(0.7·spin, spin, 0.4·spin); scene.updateMatrixWorld(true). matrixWorld[mesh][object] = Matrix4.elements (column-major)',
+    poses,
+  };
+}
+
 // ------------------------------------------------------------------------------------------ main
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   console.warn = () => {};
@@ -255,5 +345,14 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   // a stale heli file from an older bake would ship unchecked: heli_* holds exactly what was baked
   for (const f of fs.readdirSync(outDir)) if (/^heli_.*\.mmesh$/.test(f) && !written.has(f)) fs.rmSync(path.join(outDir, f));
   if (outDir === MESH_DIR) writeManifest({ keepRevision: true }); // mesh entries only; the data's revision stamp stays
+  if (outDir === MESH_DIR) {
+    const v = writeWrapped(TRANSFORMS_VECTOR, {
+      schema: 'mayday.vectors.render.heli_transforms', version: 1, producer: PRODUCER,
+      files: ['systems/heli.js', 'systems/heli/model.js', 'systems/heli/crewman.js', 'systems/heli/winch.js', 'systems/heli/searchlight.js'].map(relSrc),
+      extra: { tolerance: { class: 'bitwise', note: 'every matrix element: Double.bitPattern equal (three Matrix4.compose / multiplyMatrices)' } },
+      data: heliTransformVectors(),
+    });
+    console.log(`vector ${v.path} ${v.bytes} B`);
+  }
   if (gitInfo().dirty) console.log('note: rescue/ is dirty — do not commit this bake (sourceDirty)');
 }

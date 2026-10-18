@@ -15,10 +15,32 @@ import MaydayShaderTypes
 var failures = 0
 func check(_ ok: Bool, _ msg: @autoclosure () -> String) { if !ok { failures += 1; print("FAIL:", msg()) } }
 
+/// Every Float of a fully initialised C uniform struct (MD*: zero-initialised, no Swift padding lanes) is finite.
 func allFinite<T>(_ v: T) -> Bool {
   var ok = true
   withUnsafeBytes(of: v) { raw in for f in raw.bindMemory(to: Float.self) where !f.isFinite { ok = false } }
   return ok
+}
+
+/// Names of the stored properties holding a non-finite Float / Double. For Swift structs (FinalInput, inputs):
+/// their raw bytes include SIMD3 padding lanes and alignment gaps with arbitrary contents.
+func nonFinite(_ v: Any) -> [String] {
+  var out: [String] = []
+  for c in Mirror(reflecting: v).children {
+    let bad: Bool
+    switch c.value {
+    case let x as Float: bad = !x.isFinite
+    case let x as Double: bad = !x.isFinite
+    case let x as SIMD2<Float>: bad = !(x.x.isFinite && x.y.isFinite)
+    case let x as SIMD3<Float>: bad = !(x.x.isFinite && x.y.isFinite && x.z.isFinite)
+    case let x as SIMD4<Float>: bad = !(x.x.isFinite && x.y.isFinite && x.z.isFinite && x.w.isFinite)
+    case let x as [SIMD4<Float>]: bad = x.contains { !($0.x.isFinite && $0.y.isFinite && $0.z.isFinite && $0.w.isFinite) }
+    case let x as [Float]: bad = x.contains { !$0.isFinite }
+    default: bad = false
+    }
+    if bad { out.append(c.label ?? "?") }
+  }
+  return out
 }
 
 let bundlePath = CommandLine.arguments[1]
@@ -53,7 +75,7 @@ for q in ["low", "medium", "high"] {
     check(s.quality.name == q, "\(q)/\(p): tier \(s.quality.name)")
     let u = OceanRenderer.pack(fr.ocean)
     check(allFinite(u), "\(q)/\(p): non-finite ocean uniform")
-    check(allFinite(fr.post.finalPass), "\(q)/\(p): non-finite final uniform")
+    check(nonFinite(fr.post.finalPass).isEmpty, "\(q)/\(p): non-finite final uniform \(nonFinite(fr.post.finalPass))")
     check(allFinite(LightRig.pack(fr.lights, shadowMapBound: true)), "\(q)/\(p): non-finite light uniform")
     check(u.uSplashCount >= 0 && u.uSplashCount <= 24, "splash count")
     let a = fr.ocean.waveA.prefix(s.quality.oceanWaves).map { $0.w }
@@ -83,6 +105,34 @@ for q in ["low", "medium", "high"] {
             "fog \(fr.fog.near)…\(fr.fog.far) env \(fr.environment.rebake) NDC (\(String(format: "%.3f", ndc.x)), \(String(format: "%.3f", ndc.y)))")
     }
   }
+}
+
+// ---- 1b. debug controls: quality / preset cycling and the restart keep the session sane ---------------------
+do {
+  let s = try GameSession(catalog: catalog, storage: MemoryStorage())
+  var tiers: [String] = []
+  for i in 0..<900 {
+    if i % 150 == 10 { s.cycleQuality(); tiers.append(s.quality.name) }
+    if i % 200 == 20 { s.cyclePreset(i % 400 == 20 ? 1 : -1) }
+    if i == 600 { s.mission.restart() }
+    s.input.setVirtualButton(.altPreset2, i % 300 >= 2 && i % 300 < 6)
+    s.step(frameDelta: 1.0 / 60.0)
+    let f = s.renderFrame(internalWidth: 1280, internalHeight: 720, pxScale: 2)
+    if !allFinite(OceanRenderer.pack(f.ocean)) || !nonFinite(f.post.finalPass).isEmpty {
+      var bad: [String] = []
+      withUnsafeBytes(of: OceanRenderer.pack(f.ocean)) { raw in
+        let fl = raw.bindMemory(to: Float.self)
+        for (k, x) in fl.enumerated() where !x.isFinite { bad.append("@\(k * 4)=\(String(x.bitPattern, radix: 16))") }
+      }
+      check(false, "debug cycling: non-finite frame \(i): ocean \(nonFinite(f.ocean)) packed \(bad.prefix(8)) final \(nonFinite(f.post.finalPass)) " +
+            "heli \(s.heli.position) quality \(s.quality.name) preset \(s.weather.state.preset) shoals \(f.ocean.shoals.count) feat \(f.ocean.featA.count) glints \(f.ocean.glints.count) splashes \(f.ocean.splashes.count)")
+      break
+    }
+  }
+  check(tiers == ["low", "medium", "high", "low", "medium", "high"], "quality cycle \(tiers)")
+  check(s.mission.runs == 2 && s.loop.disabled.isEmpty, "restart: runs \(s.mission.runs), disabled \(s.loop.disabled)")
+  check(s.ocean.cfg.grid == s.quality.oceanGridN, "ocean grid \(s.ocean.cfg.grid) vs tier \(s.quality.oceanGridN)")
+  print("debug cycling: tiers \(tiers), preset \(s.weather.state.preset), runs \(s.mission.runs)")
 }
 
 // ---- 2. parity with the web's session ----------------------------------------------------------------------

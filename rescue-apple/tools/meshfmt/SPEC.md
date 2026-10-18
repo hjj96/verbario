@@ -12,7 +12,8 @@ render flags, material parameters, thermal flags).
 | `tools/meshfmt/read.mjs` | decoder with full structural validation (`decodeMMesh`, `expandTriangles`) |
 | `tools/meshfmt/verify.mjs` | checks every `Resources/Meshes/*.mmesh`: structure, manifest sha256, and (`--web`) bit equality with the live web geometry; `--summary` feeds the Swift check |
 | `tools/meshfmt/check-loader.sh` | Linux check of the Swift parser (`Sources/MaydayRender/Mesh/MMeshFile.swift`) against the JS decoder |
-| `tools/export/bake-meshes.mjs` | builds the real web objects in Node and writes `Resources/Meshes/*.mmesh` + the manifest entries |
+| `tools/meshfmt/check-render.sh` | Linux run of `Sources/MaydayRender` (stubbed Metal) on the baked meshes: meta → materials, `HeliTransforms` vs three's `matrixWorld` (`vectors/heli_transforms.json`, bitwise), `HeliShaderTypes.h` ⇄ Swift layout numbers, a real Core `Helicopter` → snapshot → uniform blocks |
+| `tools/export/bake-meshes.mjs` | builds the real web objects in Node and writes `Resources/Meshes/*.mmesh`, the manifest entries (keeping the data's `webRevision`) and `tools/meshfmt/vectors/heli_transforms.json` |
 | `Sources/MaydayRender/Mesh/MMeshLoader.swift` | runtime: file → interleaved `MTLBuffer` + `MTLVertexDescriptor` |
 
 ## Byte layout

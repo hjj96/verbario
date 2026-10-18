@@ -121,3 +121,24 @@ public struct MMeshMeta {
     return chains[i].first { $0.role == role }
   }
 }
+
+/// What a planner needs of a baked mesh without its GPU buffers: the meta block and three's
+/// geometry.boundingSphere (object space, culling and sort input).
+public struct MMeshInfo {
+  public let meta: MMeshMeta
+  public let boundsCenter: SIMD3<Double>
+  public let boundsRadius: Double
+  public var name: String { meta.name }
+
+  public init(meta: MMeshMeta, boundsCenter: SIMD3<Double>, boundsRadius: Double) {
+    self.meta = meta
+    self.boundsCenter = boundsCenter
+    self.boundsRadius = boundsRadius
+  }
+
+  public init(file: MMeshFile) throws {
+    meta = try MMeshMeta(data: file.metaJSON)
+    boundsCenter = SIMD3<Double>(Double(file.sphereCenter.x), Double(file.sphereCenter.y), Double(file.sphereCenter.z))
+    boundsRadius = Double(file.sphereRadius)
+  }
+}

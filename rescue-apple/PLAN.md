@@ -1112,6 +1112,13 @@ let package = Package(
 | X11 | 60 fps по умолчанию, 120 Гц — опция | тепло и батарея, паритет поведения 60 Гц | Perf‑план |
 | X12 | `lookFront` и 14 мест `pow(x,2)` → `x*x` | UB в GLSL/MSL | W7 делает веб таким же |
 | X13 | Эталон CPU — Node (fdlibm), не Chromium (glibc) | лицензия и воспроизводимость | §5.2 |
+| X14 | `Heli/Hull.metal`: сажа выхлопа `exp(-pow(d, 2.0))` с возможно отрицательным `d` → `exp(-sq(d))` (как X12) | UB в GLSL/MSL | W7 делает веб таким же |
+| X15 | Деколи ливреи вертолёта (`uDecal`, heli/decals.js) — прозрачная заглушка, пока `bake-canvas` не даст `heli_livery.png` (при загрузке перевернуть строки, как `flipY`) | атлас рисуется canvas с Oswald в Chromium | `HeliRenderer(decal:)`; сверка «золотым» кадром после бейка |
+| X16 | Свободный полёт M3 (`MaydayApp/Session/FreeFlight.swift`): stubs.js Mission («Свободный полёт», площадка stubs.js World) плюс правила mission.js — ввод только в полёте, Esc/Start → пауза с rAF‑опросом, `ui:pause`, после `heli:crash` через `CRASH_TO_DEBRIEF_S` новый старт вместо дебрифинга | MissionDirector, World и экраны появятся в M4 | `Tests/Vectors/app/session_flight.json` (export-app.mjs; харнесс applecheck, побитово 78 полей × 2700 кадров, события, вибрация) |
+| X17 | Тач‑раскладка `.hud-touch`: к отступам прибавляются safe‑area insets; хит‑зоны меток фиксаторов 26 × 23 pt (в вебе — размер текста); контролы, скрытые посреди жеста, отпускают оси и кнопки | вырез и скругления iPhone; UIKit не измеряет DOM | `app/touch.json` (стик и слайдер touch.js); плейтест |
+| X18 | Вибрация: dual‑rumble → CoreHaptics (strong — левая рукоять, weak — правая, иначе оба события на default; новый эффект останавливает прежний). На iPhone правила `HapticRules` с силой ≥ 0,3 — `UIImpactFeedbackGenerator` (heavy от 300 мс) и лёгкий тап на тач‑кнопках, только при `lastDevice == touch` (уточнение X9) | у Apple нет `playEffect('dual-rumble')`; слабые правила телефон не передаёт | правила — `input/haptics.json`; запросы — `app/session_flight.json`; ощущение — ручной тест |
+| X19 | Отладка вне биндингов веба: `[ ]` — пресет погоды (6 с), F2 — качество, F5 — заново; геймпад: держать View + LB/RB, Y, R3, Menu (кнопки аккорда скрыты от игры); кнопки в оверлее на таче | в вебе это URL‑параметры и консоль | — |
+| X20 | До `HeliRenderer` вертолёт рисуется заглушкой stubs.js (BoxGeometry 3 × 2 × 10, #FF5A2A) на матрице корпуса настоящего `Helicopter`, с тенью | бейк мешей вертолёта (M3, render‑heli) | `SceneProps.placements` (харнесс) |
 
 ---
 

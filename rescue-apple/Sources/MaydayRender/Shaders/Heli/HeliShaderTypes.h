@@ -2,8 +2,10 @@
 // Hull (+ hub), Rotor (main + tail veil), Lights (bulbs + halos), Cone (searchlight shaft), Cable, Ring
 // (winch reach ring) and the heli props (hoist operator, basket, rescue swimmer, raft packs, flotation
 // bags, flare embers). Same rules as ShaderTypes.h (§3.4): float4 / float4x4 members only, a size assert
-// per struct. Swift mirrors them member for member in Heli/HeliShaderTypes.swift (MemoryLayout asserts the
-// same sizes at start-up), because the clang module MaydayShaderTypes only exports ShaderTypes.h.
+// per struct. Swift writes the blocks as float4 slots in member order (Heli/HeliShaderTypes.swift,
+// HeliMaterials.swift; slot counts trap on mismatch), because the clang module MaydayShaderTypes only
+// exports ShaderTypes.h; tools/meshfmt/check-render.sh compares every size / slot / index number below with
+// HeliShaderLayout.
 // Uniform names keep the GLSL names of rescue/src/systems/heli/materials.js and core/weathering.js.
 #ifndef MAYDAY_HELI_SHADER_TYPES_H
 #define MAYDAY_HELI_SHADER_TYPES_H

@@ -30,8 +30,7 @@ public struct HeliRenderSnapshot {
   /// settings quality 'low' → the 48-segment main disc (heli/model.js discSegs), else 72
   public var lowQuality: Bool
 
-  /// Copies the render-facing state of a Helicopter after its update(dt) (a freshly constructed one gives
-  /// the web's state right after `new Helicopter`: on its pad, rotor idle, winch stowed).
+  /// Copies the render-facing state of a Helicopter after its update(dt).
   public init(heli h: Helicopter, quality: String) {
     visual = h.visual
     let lc = h.lightsCtl

@@ -38,6 +38,8 @@ struct SessionOptions {
   var viewportHeight: Double = 720
   /// main.js `last = performance.now()` at boot: the clock the first frame's delta is measured from (ms)
   var startMs: Double = 0
+  /// Debug tap on every emit from the very first one (EventTrace / replay recorder, PLAN §2.4)
+  var eventTap: ((GameEvent) -> Void)?
 
   init() {}
 }
@@ -80,6 +82,7 @@ final class GameSession {
     let game = try catalog.data("game")
     rules = try LoopRules(game: game)
     events = EventBus()
+    events.onEmit = options.eventTap
     let derived = game["derived"]
     let initialMode = GameMode(rawValue: derived["ctx"]["initialMode"].string ?? "title") ?? .title
     loop = GameLoop(events: events, rules: rules, mode: initialMode, startMs: options.startMs)
@@ -187,6 +190,13 @@ final class GameSession {
   func step(frameDelta: Double) -> FramePlan {
     mission.pollWhilePaused()
     return loop.step(frameDelta: frameDelta)
+  }
+
+  /// ocean._lateUpload() as Mesh.onBeforeRender runs it: it reads ctx.heli live, so the heli input is
+  /// refreshed to this frame's (post-update) state first (OceanStep handed the ocean last frame's).
+  func lateUpload() {
+    ocean.heli = OceanHeliInput(position: heli.position, altitude: heli.altitude, alive: heli.alive, rotorRPM: heli.rotorRPM)
+    ocean.lateUpload()
   }
 
   /// ctx.time.realT in ms: the clock InputState's mouse events and the heli's "moved within 2 s" use.
