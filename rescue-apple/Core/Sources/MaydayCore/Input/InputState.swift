@@ -86,7 +86,8 @@ public final class InputState {
   /// Receives rumble() requests when the active pad can vibrate.
   public var rumbleSink: ((RumbleEffect) -> Void)?
 
-  private var axesValues: [InputAxis: Double] = [.moveX: 0, .moveY: 0, .lift: 0, .aimX: 0, .aimY: 0]
+  /// The axes as the last poll() left them, ignoring `enabled` (camera/freecam.js reads them raw).
+  public private(set) var axesValues: [InputAxis: Double] = [.moveX: 0, .moveY: 0, .lift: 0, .aimX: 0, .aimY: 0]
   private var buttons: [InputAction: Bool] = [:]
   private var prevButtons: [InputAction: Bool] = [:]
 
@@ -96,12 +97,18 @@ public final class InputState {
   }
 
   // ---- raw events (the web's DOM listeners) --------------------------------------------------------
-  /// keydown. `inTextField`: the event targets a text input (the web ignores those).
-  public func keyDown(_ code: String, isRepeat: Bool = false, inTextField: Bool = false) {
-    if inTextField { return }
+  /// Keys whose default action (page scroll, focus move) the web cancels on keydown.
+  public static let suppressedDefaultCodes: Set<String> = ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "PageUp", "PageDown"]
+
+  /// keydown. `inTextField`: the event targets a text input (the web ignores those). Returns true when
+  /// the platform's default handling of the key should be suppressed (the web's preventDefault).
+  @discardableResult
+  public func keyDown(_ code: String, isRepeat: Bool = false, inTextField: Bool = false) -> Bool {
+    if inTextField { return false }
     keys.insert(code)
     if !isRepeat { taps.insert(code) }
     lastDevice = .keyboard
+    return InputState.suppressedDefaultCodes.contains(code)
   }
 
   /// keyup

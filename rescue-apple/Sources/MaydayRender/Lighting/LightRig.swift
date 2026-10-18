@@ -40,7 +40,7 @@ public struct SunShadowInput {
 extension LightsInput {
   /// Sun, hemisphere and shadow from the rig (what WeatherLights leaves in the three lights).
   public mutating func apply(rig s: SunRigState, shadowOnlyLayer: Bool, shadows: Bool = true) {
-    let d = ThreeVec.normalize(V3(s.position.x - s.target.x, s.position.y - s.target.y, s.position.z - s.target.z))
+    let d = (s.position - s.target).normalized()   // WebGLLights: setFromMatrixPosition(light) − target, normalised
     sunDirection = SIMD3<Float>(Float(d.x), Float(d.y), Float(d.z))
     sunColor = LightRig.scaled(s.color, s.intensity)
     hemiSky = LightRig.scaled(s.hemiColor, s.hemiIntensity)

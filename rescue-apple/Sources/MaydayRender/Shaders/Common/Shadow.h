@@ -4,8 +4,8 @@
 // sampler, rotated per pixel by interleaved gradient noise). Sun settings: weather/lights.js
 // (bias −0.0004, normalBias 0.6, radius lerped per preset); MDLightsUniforms carries them.
 //
-// Not included by any family yet: the shadow pass lands in M2 (FramePass.shadow) and the receivers
-// (ocean `oShadow`, props, terrain) switch on with the MD_FC_SHADOWS function constant.
+// Receivers (ocean `oShadow`, Standard.metal; props / terrain later) switch it on with the MD_FC_SHADOWS
+// function constant; the depth pass is Lighting/ShadowDepth.metal (ShadowPass.swift).
 //
 // Conventions (PLAN §2.5 «Тени», «Конвенции координат») — the CPU builds
 //   MDLightsUniforms.shadowMatrix = B · lightProjMetal · lightView
@@ -48,6 +48,13 @@ inline float2 vogelDiskSample(int sampleIndex, int samplesCount, float phi) {
   return float2(cos(theta), sin(theta)) * r;
 }
 
+// One Vogel tap. The coordinate is in Metal texture space (v down, see the header comment), three's
+// disk offset is in GL uv (v up): the offset's v flips so every tap lands on the texel the web reads.
+inline float shadowTap(depth2d<float> shadowMap, sampler shadowSmp, float3 sc, int i, float phi, float radius) {
+  float2 o = vogelDiskSample(i, 5, phi) * radius;
+  return shadowMap.sample_compare(shadowSmp, sc.xy + float2(o.x, -o.y), sc.z, level(0.0f));
+}
+
 // getShadow(shadowMap, shadowMapSize, shadowIntensity, shadowBias, shadowRadius, shadowCoord).
 // fragCoordGLxy: gl_FragCoord.xy (fragCoordGL() in GL.h) so the noise rotation matches the web per pixel.
 inline float getShadow(depth2d<float> shadowMap, sampler shadowSmp, float2 shadowMapSize, float shadowIntensity,
@@ -61,11 +68,9 @@ inline float getShadow(depth2d<float> shadowMap, sampler shadowSmp, float2 shado
     float2 texelSize = float2(1.0f) / shadowMapSize;
     float radius = shadowRadius * texelSize.x;
     float phi = interleavedGradientNoise(fragCoordGLxy) * MD_PI2;
-    shadow = (shadowMap.sample_compare(shadowSmp, sc.xy + vogelDiskSample(0, 5, phi) * radius, sc.z, level(0.0f)) +
-              shadowMap.sample_compare(shadowSmp, sc.xy + vogelDiskSample(1, 5, phi) * radius, sc.z, level(0.0f)) +
-              shadowMap.sample_compare(shadowSmp, sc.xy + vogelDiskSample(2, 5, phi) * radius, sc.z, level(0.0f)) +
-              shadowMap.sample_compare(shadowSmp, sc.xy + vogelDiskSample(3, 5, phi) * radius, sc.z, level(0.0f)) +
-              shadowMap.sample_compare(shadowSmp, sc.xy + vogelDiskSample(4, 5, phi) * radius, sc.z, level(0.0f))) * 0.2f;
+    shadow = (shadowTap(shadowMap, shadowSmp, sc, 0, phi, radius) + shadowTap(shadowMap, shadowSmp, sc, 1, phi, radius) +
+              shadowTap(shadowMap, shadowSmp, sc, 2, phi, radius) + shadowTap(shadowMap, shadowSmp, sc, 3, phi, radius) +
+              shadowTap(shadowMap, shadowSmp, sc, 4, phi, radius)) * 0.2f;
   }
   return glMix(1.0f, shadow, shadowIntensity);
 }

@@ -50,6 +50,7 @@ node rescue-apple/tools/export/export-render.mjs      # Resources/Textures/dfg_l
 node rescue-apple/tools/export/export-data.mjs        # Resources/Data/*.json, manifest.json, Resources/Textures/*.rgba
 node rescue-apple/tools/export/export-vectors.mjs     # Tests/Vectors/** (Node)
 node rescue-apple/tools/export/export-vectors.mjs --only ocean,heli   # группы: math,look,palette,ocean,heli,mission,text
+node rescue-apple/tools/export/export-core.mjs       # Tests/Vectors/{math/jsnumber,math/three_*,core/*,settings/*,input/*} (ядро: JSNumber, three, шина, цикл, настройки, ввод, вибрация)
 node rescue-apple/tools/export/export-browser.mjs     # Tests/Vectors/ocean/coast_<id>.json + .u8 (по умолчанию --missions 0,2)
 node rescue-apple/tools/export/verify.mjs             # разбор, обёртки, размеры, полнота и хеши manifest, сайдкары
 node rescue-apple/tools/export/verify.mjs --browser   # + сверка с живой игрой в Chromium, 0 ошибок консоли
@@ -149,6 +150,13 @@ node rescue-apple/tools/export/verify.mjs --browser   # + сверка с жив
 | `mission/scoring.json` | Scorer по 4 сложностям (все STYLES, цепочки, once, неизвестный стиль), `breakdown`, 420 кейсов `medalsFor` | побитово |
 | `mission/prepare.json` | `prepareDef` для 9 операций, endless (сид 20261016) и title | побитово |
 | `text/ru_words.json` | числительные, плюрализация, стороны света, квадраты, часы, км (radio/words и mission/text) | побайтно |
+| `math/jsnumber.json` | `Math.round`, ToUint32/ToInt32, `%`, `String(n)`, `toFixed`, `parseFloat`/`parseInt`/`Number(s)` (V8) | побитово / побайтно |
+| `math/three_{utils,vector,quaternion,euler,matrix,color}.json` | three.js r185 из `rescue/vendor/three`: случайные и граничные входы, строка `[входы…, выходы…]`; все 6 порядков Euler; `Color.setStyle/getHexString/getStyle` | побитово |
+| `core/events.json` | сценарии `EventBus` (порядок, снимок при emit, `once`, `off` во время emit, повторный вход, `clear`) | точный журнал вызовов |
+| `core/loop.json` | `frame()` из `main.js` (вырезан acorn'ом) на заглушках: порядок систем, `RUN_WHEN_PAUSED`, кап 0,1, `timeScale`, пауза, прогрев, отключение упавшей системы; `pixelRatio()` | побитово |
+| `settings/settings.json` | `Settings` на заглушках localStorage/matchMedia/location: дефолты, миграция `assistExplicit`, первый запуск, `?quality=`, `set`/`onChange`, мусор в хранилище; `loadProgress`/`saveProgress` | строки побайтно, числа побитово |
+| `input/input.json` | `Input` на заглушках DOM/геймпадов: последовательности `poll()` (клавиатура, мышь, геймпад, тач, `enabled`, перепривязка на лету), `bindableCode`, `defaultKeys`, `applyBindings` | побитово |
+| `input/haptics.json` | `Haptics` (core/haptics.js) на заглушке ctx: все правила RULES, граничные payload, ворота режима, устройства и `vibration` (ToNumber) | побитово |
 
 Каждый файл содержит:
 

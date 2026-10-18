@@ -12,7 +12,8 @@
 #       Sources/MaydayRender  the Metal renderer: Swift + .metal → the app's default.metallib
 #       Sources/AppIOS | Sources/AppMac   platform entry point, Info.plist, privacy manifest
 #     and link the local package product MaydayCore.
-#   MaydayRenderTests          macOS unit tests hosted by Mayday-macOS (ShaderTypes layout, ocean self-test).
+#   MaydayRenderTests          macOS unit tests hosted by Mayday-macOS (ShaderTypes layout, ocean self-test,
+#                              render goldens vs the web: Tests/Goldens, tools/export/render-goldens.mjs).
 # MaydayAudio / MaydayUI / MaydayUITests join when their sources exist (M3 / M5).
 # Shaders: Sources/MaydayRender/Shaders/**/*.metal (MTL_FAST_MATH = NO, Metal 3.1 — Configs/Base.xcconfig,
 # pinned again in `settings` below); check after generating:
@@ -131,6 +132,11 @@ targets:
     platform: macOS
     sources:
       - path: Tests/MaydayRenderTests
+      # render-goldens.mjs output as one folder reference → <test bundle>/Resources/Goldens (the sandboxed
+      # macOS test host cannot read the source tree; GoldenSupport.swift looks here first)
+      - path: Tests/Goldens
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: Mayday-macOS
       # Build-only (not linked: the code lives in the host app, BUNDLE_LOADER resolves it). Without

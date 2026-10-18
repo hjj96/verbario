@@ -4,12 +4,11 @@
 // Core will use for worldToScreen / screenToWater / HUD — and only the GPU copy is multiplied by
 // glToMetal (z' = 0.5·z + 0.5·w). No reverse-Z (near 2, far 1200, depth32Float).
 // World: Y up, north = −Z, east = +X. Faces: CCW = front.
-// Parity: tan comes from MaydayCore.JS (fdlibm, = V8's Math.tan) and the vector steps of lookAt are
-// written out in three's operation order (Vector3.crossVectors, length = √(x²+y²+z²) summed left to
-// right, normalize = multiplyScalar(1 / (length || 1))) instead of simd_cross / simd_normalize, which
-// may fuse or use rsqrt on Apple. TODO(before Core uses it): move this file into MaydayCore with a
-// test vector exported from three's PerspectiveCamera (lookAt + updateProjectionMatrix; three also
-// round-trips the rotation through a quaternion, which this direct basis does not reproduce).
+// Parity: the camera follows three r185 step by step with MaydayCore's three math (V3 / Mat4 / Quat,
+// vector-tested): Object3D.lookAt (rotation basis → quaternion), updateMatrixWorld (compose) and
+// Camera.updateMatrixWorld's view rule (ShadowCamera.viewMatrix), PerspectiveCamera.updateProjectionMatrix
+// with fdlibm tan — so view / projection are the web's doubles (SunRigGoldenTests checks the same path on
+// the shadow camera). TODO(Core): move into MaydayCore with a PerspectiveCamera vector once Core needs it.
 import Foundation
 import simd
 import MaydayCore
@@ -50,8 +49,10 @@ public struct CameraMatrices {
     SIMD4<Double>(0, 0, 0.5, 1)))
 
   public init(camera c: CameraState, aspect: Double) {
-    cameraWorld = CameraMatrices.lookAtWorld(eye: c.position, target: c.target, up: c.up)
-    view = CameraMatrices.viewFromLookAt(world: cameraWorld, eye: c.position)
+    let eye = V3(c.position.x, c.position.y, c.position.z)
+    let world = CameraMatrices.lookAtWorld(eye: eye, target: V3(c.target.x, c.target.y, c.target.z), up: V3(c.up.x, c.up.y, c.up.z))
+    cameraWorld = CameraMatrices.toDouble(world)
+    view = CameraMatrices.toDouble(ShadowCamera.viewMatrix(world: world))
     projGL = CameraMatrices.perspectiveGL(fovDeg: c.fovDeg, aspect: aspect, near: c.near, far: c.far, zoom: c.zoom)
     projMetal = CameraMatrices.glToMetal * projGL
     viewProjMetal = projMetal * view
@@ -79,58 +80,22 @@ public struct CameraMatrices {
       SIMD4<Double>(0, 0, d, 0)))
   }
 
-  /// three Matrix4.lookAt(eye, target, up) as used by Object3D.lookAt for cameras, with the
-  /// camera position as translation (camera.matrixWorld for an unparented camera, scale 1).
-  public static func lookAtWorld(eye: SIMD3<Double>, target: SIMD3<Double>, up: SIMD3<Double>) -> simd_double4x4 {
-    var z = SIMD3<Double>(eye.x - target.x, eye.y - target.y, eye.z - target.z)
-    if lengthSq3(z) == 0 { z.z = 1 }
-    z = normalize3(z)
-    var x = cross3(up, z)
-    if lengthSq3(x) == 0 {
-      if Swift.abs(up.z) == 1 { z.x += 0.0001 } else { z.z += 0.0001 }
-      z = normalize3(z)
-      x = cross3(up, z)
-    }
-    x = normalize3(x)
-    let y = cross3(z, x)
-    return simd_double4x4(columns: (
-      SIMD4<Double>(x.x, x.y, x.z, 0),
-      SIMD4<Double>(y.x, y.y, y.z, 0),
-      SIMD4<Double>(z.x, z.y, z.z, 0),
-      SIMD4<Double>(eye.x, eye.y, eye.z, 1)))
+  /// camera.position.copy(eye); camera.lookAt(target); camera.updateMatrixWorld() for an unparented camera:
+  /// Matrix4.lookAt(position, target, up) → quaternion.setFromRotationMatrix → matrix.compose(position, q, 1).
+  public static func lookAtWorld(eye: V3, target: V3, up: V3) -> Mat4 {
+    var rot = Mat4()
+    rot.lookAt(eye, target, up)
+    var q = Quat()
+    q.setFromRotationMatrix(rot)
+    var m = Mat4()
+    m.compose(eye, q, V3(1, 1, 1))
+    return m
   }
 
-  /// three Vector3.lengthSq: x·x + y·y + z·z, left to right, no fused multiply-add.
-  @inline(__always) static func lengthSq3(_ v: SIMD3<Double>) -> Double {
-    let xx = v.x * v.x, yy = v.y * v.y, zz = v.z * v.z
-    return xx + yy + zz
-  }
-
-  /// three Vector3.normalize: divideScalar(length() || 1) = multiplyScalar(1 / (length || 1)).
-  @inline(__always) static func normalize3(_ v: SIMD3<Double>) -> SIMD3<Double> {
-    let len = JS.sqrt(lengthSq3(v))
-    let s = 1 / (len == 0 || len.isNaN ? 1 : len)
-    return SIMD3<Double>(v.x * s, v.y * s, v.z * s)
-  }
-
-  /// three Vector3.crossVectors(a, b), component by component.
-  @inline(__always) static func cross3(_ a: SIMD3<Double>, _ b: SIMD3<Double>) -> SIMD3<Double> {
-    let ayb = a.y * b.z, azb = a.z * b.y
-    let azx = a.z * b.x, axz = a.x * b.z
-    let axy = a.x * b.y, ayx = a.y * b.x
-    return SIMD3<Double>(ayb - azb, azx - axz, axy - ayx)
-  }
-
-  /// Inverse of a rigid camera matrix [R | eye]: [Rᵀ | −Rᵀ·eye].
-  public static func viewFromLookAt(world m: simd_double4x4, eye: SIMD3<Double>) -> simd_double4x4 {
-    let x = SIMD3<Double>(m.columns.0.x, m.columns.0.y, m.columns.0.z)
-    let y = SIMD3<Double>(m.columns.1.x, m.columns.1.y, m.columns.1.z)
-    let z = SIMD3<Double>(m.columns.2.x, m.columns.2.y, m.columns.2.z)
-    return simd_double4x4(columns: (
-      SIMD4<Double>(x.x, y.x, z.x, 0),
-      SIMD4<Double>(x.y, y.y, z.y, 0),
-      SIMD4<Double>(x.z, y.z, z.z, 0),
-      SIMD4<Double>(-simd_dot(x, eye), -simd_dot(y, eye), -simd_dot(z, eye), 1)))
+  /// Mat4 (three elements, column-major) → simd_double4x4.
+  public static func toDouble(_ m: Mat4) -> simd_double4x4 {
+    simd_double4x4(columns: (SIMD4<Double>(m[0], m[1], m[2], m[3]), SIMD4<Double>(m[4], m[5], m[6], m[7]),
+                             SIMD4<Double>(m[8], m[9], m[10], m[11]), SIMD4<Double>(m[12], m[13], m[14], m[15])))
   }
 
   /// Camera forward (world) = −third row of the view rotation = −(V[0][2], V[1][2], V[2][2]).

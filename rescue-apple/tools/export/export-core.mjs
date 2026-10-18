@@ -9,9 +9,10 @@
 //   core/loop.json              main.js frame() (the real function source, extracted with acorn)
 //   settings/settings.json      core/settings.js: defaults, migrations, first-run rules, set/onChange
 //   input/input.json            core/input.js: bindings, applyBindings, poll() sequences
+//   input/haptics.json          core/haptics.js: game events → gamepad rumble (mode / device / vibration gates)
 //
 // Same wrapper / numbers / determinism rules as export-vectors.mjs (see tools/README.md).
-// Usage: node rescue-apple/tools/export/export-core.mjs [--only jsnumber,three,events,loop,settings,input] [--out <dir>]
+// Usage: node rescue-apple/tools/export/export-core.mjs [--only jsnumber,three,events,loop,settings,input,haptics] [--out <dir>]
 import { gameImport } from './shims/loader.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -906,8 +907,59 @@ async function input() {
   });
 }
 
+// ================================================================================================ haptics
+// The real core/haptics.js Haptics on a stub ctx (events = the real EventBus, input.rumble recorded,
+// settings.get('vibration') scripted). Payloads are complete, as the game emits them (the port's
+// payloads are typed, so a field is never missing).
+//   step: ['emit', name, payload] | ['mode', m] | ['device', d] | ['vibration', v | null]
+async function haptics() {
+  const { Haptics } = await gameImport('core/haptics.js');
+  const { EventBus } = await gameImport('core/events.js');
+  const rumbles = [];
+  const ctx = {
+    events: new EventBus(), mode: 'play',
+    input: { lastDevice: 'gamepad', rumble: (s, d) => rumbles.push([num(s), num(d)]) },
+    vibration: 1,
+    settings: { get: (k) => (k === 'vibration' ? ctx.vibration : undefined) },
+  };
+  new Haptics(ctx);
+  const dmg = (amount) => ['emit', 'heli:damage', { amount, source: 'rogue', hull: 0.5 }];
+  const hit = (damage) => ['emit', 'hazard:hit', { type: 'rogue', damage, source: 'rogue' }];
+  const gust = (strength, harmless) => ['emit', 'weather:gust', { dir: [1, 0], strength, eta: 3, x: 10, z: -20, harmless }];
+  const bolt = (distance, cloudOnly) => ['emit', 'weather:lightning', { x: 0, z: 0, distance, strength: 1, cloudOnly }];
+  const all = [dmg(0), dmg(0.1), dmg(0.25), dmg(0.3), ['emit', 'heli:water-strike', { x: 1, z: 2, strength: 0.4 }], ['emit', 'heli:touchdown', { vy: -1.5 }],
+    ['emit', 'heli:land', { autorotation: false, vy: -0.5 }], ['emit', 'heli:land', { autorotation: true, vy: -3 }],
+    ['emit', 'heli:crash', { reason: 'water', x: 0, z: 0, onDeck: false }], ['emit', 'heli:capture', { survivor: 3 }],
+    ['emit', 'heli:pickup', { survivor: 3, person: 7 }], ['emit', 'heli:slip', { survivor: 3, reason: 'tension' }],
+    ['emit', 'heli:snag', { x: 1, z: 2, reason: 'wave' }], hit(0), hit(0.05), hit(0.13), hit(0.4),
+    gust(0, false), gust(5, false), gust(12, false), gust(15, false), gust(40, false), gust(20, true),
+    bolt(0, false), bolt(100, false), bolt(495, false), bolt(600, false), bolt(600.0000000000001, false), bolt(50, true), bolt(1e4, false),
+    ['emit', 'ui:click', { menu: 'controls' }]];
+  const steps = [...all,
+    ['vibration', 0.5], dmg(0.1), hit(0.4), bolt(100, false), ['vibration', 2], dmg(0.1), gust(12, false), ['vibration', 0], dmg(0.1),
+    ['vibration', -1], dmg(0.1), ['vibration', null], dmg(0.1), ['vibration', 'loud'], dmg(0.1), ['vibration', '0.5'], dmg(0.1),
+    ['vibration', ''], dmg(0.1), ['vibration', true], dmg(0.1), ['vibration', false], dmg(0.1), ['vibration', [0.25]], dmg(0.1), ['vibration', 1],
+    ['mode', 'paused'], dmg(0.1), ['mode', 'title'], ['emit', 'heli:crash', { reason: 'water', x: 0, z: 0, onDeck: false }], ['mode', 'play'],
+    ['device', 'keyboard'], dmg(0.1), ['device', 'touch'], dmg(0.1), ['device', 'gamepad'], dmg(0.1)];
+  const rows = steps.map((s) => {
+    switch (s[0]) {
+      case 'emit': ctx.events.emit(s[1], s[2]); break;
+      case 'mode': ctx.mode = s[1]; break;
+      case 'device': ctx.input.lastDevice = s[1]; break;
+      case 'vibration': ctx.vibration = s[1]; break;
+      default: throw new Error('bad haptics step ' + s[0]);
+    }
+    return { step: s, rumble: rumbles.splice(0) };
+  });
+  out('input', 'haptics', {
+    files: [relSrc('core/haptics.js')],
+    tolerance: { class: 'bitwise', note: 'rumble calls per step, [strength, duration] bit-exact (NaN == NaN)' },
+    data: { note: "steps run in order on one Haptics; step: ['emit', name, payload] | ['mode', m] | ['device', lastDevice] | ['vibration', settings value]; rumble: input.rumble(strength, ms) calls the step caused", rows },
+  });
+}
+
 // ===================================================================================================== run
-const GROUPS = { jsnumber, three, events, loop, settings, input };
+const GROUPS = { jsnumber, three, events, loop, settings, input, haptics };
 for (const [k, fn] of Object.entries(GROUPS)) {
   if (ONLY && !ONLY.has(k)) continue;
   const t0 = Date.now();

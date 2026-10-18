@@ -7,6 +7,8 @@
 // (layers main, plus shadowOnly on high) with depthPipeline(…) or their own depth functions.
 import Foundation
 import Metal
+import simd
+import MaydayCore
 import MaydayShaderTypes
 
 /// What a family needs to encode its shadow casters.
@@ -90,21 +92,30 @@ public final class ShadowPass {
   }
 
   static func metalViewProjection(_ cam: ShadowCamera) -> simd_float4x4 {
-    let glToMetal = ThreeMatrix4(elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1])
-    return ShadowPass.toFloat(ThreeMatrix4.multiply(glToMetal, cam.viewProjection))
+    var m = cam.viewProjection
+    m.premultiply(Mat4(1, 0, 0, 0,
+                       0, 1, 0, 0,
+                       0, 0, 0.5, 0.5,
+                       0, 0, 0, 1))                      // glToMetal: z' = 0.5·z + 0.5·w
+    return ShadowPass.toFloat(m)
   }
 
   /// Receiver matrix (MDLightsUniforms.shadowMatrix): three's shadow.matrix with v flipped to Metal
   /// texture rows (u, w − v, z, w): the same texel under the same world point (Common/Shadow.h).
   public static func receiverMatrix(_ cam: ShadowCamera) -> simd_float4x4 {
-    let flipV = ThreeMatrix4(elements: [1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
-    return ShadowPass.toFloat(ThreeMatrix4.multiply(flipV, cam.shadowMatrix))
+    var m = cam.shadowMatrix
+    m.premultiply(Mat4(1, 0, 0, 0,
+                       0, -1, 0, 1,
+                       0, 0, 1, 0,
+                       0, 0, 0, 1))
+    return ShadowPass.toFloat(m)
   }
 
-  static func toFloat(_ m: ThreeMatrix4) -> simd_float4x4 {
-    let e = m.e.map { Float($0) }
-    return simd_float4x4(columns: (SIMD4<Float>(e[0], e[1], e[2], e[3]), SIMD4<Float>(e[4], e[5], e[6], e[7]),
-                                   SIMD4<Float>(e[8], e[9], e[10], e[11]), SIMD4<Float>(e[12], e[13], e[14], e[15])))
+  static func toFloat(_ m: Mat4) -> simd_float4x4 {
+    simd_float4x4(columns: (SIMD4<Float>(Float(m[0]), Float(m[1]), Float(m[2]), Float(m[3])),
+                            SIMD4<Float>(Float(m[4]), Float(m[5]), Float(m[6]), Float(m[7])),
+                            SIMD4<Float>(Float(m[8]), Float(m[9]), Float(m[10]), Float(m[11])),
+                            SIMD4<Float>(Float(m[12]), Float(m[13]), Float(m[14]), Float(m[15]))))
   }
 
   /// Encodes the depth pass: clear to 1, then every caster family. Returns false when nothing was encoded.
@@ -126,7 +137,7 @@ public final class ShadowPass {
     let off = ring.push(ShadowPass.passUniforms(camera))
     enc.setVertexBuffer(ring.buffer, offset: off, index: Int(MD_BUF_PASS))
     // three Frustum from the shadow camera's projScreenMatrix (WebGL clip), in Double
-    let vp = camera.viewProjection.e
+    let vp = camera.viewProjection
     let frustum = Frustum(viewProjGL: simd_double4x4(columns: (SIMD4<Double>(vp[0], vp[1], vp[2], vp[3]),
                                                                SIMD4<Double>(vp[4], vp[5], vp[6], vp[7]),
                                                                SIMD4<Double>(vp[8], vp[9], vp[10], vp[11]),

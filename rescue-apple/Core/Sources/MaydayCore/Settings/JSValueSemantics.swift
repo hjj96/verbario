@@ -27,6 +27,20 @@ extension JSONValue {
     }
   }
 
+  /// ToNumber(value) (ECMAScript §7.1.4) — what arithmetic and `<=` against a number see: null → 0,
+  /// booleans → 0 / 1, strings → StringToNumber, arrays through their ToString ("" → 0,
+  /// [0.25] → 0.25, [1, 2] → NaN), objects → NaN.
+  public var jsToNumber: Double {
+    switch self {
+    case .null: return 0
+    case .bool(let b): return b ? 1 : 0
+    case .number(let d): return d
+    case .string(let s): return JSNumber.fromString(s)
+    case .array: return JSNumber.fromString(jsToString)
+    case .object: return .nan
+    }
+  }
+
   /// `a === b` for a value just handed over by a caller: primitives by value (NaN !== NaN, +0 === -0,
   /// strings by UTF-16 code units); an object or array is a fresh reference, never === anything.
   public func jsStrictEquals(_ other: JSONValue) -> Bool {

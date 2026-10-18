@@ -17,6 +17,25 @@ final class ShaderTypesLayoutTests: XCTestCase {
     XCTAssertEqual(MemoryLayout<MDOceanUniforms>.size, 2032)
     XCTAssertEqual(MemoryLayout<MDOutputUniforms>.size, 32)
     XCTAssertEqual(MemoryLayout<MDFinalUniforms>.size, 288)
+    XCTAssertEqual(MemoryLayout<MDStandardMaterial>.size, 48)
+    XCTAssertEqual(MemoryLayout<MDBloomUniforms>.size, 144)
+    XCTAssertEqual(MemoryLayout<MDBloomCompositeUniforms>.size, 128)
+    XCTAssertEqual(MemoryLayout<MDEnvSkyUniforms>.size, 80)
+    XCTAssertEqual(MemoryLayout<MDPmremUniforms>.size, 32)
+    XCTAssertEqual(MemoryLayout<MDShadowPassUniforms>.size, 64)
+    XCTAssertEqual(MemoryLayout<MDMemoryAdvectUniforms>.size, 64)
+    XCTAssertEqual(MemoryLayout<MDMemoryStamp>.size, 48)
+    XCTAssertEqual(MemoryLayout<MDMemoryStamp>.stride, 48)   // instance array element (stamp_vs reads [[instance_id]])
+  }
+
+  func testLightsOffsets() {
+    // MSL constant-buffer layout of MDLightsUniforms (16-byte rows; the shadow matrix 16-aligned)
+    XCTAssertEqual(MemoryLayout<MDLightsUniforms>.offset(of: \MDLightsUniforms.hemi), 32)
+    XCTAssertEqual(MemoryLayout<MDLightsUniforms>.offset(of: \MDLightsUniforms.spot), 80)
+    XCTAssertEqual(MemoryLayout<MDLightsUniforms>.offset(of: \MDLightsUniforms.point), 208)
+    XCTAssertEqual(MemoryLayout<MDLightsUniforms>.offset(of: \MDLightsUniforms.ambientEnv), 496)
+    XCTAssertEqual(MemoryLayout<MDLightsUniforms>.offset(of: \MDLightsUniforms.shadowMatrix), 512)
+    XCTAssertEqual(MemoryLayout<MDLightsUniforms>.offset(of: \MDLightsUniforms.shadowParams), 576)
   }
 
   func testOceanOffsets() {

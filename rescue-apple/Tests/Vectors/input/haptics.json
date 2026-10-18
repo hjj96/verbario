@@ -1,0 +1,212 @@
+{
+  "schema": "mayday.vectors.input.haptics",
+  "version": 1,
+  "source": "897fa86e5a87ec08b41cf7011e2e83f41feec11c",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/core/haptics.js"],
+  "producer": "tools/export/export-core.mjs",
+  "tolerance": {"class": "bitwise", "note": "rumble calls per step, [strength, duration] bit-exact (NaN == NaN)"},
+  "data": {
+    "note": "steps run in order on one Haptics; step: ['emit', name, payload] | ['mode', m] | ['device', lastDevice] | ['vibration', settings value]; rumble: input.rumble(strength, ms) calls the step caused",
+    "rows": [
+      {
+        "step": ["emit", "heli:damage", {"amount": 0, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.35, 220]]
+      },
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.65, 220]]
+      },
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.25, "source": "rogue", "hull": 0.5}],
+        "rumble": [[1, 220]]
+      },
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.3, "source": "rogue", "hull": 0.5}],
+        "rumble": [[1, 220]]
+      },
+      {
+        "step": ["emit", "heli:water-strike", {"x": 1, "z": 2, "strength": 0.4}],
+        "rumble": [[0.45, 160]]
+      },
+      {"step": ["emit", "heli:touchdown", {"vy": -1.5}], "rumble": [[0.25, 90]]},
+      {"step": ["emit", "heli:land", {"autorotation": false, "vy": -0.5}], "rumble": [[0.2, 120]]},
+      {"step": ["emit", "heli:land", {"autorotation": true, "vy": -3}], "rumble": [[0.7, 120]]},
+      {
+        "step": ["emit", "heli:crash", {"reason": "water", "x": 0, "z": 0, "onDeck": false}],
+        "rumble": [[1, 700]]
+      },
+      {"step": ["emit", "heli:capture", {"survivor": 3}], "rumble": [[0.2, 80]]},
+      {"step": ["emit", "heli:pickup", {"survivor": 3, "person": 7}], "rumble": [[0.3, 110]]},
+      {"step": ["emit", "heli:slip", {"survivor": 3, "reason": "tension"}], "rumble": [[0.5, 200]]},
+      {"step": ["emit", "heli:snag", {"x": 1, "z": 2, "reason": "wave"}], "rumble": [[0.6, 260]]},
+      {
+        "step": ["emit", "hazard:hit", {"type": "rogue", "damage": 0, "source": "rogue"}],
+        "rumble": [[0.5, 320]]
+      },
+      {
+        "step": ["emit", "hazard:hit", {"type": "rogue", "damage": 0.05, "source": "rogue"}],
+        "rumble": [[0.6, 320]]
+      },
+      {
+        "step": ["emit", "hazard:hit", {"type": "rogue", "damage": 0.13, "source": "rogue"}],
+        "rumble": [[0.76, 320]]
+      },
+      {
+        "step": ["emit", "hazard:hit", {"type": "rogue", "damage": 0.4, "source": "rogue"}],
+        "rumble": [[1, 320]]
+      },
+      {
+        "step": ["emit", "weather:gust", {"dir": [1, 0], "strength": 0, "eta": 3, "x": 10, "z": -20, "harmless": false}],
+        "rumble": [[0.26666666666666666, 260]]
+      },
+      {
+        "step": ["emit", "weather:gust", {"dir": [1, 0], "strength": 5, "eta": 3, "x": 10, "z": -20, "harmless": false}],
+        "rumble": [[0.16666666666666666, 260]]
+      },
+      {
+        "step": ["emit", "weather:gust", {"dir": [1, 0], "strength": 12, "eta": 3, "x": 10, "z": -20, "harmless": false}],
+        "rumble": [[0.4, 260]]
+      },
+      {
+        "step": ["emit", "weather:gust", {"dir": [1, 0], "strength": 15, "eta": 3, "x": 10, "z": -20, "harmless": false}],
+        "rumble": [[0.5, 260]]
+      },
+      {
+        "step": ["emit", "weather:gust", {"dir": [1, 0], "strength": 40, "eta": 3, "x": 10, "z": -20, "harmless": false}],
+        "rumble": [[0.5, 260]]
+      },
+      {
+        "step": ["emit", "weather:gust", {"dir": [1, 0], "strength": 20, "eta": 3, "x": 10, "z": -20, "harmless": true}],
+        "rumble": []
+      },
+      {
+        "step": ["emit", "weather:lightning", {"x": 0, "z": 0, "distance": 0, "strength": 1, "cloudOnly": false}],
+        "rumble": [[0.7, 240]]
+      },
+      {
+        "step": ["emit", "weather:lightning", {"x": 0, "z": 0, "distance": 100, "strength": 1, "cloudOnly": false}],
+        "rumble": [[0.5888888888888888, 240]]
+      },
+      {
+        "step": ["emit", "weather:lightning", {"x": 0, "z": 0, "distance": 495, "strength": 1, "cloudOnly": false}],
+        "rumble": [[0.15, 240]]
+      },
+      {
+        "step": ["emit", "weather:lightning", {"x": 0, "z": 0, "distance": 600, "strength": 1, "cloudOnly": false}],
+        "rumble": [[0.15, 240]]
+      },
+      {
+        "step": [
+          "emit",
+          "weather:lightning",
+          {"x": 0, "z": 0, "distance": 600.0000000000001, "strength": 1, "cloudOnly": false}
+        ],
+        "rumble": []
+      },
+      {
+        "step": ["emit", "weather:lightning", {"x": 0, "z": 0, "distance": 50, "strength": 1, "cloudOnly": true}],
+        "rumble": []
+      },
+      {
+        "step": ["emit", "weather:lightning", {"x": 0, "z": 0, "distance": 10000, "strength": 1, "cloudOnly": false}],
+        "rumble": []
+      },
+      {"step": ["emit", "ui:click", {"menu": "controls"}], "rumble": []},
+      {"step": ["vibration", 0.5], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.325, 220]]
+      },
+      {
+        "step": ["emit", "hazard:hit", {"type": "rogue", "damage": 0.4, "source": "rogue"}],
+        "rumble": [[0.5, 320]]
+      },
+      {
+        "step": ["emit", "weather:lightning", {"x": 0, "z": 0, "distance": 100, "strength": 1, "cloudOnly": false}],
+        "rumble": [[0.2944444444444444, 240]]
+      },
+      {"step": ["vibration", 2], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[1, 220]]
+      },
+      {
+        "step": ["emit", "weather:gust", {"dir": [1, 0], "strength": 12, "eta": 3, "x": 10, "z": -20, "harmless": false}],
+        "rumble": [[0.8, 260]]
+      },
+      {"step": ["vibration", 0], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": []
+      },
+      {"step": ["vibration", -1], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": []
+      },
+      {"step": ["vibration", null], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.65, 220]]
+      },
+      {"step": ["vibration", "loud"], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [["NaN", 220]]
+      },
+      {"step": ["vibration", "0.5"], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.325, 220]]
+      },
+      {"step": ["vibration", ""], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": []
+      },
+      {"step": ["vibration", true], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.65, 220]]
+      },
+      {"step": ["vibration", false], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": []
+      },
+      {"step": ["vibration", [0.25]], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.1625, 220]]
+      },
+      {"step": ["vibration", 1], "rumble": []},
+      {"step": ["mode", "paused"], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": []
+      },
+      {"step": ["mode", "title"], "rumble": []},
+      {
+        "step": ["emit", "heli:crash", {"reason": "water", "x": 0, "z": 0, "onDeck": false}],
+        "rumble": []
+      },
+      {"step": ["mode", "play"], "rumble": []},
+      {"step": ["device", "keyboard"], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": []
+      },
+      {"step": ["device", "touch"], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": []
+      },
+      {"step": ["device", "gamepad"], "rumble": []},
+      {
+        "step": ["emit", "heli:damage", {"amount": 0.1, "source": "rogue", "hull": 0.5}],
+        "rumble": [[0.65, 220]]
+      }
+    ]
+  }
+}

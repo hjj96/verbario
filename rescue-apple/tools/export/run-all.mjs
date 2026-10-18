@@ -2,7 +2,7 @@
 //
 //   node rescue-apple/tools/export/run-all.mjs                 render + data + vectors + verify (Node only, ~5 s)
 //   node rescue-apple/tools/export/run-all.mjs --browser       + coast maps from Chromium + live spot checks
-//   node rescue-apple/tools/export/run-all.mjs --only data     render | data | vectors | browser | verify
+//   node rescue-apple/tools/export/run-all.mjs --only data     render | data | vectors | core | browser | verify
 // render (three's DFG LUT) runs before data, whose manifest.json then hashes the fresh dfg_lut.rg16f.
 //
 // Each step is a separate Node process (the loader hooks and DOM shims stay per-process).
@@ -20,6 +20,7 @@ const steps = [
   ['render', ['export-render.mjs']],
   ['data', ['export-data.mjs']],
   ['vectors', ['export-vectors.mjs']],
+  ['core', ['export-core.mjs']], // core foundation: jsnumber, three math, events, loop, settings, input
   ['browser', ['export-browser.mjs'], true],
   ['verify', ['verify.mjs', ...(browser ? ['--browser'] : [])]],
 ];

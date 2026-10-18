@@ -7,7 +7,9 @@
 //   * the lightning swing: the key light snaps toward the strike for 0.3 s (+0.12 s fade);
 //   * the HemisphereLight: palette ambient / ambientGround, ×(1 + 3·flash).
 // Output is the light state three would render with; ShadowCamera turns it into the shadow matrices.
-// Bit-exact against the real WeatherLights (Tests/Goldens/lighting/sunrig.json, MaydayRenderTests).
+// Three's vector / matrix steps come from MaydayCore (Math/Three: V3, Mat4, Quat — three r185 operation
+// order, vector-tested). Bit-exact against the real WeatherLights and LightShadow.updateMatrices
+// (Tests/Goldens/lighting/sunrig.json, MaydayRenderTests/SunRigGoldenTests).
 // TODO(Core): PLAN places SunRig in MaydayCore/Weather; it lives here until WeatherSim is ported (it
 // only needs MaydayCore math), then moves verbatim.
 import Foundation
@@ -143,23 +145,21 @@ public final class SunRig {
     if let cf = camFocus, JS.hypot(cf.x - c.x, cf.z - c.z) > 160 { c = V3(cf.x, 0, cf.z) }
 
     // texel snapping in light space (axes of the shadow camera's lookAt basis)
-    var R = ThreeVec.cross(V3(0, 1, 0), dir)
-    if ThreeVec.lengthSq(R) < 1e-6 { R = V3(1, 0, 0) }
-    R = ThreeVec.normalize(R)
-    let U = ThreeVec.normalize(ThreeVec.cross(dir, R))
+    var R = V3.cross(V3(0, 1, 0), dir)
+    if R.lengthSq < 1e-6 { R = V3(1, 0, 0) }
+    R = R.normalized()
+    let U = V3.cross(dir, R).normalized()
     let texel = SunRig.BOX / Double(state.mapSize)
-    let r = ThreeVec.dot(c, R)
-    let u = ThreeVec.dot(c, U)
-    c = SunRig.addScaled(c, R, JS.round(r / texel) * texel - r)
-    c = SunRig.addScaled(c, U, JS.round(u / texel) * texel - u)
+    let r = c.dot(R)
+    let u = c.dot(U)
+    c.addScaled(R, JS.round(r / texel) * texel - r)
+    c.addScaled(U, JS.round(u / texel) * texel - u)
 
     state.target = c
-    state.position = SunRig.addScaled(c, dir, SunRig.DIST)
+    var p = c
+    p.addScaled(dir, SunRig.DIST)
+    state.position = p
     return state
-  }
-
-  @inline(__always) static func addScaled(_ a: V3, _ v: V3, _ s: Double) -> V3 {
-    V3(a.x + v.x * s, a.y + v.y * s, a.z + v.z * s)
   }
 
   /// THREE.Color.lerp: r += (target.r − r) · alpha (per channel).
@@ -168,22 +168,66 @@ public final class SunRig {
   }
 }
 
-/// three LightShadow.updateMatrices(light) for the sun's OrthographicCamera(−125, 125, 125, −125, 1, 940).
+/// three LightShadow.updateMatrices(light) for the sun's OrthographicCamera(−125, 125, 125, −125, 1, 940):
+/// the camera moves to the light's world position, lookAt(target) (Object3D.lookAt for cameras: rotation
+/// basis → quaternion), updateMatrixWorld (compose; matrixWorldInverse by r185's decompose rule), and
+/// shadow.matrix = bias × projection × matrixWorldInverse (WebGL coordinate system, no reversed depth).
 public struct ShadowCamera: Equatable {
-  public var projection: ThreeMatrix4         // shadow.camera.projectionMatrix (WebGL clip)
-  public var pose: ThreeCameraPose            // shadow.camera matrixWorld / matrixWorldInverse
-  public var viewProjection: ThreeMatrix4     // _projScreenMatrix = projection · matrixWorldInverse
-  public var shadowMatrix: ThreeMatrix4       // shadow.matrix = bias(0.5…) · _projScreenMatrix (three, GL uv)
+  public var projection: Mat4          // shadow.camera.projectionMatrix (WebGL clip)
+  public var quaternion: Quat          // shadow.camera.quaternion
+  public var matrixWorld: Mat4         // shadow.camera.matrixWorld
+  public var matrixWorldInverse: Mat4  // shadow.camera.matrixWorldInverse
+  public var viewProjection: Mat4      // _projScreenMatrix = projection · matrixWorldInverse
+  public var shadowMatrix: Mat4        // shadow.matrix = bias(0.5 …) · _projScreenMatrix (three, GL uv)
 
   public init(position: V3, target: V3) {
-    let half = SunRig.BOX / 2
-    projection = ThreeMatrix4.orthographicCamera(left: -half, right: half, top: half, bottom: -half,
-                                                 near: SunRig.CAMERA_NEAR, far: SunRig.CAMERA_FAR)
-    pose = ThreeCameraPose(position: position, target: target)
-    viewProjection = ThreeMatrix4.multiply(projection, pose.matrixWorldInverse)
-    let bias = ThreeMatrix4(elements: [0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0.5, 0.5, 0.5, 1])
-    shadowMatrix = ThreeMatrix4.multiply(bias, viewProjection)
+    projection = ShadowCamera.projection(left: -SunRig.BOX / 2, right: SunRig.BOX / 2, top: SunRig.BOX / 2,
+                                         bottom: -SunRig.BOX / 2, near: SunRig.CAMERA_NEAR, far: SunRig.CAMERA_FAR)
+    var rot = Mat4()
+    rot.lookAt(position, target, V3(0, 1, 0))     // isCamera: _m1.lookAt(_position, _target, up)
+    var q = Quat()
+    q.setFromRotationMatrix(rot)
+    quaternion = q
+    var world = Mat4()
+    world.compose(position, q, V3(1, 1, 1))
+    matrixWorld = world
+    matrixWorldInverse = ShadowCamera.viewMatrix(world: world)
+    var vp = Mat4()
+    vp.multiplyMatrices(projection, matrixWorldInverse)
+    viewProjection = vp
+    var sm = Mat4(0.5, 0, 0, 0.5,
+                  0, 0.5, 0, 0.5,
+                  0, 0, 0.5, 0.5,
+                  0, 0, 0, 1)
+    sm.multiply(vp)
+    shadowMatrix = sm
   }
 
   public init(_ s: SunRigState) { self.init(position: s.position, target: s.target) }
+
+  /// r185 Camera.updateMatrixWorld: matrixWorld.decompose(p, q, s); s exactly (1, 1, 1) → inverse of
+  /// matrixWorld, else the inverse of compose(p, q, (1, 1, 1)) — a camera's view never carries scale. A
+  /// matrix composed from a unit quaternion usually decomposes to a scale a few ulp off 1 (second path).
+  static func viewMatrix(world: Mat4) -> Mat4 {
+    let d = world.decompose()
+    var m = world
+    if !(d.scale.x == 1 && d.scale.y == 1 && d.scale.z == 1) {
+      m = Mat4()
+      m.compose(d.position, d.quaternion, V3(1, 1, 1))
+    }
+    m.invert()
+    return m
+  }
+
+  /// OrthographicCamera.updateProjectionMatrix() (zoom 1, no view offset).
+  static func projection(left: Double, right: Double, top: Double, bottom: Double, near: Double, far: Double) -> Mat4 {
+    let zoom = 1.0
+    let dx = (right - left) / (2 * zoom)
+    let dy = (top - bottom) / (2 * zoom)
+    let cx = (right + left) / 2
+    let cy = (top + bottom) / 2
+    var m = Mat4()
+    m.makeOrthographic(cx - dx, cx + dx, cy + dy, cy - dy, near, far)
+    return m
+  }
 }

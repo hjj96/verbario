@@ -3,8 +3,10 @@
 // quality) covering MEMORY_EXTENT = 320 m around the camera focus, re-centred by whole texels.
 // update(): advect (wind drift + feature swirl, per-channel half-lives 3 / 240 / 0.8 / 600 s, dye
 // diffusion) then the frame's instanced stamps (One/One additive), then swap — like WaterMemory.update.
-// The CPU part of that method (texel snapping, decay factors) is reproduced here in Double with JS math;
-// the stamp queue (WaterMemoryInput) carries WaterMemory.push and Ocean.stamp's vocabulary.
+// The CPU part of that method (texel snapping, decay factors) is WaterMemoryWindow, in Double with JS math;
+// the stamp queue (WaterMemoryInput) carries WaterMemory.push and the ocean.js writers (stamp, splash,
+// addWake, _autoStamps). Both are checked against the real memory.js / ocean.js (Tests/Goldens/ocean/
+// memory.json, WaterMemoryGoldenTests).
 // TODO(Core): PLAN puts the queue in MaydayCore (WaterMemoryQueue); WaterMemoryInput is its render
 // snapshot until OceanSim is ported.
 import Foundation
@@ -54,6 +56,35 @@ public struct WaterMemoryInput {
 
   public mutating func removeAllStamps() { stamps.removeAll(keepingCapacity: true) }
 
+  /// Ocean.splash(x, z, radius, strength): its two memory stamps (the analytic splash ring is OceanSim's).
+  public mutating func splash(x: Double, z: Double, radius: Double = 2, strength: Double = 1) {
+    push(.ring, x: x, z: z, radius: radius * 2.2, strength: 0.6 * strength, foam: 0.7, dye: 0, disturbance: 1, oil: 0, inner: 0.6)
+    push(.disc, x: x, z: z, radius: radius * 1.1, strength: 0.8 * strength, foam: 0.8, dye: 0, disturbance: 0.8, oil: 0)
+  }
+
+  /// Ocean.addWake(x, z, strength, dirX, dirZ): a faint V per frame (stamps add up to a Kelvin wake), or a
+  /// foam disc without a direction. `dt` = ctx.time.dt (nothing while paused).
+  public mutating func addWake(x: Double, z: Double, strength: Double = 1, dirX: Double? = nil, dirZ: Double? = nil, dt: Double) {
+    guard dt > 0 else { return }
+    let s = MathUtil.clamp(strength, 0, 3)
+    if let dx = dirX, let dz = dirZ, dx.isFinite, dz.isFinite, JSNumber.isTruthy(dx) || JSNumber.isTruthy(dz) {
+      let l = JS.hypot(dx, dz)
+      push(.wake, x: x, z: z, radius: 8 + 6 * s, strength: 0.35 * s * dt, foam: 1, dye: 0, disturbance: 1, oil: 0,
+           inner: 0, dirX: dx / l, dirZ: dz / l)
+    } else {
+      push(.disc, x: x, z: z, radius: 0.8 + 1.2 * s, strength: 1.2 * s * dt, foam: 1, dye: 0, disturbance: 1, oil: 0)
+    }
+  }
+
+  /// Ocean._autoStamps(dt): the rotor downwash's continuous ring + disturbance disc (features.downwash
+  /// = x, z, radius, strength; only above strength 0.01).
+  public mutating func autoStamps(downwash d: SIMD4<Double>, dt: Double) {
+    guard d.w > 0.01 else { return }
+    let s = d.w
+    push(.ring, x: d.x, z: d.y, radius: d.z * 1.15, strength: 0.18 * s * dt, foam: 1, dye: 0, disturbance: 0.6, oil: 0, inner: 0.82)
+    push(.disc, x: d.x, z: d.y, radius: d.z * 0.9, strength: 1.6 * s * dt, foam: 0, dye: 0, disturbance: 1, oil: 0)
+  }
+
   /// Ocean.stamp(kind, x, z, opts) with the memory present: 'foam' | 'dye' | 'disturb' | 'oil' | 'scar' |
   /// 'ring' | 'wake' | 'splash' (unknown kinds are ignored). radius default 3, strength 1, inner 0.75.
   public mutating func stamp(_ kind: String, x: Double, z: Double, radius r: Double = 3, strength s: Double = 1,
@@ -83,22 +114,58 @@ public struct WaterMemoryInput {
   }
 }
 
+/// The CPU half of WaterMemory.update (memory.js): the window re-centred by whole texels on the focus, and
+/// the advect uniforms of one step (shift, per-channel decay, dye diffusion). Double with JS math.
+public struct WaterMemoryWindow: Equatable {
+  public let size: Int
+  public let extent: Double
+  public let texel: Double
+  public private(set) var centerInit = false
+  /// Window centre (snapped), world x / z — ocean uMemWin.xy.
+  public private(set) var center = SIMD2<Double>(0, 0)
+
+  public init(size: Int, extent: Double = WaterMemoryPass.EXTENT) {
+    self.size = size
+    self.extent = extent
+    texel = extent / Double(size)
+  }
+
+  /// One update(dt, focusX, focusZ, windX, windZ) step: the advect uniforms; the centre moves to the focus.
+  public mutating func advance(dt: Double, focus: SIMD2<Double>, wind: SIMD2<Double>) -> MDMemoryAdvectUniforms {
+    let nx = JS.round(focus.x / texel) * texel
+    let nz = JS.round(focus.y / texel) * texel
+    if !centerInit {
+      center = SIMD2<Double>(nx, nz)
+      centerInit = true
+    }
+    var u = MDMemoryAdvectUniforms()
+    u.shiftCenter = SIMD4<Float>(Float((nx - center.x) / extent), Float((nz - center.y) / extent), Float(nx), Float(nz))
+    u.extentDtWind = SIMD4<Float>(Float(extent), Float(dt), Float(wind.x), Float(wind.y))
+    let h = WaterMemoryPass.HALF_LIFE
+    u.uDecay = SIMD4<Float>(Float(JS.pow(0.5, dt / h[0])), Float(JS.pow(0.5, dt / h[1])),
+                            Float(JS.pow(0.5, dt / h[2])), Float(JS.pow(0.5, dt / h[3])))
+    u.texelDiffuse = SIMD4<Float>(Float(1 / Double(size)), Float(1 / Double(size)), Float(JS.min(1, dt * 0.6)), 0)
+    center = SIMD2<Double>(nx, nz)
+    return u
+  }
+}
+
 public final class WaterMemoryPass {
   public static let EXTENT: Double = 320                       // ocean.js MEMORY_EXTENT
   public static let HALF_LIFE: [Double] = [3, 240, 0.8, 600]   // memory.js HALF_LIFE (R, G, B, A)
   public static let format: MTLPixelFormat = .rgba16Float
 
   public let size: Int
-  public let texel: Double
+  public var texel: Double { win.texel }
   private let rd: RenderDevice
   private let cache: PipelineCache
   private let look: LookResources
   private var read: MTLTexture
   private var write: MTLTexture
   private var needsClear = true
-  private var centerInit = false
+  private var win: WaterMemoryWindow
   /// Window centre (snapped), world x / z — ocean uMemWin.xy.
-  public private(set) var center = SIMD2<Double>(0, 0)
+  public var center: SIMD2<Double> { win.center }
 
   /// The texture the ocean samples (the last written target).
   public var texture: MTLTexture { read }
@@ -108,7 +175,7 @@ public final class WaterMemoryPass {
     self.cache = cache
     self.look = look
     self.size = size
-    texel = WaterMemoryPass.EXTENT / Double(size)
+    win = WaterMemoryWindow(size: size)
     func make(_ label: String) throws -> MTLTexture {
       let d = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: WaterMemoryPass.format, width: size, height: size, mipmapped: false)
       d.usage = [.renderTarget, .shaderRead]
@@ -148,22 +215,6 @@ public final class WaterMemoryPass {
     return (advect, stamp)
   }
 
-  /// WaterMemory.update's CPU part: snapped centre, shift (whole texels / extent), decay, diffusion.
-  public func advectUniforms(dt: Double, focus: SIMD2<Double>, wind: SIMD2<Double>) -> (MDMemoryAdvectUniforms, SIMD2<Double>) {
-    let nx = JS.round(focus.x / texel) * texel
-    let nz = JS.round(focus.y / texel) * texel
-    let old = centerInit ? center : SIMD2<Double>(nx, nz)
-    let ext = WaterMemoryPass.EXTENT
-    var u = MDMemoryAdvectUniforms()
-    u.shiftCenter = SIMD4<Float>(Float((nx - old.x) / ext), Float((nz - old.y) / ext), Float(nx), Float(nz))
-    u.extentDtWind = SIMD4<Float>(Float(ext), Float(dt), Float(wind.x), Float(wind.y))
-    let h = WaterMemoryPass.HALF_LIFE
-    u.uDecay = SIMD4<Float>(Float(JS.pow(0.5, dt / h[0])), Float(JS.pow(0.5, dt / h[1])),
-                            Float(JS.pow(0.5, dt / h[2])), Float(JS.pow(0.5, dt / h[3])))
-    u.texelDiffuse = SIMD4<Float>(Float(1 / Double(size)), Float(1 / Double(size)), Float(JS.min(1, dt * 0.6)), 0)
-    return (u, SIMD2<Double>(nx, nz))
-  }
-
   /// Encodes this frame's memory update. `oceanOffset`: the frame's MDOceanUniforms in the ring (feature
   /// flow for the advection). No-op while dt ≤ 0 (ocean.js: `if (this.memory && dt > 0)`), except a clear.
   public func encode(_ cb: MTLCommandBuffer, input: WaterMemoryInput, ring: FrameRing, oceanOffset: Int) throws {
@@ -183,10 +234,7 @@ public final class WaterMemoryPass {
       needsClear = false
     }
     guard input.dt > 0 else { return }
-    let (u, next) = advectUniforms(dt: input.dt, focus: input.focus, wind: input.wind)
-    centerInit = true
-    center = next
-    let off = ring.push(u)
+    let off = ring.push(win.advance(dt: input.dt, focus: input.focus, wind: input.wind))
     let rp = MTLRenderPassDescriptor()
     rp.colorAttachments[0].texture = write
     rp.colorAttachments[0].loadAction = .dontCare        // the advect triangle covers every texel

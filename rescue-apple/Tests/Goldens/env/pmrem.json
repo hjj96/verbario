@@ -1,0 +1,184 @@
+{
+  "schema": "mayday.goldens.env.pmrem",
+  "version": 1,
+  "source": "897fa86e5a87ec08b41cf7011e2e83f41feec11c",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/vendor/three (PMREMGenerator r185)", "rescue/src/systems/weather/env.js"],
+  "producer": "tools/export/render-goldens.mjs",
+  "tolerance": {
+    "class": "bitwise",
+    "note": "compare Double.bitPattern (Float values: Float(js) == swift Float); report index, both values and ulp distance on mismatch"
+  },
+  "data": {
+    "size": 128,
+    "lodMax": 7,
+    "cubeSize": 128,
+    "width": 384,
+    "height": 512,
+    "defines": {
+      "GGX_SAMPLES": 256,
+      "CUBEUV_TEXEL_WIDTH": 0.0026041666666666665,
+      "CUBEUV_TEXEL_HEIGHT": 0.001953125,
+      "CUBEUV_MAX_MIP": "7.0"
+    },
+    "sizeLods": [128, 64, 32, 16, 16, 16, 16, 16, 16, 16],
+    "uvRange": [
+      [-0.007936508394777775, 1.0079364776611328],
+      [-0.016129031777381897, 1.0161290168762207],
+      [-0.03333333507180214, 1.0333333015441895],
+      [-0.0714285746216774, 1.0714285373687744],
+      [-0.0714285746216774, 1.0714285373687744],
+      [-0.0714285746216774, 1.0714285373687744],
+      [-0.0714285746216774, 1.0714285373687744],
+      [-0.0714285746216774, 1.0714285373687744],
+      [-0.0714285746216774, 1.0714285373687744],
+      [-0.0714285746216774, 1.0714285373687744]
+    ],
+    "passes": [
+      {
+        "lod": 1,
+        "roughness": 0.015432098765432098,
+        "mipInt": 7,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [0, 256, 192, 128]
+      },
+      {
+        "lod": 1,
+        "roughness": 0,
+        "mipInt": 6,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [0, 256, 192, 128]
+      },
+      {
+        "lod": 2,
+        "roughness": 0.053458358258298685,
+        "mipInt": 6,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [0, 384, 96, 64]
+      },
+      {
+        "lod": 2,
+        "roughness": 0,
+        "mipInt": 5,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [0, 384, 96, 64]
+      },
+      {
+        "lod": 3,
+        "roughness": 0.10352166562499025,
+        "mipInt": 5,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [0, 448, 48, 32]
+      },
+      {
+        "lod": 3,
+        "roughness": 0,
+        "mipInt": 4,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [0, 448, 48, 32]
+      },
+      {
+        "lod": 4,
+        "roughness": 0.1633179821644809,
+        "mipInt": 4,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [48, 448, 48, 32]
+      },
+      {
+        "lod": 4,
+        "roughness": 0,
+        "mipInt": 3,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [48, 448, 48, 32]
+      },
+      {
+        "lod": 5,
+        "roughness": 0.23148148148148154,
+        "mipInt": 3,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [96, 448, 48, 32]
+      },
+      {
+        "lod": 5,
+        "roughness": 0,
+        "mipInt": 2,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [96, 448, 48, 32]
+      },
+      {
+        "lod": 6,
+        "roughness": 0.30709488799587026,
+        "mipInt": 2,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [144, 448, 48, 32]
+      },
+      {
+        "lod": 6,
+        "roughness": 0,
+        "mipInt": 1,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [144, 448, 48, 32]
+      },
+      {
+        "lod": 7,
+        "roughness": 0.38948856370752977,
+        "mipInt": 1,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [192, 448, 48, 32]
+      },
+      {
+        "lod": 7,
+        "roughness": 0,
+        "mipInt": 0,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [192, 448, 48, 32]
+      },
+      {
+        "lod": 8,
+        "roughness": 0.47814609212437237,
+        "mipInt": 0,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [240, 448, 48, 32]
+      },
+      {
+        "lod": 8,
+        "roughness": 0,
+        "mipInt": -1,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [240, 448, 48, 32]
+      },
+      {
+        "lod": 9,
+        "roughness": 0.5726535591135641,
+        "mipInt": -1,
+        "source": "cubeUV",
+        "target": "pingPong",
+        "viewport": [288, 448, 48, 32]
+      },
+      {
+        "lod": 9,
+        "roughness": 0,
+        "mipInt": -2,
+        "source": "pingPong",
+        "target": "cubeUV",
+        "viewport": [288, 448, 48, 32]
+      }
+    ]
+  }
+}

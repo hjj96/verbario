@@ -13,6 +13,7 @@ final class OceanSelftestTests: XCTestCase {
   }
 
   private func run(preset: String, quality: String) throws -> (p99: Double, max: Double, dampErr: Double) {
+    _ = try requireMetalDevice()
     let data = try DataBundle()
     let sim = try BootstrapSim(data: data, qualityName: quality, presetName: preset)
     let renderer = try Renderer(texturesDirectory: data.texturesDirectory, oceanConstants: sim.ocean.constants)
@@ -61,6 +62,7 @@ final class OceanSelftestTests: XCTestCase {
   }
 
   func testGridBuffersAndSnapQuantum() throws {
+    _ = try requireMetalDevice()
     let data = try DataBundle()
     let sim = try BootstrapSim(data: data, qualityName: "high", presetName: "calm")
     let renderer = try Renderer(texturesDirectory: data.texturesDirectory, oceanConstants: sim.ocean.constants)
