@@ -13,6 +13,9 @@ public final class PipelineCache {
   private var computeStates: [String: MTLComputePipelineState] = [:]
   private var depthStates: [String: MTLDepthStencilState] = [:]
   private var failed: [String: Error] = [:]   // "render:<key>" / "compute:<key>" → first error
+  /// Bumped by every resetFailures(): a family that memoises its lookups (HeliRenderer) drops what it
+  /// remembered when this changes, so a failed PSO gets its fresh attempt there too.
+  public private(set) var generation = 0
 
   public init(device: RenderDevice) {
     self.rd = device
@@ -21,6 +24,7 @@ public final class PipelineCache {
   /// Forgets remembered failures so the next request for those keys compiles again.
   public func resetFailures() {
     failed.removeAll()
+    generation += 1
   }
 
   public func render(key: String, build: () throws -> MTLRenderPipelineDescriptor) throws -> MTLRenderPipelineState {

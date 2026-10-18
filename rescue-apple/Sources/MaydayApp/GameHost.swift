@@ -61,11 +61,14 @@ final class GameHost: ObservableObject {
   private(set) var session: GameSession?
   private(set) var renderer: Renderer?
   private var props: SceneProps?
+  private var heliRenderer: HeliRenderer?
   private var haptics: HapticsDriver?
   #if os(iOS)
   private(set) var touchHaptics: TouchHaptics?
   #endif
   private var dynamicResolution = true
+  /// Why the baked helicopter could not be loaded (debug overlay; the stub airframe flies instead).
+  private var heliLoadError: String?
   private var preferredFPS = 60
   private var viewportPoints = (width: 0.0, height: 0.0)
   private var fpsAccum = 0.0
@@ -94,7 +97,15 @@ final class GameHost: ObservableObject {
       let s = try GameSession(catalog: try data.catalog(), storage: SettingsStore.storage(), options: options)
       let r = try Renderer(texturesDirectory: data.texturesDirectory, oceanConstants: s.ocean.tables.waves)
       try r.prewarm(quality: s.quality)
-      props = try SceneProps(renderer: r)
+      // the baked helicopter (Resources/Meshes, manifest-checked); the stub airframe only if it cannot load
+      do {
+        let hr = try HeliRenderer(renderer: r, meshes: try HeliMeshes(device: r.device.device, catalog: try data.catalog()))
+        r.addFamily(hr)
+        heliRenderer = hr
+      } catch {
+        heliLoadError = "вертолёт: \(error)"
+      }
+      props = try SceneProps(renderer: r, heliStandIn: heliRenderer == nil)
       session = s
       renderer = r
       wire(s)
@@ -221,6 +232,7 @@ final class GameHost: ObservableObject {
     f.dynamicResolution = dynamicResolution
     f.framesPerSecond = view.preferredFramesPerSecond
     props?.update(s)
+    heliRenderer?.update(s.heliSnapshot)
     simAccum += (CACurrentMediaTime() - t0) * 1000
     renderer.render(f) { view.currentDrawable }
     if s.loop.afterRender() {
@@ -274,7 +286,8 @@ final class GameHost: ObservableObject {
     if s.loop.disabled.count > 0 { flags.append("отключены: " + s.loop.disabled.map(\.rawValue).sorted().joined(separator: ", ")) }
     o.flags = flags.joined(separator: " · ")
     o.device = renderer.device.device.name
-    o.error = st.lastError
+    // a frame that failed, else the helicopter: not loaded (stub airframe) or a family PSO left out
+    o.error = st.lastError ?? heliLoadError ?? heliRenderer?.lastError.map { "вертолёт: \($0)" }
     overlay = o
   }
 }

@@ -7,9 +7,10 @@
 //          buttons → Mouse0 / Mouse2 on the game view, wheel → wheel(deltaY) (the browser's deltaY sign,
 //          natural scrolling included); window blur → input.blur();
 //   iOS    a touch on the game view makes touch the active device (window touchstart); pointer clicks
-//          (iPad trackpad / mouse, indirect touches) are mouse buttons + position; TouchControlsView sits
-//          on top (stick, slider, buttons); the hardware keyboard arrives through GCKeyboard
-//          (GamepadAdapter).
+//          (iPad trackpad / mouse, indirect touches) are mouse buttons + position, and the hovering pointer
+//          (UIHoverGestureRecognizer) is mousemove, so the nose follows the cursor without a click like on
+//          the web / Mac; TouchControlsView sits on top (stick, slider, buttons); the hardware keyboard
+//          arrives through GCKeyboard (GamepadAdapter).
 import SwiftUI
 import MetalKit
 import MaydayCore
@@ -36,11 +37,32 @@ final class GameMTKView: MTKView {
   override init(frame frameRect: CGRect, device: MTLDevice?) {
     super.init(frame: frameRect, device: device)
     isMultipleTouchEnabled = true
+    addHoverRecognizer()
   }
 
   required init(coder: NSCoder) {
     super.init(coder: coder)
     isMultipleTouchEnabled = true
+    addHoverRecognizer()
+  }
+
+  /// iPad trackpad / mouse: the touches only carry the pointer while a button is held; hover is a gesture.
+  private func addHoverRecognizer() {
+    #if canImport(ObjectiveC)   // target–action needs the Objective-C runtime (absent in the Linux pre-flight)
+    addGestureRecognizer(UIHoverGestureRecognizer(target: self, action: #selector(hoverChanged(_:))))
+    #endif
+  }
+
+  #if canImport(ObjectiveC)
+  @objc private func hoverChanged(_ r: UIHoverGestureRecognizer) { hover(r) }
+  #endif
+
+  /// mousemove without a button: .began / .changed move the pointer (like pointer(_:) for a pressed one).
+  private func hover(_ r: UIHoverGestureRecognizer) {
+    switch r.state {
+    case .began, .changed: pointerMoved(to: r.location(in: self))
+    default: break
+    }
   }
 
   /// Adds the touch controls (once the host's input exists).
@@ -55,9 +77,11 @@ final class GameMTKView: MTKView {
     touchControls = tc
   }
 
-  private func pointer(_ t: UITouch) {
+  private func pointer(_ t: UITouch) { pointerMoved(to: t.location(in: self)) }
+
+  /// mousemove at `p` (points from the top-left, the DOM's clientX / clientY).
+  private func pointerMoved(to p: CGPoint) {
     guard let s = host?.session, bounds.width > 0, bounds.height > 0 else { return }
-    let p = t.location(in: self)
     s.input.mouseMove(x: Double(p.x), y: Double(p.y), viewWidth: Double(bounds.width), viewHeight: Double(bounds.height), nowMs: s.clockMs)
   }
 

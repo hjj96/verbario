@@ -21,9 +21,14 @@ public struct CameraState {
   public var near: Double
   public var far: Double
   public var zoom: Double          // three PerspectiveCamera.zoom (always 1 in the game)
+  /// three PerspectiveCamera.aspect: CSS width / height in points (main.js onResize), the projection the
+  /// web draws with and Core's PerspectiveCamera picks / projects the HUD with. It differs slightly from
+  /// the internal pixel size, floor(points × pixelRatio), at fractional ratios. nil = that pixel size's
+  /// ratio (offscreen renders, goldens).
+  public var aspect: Double?
 
   public init(position: SIMD3<Double>, target: SIMD3<Double>, up: SIMD3<Double> = SIMD3(0, 1, 0),
-              fovDeg: Double = 40, near: Double = 2, far: Double = 1200, zoom: Double = 1) {
+              fovDeg: Double = 40, near: Double = 2, far: Double = 1200, zoom: Double = 1, aspect: Double? = nil) {
     self.position = position
     self.target = target
     self.up = up
@@ -31,6 +36,7 @@ public struct CameraState {
     self.near = near
     self.far = far
     self.zoom = zoom
+    self.aspect = aspect
   }
 }
 

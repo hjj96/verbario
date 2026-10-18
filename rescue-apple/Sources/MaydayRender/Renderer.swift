@@ -115,11 +115,13 @@ public final class Renderer {
   }
 
   /// Compiles the PSOs of a quality tier ahead of the first frame (boot / quality change).
+  /// Leaves the dynamic-resolution scale alone: the host also warms up on every mission:setup (a restart
+  /// keeps the scale, like the web's warmup.js); a real tier change resets it in updateDynamicResolution
+  /// (post.js _applyQuality: `this.scale = 1`).
   public func prewarm(quality: RenderQualityConfig) throws {
     // boot / quality change: give previously failed PSOs and render targets one fresh attempt
     cache.resetFailures()
     failedTargets = nil
-    dynRes.applyQuality(quality.name)
     let sc = device.sampleCount(atMost: quality.sampleCount)
     for shadows in [false, true] {
       _ = try ocean.pipeline(quality: quality, sampleCount: sc, memory: quality.oceanMemory > 0, shadows: shadows)
@@ -313,8 +315,9 @@ public final class Renderer {
     let vpH = max(1, Int((Double(h) * scale).rounded()))
     let viewport = MTLViewport(originX: 0, originY: 0, width: Double(vpW), height: Double(vpH), znear: 0, zfar: 1)
 
-    // ---- per-frame uniforms (aspect of the full internal size: dynres never changes framing)
-    let cam = CameraMatrices(camera: frame.camera, aspect: Double(w) / Double(h))
+    // ---- per-frame uniforms. The projection uses camera.aspect (CSS points, like the web's and Core's
+    // picking / HUD projection), not the floored pixel size; dynres never changes framing.
+    let cam = CameraMatrices(camera: frame.camera, aspect: frame.camera.aspect ?? Double(w) / Double(h))
     let frameOffset = ring.push(makeFrameUniforms(frame, cam: cam, vpW: vpW, vpH: vpH))
     let lookOffset = ring.push(makeLookUniforms(frame, vpW: vpW, vpH: vpH))
     let lightsOffset = ring.push(LightRig.pack(frame.lights, shadowMapBound: shadowOn))
@@ -327,7 +330,9 @@ public final class Renderer {
     // ---- coast map upload (blit) and 2. water memory
     let coast = try ocean.coastTexture(for: frame.ocean.coast, cb: cb)
     if let m = mem {
-      let featureOffset = ocean.pushUniforms(frame.ocean, ring: ring, memoryWindow: m.window)
+      // the advect's feature swirl reads the ocean uniforms as they were when the web ran it (inside
+      // ocean.update, before the late upload): the queue's flow, not frame.ocean's late-upload features
+      let featureOffset = ocean.pushUniforms(frame.waterMemory.advectOcean(frame.ocean), ring: ring, memoryWindow: m.window)
       try m.encode(cb, input: frame.waterMemory, ring: ring, oceanOffset: featureOffset)
     }
     let oceanOffset = ocean.pushUniforms(frame.ocean, ring: ring, memoryWindow: mem?.window)

@@ -3,7 +3,9 @@
 // exactly like the app does, and checks:
 //   1. session: every preset × quality flies (take off, cruise, hover) and the render snapshot packs to
 //      finite uniforms (ocean, lights, FinalPass), the heli sits at NDC (0, +0.1) of the follow framing
-//      (camera.js HELI_SCREEN_Y), depth inside Metal's clip range, fog focus under the screen centre;
+//      (camera.js HELI_SCREEN_Y), depth inside Metal's clip range, fog focus under the screen centre, the GPU
+//      projection on camera.aspect; the water-memory step the renderer encodes is the queue's (window
+//      floats bitwise, the advect's feature flow from ocean.update rather than the late upload);
 //   2. parity: Tests/Vectors/app/*.json, recorded from the web's own boot + frame loop over the same
 //      systems (tools/export/export-app.mjs), replayed through GameSession (bitwise) and touch.js's
 //      arithmetic through TouchMapping;
@@ -81,8 +83,10 @@ for q in ["low", "medium", "high"] {
     let a = fr.ocean.waveA.prefix(s.quality.oceanWaves).map { $0.w }
     check(a.contains { $0 > 0 }, "\(q)/\(p): all wave amplitudes zero")
     check(fr.ocean.heliP.w == 1, "\(q)/\(p): ocean has no heli (downwash / contact)")
-    // camera: the heli at NDC (0, +0.1) once hovering; depth inside the clip range
-    let cam = CameraMatrices(camera: fr.camera, aspect: 1920.0 / 1080.0)
+    // camera: the GPU projects with camera.aspect (CSS points), not the pixel size; the heli at NDC (0, +0.1)
+    // once hovering; depth inside the clip range
+    check(fr.camera.aspect.map { $0.bitPattern == s.camera.aspect.bitPattern } ?? false, "\(q)/\(p): render aspect \(fr.camera.aspect ?? .nan)")
+    let cam = CameraMatrices(camera: fr.camera, aspect: fr.camera.aspect ?? 1920.0 / 1080.0)
     let hp = s.heli.position
     let clip = cam.projGL * (cam.view * SIMD4<Double>(hp.x, hp.y, hp.z, 1))
     let ndc = SIMD3<Double>(clip.x / clip.w, clip.y / clip.w, clip.z / clip.w)
@@ -97,8 +101,15 @@ for q in ["low", "medium", "high"] {
     } }
     check(maxErr < 1e-9, "inverse error \(maxErr)")
     // the stand-ins: pad cylinder at the stub World's object position, the heli box on the body matrix
-    let pl = SceneProps.placements(s)
-    check(pl.count == s.world.padList.count + 1, "\(q)/\(p): \(pl.count) stand-in meshes")
+    check(SceneProps.placements(s, heliStandIn: true).count == s.world.padList.count + 1, "\(q)/\(p): stand-in meshes")
+    check(SceneProps.placements(s, heliStandIn: false).count == s.world.padList.count, "\(q)/\(p): pad meshes")
+    // the heli's lamps in the light set come from its render snapshot (spot[0] searchlight, point[0] belly)
+    if let hs = s.heliSnapshot {
+      check(fr.lights.spots.count == 1 && fr.lights.points.count == 1 && fr.lights.points[0].position == hs.bellyLight.position,
+            "\(q)/\(p): heli lights")
+    } else {
+      check(false, "\(q)/\(p): no heli snapshot")
+    }
     if q == "high" {
       print("\(p): heli (\(fmt(hp.x)), \(fmt(hp.y)), \(fmt(hp.z))) alt \(fmt(s.heli.altitude)) cam H \(fmt(s.rig.height)) tilt \(fmt(s.rig.tiltDeg)) " +
             "wind \(fmt(s.weather.state.windSpeed)) Hs \(fmt(s.ocean.waveStats.Hs)) exp \(fmt(Double(fr.post.exposure))) " +
@@ -133,6 +144,53 @@ do {
   check(s.mission.runs == 2 && s.loop.disabled.isEmpty, "restart: runs \(s.mission.runs), disabled \(s.loop.disabled)")
   check(s.ocean.cfg.grid == s.quality.oceanGridN, "ocean grid \(s.ocean.cfg.grid) vs tier \(s.quality.oceanGridN)")
   print("debug cycling: tiers \(tiers), preset \(s.weather.state.preset), runs \(s.mission.runs)")
+}
+
+// ---- 1c. water memory: the renderer's window and advect flow are the queue's (WaterMemoryQueue.Frame) ---------
+do {
+  var opt = SessionOptions()
+  opt.quality = "high"
+  opt.weather = "calm"
+  let s = try GameSession(catalog: catalog, storage: MemoryStorage(), options: opt)
+  var win: WaterMemoryWindow?
+  var steps = 0
+  let addAt = 120
+  for i in 0..<240 {
+    s.input.setVirtualButton(.altPreset2, i >= 2 && i < 6)
+    s.step(frameDelta: 1.0 / 60.0)
+    // a system that runs after the ocean (hazards) adds a vortex: the late upload has it this frame, the
+    // advect that ran inside ocean.update does not (web: the advect renders inside ocean.update)
+    if i == addAt {
+      let hp = s.heli.position
+      check(s.ocean.setFeature("harness-vortex", FeatureSpec(type: "vortex", x: hp.x + 40, z: hp.z, radius: 25)), "memory: vortex accepted")
+    }
+    let f = s.renderFrame(internalWidth: 1280, internalHeight: 720, pxScale: 2)
+    let wm = f.waterMemory
+    guard wm.dt > 0, let q = s.ocean.memory, let mf = q.frame else { continue }
+    steps += 1
+    if win?.size != q.size { win = WaterMemoryWindow(size: q.size, extent: q.extent) }
+    let u = win!.advance(dt: wm.dt, focus: wm.focus, wind: wm.wind)
+    let a = mf.advect
+    var e = MDMemoryAdvectUniforms()
+    e.shiftCenter = SIMD4<Float>(Float(a.shift.x), Float(a.shift.y), Float(a.center.x), Float(a.center.y))
+    e.extentDtWind = SIMD4<Float>(Float(a.extent), Float(a.dt), Float(a.windV.x), Float(a.windV.y))
+    e.uDecay = SIMD4<Float>(Float(a.decay.x), Float(a.decay.y), Float(a.decay.z), Float(a.decay.w))
+    e.texelDiffuse = SIMD4<Float>(Float(a.texel.x), Float(a.texel.y), Float(a.diffuse), 0)
+    let same = withUnsafeBytes(of: u) { ub in withUnsafeBytes(of: e) { eb in ub.elementsEqual(eb) } }
+    check(same, "memory step \(i): renderer advect \(u) vs queue \(e)")
+    let adv = OceanRenderer.pack(wm.advectOcean(f.ocean))
+    check(Int(adv.uFeatCount) == min(mf.flow.count, Int(MD_MAX_FEATURES)) && wm.stamps.count == mf.count,
+          "memory step \(i): advect features \(adv.uFeatCount), flow \(mf.flow.count), stamps \(wm.stamps.count) / \(mf.count)")
+    if i == addAt {
+      check(f.ocean.featA.count == 1 && adv.uFeatCount == 0, "memory: late-upload features \(f.ocean.featA.count), advect \(adv.uFeatCount) (want 1, 0)")
+    }
+    if i == addAt + 1 {
+      check(adv.uFeatCount == 1 && withUnsafeBytes(of: adv.uFeatA) { Array($0.prefix(16)) } == withUnsafeBytes(of: OceanRenderer.pack(f.ocean).uFeatA) { Array($0.prefix(16)) },
+            "memory: the next step's advect swirls with the vortex (\(adv.uFeatCount))")
+    }
+  }
+  check(steps == 240, "memory: \(steps) steps of 240 handed over")
+  print("water memory: \(steps) steps, window + flow = queue")
 }
 
 // ---- 2. parity with the web's session ----------------------------------------------------------------------

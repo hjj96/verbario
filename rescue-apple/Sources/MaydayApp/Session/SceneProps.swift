@@ -1,10 +1,9 @@
 // SceneProps — the free-flight scene's stand-in meshes, drawn by MaydayRender's StandardFamily
 // (MeshStandardMaterial, three r185 geometry):
 //   * each pad's stubs.js World object: CylinderGeometry(12, 12, 4, 24), #555555, at (x, 2, z);
-//   * the helicopter: the web's stub airframe, BoxGeometry(3, 2, 10) #FF5A2A (stubs.js Helicopter), placed
-//     with the real Helicopter's body matrix (interpolated position, heading, pitch / bank springs) and
-//     casting the sun's shadow (the «shadow altimeter», DESIGN §2.7.2) — until MaydayRender's HeliRenderer
-//     draws the baked airframe (PLAN §2.9 heli/model.js row, M3 render-heli; §10 X20).
+//   * only when the baked helicopter cannot be loaded (HeliRenderer draws it otherwise): the web's stub
+//     airframe, BoxGeometry(3, 2, 10) #FF5A2A (stubs.js Helicopter), placed with the real Helicopter's body
+//     matrix and casting the sun's shadow (the «shadow altimeter», DESIGN §2.7.2) — PLAN §10 X20.
 // Transforms are plain values (`placements`) so the harness can check them without a GPU.
 import Foundation
 import Metal
@@ -114,10 +113,13 @@ final class SceneProps {
   static let padSegments = 24
 
   let family: StandardFamily
+  /// Draw the stub airframe (no HeliRenderer).
+  let heliStandIn: Bool
   private let heliMesh: MeshBuffer
   private let padMesh: MeshBuffer
 
-  init(renderer: Renderer) throws {
+  init(renderer: Renderer, heliStandIn: Bool) throws {
+    self.heliStandIn = heliStandIn
     family = try StandardFamily(renderer: renderer)
     let dev = renderer.device.device
     heliMesh = try ThreeBoxGeometry.mesh(device: dev, width: SceneProps.heliBox.width, height: SceneProps.heliBox.height,
@@ -127,8 +129,8 @@ final class SceneProps {
     renderer.addFamily(family)
   }
 
-  /// Where every stand-in sits this frame (pads first, in world.pads order, then the heli).
-  static func placements(_ s: GameSession) -> [PropPlacement] {
+  /// Where every stand-in sits this frame (pads first, in world.pads order, then the stub heli if asked).
+  static func placements(_ s: GameSession, heliStandIn: Bool) -> [PropPlacement] {
     var out: [PropPlacement] = []
     for p in s.world.padList {
       var m = Mat4()
@@ -136,14 +138,16 @@ final class SceneProps {
       out.append(PropPlacement(kind: .pad, model: m, color: Color3(hex: FreeFlightWorld.objectColorHex), castShadow: false,
                                receiveShadow: true))
     }
-    out.append(PropPlacement(kind: .heli, model: s.heli.visual.bodyMatrix, color: Color3(hex: SceneProps.heliBox.color),
-                             castShadow: true, receiveShadow: true))
+    if heliStandIn {
+      out.append(PropPlacement(kind: .heli, model: s.heli.visual.bodyMatrix, color: Color3(hex: SceneProps.heliBox.color),
+                               castShadow: true, receiveShadow: true))
+    }
     return out
   }
 
   /// Refreshes the family's items from the session (call once per frame before rendering).
   func update(_ s: GameSession) {
-    family.items = SceneProps.placements(s).enumerated().map { i, p in
+    family.items = SceneProps.placements(s, heliStandIn: heliStandIn).enumerated().map { i, p in
       var it = StandardItem(id: i, mesh: p.kind == .heli ? heliMesh : padMesh, model: CameraMatrices.toDouble(p.model))
       it.color = SIMD3<Float>(Float(p.color.r), Float(p.color.g), Float(p.color.b))
       it.castShadow = p.castShadow

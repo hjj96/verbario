@@ -79,6 +79,8 @@ final class HeliPlanner {
   let rescuerMaterial: HeliPropMaterialParams
   let raftMaterial: HeliPropMaterialParams
   let flareMaterial: HeliPropMaterialParams
+  /// three's renderList, reused frame to frame (reset keeps its capacity)
+  private let list = RenderList()
 
   init(infos: [String: MMeshInfo]) throws {
     for n in HeliMeshes.names where infos[n] == nil { throw RenderError.resource("heli: mesh \(n) missing") }
@@ -110,8 +112,8 @@ final class HeliPlanner {
   func plan(_ s: HeliRenderSnapshot, viewProjGL: simd_double4x4) -> HeliPlan {
     var out = HeliPlan()
     let frustum = Frustum(viewProjGL: viewProjGL)
-    let list = RenderList()
-    var draws: [HeliPlannedDraw] = []
+    list.reset()
+    var draws: [HeliPlannedDraw] = []   // indexed by DrawItem.handle
     let pose = HeliPose(s)
 
     // one object: main-pass draw (kind nil = shadow / thermal only), shadow caster, thermal item
@@ -204,15 +206,14 @@ final class HeliPlanner {
     }
 
     list.sort()
-    var byID: [Int: HeliPlannedDraw] = [:]
-    for d in draws { byID[d.item.id] = d }
-    func sorted(_ it: DrawItem) -> HeliPlannedDraw? {
-      guard var d = byID[it.id] else { return nil }
+    // back to the planned draws through the handle (= the draw's index: set before list.add, appended after)
+    func sorted(_ it: DrawItem) -> HeliPlannedDraw {
+      var d = draws[it.handle]
       d.item = it
       return d
     }
-    out.opaque = list.opaque.compactMap(sorted)
-    out.transparent = list.transparent.compactMap(sorted)
+    out.opaque = list.opaque.map(sorted)
+    out.transparent = list.transparent.map(sorted)
     return out
   }
 }

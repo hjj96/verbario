@@ -90,6 +90,7 @@ targets:
         "-mayday.quality high": false
         "-mayday.weather storm": false
         "-mayday.dynres NO": false
+        "-mayday.persist NO": false
 
   Mayday-macOS:
     type: application
@@ -129,6 +130,7 @@ targets:
         "-mayday.quality medium": false
         "-mayday.weather nightStorm": false
         "-mayday.dynres NO": false
+        "-mayday.persist NO": false
 
   MaydayRenderTests:
     type: bundle.unit-test

@@ -10,9 +10,15 @@
 //                airframe's thermal mass (layer 3) for the FLIR pass (post/thermal.js, PLAN §2.5 pass 3).
 // What is drawn, where and in which order is HeliPlanner's (pure, Linux-checked); this class adds the GPU:
 // uniform blocks into the frame ring, PSOs, bindings, draws.
+// PSOs resolve once per mesh variant (mesh, kind, blend, sample count, shadows, env) and are kept here, so a
+// frame does no vertex-descriptor / key-string work. A PSO that cannot be built (specialisation, vertex
+// layout, device) drops only the draws and shadow casters that need it: prepare never throws, the rest of
+// the frame (ocean, post, present) goes on, and `lastError` names the first failure for the debug overlay
+// (PLAN §10 X20: the app must not fall over because of assets). PipelineCache.resetFailures (prewarm on
+// boot / mission setup / quality change) gives failed variants a fresh attempt here too.
 // Use: `HeliRenderer(renderer:meshes:)`, `renderer.addFamily(_:)`, then every frame `update(HeliRenderSnapshot(
-// heli:quality:))` and put `snapshot.searchlightLight` / `snapshot.bellyLight` into LightsInput spot[0] /
-// point[0] (CONTRACT light set).
+// heli:quality:))` (quality: the one the helicopter was built with) and put `snapshot.searchlightLight` /
+// `snapshot.bellyLight` into LightsInput spot[0] / point[0] (CONTRACT light set).
 import Foundation
 import Metal
 import simd
@@ -23,7 +29,24 @@ public final class HeliRenderer: RenderFamily {
   private struct Command {
     let draw: HeliPlannedDraw
     let mesh: MMesh
+    let pso: MTLRenderPipelineState
     let material: Int            // ring offset of the uniform block
+  }
+
+  private struct Caster {
+    let caster: HeliPlannedCaster
+    let mesh: MMesh
+    let pso: MTLRenderPipelineState
+  }
+
+  /// Everything a main-pass PSO of a mesh depends on.
+  private struct PSOKey: Hashable {
+    let mesh: ObjectIdentifier
+    let kind: HeliDrawKind
+    let blend: BlendMode
+    let sampleCount: Int
+    let shadows: Bool
+    let env: Bool
   }
 
   private let rd: RenderDevice
@@ -39,9 +62,17 @@ public final class HeliRenderer: RenderFamily {
 
   public private(set) var snapshot: HeliRenderSnapshot?
   public private(set) var thermalItems: [HeliThermalItem] = []
+  /// The first PSO failure of the last prepare() (its draws were dropped); nil when everything compiled.
+  public private(set) var lastError: String?
   private var opaque: [Command] = []
   private var transparent: [Command] = []
-  private var casters: [HeliPlannedCaster] = []
+  private var casters: [Caster] = []
+  // resolved PSOs (the meshes live as long as this renderer, so their identities are stable keys)
+  private var psos: [PSOKey: MTLRenderPipelineState] = [:]
+  private var depthPSOs: [ObjectIdentifier: MTLRenderPipelineState] = [:]
+  private var failedPSOs: [PSOKey: String] = [:]
+  private var failedDepth: [ObjectIdentifier: String] = [:]
+  private var cacheGeneration: Int
 
   /// decal: the livery atlas (heli/decals.js drawDecals, 1024 × 512, rgba8Unorm_srgb, mipmapped, rows flipped
   /// like three's flipY) once bake-canvas produces heli_livery.png; nil = a transparent placeholder (decal
@@ -49,6 +80,7 @@ public final class HeliRenderer: RenderFamily {
   public init(renderer: Renderer, meshes: HeliMeshes, decal: MTLTexture? = nil) throws {
     rd = renderer.device
     cache = renderer.pipelineCache
+    cacheGeneration = renderer.pipelineCache.generation
     shadowPass = renderer.shadow
     look = renderer.look
     self.meshes = meshes
@@ -87,25 +119,60 @@ public final class HeliRenderer: RenderFamily {
   /// Read by the Renderer before prepare(): the hull always casts when there is a helicopter.
   public var castsShadows: Bool { snapshot != nil }
 
+  /// Plans the frame and resolves every draw's PSO. Never throws: a draw whose PSO fails is left out.
   public func prepare(_ ctx: FrameContext) throws {
     opaque.removeAll(keepingCapacity: true)
     transparent.removeAll(keepingCapacity: true)
     casters.removeAll(keepingCapacity: true)
     thermalItems.removeAll(keepingCapacity: true)
+    lastError = nil
+    if cacheGeneration != cache.generation {   // prewarm: failed variants get one fresh attempt
+      failedPSOs.removeAll()
+      failedDepth.removeAll()
+      cacheGeneration = cache.generation
+    }
     guard let s = snapshot else { return }
     let plan = planner.plan(s, viewProjGL: ctx.camera.projGL * ctx.camera.view)   // three projScreenMatrix
-    func command(_ d: HeliPlannedDraw) -> Command? {
-      guard let mesh = meshes[d.mesh] else { return nil }
-      return Command(draw: d, mesh: mesh, material: ctx.ring.push(array: d.uniforms))
-    }
-    opaque = plan.opaque.compactMap(command)
-    transparent = plan.transparent.compactMap(command)
-    casters = plan.casters
-    thermalItems = plan.thermal
-    // compile what this frame draws (PipelineCache remembers failures)
     let shadows = ctx.shadowMap != nil, env = ctx.environment != nil
-    for c in opaque + transparent { _ = try pipeline(c, sampleCount: ctx.sampleCount, shadows: shadows, env: env) }
-    for c in casters { if let m = meshes[c.mesh] { _ = try depthPipeline(m) } }
+    for d in plan.opaque {
+      if let c = command(d, ctx, shadows: shadows, env: env) { opaque.append(c) }
+    }
+    for d in plan.transparent {
+      if let c = command(d, ctx, shadows: shadows, env: env) { transparent.append(c) }
+    }
+    for c in plan.casters {
+      if let m = meshes[c.mesh], let pso = depthPipeline(m) { casters.append(Caster(caster: c, mesh: m, pso: pso)) }
+    }
+    thermalItems = plan.thermal
+  }
+
+  /// One main-pass draw with its PSO and uniform block (nil: no mesh, or its PSO failed).
+  private func command(_ d: HeliPlannedDraw, _ ctx: FrameContext, shadows: Bool, env: Bool) -> Command? {
+    guard let mesh = meshes[d.mesh] else { return nil }
+    let key = PSOKey(mesh: ObjectIdentifier(mesh), kind: d.kind, blend: d.blend, sampleCount: ctx.sampleCount,
+                     shadows: shadows, env: env)
+    let pso: MTLRenderPipelineState
+    if let p = psos[key] {
+      pso = p
+    } else if let e = failedPSOs[key] {
+      note(e)
+      return nil
+    } else {
+      do {
+        pso = try pipeline(kind: d.kind, blend: d.blend, mesh: mesh, sampleCount: ctx.sampleCount, shadows: shadows, env: env)
+        psos[key] = pso
+      } catch {
+        let e = "\(d.mesh): \(error)"
+        failedPSOs[key] = e
+        note(e)
+        return nil
+      }
+    }
+    return Command(draw: d, mesh: mesh, pso: pso, material: ctx.ring.push(array: d.uniforms))
+  }
+
+  private func note(_ e: String) {
+    if lastError == nil { lastError = e }
   }
 
   // ---- pipelines -------------------------------------------------------------------------------------------
@@ -169,41 +236,58 @@ public final class HeliRenderer: RenderFamily {
     return fc
   }
 
-  private func pipeline(_ c: Command, sampleCount: Int, shadows: Bool, env: Bool) throws -> MTLRenderPipelineState {
-    let blend = c.draw.blend
+  /// Builds (through PipelineCache) the main-pass PSO of one mesh variant; only on a memo miss.
+  private func pipeline(kind: HeliDrawKind, blend: BlendMode, mesh: MMesh, sampleCount: Int, shadows: Bool,
+                        env: Bool) throws -> MTLRenderPipelineState {
     let sb = "s\(shadows ? 1 : 0)e\(env ? 1 : 0)"
-    switch c.draw.kind {
+    switch kind {
     case .hull:
-      return try build("heli.hull.\(sb)", vs: "hull_vs", fs: "hull_fs", mesh: c.mesh, attributes: HeliRenderer.hullAttributes,
+      return try build("heli.hull.\(sb)", vs: "hull_vs", fs: "hull_fs", mesh: mesh, attributes: HeliRenderer.hullAttributes,
                        sampleCount: sampleCount, blend: blend, constants: HeliRenderer.constants(shadows: shadows, env: env))
     case .prop(let vc):
-      return try build("heli.prop.\(sb)c\(vc ? 1 : 0)", vs: "heli_prop_vs", fs: "heli_prop_fs", mesh: c.mesh,
+      return try build("heli.prop.\(sb)c\(vc ? 1 : 0)", vs: "heli_prop_vs", fs: "heli_prop_fs", mesh: mesh,
                        attributes: HeliRenderer.propAttributes(vc), sampleCount: sampleCount, blend: blend,
                        constants: HeliRenderer.constants(shadows: shadows, env: env, vertexColors: vc))
     case .basic:
-      return try build("heli.basic", vs: "heli_basic_vs", fs: "heli_basic_fs", mesh: c.mesh,
+      return try build("heli.basic", vs: "heli_basic_vs", fs: "heli_basic_fs", mesh: mesh,
                        attributes: HeliRenderer.positionOnly, sampleCount: sampleCount, blend: blend)
     case .cable:
-      return try build("heli.cable", vs: "cable_vs", fs: "cable_fs", mesh: c.mesh,
+      return try build("heli.cable", vs: "cable_vs", fs: "cable_fs", mesh: mesh,
                        attributes: HeliRenderer.cableAttributes, sampleCount: sampleCount, blend: blend)
     case .ring:
-      return try build("heli.ring", vs: "ring_vs", fs: "ring_fs", mesh: c.mesh,
+      return try build("heli.ring", vs: "ring_vs", fs: "ring_fs", mesh: mesh,
                        attributes: HeliRenderer.ringAttributes, sampleCount: sampleCount, blend: blend)
     case .rotor:
-      return try build("heli.rotor", vs: "rotor_vs", fs: "rotor_fs", mesh: c.mesh,
+      return try build("heli.rotor", vs: "rotor_vs", fs: "rotor_fs", mesh: mesh,
                        attributes: HeliRenderer.positionOnly, sampleCount: sampleCount, blend: blend)
     case .lights:
-      return try build("heli.lights", vs: "heli_lights_vs", fs: "heli_lights_fs", mesh: c.mesh,
+      return try build("heli.lights", vs: "heli_lights_vs", fs: "heli_lights_fs", mesh: mesh,
                        attributes: HeliRenderer.lightsAttributes, sampleCount: sampleCount, blend: blend)
     case .cone:
-      return try build("heli.cone", vs: "cone_vs", fs: "cone_fs", mesh: c.mesh,
+      return try build("heli.cone", vs: "cone_vs", fs: "cone_fs", mesh: mesh,
                        attributes: HeliRenderer.positionOnly, sampleCount: sampleCount, blend: blend)
     }
   }
 
-  private func depthPipeline(_ mesh: MMesh) throws -> MTLRenderPipelineState {
-    try shadowPass.depthPipeline(vertexDescriptor: try mesh.vertexDescriptor(HeliRenderer.positionOnly),
-                                 layoutKey: "mmesh:" + mesh.layoutKey(HeliRenderer.positionOnly), instanced: false)
+  /// The shadow-depth PSO of a caster mesh, resolved once per mesh (nil: it failed; noted in lastError).
+  private func depthPipeline(_ mesh: MMesh) -> MTLRenderPipelineState? {
+    let key = ObjectIdentifier(mesh)
+    if let p = depthPSOs[key] { return p }
+    if let e = failedDepth[key] {
+      note(e)
+      return nil
+    }
+    do {
+      let p = try shadowPass.depthPipeline(vertexDescriptor: try mesh.vertexDescriptor(HeliRenderer.positionOnly),
+                                           layoutKey: "mmesh:" + mesh.layoutKey(HeliRenderer.positionOnly), instanced: false)
+      depthPSOs[key] = p
+      return p
+    } catch {
+      let e = "\(mesh.label) (тень): \(error)"
+      failedDepth[key] = e
+      note(e)
+      return nil
+    }
   }
 
   // ---- encoding --------------------------------------------------------------------------------------------
@@ -211,8 +295,8 @@ public final class HeliRenderer: RenderFamily {
   public func encodeShadow(_ enc: MTLRenderCommandEncoder, _ ctx: FrameContext, pass: ShadowPassContext) {
     guard snapshot != nil else { return }
     enc.pushDebugGroup("heli.shadow")
-    for c in casters {
-      guard let mesh = meshes[c.mesh] else { continue }
+    for cs in casters {
+      let c = cs.caster, mesh = cs.mesh
       // WebGLShadowMap: layers.test(shadow camera), visible (already filtered), frustum test when frustumCulled
       if c.layers.intersection(pass.layers).isEmpty { continue }
       if c.frustumCulled {
@@ -220,8 +304,7 @@ public final class HeliRenderer: RenderFamily {
         p.applyMatrix4(c.model)
         if !pass.frustum.intersects(center: SIMD3<Double>(p.x, p.y, p.z), radius: mesh.boundsRadius * c.model.getMaxScaleOnAxis()) { continue }
       }
-      guard let pso = try? depthPipeline(mesh) else { continue }
-      enc.setRenderPipelineState(pso)
+      enc.setRenderPipelineState(cs.pso)
       enc.setCullMode(ShadowPass.cullMode(for: c.culling))
       var o = c.object
       enc.setVertexBytes(&o, length: MemoryLayout<MDObjectData>.stride, index: Int(MD_BUF_OBJECT))
@@ -249,10 +332,8 @@ public final class HeliRenderer: RenderFamily {
   }
 
   private func encode(_ cmds: [Command], _ enc: MTLRenderCommandEncoder, _ ctx: FrameContext) {
-    let shadows = ctx.shadowMap != nil, env = ctx.environment != nil
     for c in cmds {
-      guard let pso = try? pipeline(c, sampleCount: ctx.sampleCount, shadows: shadows, env: env) else { continue }
-      enc.setRenderPipelineState(pso)
+      enc.setRenderPipelineState(c.pso)
       enc.setDepthStencilState(c.draw.depthWrite ? depthWrite : depthRead)
       switch c.draw.culling {
       case .back: enc.setCullMode(.back)

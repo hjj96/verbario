@@ -86,8 +86,9 @@ final class HapticsDriver {
     engines[key] = pe
     if pe.needsStart {
       for engine in pe.engines {
-        engine.resetHandler = { [weak pe] in pe?.needsStart = true }
-        engine.stoppedHandler = { [weak pe] _ in pe?.needsStart = true }
+        // CoreHaptics calls both handlers on its own queue; needsStart belongs to the main thread (rumble)
+        engine.resetHandler = { [weak pe] in DispatchQueue.main.async { pe?.needsStart = true } }
+        engine.stoppedHandler = { [weak pe] _ in DispatchQueue.main.async { pe?.needsStart = true } }
         try? engine.start()
       }
       pe.needsStart = false

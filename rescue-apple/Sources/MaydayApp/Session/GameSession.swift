@@ -74,6 +74,12 @@ final class GameSession {
   var gamepads: () -> [GamepadSnapshot?] = { [] }
   /// Last water-memory update handed to the renderer (WaterMemoryQueue.Frame.serial).
   var memorySerial = 0
+  /// The helicopter as the last renderFrame() saw it (HeliRenderer draws it).
+  var heliSnapshot: HeliRenderSnapshot?
+  /// settings quality when the helicopter was built: heli/model.js buildHeliModel picks the main rotor
+  /// disc's segment count (48 on low, else 72) once, in the Helicopter constructor; a later quality change
+  /// only toggles the shadow-only blades (Helicopter.applyQuality), so the disc keeps this variant.
+  let heliModelQuality: String
   private var settingsSubs: [SettingsSubscription] = []
 
   /// Builds and boots the session (main.js boot()). `storage`: localStorage (UserDefaults in the app).
@@ -124,6 +130,7 @@ final class GameSession {
     ocean.weather = weather
     ocean.memorySupported = true                       // float render targets: always on Apple GPUs
     world = FreeFlightWorld(events: events)
+    heliModelQuality = settings.quality ?? ""
     heli = Helicopter(ctx: ctx)
     let heliRef = heli
     settingsSubs.append(settings.onChange { key, _ in if key == "quality" { heliRef.applyQuality() } })

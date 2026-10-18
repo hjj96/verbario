@@ -27,10 +27,12 @@ public struct HeliRenderSnapshot {
   public var cone: SearchlightCone
   public var winch: WinchRenderState
   public var crew: CrewmanPose
-  /// settings quality 'low' → the 48-segment main disc (heli/model.js discSegs), else 72
+  /// the model was built on quality 'low' → the 48-segment main disc (heli/model.js discSegs), else 72
   public var lowQuality: Bool
 
-  /// Copies the render-facing state of a Helicopter after its update(dt).
+  /// Copies the render-facing state of a Helicopter after its update(dt). `quality`: the settings quality
+  /// the helicopter was CONSTRUCTED with — buildHeliModel picks discSegs once, and a later quality change
+  /// keeps the disc (heli.js _applyQuality only toggles the shadow-only blades).
   public init(heli h: Helicopter, quality: String) {
     visual = h.visual
     let lc = h.lightsCtl

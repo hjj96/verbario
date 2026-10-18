@@ -4,8 +4,9 @@
 //   camera   ctx.camera as CameraRig placed it (position, look direction and roll from matrixWorld)
 //   look     core/look.js uniforms (time, wind, wind travel, rain, wet, flash, night, gust fronts)
 //   fog      scene.fog from WeatherSim (colour lit by lightning, near, far)
+//   heli     HeliRenderSnapshot (MaydayRender): what systems/heli.js writes into its objects / materials
 //   lights   WeatherLights.state (sun + hemisphere + shadow box; MaydayRender LightRig packs it) and the
-//            heli's lamps: spot[0] = the searchlight SpotLight, point[0] = the belly PointLight
+//            heli's lamps from its snapshot: spot[0] = the searchlight SpotLight, point[0] = the belly PointLight
 //   env      WeatherEnv's bake decision with the palette sky (weather/env.js)
 //   ocean    OceanSim.uniforms after the late upload (Mesh.onBeforeRender), the coast map, water memory
 //   post     PostFX: exposure, bloom, the FinalPass uniforms
@@ -18,12 +19,14 @@ extension GameSession {
   /// The frame to draw now. Runs the ocean's late upload first (values heli / survivors wrote after update).
   func renderFrame(internalWidth: Int, internalHeight: Int, pxScale: Float) -> RenderFrame {
     lateUpload()
+    let hs = HeliRenderSnapshot(heli: heli, quality: heliModelQuality)   // the model's build-time disc variant
+    heliSnapshot = hs
     var f = RenderFrame(camera: renderCamera(), quality: quality, internalWidth: internalWidth, internalHeight: internalHeight)
     f.pxScale = pxScale
     f.realTime = loop.time.realT
     f.look = lookInput()
     f.fog = fogInput()
-    f.lights = lightsInput()
+    f.lights = lightsInput(heli: hs)
     f.environment = environmentInput()
     f.ocean = GameSession.oceanInput(ocean.uniforms, coast: ocean.bank.coast)
     f.waterMemory = waterMemoryInput()
@@ -35,7 +38,8 @@ extension GameSession {
 
   // ---- camera --------------------------------------------------------------------------------------------
   /// ctx.camera → CameraState: eye, eye + forward (−Z column) and the camera's own up (+Y column), so the
-  /// rig's shake roll survives the renderer's lookAt rebuild.
+  /// rig's shake roll survives the renderer's lookAt rebuild; camera.aspect (CSS points) so the GPU projects
+  /// exactly like Core's picking and HUD projection.
   func renderCamera() -> CameraState {
     camera.updateMatrixWorld()
     let m = camera.matrixWorld
@@ -43,7 +47,7 @@ extension GameSession {
     let fwd = SIMD3<Double>(-m[8], -m[9], -m[10])
     let up = SIMD3<Double>(m[4], m[5], m[6])
     return CameraState(position: p, target: p + fwd, up: up, fovDeg: camera.fov, near: camera.near, far: camera.far,
-                       zoom: camera.zoom)
+                       zoom: camera.zoom, aspect: camera.aspect)
   }
 
   // ---- look / fog -------------------------------------------------------------------------------------------
@@ -71,7 +75,7 @@ extension GameSession {
   }
 
   // ---- lights -------------------------------------------------------------------------------------------------
-  func lightsInput() -> LightsInput {
+  func lightsInput(heli hs: HeliRenderSnapshot) -> LightsInput {
     let s = weather.lights.state
     var rigState = SunRigState()
     rigState.direction = s.direction
@@ -88,41 +92,10 @@ extension GameSession {
     var l = LightsInput()
     l.apply(rig: rigState, shadowOnlyLayer: weather.lights.shadowLayer1, shadows: true)
     l.environmentIntensity = Float(weather.env.environmentIntensity)
-    l.spots = [searchlightSpot()]
-    l.points = [bellyLight()]
+    // heli/searchlight.js SpotLight (300 m, penumbra 0.6, decay 2) and heli/lights.js belly PointLight (90 m)
+    l.spots = [hs.searchlightLight]
+    l.points = [hs.bellyLight]
     return l
-  }
-
-  /// heli/searchlight.js: SpotLight(0xfff1da, intensity, 300 m, angle, penumbra 0.6, decay 2) aimed at the
-  /// beam's hit point; three's cone cosines: cos(angle), cos(angle · (1 − penumbra)).
-  func searchlightSpot() -> SpotLightInput {
-    let sp = heli.searchlightCtl.spot
-    var s = SpotLightInput()
-    s.position = GameSession.f3(sp.position)
-    let d = (sp.target - sp.position).normalized()
-    s.direction = GameSession.f3(d)
-    let c = SearchlightSpot.color
-    s.color = SIMD3<Float>(Float(c.r * sp.intensity), Float(c.g * sp.intensity), Float(c.b * sp.intensity))
-    s.distance = Float(SearchlightSpot.range)
-    s.decay = Float(SearchlightSpot.decay)
-    s.coneCos = Float(JS.cos(sp.angle))
-    s.penumbraCos = Float(JS.cos(sp.angle * (1 - sp.penumbra)))
-    return s
-  }
-
-  /// heli/lights.js: the belly PointLight (90 m, decay 2) at POINTS.belly on the airframe body.
-  func bellyLight() -> PointLightInput {
-    let lc = heli.lightsCtl
-    var p = HeliModel.Points.belly
-    p.applyMatrix4(heli.visual.bodyMatrix)
-    var b = PointLightInput()
-    b.position = GameSession.f3(p)
-    let c = lc.bellyColor
-    let i = lc.bellyIntensity
-    b.color = SIMD3<Float>(Float(c.r * i), Float(c.g * i), Float(c.b * i))
-    b.distance = 90
-    b.decay = 2
-    return b
   }
 
   // ---- environment -------------------------------------------------------------------------------------------
@@ -202,8 +175,9 @@ extension GameSession {
   }
 
   /// The water memory step OceanSim queued this frame (WaterMemoryQueue.Frame): the renderer re-derives
-  /// the same window from the focus / wind / dt and draws the stamps. A frame without a new update
-  /// (paused, dt 0) hands over dt 0: texture and window stay.
+  /// the same window from the focus / wind / dt, advects with the step's feature flow (the uniforms as
+  /// ocean.update saw them, not frame.ocean's late upload) and draws the stamps. A frame without a new
+  /// update (paused, dt 0) hands over dt 0: texture and window stay.
   func waterMemoryInput() -> WaterMemoryInput {
     var w = WaterMemoryInput()
     w.focus = SIMD2<Double>(ocean.focus.x, ocean.focus.y)
@@ -214,6 +188,12 @@ extension GameSession {
     w.clear = fr.clear
     w.focus = SIMD2<Double>(fr.advect.center.x, fr.advect.center.y)
     w.wind = SIMD2<Double>(fr.advect.windV.x, fr.advect.windV.y)
+    let fl = fr.flow
+    w.flowCount = fl.count
+    w.flowA = Array(GameSession.vec4s(fl.a).prefix(fl.count))
+    w.flowB = Array(GameSession.vec4s(fl.b).prefix(fl.count))
+    w.flowC = Array(GameSession.vec4s(fl.c).prefix(fl.count))
+    w.flowDownwash = GameSession.f4(fl.downwash)
     for i in 0..<fr.count {
       let j = i * 4
       guard j + 3 < fr.aA.count, j + 3 < fr.aB.count, j + 3 < fr.aC.count,

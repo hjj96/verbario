@@ -3,12 +3,15 @@
 // quality) covering MEMORY_EXTENT = 320 m around the camera focus, re-centred by whole texels.
 // update(): advect (wind drift + feature swirl, per-channel half-lives 3 / 240 / 0.8 / 600 s, dye
 // diffusion) then the frame's instanced stamps (One/One additive), then swap — like WaterMemory.update.
-// The CPU part of that method (texel snapping, decay factors) is WaterMemoryWindow, in Double with JS math;
-// the stamp queue (WaterMemoryInput) carries WaterMemory.push and the ocean.js writers (stamp, splash,
-// addWake, _autoStamps). Both are checked against the real memory.js / ocean.js (Tests/Goldens/ocean/
-// memory.json, WaterMemoryGoldenTests).
-// TODO(Core): PLAN puts the queue in MaydayCore (WaterMemoryQueue); WaterMemoryInput is its render
-// snapshot until OceanSim is ported.
+// The CPU part of that method (texel snapping, decay factors) is WaterMemoryWindow, in Double with JS math.
+// The game's queue is MaydayCore's WaterMemoryQueue (OceanSim): the app hands each new
+// WaterMemoryQueue.Frame over as a WaterMemoryInput — stamps, the snapped centre as focus, wind, dt and the
+// feature flow the advect reads (the ocean uniforms inside ocean.update, before the late upload). The window
+// re-derived here from that centre is the queue's (applecheck harness: same advect floats); it follows what
+// this texture actually holds, so a frame the renderer skipped never shifts it twice. WaterMemoryInput's own
+// writers (push, stamp, splash, addWake, _autoStamps) build the render goldens' replays of the web's memory
+// log; both halves are checked against the real memory.js / ocean.js (Tests/Goldens/ocean/memory.json,
+// WaterMemoryGoldenTests).
 import Foundation
 import Metal
 import MaydayCore
@@ -42,8 +45,29 @@ public struct WaterMemoryInput {
   /// WaterMemory.clear() (mission setup): both targets to zero, queued stamps dropped.
   public var clear = false
   public private(set) var stamps: [WaterMemoryStamp] = []
+  /// The ocean feature uniforms the advect's swirl reads (oceanFeatureFlow: uFeatCount, uFeatA, uFeatB;
+  /// memory.js spreads uFeatC / uDownwash in too) with their values when the step ran: inside ocean.update
+  /// (after features.update and _updateLook), so features that systems running after the ocean change
+  /// (hazards) are not in yet and uDownwash is still the previous frame's late upload —
+  /// WaterMemoryQueue.Frame.flow. Empty = no swirl.
+  public var flowCount = 0
+  public var flowA: [SIMD4<Float>] = []
+  public var flowB: [SIMD4<Float>] = []
+  public var flowC: [SIMD4<Float>] = []
+  public var flowDownwash = SIMD4<Float>(0, 0, 10, 0)
 
   public init() {}
+
+  /// The frame's ocean uniforms with the feature slots of this step's flow (the advect pass's material:
+  /// memory.js `{...featureUniforms}`); everything else is the frame's own.
+  public func advectOcean(_ o: OceanFrameInput) -> OceanFrameInput {
+    var adv = o
+    adv.featA = Array(flowA.prefix(flowCount))
+    adv.featB = Array(flowB.prefix(flowCount))
+    adv.featC = Array(flowC.prefix(flowCount))
+    adv.downwash = flowDownwash
+    return adv
+  }
 
   /// WaterMemory.push: ignored when full (128) or when radius / strength are not > 0 (NaN included).
   public mutating func push(_ shape: WaterMemoryStamp.Shape, x: Double, z: Double, radius: Double, strength: Double,

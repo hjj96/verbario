@@ -24,7 +24,21 @@ open class UIView: UIResponder {
     public static let flexibleRightMargin = AutoresizingMask(rawValue: 4); public static let flexibleTopMargin = AutoresizingMask(rawValue: 8)
     public static let flexibleHeight = AutoresizingMask(rawValue: 16); public static let flexibleBottomMargin = AutoresizingMask(rawValue: 32) }
   open var autoresizingMask: UIView.AutoresizingMask = []
+  open func addGestureRecognizer(_ gestureRecognizer: UIGestureRecognizer) {}
 }
+open class UIGestureRecognizer: NSObject {
+  public enum State: Int { case possible = 0, began = 1, changed = 2, ended = 3, cancelled = 4, failed = 5
+    public static var recognized: UIGestureRecognizer.State { .ended } }
+  // init(target:action:) takes an Objective-C Selector: the app wires it under #if canImport(ObjectiveC),
+  // which Linux never has (no Selector type here), so only the rest of the surface is checked
+  #if canImport(ObjectiveC)
+  public init(target: Any?, action: Selector?) {}
+  #endif
+  open var state: UIGestureRecognizer.State { .possible }
+  open var isEnabled = true; open var cancelsTouchesInView = true
+  open func location(in view: UIView?) -> CGPoint { .zero }
+}
+open class UIHoverGestureRecognizer: UIGestureRecognizer {}
 public struct UIEdgeInsets { public var top: CGFloat; public var left: CGFloat; public var bottom: CGFloat; public var right: CGFloat
   public init() { top = 0; left = 0; bottom = 0; right = 0 }
   public init(top: CGFloat, left: CGFloat, bottom: CGFloat, right: CGFloat) { self.top = top; self.left = left; self.bottom = bottom; self.right = right } }
