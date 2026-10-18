@@ -28,7 +28,8 @@ public struct Alignment { public static let center = Alignment(); public static 
 public enum TextAlignment { case leading, center, trailing }
 public enum ColorScheme { case light, dark }
 public enum Visibility { case automatic, visible, hidden }
-public struct Edge { public struct Set: OptionSet { public let rawValue: Int; public init(rawValue: Int) { self.rawValue = rawValue }; public static let all = Set(rawValue: 15) } }
+public struct Edge { public struct Set: OptionSet { public let rawValue: Int; public init(rawValue: Int) { self.rawValue = rawValue }; public static let all = Set(rawValue: 15)
+  public static let top = Set(rawValue: 1); public static let leading = Set(rawValue: 2); public static let bottom = Set(rawValue: 4); public static let trailing = Set(rawValue: 8) } }
 public struct SafeAreaRegions: OptionSet { public let rawValue: Int; public init(rawValue: Int) { self.rawValue = rawValue }; public static let all = SafeAreaRegions(rawValue: 3) }
 
 public struct Font {
@@ -51,6 +52,11 @@ public struct Text: View {
   public func font(_ f: Font?) -> Text { self }
   public func foregroundColor(_ c: Color?) -> Text { self }
 }
+public struct Button<Label: View>: View {
+  public init(action: @escaping () -> Void, @ViewBuilder label: () -> Label) {}
+  public var body: Never { return fatalError() }
+}
+extension Button where Label == Text { public init<S: StringProtocol>(_ title: S, action: @escaping () -> Void) {} }
 public struct ZStack: View { public init(alignment: Alignment = .center, @ViewBuilder content: () -> AnyView) {}; public var body: Never { return fatalError() } }
 public struct VStack: View { public init(alignment: HorizontalAlignment = .center, spacing: CGFloat? = nil, @ViewBuilder content: () -> AnyView) {}; public var body: Never { return fatalError() } }
 public struct HStack: View { public init(alignment: Alignment = .center, spacing: CGFloat? = nil, @ViewBuilder content: () -> AnyView) {}; public var body: Never { return fatalError() } }
@@ -59,7 +65,7 @@ extension View {
   public func font(_ f: Font?) -> ModifiedContent<Self> { ModifiedContent() }
   public func foregroundColor(_ c: Color?) -> ModifiedContent<Self> { ModifiedContent() }
   public func padding(_ length: CGFloat) -> ModifiedContent<Self> { ModifiedContent() }
-  public func padding() -> ModifiedContent<Self> { ModifiedContent() }
+  public func padding(_ edges: Edge.Set = .all, _ length: CGFloat? = nil) -> ModifiedContent<Self> { ModifiedContent() }
   public func background<B: View>(_ b: B, alignment: Alignment = .center) -> ModifiedContent<Self> { ModifiedContent() }
   public func clipShape<S: Shape>(_ s: S) -> ModifiedContent<Self> { ModifiedContent() }
   public func frame(minWidth: CGFloat? = nil, idealWidth: CGFloat? = nil, maxWidth: CGFloat? = nil, minHeight: CGFloat? = nil, idealHeight: CGFloat? = nil, maxHeight: CGFloat? = nil, alignment: Alignment = .center) -> ModifiedContent<Self> { ModifiedContent() }

@@ -5,3 +5,4 @@ public final class CGColorSpace {
   public static let displayP3 = "kCGColorSpaceDisplayP3"
 }
 public typealias CFTimeInterval = Double
+public final class CGColor { public init() {} }

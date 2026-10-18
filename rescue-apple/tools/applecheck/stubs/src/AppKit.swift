@@ -36,7 +36,8 @@ open class NSWindow: NSResponder {
   public static let didResignKeyNotification = Notification.Name("NSWindowDidResignKeyNotification")
   public static let didBecomeKeyNotification = Notification.Name("NSWindowDidBecomeKeyNotification")
 }
-open class NSApplication: NSResponder { open class var shared: NSApplication { NSApplication() } }
+open class NSApplication: NSResponder { open class var shared: NSApplication { NSApplication() }
+  public class var didBecomeActiveNotification: NSNotification.Name { NSNotification.Name("NSApplicationDidBecomeActiveNotification") } }
 public protocol NSApplicationDelegate: NSObjectProtocol {
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool
 }

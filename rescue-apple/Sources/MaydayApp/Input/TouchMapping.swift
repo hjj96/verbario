@@ -73,8 +73,8 @@ struct TouchLayout {
   var buttons: [CGRect]
   var pause: CGRect
 
-  /// `safe`: the view's safe-area insets (top, left, bottom, right), added to the web's own margins.
-  init(width w: Double, height h: Double, safeTop: Double = 0, safeLeft: Double = 0, safeBottom: Double = 0, safeRight: Double = 0) {
+  /// `safe*`: the view's safe-area insets, added to the web's own margins (PLAN §8: safe area over SAFE).
+  init(width w: Double, height h: Double, safeTop: Double = 0, safeBottom: Double = 0, safeRight: Double = 0) {
     let L = TouchLayout.self
     stickZone = CGRect(x: 0, y: h * L.zoneTop, width: w * L.zoneWidth, height: h * (1 - L.zoneTop))
     let gridW = 2 * L.buttonSize + L.buttonGap
@@ -99,6 +99,5 @@ struct TouchLayout {
     }
     buttons = b
     pause = CGRect(x: w / 2 - L.pauseSize / 2, y: L.pauseTop + safeTop, width: L.pauseSize, height: L.pauseSize)
-    _ = safeLeft
   }
 }

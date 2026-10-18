@@ -98,7 +98,8 @@ MD_UN(fwidth) MD_UN(dfdx) MD_UN(dfdy) MD_UN(round) MD_UN(trunc) MD_UN(sign)
 MD_BIN(pow) MD_BIN(atan2) MD_BIN(min) MD_BIN(max) MD_BIN(step) MD_BIN(fmod) MD_BIN(reflect)
 MD_TER(clamp) MD_TER(mix) MD_TER(smoothstep) MD_TER(fma)
 uint min(uint, uint); uint max(uint, uint); uint2 min(uint2, uint2); uint2 max(uint2, uint2);
-int min(int, int); int max(int, int);
+int min(int, int); int max(int, int); int clamp(int, int, int);
+void discard_fragment();   // MSL: void discard_fragment(void)
 float dot(float2, float2); float dot(float3, float3); float dot(float4, float4);
 float length(float2); float length(float3); float length(float4);
 float distance(float2, float2); float distance(float3, float3);

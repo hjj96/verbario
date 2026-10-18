@@ -1,12 +1,12 @@
 #!/bin/sh
 # Pre-flight for the Xcode-only Swift (MaydayRender + MaydayApp + AppIOS / AppMac + MaydayRenderTests)
 # on Linux: builds MaydayCore with SwiftPM (package in Core/), builds stub modules for the Apple frameworks the app
-# imports (stubs/src: Metal, MetalKit, QuartzCore, simd, CoreGraphics, Combine, GameController,
+# imports (stubs/src: Metal, MetalKit, QuartzCore, simd, CoreGraphics, Combine, CoreHaptics, GameController,
 # UIKit | AppKit, SwiftUI — the API surface the code uses, with the Swift names and signatures of the
 # Apple SDK), then type-checks the app module twice (iOS pass: os(iOS) = true; macOS pass) in Swift 5
 # mode like Configs/Base.xcconfig, plus the render tests against it. Finally runs harness/main.swift:
-# the bootstrap simulation on the real exported data (no GPU) — uniform packing, camera framing,
-# DrawList ordering.
+# the app's GameSession (MaydayCore's real systems) on the real exported data, no GPU — the web session
+# trace (Tests/Vectors/app), touch mapping, render snapshot packing, camera framing, DrawList ordering.
 # A stub can only be as right as its author: a pass here means "consistent with the stubs", it does
 # not replace an Xcode build. Actor isolation (@MainActor in the SDKs) is not modelled.
 #   . tools/applecheck/env.sh && tools/applecheck/check-swift.sh [--no-harness]
@@ -25,7 +25,7 @@ core=$(cd "$core" && pwd)
 stubs() { # pass
   p=$1; o=$out/stubs-$p; mkdir -p "$o"
   if [ "$p" = ios ]; then D=IOS; PLAT=UIKit; else D=MAC; PLAT=AppKit; fi
-  for m in simd CoreGraphics Metal QuartzCore Combine GameController $PLAT MetalKit SwiftUI; do
+  for m in simd CoreGraphics Metal QuartzCore Combine CoreHaptics GameController $PLAT MetalKit SwiftUI; do
     extra=""; [ "$m" = simd ] && extra=-import-underlying-module
     swiftc -swift-version 5 -parse-as-library -emit-library -static -emit-module -module-name "$m" -D "$D" $extra \
       -I "$o" -I "$here/stubs/cinclude" -o "$o/lib$m.a" -emit-module-path "$o/$m.swiftmodule" "$here/stubs/src/$m.swift"
@@ -56,10 +56,13 @@ echo "== runtime harness (macOS sources, Linux run)"
 w=$out/work-mac
 srcs=""
 for f in "$w"/src/*.swift; do
-  case "$(basename "$f")" in AppMac__*|MaydayApp__GameHost.swift|MaydayApp__MetalView.swift|MaydayApp__RootView.swift|MaydayApp__DebugOverlay.swift|MaydayApp__Input__InputDevices.swift) ;; *) srcs="$srcs $f";; esac
+  # platform UI / input / haptics files need frameworks the harness does not link
+  case "$(basename "$f")" in AppMac__*|MaydayApp__GameHost.swift|MaydayApp__MetalView.swift|MaydayApp__RootView.swift|MaydayApp__DebugOverlay.swift|\
+    MaydayApp__Input__GamepadAdapter.swift|MaydayApp__Input__HapticsDriver.swift|MaydayApp__Input__TouchControlsView.swift|\
+    MaydayApp__Persistence__SettingsStore.swift) ;; *) srcs="$srcs $f";; esac
 done
-swiftc $(common "$out/stubs-mac") -O -module-name BootHarness $srcs "$here/harness/main.swift" \
+swiftc $(common "$out/stubs-mac") -O -module-name BootHarness $srcs "$here"/harness/*.swift \
   "$core"/MaydayCore.build/*.o "$core"/CJSMath.build/*.o -L "$out/stubs-mac" -lQuartzCore -lMetal -lCoreGraphics -lsimd -o "$out/bootharness"
 # Linux Bundle(path:) treats a `Resources/` folder as the resource directory: mirror the app bundle
 rm -rf "$out/bundle"; mkdir -p "$out/bundle/Resources"; ln -s "$repo/Resources" "$out/bundle/Resources/Resources"
-"$out/bootharness" "$out/bundle"
+"$out/bootharness" "$out/bundle" "$repo/Tests/Vectors"

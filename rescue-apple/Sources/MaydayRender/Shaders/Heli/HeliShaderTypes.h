@@ -29,6 +29,7 @@
 
 // ---- textures / function constants ------------------------------------------------------------------------
 #define MD_TEX_HELI_DECAL 8      // hull uDecal: livery atlas 1024 × 512 (heli/decals.js, sRGB, clamp, mipmapped)
+#define MD_SMP_HELI_DECAL 5      // uDecal sampler: clamp to edge, trilinear, anisotropy 4 (look.canvasTexture)
 #define MD_FC_HELI_VCOLOR 20     // bool: heli prop mesh has vertex colours (material.vertexColors)
 
 // =====================================================================================================
@@ -48,14 +49,16 @@ MD_STATIC_ASSERT(sizeof(MDWxParams) == 96, "MDWxParams layout");
 typedef struct {
   simd_float4 diffuseOpacity;    // material.color (linear), opacity
   simd_float4 physical;          // roughness, metalness, clearcoat, clearcoatRoughness
+  simd_float4 specular;          // specularColor (linear), specularIntensity (MeshPhysicalMaterial, USE_SPECULAR)
+  simd_float4 iorShadow;         // ior, receiveShadow (1 / 0: object.receiveShadow — hull yes, hub no), 0, 0
   simd_float4 uRim;              // rgb, uSunScale
   simd_float4 uFill;             // rgb, uSoot
-  simd_float4 uInstr;            // rgb, receiveShadow (1 / 0: hull yes, hub no)
+  simd_float4 uInstr;            // rgb, 0
   simd_float4 uGlowPos[MD_HULL_GLOWS]; // xyz airframe-local, w = radius m
   simd_float4 uGlowCol[MD_HULL_GLOWS]; // rgb, 0
   MDWxParams wx;
 } MDHullUniforms;
-MD_STATIC_ASSERT(sizeof(MDHullUniforms) == 432, "MDHullUniforms layout");
+MD_STATIC_ASSERT(sizeof(MDHullUniforms) == 464, "MDHullUniforms layout");
 
 // Rotor veil (buffer 5): createRotorMaterial uniforms (uTime comes from MDLookUniforms).
 typedef struct {

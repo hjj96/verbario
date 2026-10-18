@@ -36,6 +36,8 @@ struct SessionOptions {
   /// window.innerWidth × innerHeight before the first layout (CSS px = points)
   var viewportWidth: Double = 1280
   var viewportHeight: Double = 720
+  /// main.js `last = performance.now()` at boot: the clock the first frame's delta is measured from (ms)
+  var startMs: Double = 0
 
   init() {}
 }
@@ -80,7 +82,7 @@ final class GameSession {
     events = EventBus()
     let derived = game["derived"]
     let initialMode = GameMode(rawValue: derived["ctx"]["initialMode"].string ?? "title") ?? .title
-    loop = GameLoop(events: events, rules: rules, mode: initialMode)
+    loop = GameLoop(events: events, rules: rules, mode: initialMode, startMs: options.startMs)
 
     // settings + live bindings (core/settings.js reads localStorage, applyBindings on construction)
     let inputTables = try InputTables(json: try catalog.data("input"))

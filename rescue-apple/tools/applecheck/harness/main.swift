@@ -1,6 +1,13 @@
-// Linux runtime harness for the M0 bootstrap (no GPU): loads the real exported data like the app,
-// runs BootstrapSim for every preset × quality, packs the uniforms the renderer would upload and checks
-// them (finite, sane), plus camera framing through CameraMatrices (heli at NDC y ≈ +0.1).
+// Linux runtime harness for the app layer (no GPU): builds the app's GameSession — MaydayCore's real
+// WeatherSim, OceanSim, Helicopter, CameraRig and the free-flight stand-ins — on the real exported data,
+// exactly like the app does, and checks:
+//   1. session: every preset × quality flies (take off, cruise, hover) and the render snapshot packs to
+//      finite uniforms (ocean, lights, FinalPass), the heli sits at NDC (0, +0.1) of the follow framing
+//      (camera.js HELI_SCREEN_Y), depth inside Metal's clip range, fog focus under the screen centre;
+//   2. parity: Tests/Vectors/app/*.json, recorded from the web's own boot + frame loop over the same
+//      systems (tools/export/export-app.mjs), replayed through GameSession (bitwise) and touch.js's
+//      arithmetic through TouchMapping;
+//   3. DrawList ordering against three's comparators on a small scene.
 import Foundation
 import MaydayCore
 import MaydayShaderTypes
@@ -18,39 +25,48 @@ let bundlePath = CommandLine.arguments[1]
 guard let bundle = Bundle(path: bundlePath) else { fatalError("no bundle at \(bundlePath)") }
 print("resourceURL:", bundle.resourceURL?.path ?? "nil")
 let data = try DataBundle(bundle: bundle)
-let presets = try data.data("weather")["weather/presets"]["PRESET_NAMES"].strings
-let fmt = { (x: Float) in String(format: "%.3f", x) }
-let fmt4 = { (v: SIMD4<Float>) in "(\(fmt(v.x)), \(fmt(v.y)), \(fmt(v.z)), \(fmt(v.w)))" }
-let fmt3 = { (v: SIMD3<Float>) in "(\(fmt(v.x)), \(fmt(v.y)), \(fmt(v.z)))" }
+let catalog = try data.catalog()
+let presets = try data.data("weather")["weather/presets"]["PRESET_NAMES"].strings ?? []
+let fmt = { (x: Double) in String(format: "%.2f", x) }
 
+// ---- 1. session smoke run ------------------------------------------------------------------------------
 for q in ["low", "medium", "high"] {
-  for p in presets {
-    let sim = try BootstrapSim(data: data, qualityName: q, presetName: p)
-    var raw = RawInputFrame()
+  for p in (q == "high" ? presets : ["calm", "storm"]) {
+    var opt = SessionOptions()
+    opt.quality = q
+    opt.weather = p
+    let s = try GameSession(catalog: catalog, storage: MemoryStorage(), options: opt)
+    check(s.loop.mode == .play, "\(q)/\(p): mode \(s.loop.mode) after boot (free flight launches into play)")
+    check(s.heli.landed != nil, "\(q)/\(p): the heli starts on the stub World's pad")
     var f: RenderFrame?
-    for i in 0..<420 {
-      // fly north-east for 3 s, then hover (the camera springs settle on the hovering probe)
-      raw.virtualAxes = i < 180 ? ["moveX": 0.6, "moveY": 0.8] : [:]
-      sim.step(realDt: 1.0 / 60.0, raw: raw)
-      f = sim.renderFrame(internalWidth: 1920, internalHeight: 1080, pxScale: 2, dt: 1.0 / 60.0)
+    for i in 0..<720 {
+      // 40 m preset (takes off from the pad), cruise north-east for 3 s from 4 s, then hover (springs settle)
+      s.input.setVirtualButton(.altPreset2, i >= 2 && i < 6)
+      s.input.setVirtualAxis(.moveX, i >= 240 && i < 420 ? 0.6 : 0)
+      s.input.setVirtualAxis(.moveY, i >= 240 && i < 420 ? 0.8 : 0)
+      s.step(frameDelta: 1.0 / 60.0)
+      f = s.renderFrame(internalWidth: 1920, internalHeight: 1080, pxScale: 2)
     }
     guard let fr = f else { continue }
+    check(s.loop.disabled.isEmpty, "\(q)/\(p): disabled systems \(s.loop.disabled)")
+    check(s.heli.alive && s.heli.landed == nil && s.heli.altitude > 30, "\(q)/\(p): heli alt \(s.heli.altitude) alive \(s.heli.alive)")
+    check(s.quality.name == q, "\(q)/\(p): tier \(s.quality.name)")
     let u = OceanRenderer.pack(fr.ocean)
     check(allFinite(u), "\(q)/\(p): non-finite ocean uniform")
     check(allFinite(fr.post.finalPass), "\(q)/\(p): non-finite final uniform")
+    check(allFinite(LightRig.pack(fr.lights, shadowMapBound: true)), "\(q)/\(p): non-finite light uniform")
     check(u.uSplashCount >= 0 && u.uSplashCount <= 24, "splash count")
-    // waves present (amplitudes) and the bank count follows the tier
-    let a = fr.ocean.waveA.prefix(sim.quality.oceanWaves).map { $0.w }
+    let a = fr.ocean.waveA.prefix(s.quality.oceanWaves).map { $0.w }
     check(a.contains { $0 > 0 }, "\(q)/\(p): all wave amplitudes zero")
-    // camera: heli (probe) at NDC (0, +0.1) once hovering; projection depth inside the clip range
+    check(fr.ocean.heliP.w == 1, "\(q)/\(p): ocean has no heli (downwash / contact)")
+    // camera: the heli at NDC (0, +0.1) once hovering; depth inside the clip range
     let cam = CameraMatrices(camera: fr.camera, aspect: 1920.0 / 1080.0)
-    let hp = sim.probe
+    let hp = s.heli.position
     let clip = cam.projGL * (cam.view * SIMD4<Double>(hp.x, hp.y, hp.z, 1))
     let ndc = SIMD3<Double>(clip.x / clip.w, clip.y / clip.w, clip.z / clip.w)
-    check(abs(ndc.x) < 0.01 && abs(ndc.y - 0.1) < 0.01, "\(q)/\(p): heli NDC \(ndc) (want 0, 0.1)")
+    check(abs(ndc.x) < 0.06 && abs(ndc.y - CameraRig.HELI_SCREEN_Y) < 0.06, "\(q)/\(p): heli NDC \(ndc) (want 0, 0.1)")
     let metal = cam.projMetal * (cam.view * SIMD4<Double>(hp.x, hp.y, hp.z, 1))
     check(metal.z / metal.w > 0 && metal.z / metal.w < 1, "\(q)/\(p): Metal depth \(metal.z / metal.w)")
-    // inverse sanity: invViewProj · viewProj = I
     let I = cam.viewProjMetal.inverse * cam.viewProjMetal
     var maxErr = 0.0
     for c in 0..<4 { for r in 0..<4 {
@@ -58,20 +74,21 @@ for q in ["low", "medium", "high"] {
       maxErr = max(maxErr, abs(col[r] - (c == r ? 1 : 0)))
     } }
     check(maxErr < 1e-9, "inverse error \(maxErr)")
-    // fog focus lies under the screen centre: the camera's look-at target (y = 0)
-    let ff = cam.fogFocus(cameraY: fr.camera.position.y)
-    let tgt = fr.camera.target - fr.camera.position
-    check(abs(ff.x - tgt.x) < 1e-6 && abs(ff.y - tgt.z) < 1e-6, "\(q)/\(p): fog focus \(ff) vs target offset \(tgt)")
+    // the stand-ins: pad cylinder at the stub World's object position, the heli box on the body matrix
+    let pl = SceneProps.placements(s)
+    check(pl.count == s.world.padList.count + 1, "\(q)/\(p): \(pl.count) stand-in meshes")
     if q == "high" {
-      print("\(p): H \(String(format: "%.1f", sim.lastPose?.heightM ?? 0)) tilt \(String(format: "%.2f", sim.lastPose?.tiltDeg ?? 0)) Hs \(String(format: "%.3f", sim.ocean.bank.stats.Hs)) HsEff \(fmt(u.grid.w)) exp \(fmt(fr.post.exposure)) fog \(fmt3(fr.fog.color)) \(fr.fog.near)…\(fr.fog.far)")
-      print("   seaA \(fmt4(u.uSeaA)) seaB \(fmt4(u.uSeaB)) seaC \(fmt4(u.uSeaC))")
-      print("   seaD \(fmt4(u.uSeaD)) seaE \(fmt4(u.uSeaE)) lookK \(fmt4(u.uLookK)) jStats \(fmt4(u.uJStats))")
-      print("   deep \(fmt4(u.uDeep)) body \(fmt4(u.uBody)) crest \(fmt4(u.uCrest)) foam \(fmt4(u.uFoamCol))")
-      print("   final slope \(fmt3(fr.post.finalPass.slope)) power \(fmt(fr.post.finalPass.power)) contrast \(fmt(fr.post.finalPass.contrast)) sat \(fmt(fr.post.finalPass.sat)) vignette \(fmt(fr.post.finalPass.vignette)) grain \(fmt(fr.post.finalPass.grain)) ca(px@1080) \(fmt(fr.post.finalPass.ca))")
+      print("\(p): heli (\(fmt(hp.x)), \(fmt(hp.y)), \(fmt(hp.z))) alt \(fmt(s.heli.altitude)) cam H \(fmt(s.rig.height)) tilt \(fmt(s.rig.tiltDeg)) " +
+            "wind \(fmt(s.weather.state.windSpeed)) Hs \(fmt(s.ocean.waveStats.Hs)) exp \(fmt(Double(fr.post.exposure))) " +
+            "fog \(fr.fog.near)…\(fr.fog.far) env \(fr.environment.rebake) NDC (\(String(format: "%.3f", ndc.x)), \(String(format: "%.3f", ndc.y)))")
     }
   }
 }
-// DrawList ordering against three's comparators on a small scene
+
+// ---- 2. parity with the web's session ----------------------------------------------------------------------
+failures += try SessionParity.run(catalog: catalog, vectors: SessionParity.vectorsDirectory(bundlePath: bundlePath))
+
+// ---- 3. DrawList ordering against three's comparators on a small scene ---------------------------------------
 let list = RenderList()
 let cam = CameraMatrices(camera: CameraState(position: SIMD3<Double>(0, 150, 40), target: SIMD3<Double>(0, 0, 0)), aspect: 16.0 / 9.0)
 let vp = cam.projGL * cam.view
@@ -107,7 +124,5 @@ for (a, b) in zip(list.opaque, list.opaque.dropFirst()) { check(RenderList.opaqu
 for (a, b) in zip(list.transparent, list.transparent.dropFirst()) {
   check(a.renderOrder < b.renderOrder || (a.renderOrder == b.renderOrder && a.z >= b.z), "transparent back-to-front")
 }
-print("opaque:", list.opaque.map { "\($0.id)/r\($0.renderOrder)/m\($0.materialID)" }.joined(separator: " "))
-print("transparent:", list.transparent.map { "\($0.id)/r\($0.renderOrder)/z\(String(format: "%.3f", $0.z))" }.joined(separator: " "))
 print(failures == 0 ? "HARNESS OK" : "HARNESS FAILURES: \(failures)")
 exit(failures == 0 ? 0 : 1)

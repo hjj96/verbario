@@ -1,14 +1,18 @@
-// MetalView — SwiftUI host of the game's MTKView (PLAN §2.8: UIViewRepresentable /
-// NSViewRepresentable around MTKView, delegate = GameHost via MetalViewDelegate).
-//
-// GameMTKView adds the platform input that GameController does not cover:
-//   macOS: keyboard through NSEvent (keyDown / keyUp / flagsChanged → KeyboardEvent.code; swallowed,
-//          so no system beep), mouse buttons (Mouse0 / Mouse2), wheel, pointer NDC; blur on resign key;
-//   iOS:   a floating virtual stick on the left half of the screen (touch.js: radius 64 pt) →
-//          virtual axes moveX / moveY; full touch controls (lift slider, buttons) land with
-//          TouchControlsView in M4.
+// MetalView — SwiftUI host of the game's MTKView (PLAN §2.8: UIViewRepresentable / NSViewRepresentable
+// around MTKView, delegate = GameHost via MetalViewDelegate), and the platform input core/input.js gets
+// from DOM listeners, fed into MaydayCore's InputState:
+//   macOS  keyboard through NSEvent: keyDown / keyUp / flagsChanged → KeyboardEvent.code (KeyCodeMap,
+//          positional, ЙЦУКЕН works; swallowed, so no system beep; menu key equivalents such as ⌘Q run
+//          before keyDown), mouse: move / drag → mouseMove (CSS-px points from the top-left), left / right
+//          buttons → Mouse0 / Mouse2 on the game view, wheel → wheel(deltaY) (the browser's deltaY sign,
+//          natural scrolling included); window blur → input.blur();
+//   iOS    a touch on the game view makes touch the active device (window touchstart); pointer clicks
+//          (iPad trackpad / mouse, indirect touches) are mouse buttons + position; TouchControlsView sits
+//          on top (stick, slider, buttons); the hardware keyboard arrives through GCKeyboard
+//          (GamepadAdapter).
 import SwiftUI
 import MetalKit
+import MaydayCore
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -27,9 +31,7 @@ final class MetalViewDelegate: NSObject, MTKViewDelegate {
 #if os(iOS)
 final class GameMTKView: MTKView {
   weak var host: GameHost?
-  private var stickTouch: UITouch?
-  private var stickOrigin = CGPoint.zero
-  private let stickRadius: CGFloat = 64
+  private(set) var touchControls: TouchControlsView?
 
   override init(frame frameRect: CGRect, device: MTLDevice?) {
     super.init(frame: frameRect, device: device)
@@ -41,42 +43,53 @@ final class GameMTKView: MTKView {
     isMultipleTouchEnabled = true
   }
 
+  /// Adds the touch controls (once the host's input exists).
+  func attach(host: GameHost) {
+    self.host = host
+    guard touchControls == nil, let input = host.input else { return }
+    let tc = TouchControlsView(input: input, onPause: { [weak host] in host?.touchPause() })
+    tc.haptics = host.touchHaptics
+    tc.frame = bounds
+    tc.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    addSubview(tc)
+    touchControls = tc
+  }
+
+  private func pointer(_ t: UITouch) {
+    guard let s = host?.session, bounds.width > 0, bounds.height > 0 else { return }
+    let p = t.location(in: self)
+    s.input.mouseMove(x: Double(p.x), y: Double(p.y), viewWidth: Double(bounds.width), viewHeight: Double(bounds.height), nowMs: s.clockMs)
+  }
+
+  private static func button(_ event: UIEvent?) -> Int {
+    (event?.buttonMask.contains(.secondary) ?? false) ? 2 : 0
+  }
+
   override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-    for t in touches where stickTouch == nil {
-      let p = t.location(in: self)
-      if p.x < bounds.width * 0.5 {
-        stickTouch = t
-        stickOrigin = p
-        host?.setVirtualStick(SIMD2<Double>(0, 0))
+    guard let s = host?.session else { return }
+    for t in touches {
+      if t.type == .indirectPointer {
+        pointer(t)
+        s.input.mouseDown(button: GameMTKView.button(event), onGameView: true, nowMs: s.clockMs)
+      } else {
+        s.input.touchStart()
       }
     }
   }
 
   override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-    guard let st = stickTouch, touches.contains(st) else { return }
-    let p = st.location(in: self)
-    var dx = Double((p.x - stickOrigin.x) / stickRadius)
-    var dy = Double(-(p.y - stickOrigin.y) / stickRadius)   // screen up = north = +moveY
-    let l = (dx * dx + dy * dy).squareRoot()
-    if l > 1 {
-      dx /= l
-      dy /= l
+    for t in touches where t.type == .indirectPointer { pointer(t) }
+  }
+
+  override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) { endPointer(touches, event) }
+  override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { endPointer(touches, event) }
+
+  private func endPointer(_ touches: Set<UITouch>, _ event: UIEvent?) {
+    guard let s = host?.session else { return }
+    for t in touches where t.type == .indirectPointer {
+      s.input.mouseUp(button: 0)
+      s.input.mouseUp(button: 2)
     }
-    host?.setVirtualStick(SIMD2<Double>(dx, dy))
-  }
-
-  override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-    endStick(touches)
-  }
-
-  override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-    endStick(touches)
-  }
-
-  private func endStick(_ touches: Set<UITouch>) {
-    guard let st = stickTouch, touches.contains(st) else { return }
-    stickTouch = nil
-    host?.setVirtualStick(nil)
   }
 }
 
@@ -87,7 +100,7 @@ struct MetalView: UIViewRepresentable {
 
   func makeUIView(context: Context) -> GameMTKView {
     let v = GameMTKView(frame: .zero, device: host.metalDevice)
-    v.host = host
+    v.attach(host: host)
     host.configure(v)
     v.delegate = context.coordinator
     return v
@@ -101,6 +114,8 @@ final class GameMTKView: MTKView {
   weak var host: GameHost?
   private var resignObserver: NSObjectProtocol?
   private var trackingArea: NSTrackingArea?
+  /// Physical modifiers currently down (flagsChanged reports the whole mask).
+  private var modifiers = Set<String>()
 
   override var acceptsFirstResponder: Bool { true }
 
@@ -113,13 +128,19 @@ final class GameMTKView: MTKView {
     if let w = window {
       // queue: .main → the (@Sendable) block runs on the main thread, where the view lives
       resignObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: w, queue: .main) { [weak self] _ in
-        MainActor.assumeIsolated { () -> Void in self?.host?.devices.keyboard.blur() }
+        MainActor.assumeIsolated { () -> Void in self?.blur() }
       }
     }
   }
 
   deinit {
     if let o = resignObserver { NotificationCenter.default.removeObserver(o) }
+  }
+
+  /// window blur: InputState forgets every key (a keyup lost behind ⌘-Tab must not stick).
+  private func blur() {
+    modifiers.removeAll()
+    host?.session?.input.blur()
   }
 
   override func updateTrackingAreas() {
@@ -130,34 +151,41 @@ final class GameMTKView: MTKView {
     trackingArea = t
   }
 
-  // ---- keyboard (swallowed: no beep; menu key equivalents such as ⌘Q run before keyDown) ----
+  // ---- keyboard (swallowed: no beep) ----
   override func keyDown(with event: NSEvent) {
     guard let code = KeyCodeMap.mac[event.keyCode] else { return }
-    host?.devices.keyboard.keyDown(code, isRepeat: event.isARepeat)
+    host?.keyDown(code, isRepeat: event.isARepeat)
   }
 
   override func keyUp(with event: NSEvent) {
     guard let code = KeyCodeMap.mac[event.keyCode] else { return }
-    host?.devices.keyboard.keyUp(code)
+    host?.keyUp(code)
   }
 
   override func flagsChanged(with event: NSEvent) {
-    guard let kb = host?.devices.keyboard else { return }
+    guard let host else { return }
     let raw = event.modifierFlags.rawValue
     for m in KeyCodeMap.macModifierMasks {
       let isDown = raw & m.mask != 0
-      let wasDown = kb.keys.contains(m.code)
-      if isDown && !wasDown { kb.keyDown(m.code, isRepeat: false) }
-      if !isDown && wasDown { kb.keyUp(m.code) }
+      let wasDown = modifiers.contains(m.code)
+      if isDown && !wasDown {
+        modifiers.insert(m.code)
+        host.keyDown(m.code, isRepeat: false)
+      }
+      if !isDown && wasDown {
+        modifiers.remove(m.code)
+        host.keyUp(m.code)
+      }
     }
   }
 
   // ---- mouse ----
   private func updatePointer(_ event: NSEvent) {
+    guard let s = host?.session, bounds.width > 0, bounds.height > 0 else { return }
     let p = convert(event.locationInWindow, from: nil)
-    guard bounds.width > 0, bounds.height > 0 else { return }
-    // NSView y grows upward (non-flipped): NDC y = 2·y/h − 1
-    host?.devices.keyboard.mouseNDC = SIMD2<Double>(Double(p.x / bounds.width) * 2 - 1, Double(p.y / bounds.height) * 2 - 1)
+    // NSView y grows upward (non-flipped): the DOM's clientY = height − y
+    s.input.mouseMove(x: Double(p.x), y: Double(bounds.height - p.y), viewWidth: Double(bounds.width), viewHeight: Double(bounds.height),
+                      nowMs: s.clockMs)
   }
 
   override func mouseMoved(with event: NSEvent) { updatePointer(event) }
@@ -167,21 +195,24 @@ final class GameMTKView: MTKView {
   override func mouseDown(with event: NSEvent) {
     window?.makeFirstResponder(self)
     updatePointer(event)
-    host?.devices.keyboard.mouseDown("Mouse0")
+    guard let s = host?.session else { return }
+    s.input.mouseDown(button: 0, onGameView: true, nowMs: s.clockMs)
   }
 
-  override func mouseUp(with event: NSEvent) { host?.devices.keyboard.mouseUp("Mouse0") }
+  override func mouseUp(with event: NSEvent) { host?.session?.input.mouseUp(button: 0) }
 
   override func rightMouseDown(with event: NSEvent) {
     updatePointer(event)
-    host?.devices.keyboard.mouseDown("Mouse2")
+    guard let s = host?.session else { return }
+    s.input.mouseDown(button: 2, onGameView: true, nowMs: s.clockMs)
   }
 
-  override func rightMouseUp(with event: NSEvent) { host?.devices.keyboard.mouseUp("Mouse2") }
+  override func rightMouseUp(with event: NSEvent) { host?.session?.input.mouseUp(button: 2) }
 
   override func scrollWheel(with event: NSEvent) {
-    let d = event.scrollingDeltaY
-    if d != 0 { host?.devices.keyboard.addWheel(d > 0 ? -1 : 1) }   // web: sign(deltaY), + = scroll down
+    // WheelEvent.deltaY > 0 = scroll down (towards the user); NSEvent's scrollingDeltaY has the opposite sign
+    let d = Double(event.scrollingDeltaY)
+    if d != 0 { host?.session?.input.wheel(deltaY: -d) }
   }
 }
 

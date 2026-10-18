@@ -1,5 +1,6 @@
 // RootView — SwiftUI root shared by iOS and macOS (PLAN §2.8):
-// ZStack(MetalView, FatalOverlay, debug overlay). Paper screens (MaydayUI) join the stack in M5.
+// ZStack(MetalView (+ touch controls inside it on iOS), FatalOverlay, debug overlay). Paper screens
+// (MaydayUI) join the stack in M4.
 import SwiftUI
 
 struct RootView: View {
@@ -13,9 +14,14 @@ struct RootView: View {
           .ignoresSafeArea()
       }
       if host.showOverlay && host.fatalMessage == nil {
+        #if os(iOS)
+        DebugOverlay(info: host.overlay, command: { [weak host] c in host?.debug(c) })
+          .padding(12)
+        #else
         DebugOverlay(info: host.overlay)
           .padding(12)
           .allowsHitTesting(false)
+        #endif
       }
       if let message = host.fatalMessage {
         FatalOverlay(message: message)

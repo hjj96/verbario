@@ -1,12 +1,19 @@
-// GameHost — owns the simulation and the renderer, driven by the MTKView display link
-// (PLAN §2.3 «Игровой цикл», §2.8; web: main.js loop + pixel-ratio rule).
+// GameHost — owns the game session (MaydayCore's real systems, GameSession), the renderer and the platform
+// input / haptics, driven by the MTKView display link (PLAN §2.3, §2.8; web: main.js boot + frame).
 //
-//   frame: realDt = min(frameDelta, dtCap 0.1) → input.poll() → simulation → render snapshot → Renderer
-//   pixel ratio: min(screen scale, pixelRatioCap(quality), max(1, √(1920·1080 / points²))) (main.js)
-//   view: bgra8Unorm drawable, colorspace sRGB (P3 panels must not oversaturate), no MTKView depth
-//         (the renderer owns its targets), 60 fps (120 Hz is a later setting, PLAN X11).
-// Launch arguments (NSArgumentDomain, PLAN §2.8): -mayday.quality low|medium|high,
-//   -mayday.weather <preset>, -mayday.dynres NO, -mayday.debug YES|NO, -mayday.fps 60|120.
+//   frame:  nowMs = display clock → session.frame (pause poll, realDt = min(Δ, 0.1), look time,
+//           gamepads + input.poll(), the systems in SYSTEMS order) → debug keys → render snapshot
+//           (ocean.lateUpload, stand-in meshes) → Renderer → warm-up (PipelineCache.prewarm when the loop
+//           asks for it: boot, mission:setup, quality changes; replaces core/warmup.js compileScene).
+//   pixels: internal size = floor(points × pixelRatio), pixelRatio = min(screen scale, settings
+//           pixelRatioCap(quality), max(1, √(1920·1080 / points²))) (main.js); the drawable stays native.
+//   view:   bgra8Unorm drawable, colorspace sRGB (P3 panels must not oversaturate), no MTKView depth (the
+//           renderer owns its targets), 60 fps (120 Hz is a later setting, PLAN X11).
+// Launch arguments (NSArgumentDomain, PLAN §2.8): -mayday.quality, -mayday.weather, -mayday.tod,
+// -mayday.persist NO (SettingsStore), -mayday.dynres NO, -mayday.debug YES|NO, -mayday.fps 60|120.
+// Debug controls (outside the game's bindings): ` (the game's `debug` action) / pad View+R3 — overlay;
+// [ ] / View+LB / View+RB — weather preset; F2 / View+Y — quality; F5 / View+Menu — restart the flight;
+// the overlay's buttons on touch devices.
 //
 // No actor annotations on purpose: everything here runs on the main thread (MTKView draw, SwiftUI,
 // GameController handlers on the main queue); Metal completion handlers only touch the renderer's
@@ -26,16 +33,18 @@ struct OverlayInfo {
   var fps: Double = 0
   var cpuMs: Double = 0
   var gpuMs: Double = 0
+  var simMs: Double = 0
   var internalSize = ""
   var drawableSize = ""
   var dynScale: Double = 1
   var msaa = 1
   var quality = ""
   var preset = ""
-  var windText = ""
+  var weatherText = ""
   var seaText = ""
+  var heliText = ""
+  var heliText2 = ""
   var cameraText = ""
-  var probeText = ""
   var flags = ""
   var device = ""
   var error: String?
@@ -46,20 +55,25 @@ final class GameHost: ObservableObject {
   @Published var showOverlay: Bool
   @Published private(set) var fatalMessage: String? = nil
 
-  let devices = InputDevices()
+  let pads = GamepadAdapter()
+  private(set) var session: GameSession?
   private(set) var renderer: Renderer?
-  private(set) var sim: BootstrapSim?
-  private var lastTime: CFTimeInterval = 0
-  private var dtCap = 0.1
+  private var props: SceneProps?
+  private var haptics: HapticsDriver?
+  #if os(iOS)
+  private(set) var touchHaptics: TouchHaptics?
+  #endif
   private var dynamicResolution = true
   private var preferredFPS = 60
-  private var virtualAxes: [String: Double] = [:]
-  private var prewarmedQuality: RenderQualityConfig?
+  private var viewportPoints = (width: 0.0, height: 0.0)
   private var fpsAccum = 0.0
   private var fpsFrames = 0
+  private var simAccum = 0.0
+  private var lastFrameMs = 0.0
   private var overlayT = 0.0
 
   var metalDevice: MTLDevice? { renderer?.device.device }
+  var input: InputState? { session?.input }
 
   init() {
     let defaults = UserDefaults.standard
@@ -73,15 +87,15 @@ final class GameHost: ObservableObject {
     if fps == 60 || fps == 120 { preferredFPS = fps }
     do {
       let data = try DataBundle()
-      if let cap = try? data.data("game")["derived"]["loop"]["dtCap"].double { dtCap = cap }
-      let quality = defaults.string(forKey: "mayday.quality") ?? GameHost.defaultQuality()
-      let weather = defaults.string(forKey: "mayday.weather")
-      let s = try BootstrapSim(data: data, qualityName: quality, presetName: weather)
-      let r = try Renderer(texturesDirectory: data.texturesDirectory, oceanConstants: s.ocean.constants)
+      var options = SettingsStore.launchOptions()
+      options.startMs = CACurrentMediaTime() * 1000
+      let s = try GameSession(catalog: try data.catalog(), storage: SettingsStore.storage(), options: options)
+      let r = try Renderer(texturesDirectory: data.texturesDirectory, oceanConstants: s.ocean.tables.waves)
       try r.prewarm(quality: s.quality)
-      prewarmedQuality = s.quality
-      sim = s
+      props = try SceneProps(renderer: r)
+      session = s
       renderer = r
+      wire(s)
     } catch let e as RenderError {
       fatalMessage = e.description
     } catch let e as DataBundleError {
@@ -91,17 +105,20 @@ final class GameHost: ObservableObject {
     }
   }
 
-  /// Default tier per device (PLAN §1.4, X5): Mac → high; iPhone 15 Pro+ (apple9) / iPad M1+ → high;
-  /// A15/A16 (apple8) → medium; older → low.
-  static func defaultQuality() -> String {
-    #if os(macOS)
-    return "high"
-    #else
-    guard let dev = MTLCreateSystemDefaultDevice() else { return "low" }
-    if dev.supportsFamily(.apple9) { return "high" }
-    if UIDevice.current.userInterfaceIdiom == .pad && dev.supportsFamily(.apple7) { return "high" }
-    if dev.supportsFamily(.apple8) { return "medium" }
-    return "low"
+  /// Input and haptics adapters → the session.
+  private func wire(_ s: GameSession) {
+    let pads = self.pads
+    s.gamepads = { pads.snapshots() }
+    let driver = HapticsDriver(pads: pads)
+    haptics = driver
+    s.input.rumbleSink = { [weak driver] e in driver?.rumble(e) }
+    pads.onDebug = { [weak self] cmd in self?.debug(cmd) }
+    pads.onKey = { [weak self] code, down in
+      if down { self?.keyDown(code, isRepeat: false) } else { self?.keyUp(code) }
+    }
+    #if os(iOS)
+    let loop = s.loop
+    touchHaptics = TouchHaptics(events: s.events, input: s.input, settings: s.settings, mode: { loop.mode })
     #endif
   }
 
@@ -126,15 +143,37 @@ final class GameHost: ObservableObject {
     // render targets follow RenderFrame.internalWidth/Height on the next frame
   }
 
-  func setVirtualStick(_ v: SIMD2<Double>?) {
-    if let v = v {
-      virtualAxes["moveX"] = v.x
-      virtualAxes["moveY"] = v.y
-    } else {
-      virtualAxes["moveX"] = 0
-      virtualAxes["moveY"] = 0
+  // ---- keyboard / debug -------------------------------------------------------------------------------------
+
+  /// keydown (KeyboardEvent.code): the game's Input, then the debug keys outside its bindings.
+  func keyDown(_ code: String, isRepeat: Bool) {
+    guard let s = session else { return }
+    s.input.keyDown(code, isRepeat: isRepeat)
+    if isRepeat { return }
+    switch code {
+    case "BracketLeft": debug(.previousPreset)
+    case "BracketRight": debug(.nextPreset)
+    case "F2": debug(.cycleQuality)
+    case "F5": debug(.restart)
+    default: break
     }
   }
+
+  func keyUp(_ code: String) { session?.input.keyUp(code) }
+
+  func debug(_ cmd: DebugCommand) {
+    guard let s = session else { return }
+    switch cmd {
+    case .previousPreset: s.cyclePreset(-1)
+    case .nextPreset: s.cyclePreset(1)
+    case .cycleQuality: s.cycleQuality()
+    case .toggleOverlay: showOverlay.toggle()
+    case .restart: s.mission.restart()
+    }
+  }
+
+  /// The touch pause button (touch.js: hud.emit('ui:pause')).
+  func touchPause() { session?.events.emit(GameEvent.UiPause()) }
 
   private func screenScale(_ view: MTKView) -> Double {
     #if os(macOS)
@@ -144,67 +183,85 @@ final class GameHost: ObservableObject {
     #endif
   }
 
+  // ---- frame ----------------------------------------------------------------------------------------------
+
   /// One display-link tick (MTKViewDelegate.draw).
   func frame(_ view: MTKView) {
-    guard let renderer = renderer, let sim = sim else { return }
-    let now = CACurrentMediaTime()
-    let frameDelta = lastTime > 0 ? now - lastTime : 1.0 / Double(preferredFPS)
-    lastTime = now
-    let realDt = min(max(frameDelta, 0), dtCap)
-
-    let raw = devices.frame(virtualAxes: virtualAxes, virtualButtons: [:])
-    sim.step(realDt: realDt, raw: raw)
-    if sim.input.rawPressed("debug") || sim.input.rawPadPressed(11) { showOverlay.toggle() }
-    if prewarmedQuality != sim.quality {
-      do { try renderer.prewarm(quality: sim.quality) } catch { fatalMessage = "\(error)" }
-      prewarmedQuality = sim.quality
+    guard let renderer, let s = session else { return }
+    let nowMs = CACurrentMediaTime() * 1000
+    let pts = view.bounds.size
+    let w = Double(max(pts.width, 1)), h = Double(max(pts.height, 1))
+    if w != viewportPoints.width || h != viewportPoints.height {
+      viewportPoints = (w, h)
+      s.resize(width: w, height: h)
     }
 
-    let pts = view.bounds.size
-    let scale = screenScale(view)
-    let size = sim.internalSize(pointsWidth: Double(max(pts.width, 1)), pointsHeight: Double(max(pts.height, 1)), screenScale: scale)
-    let pxScale = pts.width > 0 ? Float(view.drawableSize.width / pts.width) : Float(scale)
-    var f = sim.renderFrame(internalWidth: size.0, internalHeight: size.1, pxScale: pxScale, dt: realDt)
+    let t0 = CACurrentMediaTime()
+    s.frame(nowMs: nowMs)
+    if s.input.rawPressed(.debug) { showOverlay.toggle() }
+    #if os(iOS)
+    (view as? GameMTKView)?.touchControls?.setOn(TouchMapping.visible(mode: s.loop.mode, lastDevice: s.input.lastDevice))
+    #endif
+
+    let ratio = s.pixelRatio(devicePixelRatio: screenScale(view), width: w, height: h)
+    let iw = max(1, Int((w * ratio).rounded(.down)))
+    let ih = max(1, Int((h * ratio).rounded(.down)))
+    let pxScale = pts.width > 0 ? Float(view.drawableSize.width / pts.width) : Float(screenScale(view))
+    var f = s.renderFrame(internalWidth: iw, internalHeight: ih, pxScale: pxScale)
     f.dynamicResolution = dynamicResolution
     f.framesPerSecond = view.preferredFramesPerSecond
+    props?.update(s)
+    simAccum += (CACurrentMediaTime() - t0) * 1000
     renderer.render(f) { view.currentDrawable }
+    if s.loop.afterRender() {
+      // core/warmup.js compileScene → every PSO of the current tier, synchronously (PipelineCache)
+      do { try renderer.prewarm(quality: s.quality) } catch { fatalMessage = "\(error)" }
+      s.loop.warmupCompiled()
+    }
 
+    let frameDelta = lastFrameMs > 0 ? (nowMs - lastFrameMs) / 1000 : 0
+    lastFrameMs = nowMs
     fpsAccum += frameDelta
     fpsFrames += 1
-    overlayT += realDt
+    overlayT += frameDelta
     if overlayT >= 0.25 {
       overlayT = 0
-      publishOverlay(renderer: renderer, sim: sim)
+      publishOverlay(renderer: renderer, session: s)
     }
   }
 
-  private func publishOverlay(renderer: Renderer, sim: BootstrapSim) {
+  private func publishOverlay(renderer: Renderer, session s: GameSession) {
     let st = renderer.stats
     var o = OverlayInfo()
     o.fps = fpsAccum > 0 ? Double(fpsFrames) / fpsAccum : 0
+    o.simMs = fpsFrames > 0 ? simAccum / Double(fpsFrames) : 0
     fpsAccum = 0
     fpsFrames = 0
+    simAccum = 0
     o.cpuMs = st.cpuEncodeMs
     o.gpuMs = st.gpuMs
     o.internalSize = "\(st.viewportWidth)×\(st.viewportHeight) из \(st.internalWidth)×\(st.internalHeight)"
     o.drawableSize = "\(st.drawableWidth)×\(st.drawableHeight)"
     o.dynScale = st.dynScale
     o.msaa = st.sampleCount
-    o.quality = sim.quality.name
-    o.preset = sim.presetName
-    let pal = PaletteSnapshot(packed: sim.palettes.packed(sim.presetName), offsets: sim.palettes.offsets)
-    o.windText = String(format: "ветер %.0f м/с, курс 120°", pal.num("wind"))
-    let ws = sim.ocean.bank.stats
+    o.quality = s.quality.name
+    let w = s.weather.state
+    o.preset = w.transition.active ? "\(w.transition.from) → \(w.preset) \(Int(w.transition.progress * 100)) %" : w.preset
+    o.weatherText = String(format: "ветер %.1f м/с с %03.0f°, порыв %.1f, дождь %.2f, ночь %.2f, турб. %.2f",
+                           w.windSpeed, w.windFrom, w.gust, w.rain, w.night, w.turbulence)
+    let ws = s.ocean.waveStats
     o.seaText = String(format: "Hs %.2f м (эфф. %.2f), Q %.2f", ws.Hs, ws.HsEff, ws.Q)
-    if let p = sim.lastPose {
-      o.cameraText = String(format: "камера H %.0f м, наклон %.1f°", p.heightM, p.tiltDeg)
-    }
-    o.probeText = String(format: "зонд x %.0f z %.0f, высота %.0f м", sim.probe.x, sim.probe.z, sim.probe.y)
-    var flags: [String] = []
-    if sim.paused { flags.append("ПАУЗА") }
-    if sim.searchlightOn { flags.append("прожектор") }
-    if sim.probeEffects { flags.append("винт") }
-    if let pad = devices.padName { flags.append("геймпад: \(pad)") }
+    let h = s.heli
+    let pad = h.landed.map { "площадка \($0.raw)" } ?? "в воздухе"
+    o.heliText = String(format: "вертолёт H %.1f м (цель %.0f), %.1f м/с, курс %03.0f°, %@", h.altitude, h.altTarget, h.speed,
+                        (h.heading * 180 / Double.pi + 360).truncatingRemainder(dividingBy: 360), pad)
+    o.heliText2 = String(format: "топливо %.0f %%, корпус %.0f %%, ротор %.2f, лебёдка %@ %.1f м%@%@",
+                         h.fuel * 100, h.hull * 100, h.rotorRPM, h.winch.state.rawValue, h.winch.length,
+                         h.searchlight ? ", прожектор" : "", h.alive ? "" : ", АВАРИЯ")
+    o.cameraText = String(format: "камера %@ H %.0f м, наклон %.1f°, зум %.2f", s.rig.mode.rawValue, s.rig.height, s.rig.tiltDeg, s.rig.zoom)
+    var flags: [String] = [s.loop.mode.rawValue, "ввод: \(s.input.lastDevice.rawValue)"]
+    if let pad = pads.padName { flags.append("геймпад: \(pad)") }
+    if s.loop.disabled.count > 0 { flags.append("отключены: " + s.loop.disabled.map(\.rawValue).sorted().joined(separator: ", ")) }
     o.flags = flags.joined(separator: " · ")
     o.device = renderer.device.device.name
     o.error = st.lastError
