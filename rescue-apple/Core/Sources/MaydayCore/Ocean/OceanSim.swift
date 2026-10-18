@@ -111,7 +111,8 @@ public final class OceanSim {
   var streakA: Double = 0
   var streakB: Double = 0
   var streakMix: Double = 0
-  var detOff = V4(0, 0, 0, 0)
+  /// ocean._detOff = new THREE.Vector4() (w = 1: three's default)
+  var detOff = V4(0, 0, 0, 1)
   var windOffSeen = V2(.nan, .nan)
   var coastT: Double? = nil
   var coastKey: String? = nil
@@ -582,15 +583,22 @@ public final class OceanSim {
   // ==================================================================================================
   // CPU mirror (contract)
 
-  public func heightAt(_ x: Double, _ z: Double, _ tOffset: Double = 0) -> Double { bank.heightAt(x, z, tOffset) }
+  // heightAt / normalAt take the web's optional tOffset as a labelled argument, so the plain two-argument
+  // forms stay the OceanQuery requirements (Heli/SimContext.swift).
+  public func heightAt(_ x: Double, _ z: Double) -> Double { bank.heightAt(x, z, 0) }
 
-  public func normalAt(_ x: Double, _ z: Double, _ tOffset: Double = 0) -> V3 { bank.normalAt(x, z, tOffset) }
+  public func heightAt(_ x: Double, _ z: Double, tOffset: Double) -> Double { bank.heightAt(x, z, tOffset) }
+
+  /// Exact normal of the displaced surface (always present: optional only for the OceanQuery stubs).
+  public func normalAt(_ x: Double, _ z: Double) -> V3? { bank.normalAt(x, z, 0) }
+
+  public func normalAt(_ x: Double, _ z: Double, tOffset: Double) -> V3 { bank.normalAt(x, z, tOffset) }
 
   /// Orbital surface velocity (x, vertical, z). Hazard flows are separate (hazards.surfaceFlowAt).
-  public func velocityAt(_ x: Double, _ z: Double, _ tOffset: Double = 0) -> V3 { bank.velocityAt(x, z, tOffset) }
+  public func velocityAt(_ x: Double, _ z: Double, tOffset: Double = 0) -> V3 { bank.velocityAt(x, z, tOffset) }
 
   /// Feature part of the sea height (rogue crest, vortex / whirlpool dip); heightAt() already includes it.
-  public func featureHeightAt(_ x: Double, _ z: Double, _ tOffset: Double = 0) -> Double { bank.featureLiftAt(x, z, tOffset) }
+  public func featureHeightAt(_ x: Double, _ z: Double, tOffset: Double = 0) -> Double { bank.featureLiftAt(x, z, tOffset) }
 
   public func featureFlowAt(_ x: Double, _ z: Double) -> V2 { features.flowAt(x, z) }
 

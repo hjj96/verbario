@@ -60,9 +60,13 @@ const ACTIONS = ['winch', 'boost', 'searchlight', 'flare', 'raftDrop', 'horn', '
 const WINCH_STATES = ['stowed', 'lowering', 'down', 'raising'];
 const AIM_SOURCES = ['mouse', 'stick', 'touch', 'nose'];
 const DENIED = [null, 'high', 'fast', 'landed'];
-const INPUT_FIELDS = ['realDt', 'mode', 'nowMs', 'moveX', 'moveY', 'lift', 'aimX', 'aimY', 'wheel', 'device', 'mouseActive', 'mouseNdcX', 'mouseNdcY',
-  'mouseLastMoveT', 'mouseX', 'mouseY', 'down', 'pressed', 'photo', 'photoWheel', 'mouseButtons', 'shift', 'padLB', 'padRB', 'axMoveX', 'axMoveY',
+// Scripted per-frame inputs. Every value is a float32 (Math.fround before it reaches the game), so the
+// sidecar is f32 and exact; realDt goes in its own f64 column. Derived, not stored: nowMs = realT·1000
+// (realT = Σ realDt), mouse.x = (ndcX + 1)·640, mouse.y = (1 − ndcY)·360, lastMoveT = nowMs on mouseMoved frames.
+const INPUT_FIELDS = ['mode', 'moveX', 'moveY', 'lift', 'aimX', 'aimY', 'wheel', 'device', 'mouseActive', 'mouseNdcX', 'mouseNdcY', 'mouseMoved',
+  'down', 'pressed', 'photo', 'photoWheel', 'mouseButtons', 'shift', 'padLB', 'padRB', 'axMoveX', 'axMoveY',
   'axAimX', 'axAimY', 'axLift', 'turbulence', 'rain', 'fog', 'intensity', 'night', 'flash', 'stElmo'];
+const q32 = (o) => { const r = {}; for (const [k, v] of Object.entries(o)) r[k] = typeof v === 'number' ? Math.fround(v) : v; return r; };
 
 // ------------------------------------------------------------------------------------------- stubs
 // world: pads (optionally moving / turning / tilting), obstacles, floaters (moving), lighthouse.
@@ -153,9 +157,11 @@ function makeHazards(def, clock) {
       if (d < dd.r) { const k = 1 - d / dd.r; outV.set(dd.push[0] * k, -dd.s * k, dd.push[1] * k); }
       return outV;
     },
+    rogueOn: false,
     waveLiftAt(x, z) {
       const rg = def.rogue;
-      if (!rg || clock.t < rg.t0 || clock.t > rg.t1) return 0;
+      if (!rg) return 0;
+      if (rg.t0 !== undefined ? clock.t < rg.t0 || clock.t > rg.t1 : !hz.rogueOn) return 0;
       const d = Math.hypot(x - rg.x, z - rg.z);
       return d < rg.r ? rg.h * (1 - d / rg.r) : 0;
     },
@@ -248,8 +254,11 @@ function run(sc) {
     mission: sc.mission ? { def: { area: { radius: sc.mission.radius } }, elapsed: 0 } : undefined,
   };
   const rng = M.createRng(sc.seed);
-  Math.random = () => rng.next();
+  let draws = 0;
+  const sites = new Map();
+  Math.random = () => { draws++; if (process.env.MAYDAY_HELI_DEBUG) { const k = new Error().stack.split('\n')[2].trim(); sites.set(k, (sites.get(k) || 0) + 1); } return rng.next(); };
   const h = new Helicopter(ctx);
+  if (process.env.MAYDAY_HELI_DEBUG) console.log(sc.id, 'Math.random draws in new Helicopter:', draws, [...sites.entries()]);
   ctx.heli = h;
   const rig = new CameraRig(ctx);
   ctx.cameraRig = rig;
@@ -300,19 +309,28 @@ function run(sc) {
       case 'focus': rig.focus(new THREE.Vector3(...pk.position), pk.duration); break;
       case 'slowMo': rig.slowMo(pk.scale, pk.duration, pk.key ?? null); break;
       case 'rigMode': rig.setMode(pk.mode); break;
+      case 'rogue': hazards.rogueOn = pk.on; break;
+      case 'debris': Object.assign(hazards.debris.items[pk.kind][pk.i], { x: pk.x, z: pk.z, vx: pk.vx, vz: pk.vz }); break;
       default: throw new Error('unknown poke ' + pk.op);
     }
   };
 
+  const queued = []; // pokes a pilot asks for, applied at the start of the next frame
+  const realDts = [];
   const inputs = [];
   const states = [];
   const cables = [];
   const rings = [];
-  const fields = stateFields();
+  const all = stateFields();
+  const names = new Set();
+  for (const [n] of all) { if (names.has(n)) throw new Error('duplicate state field ' + n); names.add(n); }
+  const fields = all.filter((f) => f[2] === 'A');
+  const vfields = all.filter((f) => f[2] === 'B');
+  const visuals = [];
   for (clock.frame = 1; clock.frame <= sc.frames; clock.frame++) {
     const frame = clock.frame;
     const realDt = sc.dt(frame);
-    for (const pk of (sc.pokes && sc.pokes[frame]) || []) applyPoke(pk);
+    for (const pk of [...((sc.pokes && sc.pokes[frame]) || []), ...queued.splice(0)]) applyPoke(pk);
     const dt = ctx.mode === 'paused' ? 0 : realDt * ctx.timeScale;
     clock.t += dt;
     clock.realT += realDt;
@@ -320,10 +338,15 @@ function run(sc) {
     world.advance(dt, clock.t);
     survivors.advance(dt);
     hazards?.advance(dt);
-    Object.assign(st, sc.weather ? sc.weather(frame, clock.t) : {});
+    Object.assign(st, q32(sc.weather ? sc.weather(frame, clock.t) : {}));
     bank.update(dt, clock.t, sc.sea, 0.6, 1, 0, 0);
     // pilot → input for this frame
-    const u = sc.pilot(frame, ctx, h, rig, clock);
+    const u = q32(sc.pilot(frame, ctx, h, rig, clock));
+    if (u.mouse) u.mouse = u.mouse.map(Math.fround);
+    if (u.axes) u.axes = q32(u.axes);
+    if (u.pokes) queued.push(...u.pokes);
+    realDts.push(realDt);
+    if (process.env.MAYDAY_HELI_DEBUG && frame % 60 === 0) console.log(sc.id, frame, u.phase ?? '', h.position.toArray().map((v) => v.toFixed(1)).join(','), 'spd', h.speed.toFixed(1), 'landed', !!h.landed, h.winch.state, 'len', h.winch.length.toFixed(1), 'fuel', h.fuel.toFixed(3), 'hull', h.hull.toFixed(2), 'cab', h.cabin.length);
     inp.move.x = u.moveX ?? 0; inp.move.y = u.moveY ?? 0;
     inp.axes.lift = u.lift ?? 0; inp.axes.aimX = u.aimX ?? 0; inp.axes.aimY = u.aimY ?? 0;
     inp.down = new Set(u.down || []); inp.pressed = new Set(u.pressed || []);
@@ -339,8 +362,8 @@ function run(sc) {
     const ax = u.axes || {};
     input.axesValues = { moveX: ax.moveX ?? 0, moveY: ax.moveY ?? 0, lift: ax.lift ?? 0, aimX: ax.aimX ?? 0, aimY: ax.aimY ?? 0 };
     const bits = (set) => ACTIONS.reduce((a, n, i) => a | (set.has(n) ? 1 << i : 0), 0);
-    inputs.push(realDt, MODES.indexOf(ctx.mode), clock.realT * 1000, inp.move.x, inp.move.y, inp.axes.lift, inp.axes.aimX, inp.axes.aimY, inp.wheel,
-      DEVICES.indexOf(input.lastDevice), mo.active ? 1 : 0, mo.ndcX, mo.ndcY, mo.lastMoveT, mo.x, mo.y, bits(inp.down), bits(inp.pressed),
+    inputs.push(MODES.indexOf(ctx.mode), inp.move.x, inp.move.y, inp.axes.lift, inp.axes.aimX, inp.axes.aimY, inp.wheel,
+      DEVICES.indexOf(input.lastDevice), mo.active ? 1 : 0, mo.ndcX, mo.ndcY, u.mouse && u.mouseMoved ? 1 : 0, bits(inp.down), bits(inp.pressed),
       photo.active ? 1 : 0, u.photoWheel ? Math.sign(u.photoWheel) : 0, (input.mouseButtons.has('Mouse0') ? 1 : 0) | (input.mouseButtons.has('Mouse2') ? 2 : 0),
       u.shift ? 1 : 0, u.padLB ? 1 : 0, u.padRB ? 1 : 0, input.axesValues.moveX, input.axesValues.moveY, input.axesValues.aimX, input.axesValues.aimY,
       input.axesValues.lift, st.turbulence, st.rain, st.fog, st.intensity, st.night, st.flash, st.stElmo);
@@ -349,15 +372,19 @@ function run(sc) {
     h.update(dt);
     rig.update(realDt);
 
-    if (frame % 4 === 0) for (let i = 0; i < frameGlints.length; i++) glints.push(frame, i, ...frameGlints[i]);
+    if (frame % 12 === 0) for (let i = 0; i < frameGlints.length; i++) glints.push(frame, i, ...frameGlints[i]);
+    const S = { h, f: h.flight, w: h.winch, wc: h.winchCtl, o: h.ops, sl: h.searchlightCtl, lc: h.lightsCtl, cr: h.crewman, m: h.model, rig, cam: camera, ctx, world, lastDw, lastSl };
     if (frame % sc.every === 0) {
-      const S = { h, f: h.flight, w: h.winch, wc: h.winchCtl, o: h.ops, sl: h.searchlightCtl, lc: h.lightsCtl, cr: h.crewman, m: h.model, rig, cam: camera, ctx, world, lastDw, lastSl };
       states.push(frame, ...fields.map(([, g]) => g(S)));
       cables.push(...h.winchCtl.cur, ...h.winchCtl.rend);
     }
-    if (frame % 30 === 0) rings.push(...h.winchCtl.ringPos);
+    if (frame % 30 === 0) {
+      visuals.push(frame, ...vfields.map(([, g]) => g(S)));
+      rings.push(...h.winchCtl.ringPos);
+    }
   }
-  return { inputs, states, cables, rings, glints, evLog, fxLog, oceanLog, pokesOut, fields };
+  for (let i = 0; i < inputs.length; i++) if (Math.fround(inputs[i]) !== inputs[i]) throw new Error(`input ${INPUT_FIELDS[i % INPUT_FIELDS.length]} is not a float32`);
+  return { inputs, realDts, states, visuals, cables, rings, glints, evLog, fxLog, oceanLog, pokesOut, fields, vfields };
 }
 
 // ----------------------------------------------------------------------------------------- the row
@@ -365,6 +392,9 @@ function run(sc) {
 // same names (Tests/MaydayCoreTests/Heli/HeliTraceTests.swift).
 function stateFields() {
   const F = [];
+  let tier = 'A';
+  const push0 = F.push.bind(F);
+  F.push = (...items) => push0(...items.map(([n, g]) => [n, g, tier]));
   const v3 = (name, g) => { F.push([name + 'X', (S) => g(S).x], [name + 'Y', (S) => g(S).y], [name + 'Z', (S) => g(S).z]); };
   const q4 = (name, g) => { for (const c of ['x', 'y', 'z', 'w']) F.push([name + c.toUpperCase(), (S) => g(S)[c]]); };
   const rgb = (name, g) => { for (const c of ['r', 'g', 'b']) F.push([name + c.toUpperCase(), (S) => g(S)[c]]); };
@@ -406,9 +436,10 @@ function stateFields() {
   v3('flight0', (S) => S.o.flights[0] || { x: NaN, y: NaN, z: NaN });
   v3('drop0', (S) => S.o.drops[0] || { x: NaN, y: NaN, z: NaN });
   F.push(['drop0Spin', (S) => (S.o.drops[0] ? S.o.drops[0].spin : NaN)]);
-  // visual state
+  // visual state (tier B: recorded every 30th frame)
+  tier = 'B';
   v3('root', (S) => S.m.root.position);
-  for (let i = 0; i < 16; i++) F.push(['body' + i, (S) => S.m.body.matrixWorld.elements[i]]);
+  for (const i of [0, 1, 2, 4, 5, 6, 8, 9, 10]) F.push(['body' + i, (S) => S.m.body.matrixWorld.elements[i]]); // rotation part (translation = root)
   for (const k of ['uBlade', 'uGhost', 'uSharp', 'uExp', 'uElmo', 'uArc', 'uTipFade']) F.push(['rotor_' + k, (S) => S.m.rotorMat.uniforms[k].value]);
   for (const k of ['uBlade', 'uGhost', 'uSharp', 'uExp', 'uArc', 'uTipFade']) F.push(['tail_' + k, (S) => S.m.tailMat.uniforms[k].value]);
   F.push(['hubAngle', (S) => S.m.hub.rotation.y], ['bladesAngle', (S) => S.m.blades.rotation.y], ['bladesVisible', (S) => b(S.m.blades.visible)]);
@@ -434,14 +465,13 @@ function stateFields() {
   q4('coneQ', (S) => S.sl.cone.quaternion);
   v3('coneScale', (S) => S.sl.cone.scale);
   F.push(['beamOn', (S) => b(S.h.beam.on)], ['beamIntensity', (S) => S.h.beam.intensity], ['beamCos', (S) => S.h.beam.cosOuter]);
-  for (let i = 0; i < 8; i++) F.push(['oceanSl' + i, (S) => S.lastSl[i]]);
-  for (let i = 0; i < 4; i++) F.push(['oceanDw' + i, (S) => S.lastDw[i]]);
+  F.push(['oceanSlLevel', (S) => S.lastSl[7]], ['oceanDwStrength', (S) => S.lastDw[3]]);
   // lights
   for (let i = 0; i < 10; i++) F.push(['chan' + i, (S) => S.lc.chan[i]]);
   F.push(['halo', (S) => S.m.lightsMat.uniforms.uHalo.value], ['strobe', (S) => S.lc.strobe], ['beacon', (S) => S.lc.beacon], ['door', (S) => S.lc.door]);
   rgb('belly', (S) => S.lc.belly.color);
   F.push(['bellyIntensity', (S) => S.lc.belly.intensity]);
-  for (let i = 0; i < 8; i++) rgb('glowCol' + i, (S) => hu(S).uGlowCol.value[i]);
+  for (let i = 0; i < 8; i++) F.push(['glowCol' + i, (S) => hu(S).uGlowCol.value[i].r]);
   // crewman
   F.push(['crewLean', (S) => S.cr.lean], ['crewVisible', (S) => b(S.cr.group.visible)]);
   v3('crewPos', (S) => S.cr.group.position);
@@ -450,20 +480,20 @@ function stateFields() {
   F.push(['cableVisible', (S) => b(S.wc.cable.visible)], ['basketVisible', (S) => b(S.wc.basketMesh.visible)], ['rescuerVisible', (S) => b(S.wc.rescuer.visible)],
     ['ringVisible', (S) => b(S.wc.ring.visible)]);
   v3('basketMesh', (S) => S.wc.basketMesh.position); q4('basketQ', (S) => S.wc.basketMesh.quaternion);
-  v3('rescuer', (S) => S.wc.rescuer.position); q4('rescuerQ', (S) => S.wc.rescuer.quaternion);
+  v3('rescuer', (S) => S.wc.rescuer.position);
   F.push(['cableLit', (S) => S.wc.cableMat.uniforms.uLit.value], ['cableBeamCos', (S) => S.wc.cableMat.uniforms.uBeamCos.value],
     ['cableBeamI', (S) => S.wc.cableMat.uniforms.uBeamI.value], ['ringMatOpacity', (S) => S.wc.ringMat.uniforms.uOpacity.value],
     ['ringPhase', (S) => S.wc.ringMat.uniforms.uPhase.value]);
   rgb('ringColor', (S) => S.wc.ringMat.uniforms.uColor.value);
   // camera rig + camera
+  tier = 'A';
   v3('cam', (S) => S.cam.position); q4('camQ', (S) => S.cam.quaternion);
-  F.push(['camFov', (S) => S.cam.fov]);
-  for (let i = 0; i < 16; i++) F.push(['camProj' + i, (S) => S.cam.projectionMatrix.elements[i]]);
+  F.push(['camFov', (S) => S.cam.fov], ['camProj0', (S) => S.cam.projectionMatrix.elements[0]], ['camProj5', (S) => S.cam.projectionMatrix.elements[5]]);
   for (const k of ['zoom', 'zoomIndex', 'letterbox', 'height', 'tiltDeg', 'fov', 'viewHeight', 'trauma', '_hv', '_tilt', '_tiltV', '_punch', '_punchT', '_climbFov',
     '_winch', '_t', '_lbPulse', '_revealHold', '_slowT', '_slowScale', '_focusT', '_focusW', '_crashT']) F.push(['rig' + k, (S) => S.rig[k]]);
   F.push(['rigReveal', (S) => b(S.rig.reveal)], ['rigMode', (S) => ['follow', 'attract', 'cinematic'].indexOf(S.rig.mode)], ['rigPhoto', (S) => b(S.rig._photo)],
     ['rigPending', (S) => S.rig._pending.length], ['rigRogueUnder', (S) => b(S.rig._rogueUnder)], ['timeScale', (S) => S.ctx.timeScale]);
-  F.push(['focusX', (S) => S.rig.focusPoint.x], ['focusZ', (S) => S.rig.focusPoint.z], ['fvX', (S) => S.rig._fv.x], ['fvY', (S) => S.rig._fv.y]);
+  F.push(['focusX', (S) => S.rig.focusPoint.x], ['focusZ', (S) => S.rig.focusPoint.z], ['rigFvX', (S) => S.rig._fv.x], ['rigFvY', (S) => S.rig._fv.y]);
   for (const k of ['x', 'y', 'ndcX', 'ndcY']) F.push(['hs_' + k, (S) => S.rig.heliScreen[k]]);
   F.push(['hs_behind', (S) => b(S.rig.heliScreen.behind)], ['hs_onScreen', (S) => b(S.rig.heliScreen.onScreen)],
     ['hsvX', (S) => S.rig.heliScreenVelocity.x], ['hsvY', (S) => S.rig.heliScreenVelocity.y]);
@@ -483,7 +513,10 @@ const JITTER = [1 / 60, 1 / 60, 1 / 60, 0.0215, 0.0118, 1 / 60, 1 / 30, 1 / 60, 
 const jitterDt = (frame) => JITTER[frame % JITTER.length];
 // steer the hoist (or the heli) over a point: PD on position / velocity, stick in [−1, 1]
 function steer(h, tx, tz, { useHoist = false, kp = 0.06, kd = 0.12, max = 1 } = {}) {
-  const p = useHoist ? h.hoistWorld : h.position;
+  // with the cable out, aim the basket itself (it hangs downwind of the hoist)
+  const basket = useHoist && h.winch.length > 3;
+  const p = basket ? h.winch.basket : useHoist ? h.hoistWorld : h.position;
+  if (basket) { kp *= 0.6; }
   const dx = tx - p.x, dz = tz - p.z;
   let ux = kp * dx - kd * h.velocity.x;
   let uz = kp * dz - kd * h.velocity.z;
@@ -499,21 +532,21 @@ const NIGHT_PALETTE = { ambient: [0.03, 0.04, 0.06], sun: [0.12, 0.14, 0.2], sun
 // 1. rescue: pad take-off, searchlight + mouse aim, winch a swimmer pair (2 lifts), raft drop, flare, horn,
 //    return, deck flare + landing, unload, refuel, repair, resupply.
 function scRescue() {
-  const S1 = { x: 46, z: -34 };
+  const S1 = { x: 36, z: -26 };
   let phase = 'takeoff', phaseT = 0, lifts = 0, pressedOnce = new Set();
   const once = (k, cond) => { if (cond && !pressedOnce.has(k)) { pressedOnce.add(k); return [k.split(':')[0]]; } return []; };
   return {
-    id: 'rescue', seed: 1337, frames: 2400, every: 4, dt: jitterDt,
+    id: 'rescue', seed: 1337, frames: 3000, every: 10, dt: jitterDt,
     sea: { Hs: 1.8, swellAdd: 0.5, Q: 0.45, clearing: 0 }, wind: { base: [5, -2.5], amp: 1.2 },
     weather: (frame, t) => ({ turbulence: 0.25, rain: 0.1, fog: 0.05, intensity: 0.3, night: 0.15, flash: frame >= 900 && frame < 906 ? 0.6 : 0, stElmo: 0 }),
     env: { sunDir: [0.3, 0.8, 0.2], palette: DAY_PALETTE }, settings: { assist: 'standard', difficulty: 'pilot', quality: 'high' },
     world: { pads: [{ type: 'lighthouse', position: [0, 8, 0], radius: 14, heading: 0.3, services: { fuel: 10, repair: 4, resupply: true } }],
       obstacles: [{ x: -30, z: 25, radius: 3, top: 40 }], floaters: [{ shape: 'plank', x: 60, z: -20, vx: -0.2 }], lighthouse: [-30, 25] },
     survivors: [{ id: 1, type: 'swimmer', position: [S1.x, 0, S1.z], velocity: [0.15, 0, 0.05], remaining: 2, spotted: true },
-      { id: 2, type: 'raft', position: [-55, 0, 70], velocity: [0, 0, -0.1], remaining: 1 }],
+      { id: 2, type: 'raft', position: [12, 0, -58], velocity: [0, 0, -0.1], remaining: 1 }],
     mission: { radius: 900 },
     pokes: { 1: [{ op: 'emit', name: 'mission:setup', payload: { def: { heli: { pad: 0 } } } }, { op: 'emit', name: 'mission:start', payload: { def: {} } }],
-      600: [{ op: 'emit', name: 'survivor:signal', payload: { s: 2, kind: 'rocket', x: -50, z: 66, error: 4 } }],
+      600: [{ op: 'emit', name: 'survivor:signal', payload: { s: 2, kind: 'rocket', x: 14, z: -55, error: 4 } }],
       700: [{ op: 'emit', name: 'weather:gust', payload: { dir: [0.8, -0.6], strength: 9, eta: 1.2, x: 40, z: -30, harmless: true } }],
       1500: [{ op: 'damage', amount: 0.12, source: 'debris' }] },
     pilot(frame, ctx, h) {
@@ -534,7 +567,7 @@ function scRescue() {
         if (h.cabin.length > lifts) { lifts = h.cabin.length; phaseT = 0; if (lifts >= 2) { phase = 'raft'; } }
       } else if (phase === 'raft') {
         const r = ctx.survivors.list[1];
-        Object.assign(u, steer(h, r.position.x + 18, r.position.z, { kp: 0.04, kd: 0.14 }));
+        Object.assign(u, steer(h, r.position.x + 18, r.position.z, { kp: 0.07, kd: 0.14 }));
         u.mouse = [-0.3, 0.1];
         if (u.d < 12 && h.speed < 3) {
           u.pressed.push(...once('raftDrop:1', true));
@@ -544,12 +577,13 @@ function scRescue() {
         }
       } else if (phase === 'home') {
         const p = ctx.world.pads[0].position;
-        Object.assign(u, steer(h, p.x + 2, p.z + 1, { kp: 0.04, kd: 0.16 }));
-        if (u.d < 4 && h.speed < 1.5) u.lift = -1;
+        Object.assign(u, steer(h, p.x + 2, p.z + 1, { kp: 0.07, kd: 0.14 }));
+        if (u.d < 8) u.lift = -1;
         if (h.landed) { phase = 'landed'; phaseT = 0; }
       } else {
         u.pressed.push(...once('searchlight:off', phaseT === 200));
       }
+      u.phase = phase;
       return u;
     },
   };
@@ -559,7 +593,7 @@ function scRescue() {
 //    hull to zero → autorotation crash → ditch at sea (crew rocket) → rig crash slow-mo / lift-off.
 function scStorm() {
   return {
-    id: 'storm_crash', seed: 4242, frames: 1500, every: 4, dt: jitterDt,
+    id: 'storm_crash', seed: 4242, frames: 1500, every: 10, dt: jitterDt,
     sea: { Hs: 3.5, swellAdd: 0.5, Q: 0.6, clearing: 0 }, wind: { base: [13, 5], amp: 3.5 },
     weather: (frame, t) => ({ turbulence: 1.4, rain: 0.8, fog: 0.1, intensity: 0.9, night: 0.85, flash: frame % 170 < 4 ? 1 : 0, stElmo: frame > 300 ? 0.6 : 0 }),
     env: { sunDir: [-0.2, 0.6, 0.4], sunDirShadow: [-0.2, 0.7, 0.4], palette: NIGHT_PALETTE }, settings: { assist: 'full', difficulty: 'ace', quality: 'medium', reduceFlashes: true },
@@ -597,106 +631,130 @@ function scStorm() {
   };
 }
 
-// 3. fuel: bingo → empty → autorotation onto a moving, turning, tilting ship deck (flare over the deck),
-//    deck damage on touch, autorotation landing, resupply (legacy refuel), lift-off; boost to overheat.
+// 3. fuel: boost to overheat, bingo → empty → autorotation onto a moving, turning, tilting ship deck (flare
+//    over the deck), deck damage on touch, autorotation landing, refuel + resupply (legacy pad.refuel),
+//    autoTakeoff lift-off.
 function scFuel() {
   let phase = 'out';
   return {
-    id: 'fuel_ship', seed: 909, frames: 1800, every: 4, dt: jitterDt,
+    id: 'fuel_ship', seed: 909, frames: 1800, every: 10, dt: jitterDt,
     sea: { Hs: 0.6, swellAdd: 0.7, Q: 0.3, clearing: 0 }, wind: { base: [-3, 4], amp: 0.6 },
     weather: () => ({ turbulence: 0.1, rain: 0, fog: 0.4, intensity: 0.1, night: 0, flash: 0, stElmo: 0 }),
     env: { palette: STORM_PALETTE }, settings: { assist: 'off', difficulty: 'cadet', quality: 'low', invertLift: false },
     world: { pads: [{ type: 'ship', position: [-40, 6, 30], radius: 13, heading: 1.2, velocity: [1.2, 0, -0.6], yawRate: 0.02, tiltAmp: 0.11, tiltFreq: 0.7, refuel: true },
       { type: 'pad', position: [400, 4, -380], radius: 12 }] },
     survivors: [],
-    pokes: { 1: [{ op: 'emit', name: 'mission:setup', payload: { def: { heli: { x: 20, z: -10, y: 30, heading: -0.6 } } } }, { op: 'fuel', value: 0.27 }],
-      400: [{ op: 'fuel', value: 0.004 }],
+    pokes: { 1: [{ op: 'emit', name: 'mission:setup', payload: { def: { heli: { x: -20, z: 0, y: 40, heading: 0 } } } }, { op: 'fuel', value: 0.27 }],
+      700: [{ op: 'fuel', value: 0.004 }],
       1500: [{ op: 'autoTakeoff', alt: 30 }] },
     pilot(frame, ctx, h) {
       const deck = ctx.world.pads[0];
       let u = { moveX: 0, moveY: 0, lift: 0, down: [], pressed: [], device: 'touch' };
       if (phase === 'out') {
-        u.moveX = 0.5; u.moveY = 0.6;
-        if (frame > 100 && frame < 400) u.down.push('boost');
+        Object.assign(u, steer(h, deck.position.x + 30 * Math.cos(frame * 0.01), deck.position.z + 30 * Math.sin(frame * 0.01), { kp: 0.05, kd: 0.12 }));
+        if (frame > 60) u.down.push('boost');
         if (frame === 380) u.wheel = 2;
-        if (h.autorotation || frame > 420) phase = 'glide';
+        if (frame === 600) u.pressed.push('raftDrop');
+        if (frame === 620) u.pressed.push('flare');
+        if (h.autorotation) phase = 'glide';
       } else if (phase === 'glide') {
-        Object.assign(u, steer(h, deck.position.x, deck.position.z, { kp: 0.08, kd: 0.2 }));
+        Object.assign(u, steer(h, deck.position.x, deck.position.z, { kp: 0.09, kd: 0.18 }));
+        u.lift = -1;
         if (h.landed) phase = 'deck';
-      } else {
-        if (frame === 1300) u.pressed.push('raftDrop');
-        if (frame > 1320 && frame < 1340) u.lift = 1;
       }
+      u.phase = phase;
       return u;
     },
   };
 }
 
-// 4. winch failures: denied (fast / high / landed), tension auto-retract with a load (slip), cabin full,
-//    unsteady slip in strong wind, snag on a crest (wave) and on floating debris, touch auto-aim with
-//    distress signals, mouse aim, stick aim.
+// 4. winch failures: denied (landed / high / fast), tension auto-retract with a load (slip), wave snag and
+//    debris snag on the empty basket, pickups, cabin full (capacity 3 + an injured stretcher), touch
+//    auto-aim with distress signals, mouse aim, stick aim.
 function scWinch() {
   let phase = 'pad';
   let t0 = 0;
+  let high = 0;
+  const go = (p, frame) => { phase = p; t0 = frame; };
   return {
-    id: 'winch_failures', seed: 2024, frames: 2400, every: 4, dt: jitterDt,
+    id: 'winch_failures', seed: 2024, frames: 4200, every: 10, dt: jitterDt,
     sea: { Hs: 2.5, swellAdd: 1.4, Q: 0.35, clearing: 1 }, wind: { base: [9, 4], amp: 2.5 },
-    weather: (frame) => ({ turbulence: 0.6, rain: 0.4, fog: 0, intensity: 0.6, night: 0.4, flash: 0, stElmo: 0 }),
+    weather: () => ({ turbulence: 0.6, rain: 0.4, fog: 0, intensity: 0.6, night: 0.4, flash: 0, stElmo: 0 }),
     env: { sunDir: [0.5, 0.5, -0.3], palette: { ambient: [0.25, 0.27, 0.3], sky: [0.3, 0.33, 0.38], ambientIntensity: 0.55 } },
     settings: { assist: 'standard', difficulty: 'cadet', quality: 'high' },
-    world: { pads: [{ type: 'pad', position: [0, 3, 0], radius: 12 }], floaters: [{ shape: 'barrel', x: 72, z: -40, vx: -0.5, vz: 0.3 }, { shape: 'ring', x: 50, z: -60, moored: true }] },
-    survivors: [{ id: 5, type: 'swimmer', position: [60, 0, -40], velocity: [0.5, 0, 0.2], remaining: 3, spotted: true },
-      { id: 6, type: 'injured', position: [-60, 0, -50], velocity: [0, 0, 0.1], remaining: 1, state: 'spotted' }],
-    hazards: { rogue: { t0: 26, t1: 30, x: 60, z: -40, r: 50, h: 5 }, debris: { board: [{ x: 90, y: 0.2, z: -38, vx: -0.9, vz: 0 }], boat: [{ x: 0, y: 15, z: 0 }] } },
+    world: { pads: [{ type: 'pad', position: [0, 3, 0], radius: 12 }], floaters: [{ shape: 'barrel', x: 300, z: 300 }, { shape: 'ring', x: 50, z: -60, moored: true }] },
+    survivors: [{ id: 5, type: 'swimmer', position: [40, 0, -30], velocity: [0.3, 0, 0.1], remaining: 3, spotted: true },
+      { id: 6, type: 'injured', position: [55, 0, -18], velocity: [0.3, 0, 0.1], remaining: 1, state: 'spotted' }],
+    hazards: { rogue: { x: 0, z: 0, r: 4000, h: 5 }, debris: { board: [{ x: 500, y: 0.2, z: 500 }], boat: [{ x: 0, y: 15, z: 0 }] } },
     pokes: { 1: [{ op: 'emit', name: 'mission:setup', payload: { def: { heli: { pad: 0, heading: 0.9 } } } }, { op: 'capacity', value: 3 }],
-      200: [{ op: 'emit', name: 'survivor:signal', payload: { s: 6, kind: 'smoke', x: -58, z: -48, error: 6 } }],
-      210: [{ op: 'emit', name: 'survivor:signal', payload: { s: 5, kind: 'strobe', x: 62, z: -41, error: 2 } }],
-      1200: [{ op: 'impulse', v: [6, 0, -2] }] },
+      200: [{ op: 'emit', name: 'survivor:signal', payload: { s: 6, kind: 'smoke', x: 54, z: -20, error: 6 } }],
+      210: [{ op: 'emit', name: 'survivor:signal', payload: { s: 5, kind: 'strobe', x: 41, z: -31, error: 2 } }],
+      215: [{ op: 'emit', name: 'survivor:signal', payload: { s: 5, kind: 'mirror', x: 'NaN', z: 0, error: 2 } }] },
     pilot(frame, ctx, h) {
-      const s = ctx.survivors.list[0];
+      const [s, inj] = ctx.survivors.list;
       const w = h.winch;
+      const k = frame - t0;
       let u = { moveX: 0, moveY: 0, lift: 0, down: [], pressed: [], device: 'keyboard' };
-      if (frame < 40) { u.down.push('winch'); if (frame === 2) u.pressed.push('winch'); return u; } // denied: landed
-      if (phase === 'pad') { u.pressed.push('altPreset2'); phase = 'climb'; return u; }
-      if (phase === 'climb') {
-        if (frame > 120) { u.moveX = 0.9; u.moveY = 0.5; }
-        if (frame > 140 && frame < 200) { u.down.push('winch'); if (frame === 141) u.pressed.push('winch'); } // denied: fast / high
-        if (frame > 230) { u.device = 'touch'; }
-        if (frame > 300) phase = 'approach';
-        return u;
+      const hold = (tx, tz, max = 0.5) => Object.assign(u, steer(h, tx, tz, { useHoist: true, kp: 0.05, kd: 0.18, max }));
+      const winch = () => { u.down.push('winch'); if (k === 1) u.pressed.push('winch'); };
+      switch (phase) {
+        case 'pad': // denied: landed
+          winch();
+          if (k > 40) { go('climb', frame); u.pressed.push('altPreset2'); }
+          break;
+        case 'climb': // hover at 40 m, then denied: high
+          if (h.position.y > 37 && !high) high = frame;
+          if (high) { u.down.push('winch'); if (frame === high) u.pressed.push('winch'); }
+          if (high && frame - high > 60) { go('dash', frame); u.pressed.push('altPreset1'); }
+          break;
+        case 'dash': // fast and low: denied: fast; touch aim locks onto the signals
+          u.device = 'touch';
+          u.moveX = 0.6; u.moveY = 0.55;
+          if (k >= 70 && k < 110) { u.down.push('winch'); if (k === 70) u.pressed.push('winch'); }
+          if (k > 110) go('approach', frame);
+          break;
+        case 'approach':
+          Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.07, kd: 0.16 }));
+          u.mouse = [0.2, 0.3]; u.mouseMoved = k % 30 < 10;
+          if (k === 20) u.pressed.push('altUp');
+          if (k === 40) u.pressed.push('altDown');
+          if (u.d < 3 && h.speed < 1.2) go('lift1', frame);
+          break;
+        case 'lift1': // capture, then dash off with the person on the cable: tension → slip
+          hold(s.position.x, s.position.z);
+          u.device = 'gamepad'; u.aimX = 0.5; u.aimY = 0.5;
+          if (!w.load) winch();
+          if (w.load && w.length < 12) go('tension', frame);
+          break;
+        case 'tension':
+          u.moveX = 0.6; u.moveY = 0.1; u.down.push('winch');
+          if (!w.load && k > 30) go('lift2', frame);
+          break;
+        case 'lift2': // two more people from the group
+          Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.06, kd: 0.18, max: 0.7 }));
+          if (!w.load) u.down.push('winch');
+          if (h.cabin.length >= 2) go('full', frame);
+          break;
+        case 'full': // the injured needs a stretcher (2 seats): cabin full; the empty basket stays in the water
+          hold(inj.position.x, inj.position.z);
+          u.down.push('winch');
+          if (w.cabinFull && w.state === 'down' && w.height < 2 && !ctx.hazards.rogueOn && !u.pokes && k > 60) u.pokes = [{ op: 'rogue', on: true }];
+          if (w.jammed > 0) { go('debris', frame); u.pokes = [{ op: 'rogue', on: false }]; }
+          break;
+        case 'debris': // after the jam, a board drifts across the cable → debris snag
+          hold(inj.position.x, inj.position.z);
+          u.down.push('winch');
+          if (w.jammed <= 0) {
+            u.pokes = [{ op: 'debris', kind: 'board', i: 0, x: w.basket.x - 4, z: w.basket.z + 0.3, vx: 1.5, vz: 0 }];
+            go('debris2', frame);
+          }
+          break;
+        case 'debris2':
+          hold(inj.position.x, inj.position.z);
+          u.down.push('winch');
+          break;
       }
-      if (phase === 'approach') {
-        Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.05, kd: 0.16 }));
-        u.mouse = [0.2, 0.3]; u.mouseMoved = true;
-        if (frame % 50 === 0) u.pressed.push('altPreset1');
-        if (u.d < 3 && h.speed < 1.2) { phase = 'lift1'; t0 = frame; }
-        return u;
-      }
-      if (phase === 'lift1') {
-        Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.05, kd: 0.18, max: 0.5 }));
-        u.aimX = 0.5; u.aimY = 0.5;
-        if (!w.load) u.down.push('winch');
-        if (frame === t0 + 1) u.pressed.push('winch');
-        if (w.load && w.length < 10) { phase = 'tension'; t0 = frame; }
-        return u;
-      }
-      if (phase === 'tension') {
-        u.moveX = 1; u.moveY = 0.2; u.down.push('boost', 'winch');
-        if (frame - t0 > 200) { phase = 'back'; t0 = frame; }
-        return u;
-      }
-      if (phase === 'back') {
-        Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.05, kd: 0.16 }));
-        if (u.d < 3 && h.speed < 1.2) { phase = 'snag'; t0 = frame; }
-        if (frame - t0 > 900) { phase = 'snag'; t0 = frame; }
-        return u;
-      }
-      // snag: hold the empty basket in the water while the crest / debris pass; then lift people until full
-      Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.05, kd: 0.18, max: 0.5 }));
-      u.down.push('winch');
-      if (frame === t0 + 1) u.pressed.push('winch');
-      if (frame % 300 === 0) u.pressed.push('altDown');
-      if (frame % 300 === 150) u.pressed.push('altUp');
+      u.phase = phase;
       return u;
     },
   };
@@ -706,7 +764,7 @@ function scWinch() {
 // attract → briefing → play (mission start bars, chapters, zoom presses, focus, punch, shake, slow-mo)
 function scRigModes() {
   return {
-    id: 'modes', seed: 77, frames: 1500, every: 3, dt: jitterDt, mode0: 'title', autostart: false,
+    id: 'modes', seed: 77, frames: 1500, every: 6, dt: jitterDt, mode0: 'title', autostart: false,
     sea: { Hs: 0.4, swellAdd: 0.4, Q: 0.25, clearing: 0 }, wind: { base: [2, 1], amp: 0.4 },
     weather: (frame) => ({ turbulence: 0.05, rain: 0, fog: 0, intensity: frame > 900 ? 0.7 : 0.05, night: 0, flash: 0, stElmo: 0 }),
     env: { sunDir: [0.4, 0.8, 0.1], palette: DAY_PALETTE }, settings: { assist: 'standard', reduceMotion: true, screenShake: 0.6 },
@@ -738,7 +796,7 @@ function scRigModes() {
 // debrief cinematic, then photo mode (mouse orbit / pan, keys, sticks, wheel, LB/RB) and back
 function scRigPhoto() {
   return {
-    id: 'photo', seed: 5531, frames: 1200, every: 3, dt: jitterDt, mode0: 'play', autostart: true,
+    id: 'photo', seed: 5531, frames: 1200, every: 6, dt: jitterDt, mode0: 'play', autostart: true,
     sea: { Hs: 1.8, swellAdd: 0.5, Q: 0.45, clearing: 0 }, wind: { base: [4, 4], amp: 1 },
     weather: () => ({ turbulence: 0.2, rain: 0, fog: 0, intensity: 0.4, night: 0.6, flash: 0, stElmo: 0 }),
     env: { palette: NIGHT_PALETTE }, settings: { assist: 'standard' },
@@ -767,6 +825,18 @@ function scRigPhoto() {
 function writeRun(domain, name, sc, extraSetup = {}) {
   const r = run(sc);
   const nf = r.fields.length + 1;
+  // split off the input columns that never change
+  const nIn = INPUT_FIELDS.length;
+  const consts = {};
+  const keep = [];
+  INPUT_FIELDS.forEach((f, j) => {
+    const v0 = r.inputs[j];
+    let same = true;
+    for (let i = j; i < r.inputs.length; i += nIn) if (!Object.is(r.inputs[i], v0)) { same = false; break; }
+    if (same) consts[f] = num(v0); else keep.push(j);
+  });
+  const inp = { fields: keep.map((j) => INPUT_FIELDS[j]), consts, rows: [] };
+  for (let i = 0; i < r.inputs.length; i += nIn) for (const j of keep) inp.rows.push(r.inputs[i + j]);
   const setup = {
     seed: sc.seed, frames: sc.frames, every: sc.every, mode0: sc.mode0 || 'play', autostart: !!sc.autostart, detail: sc.detail ?? 1,
     ocean: { wavebank: 'setQuality(8, 300); setSeed(303, 0.6); every frame BEFORE the heli: update(dt, t, sea, 0.6, 1, 0, 0)', sea: sc.sea },
@@ -782,17 +852,24 @@ function writeRun(domain, name, sc, extraSetup = {}) {
     data: {
       setup,
       enums: { modes: MODES, devices: DEVICES, actions: ACTIONS, winchStates: WINCH_STATES, aimSources: AIM_SOURCES, denied: DENIED },
-      inputFields: INPUT_FIELDS,
-      inputs: sidecar(domain, `${name}_inputs.f64`, Float64Array.from(r.inputs), [sc.frames, INPUT_FIELDS.length]),
+      inputFields: inp.fields,
+      inputConst: inp.consts,
+      inputConstNote: 'input fields equal on every frame (not in the sidecar)',
+      inputs: sidecar(domain, `${name}_inputs.f32`, Float32Array.from(inp.rows), [sc.frames, inp.fields.length]),
+      realDt: sidecar(domain, `${name}_realdt.f64`, Float64Array.from(r.realDts), [sc.frames]),
       pokes: r.pokesOut,
       stateFields: ['frame', ...r.fields.map(([n]) => n)],
       states: sidecar(domain, `${name}_states.f64`, Float64Array.from(r.states), [r.states.length / nf, nf]),
+      statesNote: 'simulation + camera rows every `every` frames',
+      visualFields: ['frame', ...r.vfields.map(([n]) => n)],
+      visuals: sidecar(domain, `${name}_visuals.f64`, Float64Array.from(r.visuals), [r.visuals.length / (r.vfields.length + 1), r.vfields.length + 1]),
+      visualsNote: 'visual-state rows (rotor, hull, veil, searchlight, lights, crewman, winch render) every 30th frame',
       cable: sidecar(domain, `${name}_cable.f32`, Float32Array.from(r.cables), [r.cables.length / 90, 90]),
-      cableNote: 'per recorded row: winch cur (15 × xyz) then rend (15 × xyz)',
+      cableNote: 'per `states` row: winch cur (15 × xyz) then rend (15 × xyz)',
       ring: sidecar(domain, `${name}_ring.f32`, Float32Array.from(r.rings), [r.rings.length / 294, 294]),
       ringNote: 'every 30th frame: reach-ring vertex positions (49 × 2 × xyz)',
       glints: sidecar(domain, `${name}_glints.f64`, Float64Array.from(r.glints), [r.glints.length / 6, 6]),
-      glintsNote: 'every 4th frame: [frame, index in that frame, gx, gz, radius, intensity] per ocean.addGlint call',
+      glintsNote: 'every 12th frame: [frame, index in that frame, gx, gz, radius, intensity] per ocean.addGlint call',
       events: r.evLog,
       fx: r.fxLog,
       ocean: r.oceanLog,
@@ -849,21 +926,21 @@ async function camera() {
     const m = new CameraMotion(seed);
     const rows = [];
     const script = [];
-    for (let k = 1; k <= 900; k++) {
-      const dt = jitterDt(k) * (k > 600 ? 3.5 : 1); // > 0.05 s frames clamp the push spring step
+    for (let k = 1; k <= 600; k++) {
+      const dt = jitterDt(k) * (k > 500 ? 3.5 : 1); // > 0.05 s frames clamp the push spring step
       if (k === 30) { m.addTrauma(0.6, 9); script.push([k, 'addTrauma', 0.6, 9]); }
       if (k === 60) { m.addTrauma(0.3); script.push([k, 'addTrauma', 0.3, null]); }
       if (k === 200) { m.addTrauma(1.4, 13); script.push([k, 'addTrauma', 1.4, 13]); }
       if (k > 300 && k < 400) { m.floor(0.25); if (k === 301) script.push([k, 'floor', 0.25, '301..399']); }
       if (k === 450) { m.gustPush(3, -4, 0.8); script.push([k, 'gustPush', 3, -4, 0.8]); }
       if (k === 520) { m.gustPush(0, 0, 0.5); script.push([k, 'gustPush', 0, 0, 0.5]); }
-      const storm = Math.min(1, k / 700);
-      const shake = k < 700 ? 1 : 0.5;
-      const motion = k < 800 ? 1 : 0.4;
+      const storm = Math.min(1, k / 450);
+      const shake = k < 470 ? 1 : 0.5;
+      const motion = k < 540 ? 1 : 0.4;
       m.update(dt, storm, shake, motion);
-      rows.push([dt, storm, shake, motion, m.pos.x, m.pos.y, m.pos.z, m.rot.x, m.rot.y, m.rot.z, m.trauma, m.freq, m.shakeT, m.push.x, m.push.y, m.pushV.x, m.pushV.y, m.pushT].map(num));
+      rows.push(dt, storm, shake, motion, m.pos.x, m.pos.y, m.pos.z, m.rot.x, m.rot.y, m.rot.z, m.trauma, m.freq, m.shakeT, m.push.x, m.push.y, m.pushV.x, m.pushV.y, m.pushT);
     }
-    runs.push({ seed, script, rows });
+    runs.push({ seed, script, rows: sidecar('camera', `shake_${seed}.f64`, Float64Array.from(rows), [600, 18]) });
   }
   out('camera', 'shake', {
     files: [relSrc('systems/camera/shake.js'), relSrc('core/math.js')], tolerance: BITWISE,

@@ -1,7 +1,7 @@
 {
   "schema": "mayday.vectors.weather.lightning",
   "version": 1,
-  "source": "137a2e8236735d277bf7dcf7a1f4f02efa6df08b",
+  "source": "5475c0ec4a3c7d5feffdd49931dcfa1081c36a4e",
   "sourceDirty": false,
   "sourceFiles": ["rescue/src/systems/weather/lightning.js"],
   "producer": "tools/export/export-sim.mjs",

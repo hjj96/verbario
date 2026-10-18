@@ -1,0 +1,198 @@
+{
+  "schema": "mayday.vectors.camera.rig_photo",
+  "version": 1,
+  "source": "5475c0ec4a3c7d5feffdd49931dcfa1081c36a4e",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/heli.js", "rescue/src/systems/heli/flight.js", "rescue/src/systems/heli/ops.js",
+    "rescue/src/systems/heli/winch.js", "rescue/src/systems/heli/searchlight.js", "rescue/src/systems/heli/lights.js",
+    "rescue/src/systems/heli/crewman.js", "rescue/src/systems/heli/model.js", "rescue/src/systems/camera.js",
+    "rescue/src/systems/camera/shake.js", "rescue/src/systems/camera/freecam.js", "rescue/src/systems/ocean/waves.js",
+    "rescue/src/core/math.js"
+  ],
+  "producer": "tools/export/export-heli.mjs",
+  "tolerance": {
+    "class": "chaos",
+    "note": "every recorded row bitwise (PLAN §5.1 chaos class: the first 600 steps must be bitwise; these runs stay bitwise throughout); events / fx / ocean calls identical"
+  },
+  "data": {
+    "setup": {
+      "seed": 5531,
+      "frames": 1200,
+      "every": 6,
+      "mode0": "play",
+      "autostart": true,
+      "detail": 1,
+      "ocean": {
+        "wavebank": "setQuality(8, 300); setSeed(303, 0.6); every frame BEFORE the heli: update(dt, t, sea, 0.6, 1, 0, 0)",
+        "sea": {"Hs": 1.8, "swellAdd": 0.5, "Q": 0.45, "clearing": 0}
+      },
+      "weather": {
+        "wind": {"base": [4, 4], "amp": 1},
+        "windAt": "base + amp·(sin(0.3t + 0.002x), cos(0.21t + 0.002z)), t = game time this frame",
+        "env": {
+          "palette": {
+            "ambient": [0.03, 0.04, 0.06],
+            "sun": [0.12, 0.14, 0.2],
+            "sunIntensity": 0.2,
+            "ambientIntensity": 0.4
+          }
+        }
+      },
+      "settings": {"assist": "standard"},
+      "world": {},
+      "survivors": [],
+      "hazards": null,
+      "mission": {"radius": 300},
+      "look": "cloudAt(x, z) = 0.5 + 0.5·sin(0.01x)·cos(0.013z)",
+      "camera": "PerspectiveCamera(40, 1280/720, 2, 1200), position (0, 220, 60), lookAt(0, 0, 0); viewport 1280×720",
+      "frame": "pokes; dt = paused ? 0 : realDt·timeScale; t += dt; world/survivors/hazards advance(dt); weather state; bank.update; input; heli.update(dt); rig.update(realDt)"
+    },
+    "enums": {
+      "modes": ["title", "briefing", "play", "paused", "debrief"],
+      "devices": ["keyboard", "gamepad", "touch"],
+      "actions": [
+        "winch", "boost", "searchlight", "flare", "raftDrop", "horn", "altPreset1", "altPreset2", "altPreset3", "altUp",
+        "altDown", "zoom"
+      ],
+      "winchStates": ["stowed", "lowering", "down", "raising"],
+      "aimSources": ["mouse", "stick", "touch", "nose"],
+      "denied": [null, "high", "fast", "landed"]
+    },
+    "inputFields": [
+      "mode", "mouseActive", "mouseNdcX", "mouseNdcY", "photo", "photoWheel", "mouseButtons", "shift", "padLB", "padRB",
+      "axMoveX", "axMoveY", "axAimX", "axAimY", "axLift"
+    ],
+    "inputConst": {
+      "moveX": 0.30000001192092896,
+      "moveY": 0.20000000298023224,
+      "lift": 0,
+      "aimX": 0,
+      "aimY": 0,
+      "wheel": 0,
+      "device": 0,
+      "mouseMoved": 0,
+      "down": 0,
+      "pressed": 0,
+      "turbulence": 0.20000000298023224,
+      "rain": 0,
+      "fog": 0,
+      "intensity": 0.4000000059604645,
+      "night": 0.6000000238418579,
+      "flash": 0,
+      "stElmo": 0
+    },
+    "inputConstNote": "input fields equal on every frame (not in the sidecar)",
+    "inputs": {
+      "file": "rig_photo_inputs.f32",
+      "dtype": "f32",
+      "shape": [1200, 15],
+      "sha256": "18141fa1c45ed1bb4726aa6ebddd2a943e0420f2956937b5a0f130b803fbeb46"
+    },
+    "realDt": {
+      "file": "rig_photo_realdt.f64",
+      "dtype": "f64",
+      "shape": [1200],
+      "sha256": "15de61958d10f570efee5bc4e43e72dbdcc50b2e1f5a9e691bf2d529d14f08fd"
+    },
+    "pokes": [
+      [
+        1,
+        {
+          "op": "emit",
+          "name": "mission:setup",
+          "payload": {"def": {"heli": {"x": -20, "z": 40, "altitude": 60, "heading": 2}}}
+        }
+      ],
+      [1, {"op": "emit", "name": "mission:start", "payload": {"def": {}}}],
+      [1000, {"op": "mode", "to": "debrief"}]
+    ],
+    "stateFields": [
+      "frame", "posX", "posY", "posZ", "velX", "velY", "velZ", "heading", "altitude", "fuel", "hull", "rotorRPM",
+      "load", "bank", "pitch", "engineTemp", "emp", "altTarget", "yawRate", "vy", "speed", "airspeed", "seaY",
+      "surfaceY", "skidClearance", "bingo", "fuelBurn", "overheat", "thrustFactor", "damageTaken", "uMag", "capacity",
+      "flares", "rafts", "aimX", "aimY", "aimZ", "uMoveX", "uMoveY", "hoistWX", "hoistWY", "hoistWZ", "hoistRX",
+      "hoistRY", "hoistRZ", "dwX", "dwZ", "dwRadius", "dwStrength", "landed", "bingoPad", "alive", "searchlight",
+      "boost", "boosting", "boostHeld", "autorotation", "crashPhase", "crashT", "crashDeck", "ceiling", "refueling",
+      "cabin", "firstHit", "aimSource", "acc", "liftActive", "liftAxis", "pitchV", "bankV", "fpX", "fpY", "fpZ", "fvX",
+      "fvY", "fvZ", "fHeading", "noseTarget", "landTimer", "contactPad", "fSea", "fSurface", "fTurb", "lastVy",
+      "wState", "wLength", "basketX", "basketY", "basketZ", "steadiness", "wLoad", "wSpeed", "swing", "wTarget",
+      "capture", "tension", "jammed", "wSurfaceY", "wHeight", "inRange", "radius", "stretcher", "cabinFull", "denied",
+      "basketVelX", "basketVelY", "basketVelZ", "wc_buffer", "wc_slipT", "wc_tensionT", "wc_snagWet", "wc_snagCd",
+      "wc_grace", "wc_spin", "wc_spinRate", "wc_ringOrange", "wc_ringOpacity", "wc_autoRetract", "wc_snagInside",
+      "wc_pending", "crestUnder", "ops_bingoT", "ops_unloadT", "ops_resupplyT", "ops_hornT", "ops_floodT",
+      "ops_overheatT", "ops_crewRocketT", "ops_fuelLevel", "ops_bingoWarned", "ops_refueling", "ops_unloaded",
+      "nFlights", "nDrops", "flight0X", "flight0Y", "flight0Z", "drop0X", "drop0Y", "drop0Z", "drop0Spin", "camX",
+      "camY", "camZ", "camQX", "camQY", "camQZ", "camQW", "camFov", "camProj0", "camProj5", "rigzoom", "rigzoomIndex",
+      "rigletterbox", "righeight", "rigtiltDeg", "rigfov", "rigviewHeight", "rigtrauma", "rig_hv", "rig_tilt",
+      "rig_tiltV", "rig_punch", "rig_punchT", "rig_climbFov", "rig_winch", "rig_t", "rig_lbPulse", "rig_revealHold",
+      "rig_slowT", "rig_slowScale", "rig_focusT", "rig_focusW", "rig_crashT", "rigReveal", "rigMode", "rigPhoto",
+      "rigPending", "rigRogueUnder", "timeScale", "focusX", "focusZ", "rigFvX", "rigFvY", "hs_x", "hs_y", "hs_ndcX",
+      "hs_ndcY", "hs_behind", "hs_onScreen", "hsvX", "hsvY", "mPosX", "mPosY", "mPosZ", "mRotX", "mRotY", "mRotZ",
+      "mPushX", "mPushY", "mTrauma", "mFreq", "mShakeT", "fcPX", "fcPY", "fcPZ", "fcPivotX", "fcPivotY", "fcPivotZ",
+      "fcYaw", "fcPitch", "fcDist", "fc_yaw", "fc_pitch", "fc_dist"
+    ],
+    "states": {
+      "file": "rig_photo_states.f64",
+      "dtype": "f64",
+      "shape": [200, 215],
+      "sha256": "0618f4dff3b94f8272ef3d5db340477ede72e406e2f3274476d2ad7e8d87abda"
+    },
+    "statesNote": "simulation + camera rows every `every` frames",
+    "visualFields": [
+      "frame", "rootX", "rootY", "rootZ", "body0", "body1", "body2", "body4", "body5", "body6", "body8", "body9",
+      "body10", "rotor_uBlade", "rotor_uGhost", "rotor_uSharp", "rotor_uExp", "rotor_uElmo", "rotor_uArc",
+      "rotor_uTipFade", "tail_uBlade", "tail_uGhost", "tail_uSharp", "tail_uExp", "tail_uArc", "tail_uTipFade",
+      "hubAngle", "bladesAngle", "bladesVisible", "rimR", "rimG", "rimB", "fillR", "fillG", "fillB", "sunScale", "soot",
+      "instrR", "instrG", "instrB", "veilSunR", "veilSunG", "veilSunB", "veilAmbR", "veilAmbG", "veilAmbB", "veilSkyR",
+      "veilSkyG", "veilSkyB", "veilSunDirX", "veilSunDirY", "veilSunDirZ", "glowR", "glowG", "glowB", "glowBR",
+      "glowBG", "glowBB", "glowSR", "glowSG", "glowSB", "floatsVisible", "floatScaleX", "floatScaleY", "floatScaleZ",
+      "heatVisible", "slLevel", "slDirX", "slDirY", "slDirZ", "slOriginX", "slOriginY", "slOriginZ", "slHitX", "slHitY",
+      "slHitZ", "slLength", "slAngle", "slFlick", "spotIntensity", "spotAngle", "spotTargetX", "spotTargetY",
+      "spotTargetZ", "coneDensity", "coneIntensity", "coneLen", "coneTanA", "coneCos2", "coneVisible", "coneQX",
+      "coneQY", "coneQZ", "coneQW", "coneScaleX", "coneScaleY", "coneScaleZ", "beamOn", "beamIntensity", "beamCos",
+      "oceanSlLevel", "oceanDwStrength", "chan0", "chan1", "chan2", "chan3", "chan4", "chan5", "chan6", "chan7",
+      "chan8", "chan9", "halo", "strobe", "beacon", "door", "bellyR", "bellyG", "bellyB", "bellyIntensity", "glowCol0",
+      "glowCol1", "glowCol2", "glowCol3", "glowCol4", "glowCol5", "glowCol6", "glowCol7", "crewLean", "crewVisible",
+      "crewPosX", "crewPosY", "crewPosZ", "crewArmX", "crewArmY", "crewArmZ", "crewArmW", "crewHeadX", "crewHeadY",
+      "crewHeadZ", "crewHeadW", "cableVisible", "basketVisible", "rescuerVisible", "ringVisible", "basketMeshX",
+      "basketMeshY", "basketMeshZ", "basketQX", "basketQY", "basketQZ", "basketQW", "rescuerX", "rescuerY", "rescuerZ",
+      "cableLit", "cableBeamCos", "cableBeamI", "ringMatOpacity", "ringPhase", "ringColorR", "ringColorG", "ringColorB"
+    ],
+    "visuals": {
+      "file": "rig_photo_visuals.f64",
+      "dtype": "f64",
+      "shape": [40, 163],
+      "sha256": "44307f2a8dbcb65f10c653aba750ebceaa3f59815cddc90d009ad021c14c1569"
+    },
+    "visualsNote": "visual-state rows (rotor, hull, veil, searchlight, lights, crewman, winch render) every 30th frame",
+    "cable": {
+      "file": "rig_photo_cable.f32",
+      "dtype": "f32",
+      "shape": [200, 90],
+      "sha256": "fbf33789ce39f20d14a622c52bad83a1cae34e58a955e24492504f94202fda50"
+    },
+    "cableNote": "per `states` row: winch cur (15 × xyz) then rend (15 × xyz)",
+    "ring": {
+      "file": "rig_photo_ring.f32",
+      "dtype": "f32",
+      "shape": [40, 294],
+      "sha256": "bbc9857af176a03424e3a077242af400cbd8f6a566fdd0c363e8c30671b07e65"
+    },
+    "ringNote": "every 30th frame: reach-ring vertex positions (49 × 2 × xyz)",
+    "glints": {
+      "file": "rig_photo_glints.f64",
+      "dtype": "f64",
+      "shape": [416, 6],
+      "sha256": "a03135f630f63281f2d82932a703087e21e62c54602d1aec72bd9064948aecc4"
+    },
+    "glintsNote": "every 12th frame: [frame, index in that frame, gx, gz, radius, intensity] per ocean.addGlint call",
+    "events": [
+      [1, "mission:setup", {"def": "<def>"}],
+      [1, "mission:start", {"def": "<def>"}],
+      [1000, "game:mode", {"from": "play", "to": "debrief"}]
+    ],
+    "fx": [],
+    "ocean": []
+  }
+}

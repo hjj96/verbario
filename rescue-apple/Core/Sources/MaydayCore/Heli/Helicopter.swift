@@ -198,6 +198,8 @@ public final class Helicopter: FlightHost, GameSystem {
     _ = lightsCtl
     _ = ops
     _ = crewman
+    // buildHeliModel: the shadow-only blades exist on 'high' (settings.onChange → applyQuality() later)
+    applyQuality()
 
     subscriptions.append(ctx.events.on(GameEvent.MissionSetup.self) { [weak self] e in self?.reset(HeliSpawn(def: e.def)) })
     // Touch auto-aim (DESIGN §3.2): remember recent distress signals (rocket, smoke, strobe…).

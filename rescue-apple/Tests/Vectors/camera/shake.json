@@ -1,0 +1,55 @@
+{
+  "schema": "mayday.vectors.camera.shake",
+  "version": 1,
+  "source": "5475c0ec4a3c7d5feffdd49931dcfa1081c36a4e",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/systems/camera/shake.js", "rescue/src/core/math.js"],
+  "producer": "tools/export/export-heli.mjs",
+  "tolerance": {
+    "class": "bitwise",
+    "note": "compare Double.bitPattern; report index, both values and ulp distance on mismatch"
+  },
+  "data": {
+    "fields": [
+      "dt", "storm", "shakeScale", "motionScale", "posX", "posY", "posZ", "rotX", "rotY", "rotZ", "trauma", "freq",
+      "shakeT", "pushX", "pushY", "pushVX", "pushVY", "pushT"
+    ],
+    "note": "per frame k: script calls of frame k (floor(0.25) every frame 301..399), then update(dt, storm, shakeScale, motionScale)",
+    "runs": [
+      {
+        "seed": 4242,
+        "script": [
+          [30, "addTrauma", 0.6, 9],
+          [60, "addTrauma", 0.3, null],
+          [200, "addTrauma", 1.4, 13],
+          [301, "floor", 0.25, "301..399"],
+          [450, "gustPush", 3, -4, 0.8],
+          [520, "gustPush", 0, 0, 0.5]
+        ],
+        "rows": {
+          "file": "shake_4242.f64",
+          "dtype": "f64",
+          "shape": [600, 18],
+          "sha256": "ad58bc18e2ab4ffa6e18e452d4bd006231e61a5c90f150163731a5b16e00ff4d"
+        }
+      },
+      {
+        "seed": 2024,
+        "script": [
+          [30, "addTrauma", 0.6, 9],
+          [60, "addTrauma", 0.3, null],
+          [200, "addTrauma", 1.4, 13],
+          [301, "floor", 0.25, "301..399"],
+          [450, "gustPush", 3, -4, 0.8],
+          [520, "gustPush", 0, 0, 0.5]
+        ],
+        "rows": {
+          "file": "shake_2024.f64",
+          "dtype": "f64",
+          "shape": [600, 18],
+          "sha256": "64e95ddb4c8aa23a85ae61cbc0693cb105447ce7bf35a2046589ff46bf3b5d95"
+        }
+      }
+    ]
+  }
+}
