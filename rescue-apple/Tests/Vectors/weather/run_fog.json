@@ -1,0 +1,265 @@
+{
+  "schema": "mayday.vectors.weather.run_fog",
+  "version": 1,
+  "source": "137a2e8236735d277bf7dcf7a1f4f02efa6df08b",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/weather.js", "rescue/src/systems/weather/gusts.js", "rescue/src/systems/weather/lightning.js",
+    "rescue/src/systems/weather/lights.js", "rescue/src/systems/weather/env.js",
+    "rescue/src/systems/weather/endless.js", "rescue/src/systems/weather/palette.js",
+    "rescue/src/systems/weather/presets.js", "rescue/src/core/look.js"
+  ],
+  "producer": "tools/export/export-sim.mjs",
+  "tolerance": {
+    "class": "chaos",
+    "bitwiseSteps": 1800,
+    "note": "every frame bitwise (running FNV-1a of the probe + packed palettes); rows locate the first divergent field"
+  },
+  "data": {
+    "setup": {
+      "dt": 0.016666666666666666,
+      "frames": 1800,
+      "mode": "briefing",
+      "params": "weather=fog&tod=1.3",
+      "settings": {"quality": "high", "reduceFlashes": false, "difficulty": "pilot"},
+      "obstacles": [],
+      "heli": {
+        "x0": 30,
+        "ax": 180,
+        "wx": 0.05,
+        "y0": 60,
+        "ay": 40,
+        "wy": 0.1,
+        "z0": -40,
+        "az": 150,
+        "wz": 0.031
+      },
+      "heliFormula": "t = frame/60; x = x0 + ax·sin(t·wx), y = y0 + ay·sin(t·wy), z = z0 + az·sin(t·wz); ctx.heli = {position, altitude: y}; set BEFORE the frame's actions and update",
+      "camera": {
+        "offset": [0, 55, 35],
+        "direction": [0, -0.8, -0.6],
+        "note": "camera.position = heli + offset; getWorldDirection = direction"
+      },
+      "look": "Look(7) (Resources/Textures atlas), uniforms zeroed; weather writes setWind/setFronts/uRain/uWet/uFlash/uNight",
+      "noise": "createNoise2D(1337)",
+      "env": "PMREM replaced by a recorder: every bake logs [frame, uSky rgb, uFog rgb, uDeep rgb, uSunColor rgb, uSunDir xyz, uSunI, uCloud]",
+      "order": "new Weather(ctx) (mode, settings, params); actions of frame -1; init(); per frame f: heli/camera, actions of f (in order), update(dt)"
+    },
+    "actions": [
+      {
+        "frame": 0,
+        "op": "setup",
+        "def": {"seed": 3, "weather": {"start": "storm", "script": [{"at": 5, "to": "calm", "over": 10}]}}
+      },
+      {"frame": 5, "op": "mode", "to": "play"},
+      {"frame": 5, "op": "start"},
+      {"frame": 300, "op": "green", "v": 1},
+      {"frame": 900, "op": "preset", "name": "squall", "over": 6},
+      {"frame": 1200, "op": "forecast"},
+      {"frame": 1200, "op": "windAt", "points": [[0, 0], [37.5, -12.25], [-140, 260], [610, -455]]},
+      {
+        "frame": 1200,
+        "op": "cloudShadowAt",
+        "points": [[0, 0], [37.5, -12.25], [-140, 260], [610, -455]]
+      },
+      {"frame": 1200, "op": "detectBase"}
+    ],
+    "fields": [
+      "clock", "scriptT", "scriptIdx", "preset", "severity", "intensity", "tr.active", "tr.t", "tr.over",
+      "tr.wavesDown", "tr.rainUp", "tr.rainStart", "tr.frontEnd", "tCh0", "tCh1", "tCh2", "tCh3", "transition.active",
+      "transition.from", "transition.to", "transition.t", "transition.over", "transition.progress", "windTo", "windA0",
+      "windA1", "windAngle", "windDir.x", "windDir.y", "windSpeed", "windFrom", "gust", "gustMax", "meanWind.x",
+      "meanWind.y", "rain", "fog", "hail", "lightning", "waveHeight", "waveChoppiness", "night", "timeOfDay",
+      "visibility", "turbulence", "beaufort", "seaState", "wet", "flash", "flashColor.r", "flashColor.g",
+      "flashColor.b", "sunDir.x", "sunDir.y", "sunDir.z", "sunDirShadow.x", "sunDirShadow.y", "sunDirShadow.z",
+      "sunDirVisual.x", "sunDirVisual.y", "sunDirVisual.z", "front.active", "front.t", "front.origin.x",
+      "front.origin.y", "front.dir.x", "front.dir.y", "greenTint", "greenTarget", "greenApplied", "stElmo", "pressure",
+      "pressureTrend", "pTrendRate", "pEmitted", "pEmittedTrend", "eye", "rates.lightning", "rates.spouts",
+      "rates.rogues", "lastStrike.x", "lastStrike.z", "lastStrike.distance", "lastStrike.cloudOnly", "lastStrike.t",
+      "heliPos.x", "heliPos.y", "heliPos.z", "heliAlt", "camFocus.x", "camFocus.y", "camFocus.z", "attract", "attractT",
+      "attractIdx", "attractBolt", "gusts.timer", "gusts.n", "gust0.slot", "gust0.x", "gust0.z", "gust0.dirX",
+      "gust0.dirZ", "gust0.strength", "gust0.baseStrength", "gust0.eta", "gust0.speed", "gust0.harmless", "gust0.age",
+      "gust0.fade", "gust1.slot", "gust1.x", "gust1.z", "gust1.dirX", "gust1.dirZ", "gust1.strength",
+      "gust1.baseStrength", "gust1.eta", "gust1.speed", "gust1.harmless", "gust1.age", "gust1.fade", "gust2.slot",
+      "gust2.x", "gust2.z", "gust2.dirX", "gust2.dirZ", "gust2.strength", "gust2.baseStrength", "gust2.eta",
+      "gust2.speed", "gust2.harmless", "gust2.age", "gust2.fade", "gust3.slot", "gust3.x", "gust3.z", "gust3.dirX",
+      "gust3.dirZ", "gust3.strength", "gust3.baseStrength", "gust3.eta", "gust3.speed", "gust3.harmless", "gust3.age",
+      "gust3.fade", "lightning.flashT", "lightning.flashStrength", "lightning.flashReduced", "lightning.lastFlashAt",
+      "lightning.timer", "lightning.clock", "charge0.x", "charge0.z", "charge0.eta", "charge0.total", "charge0.radius",
+      "charge0.target", "charge0.strength", "charge0.alive", "charge1.x", "charge1.z", "charge1.eta", "charge1.total",
+      "charge1.radius", "charge1.target", "charge1.strength", "charge1.alive", "charge2.x", "charge2.z", "charge2.eta",
+      "charge2.total", "charge2.radius", "charge2.target", "charge2.strength", "charge2.alive", "charge3.x",
+      "charge3.z", "charge3.eta", "charge3.total", "charge3.radius", "charge3.target", "charge3.strength",
+      "charge3.alive", "lights.swingT", "lights.swingDir.x", "lights.swingDir.y", "lights.swingDir.z", "sun.intensity",
+      "sun.color.r", "sun.color.g", "sun.color.b", "sun.shadow.intensity", "sun.shadow.radius", "hemi.color.r",
+      "hemi.color.g", "hemi.color.b", "hemi.groundColor.r", "hemi.groundColor.g", "hemi.groundColor.b",
+      "hemi.intensity", "sun.target.x", "sun.target.y", "sun.target.z", "sun.position.x", "sun.position.y",
+      "sun.position.z", "lights.mapSize", "fog.color.r", "fog.color.g", "fog.color.b", "fog.near", "fog.far",
+      "exposure", "environmentIntensity", "env.lastBake", "env.dirty", "look.uWind.x", "look.uWind.y",
+      "look.uWindOffset.x", "look.uWindOffset.y", "look.uRain", "look.uWet", "look.uFlash", "look.uNight",
+      "endless.active", "endless.t", "endless.inPreset", "endless.lullRolled", "endless.phase", "endless.next.at",
+      "endless.next.preset", "endless.next.over", "endless.next.lull", "endless.nightPick"
+    ],
+    "every": 30,
+    "rows": {
+      "file": "run_fog.f64",
+      "dtype": "f64",
+      "shape": [60, 235],
+      "sha256": "b28dc9af6ff7ecb707e22871b8c94ed7b162b1273b993d9a570af0dfb3eab147"
+    },
+    "hashEvery": 1,
+    "hashes": {
+      "file": "run_fog_hash.u32",
+      "dtype": "u32",
+      "shape": [1800],
+      "sha256": "cf5094f100b45e7910120c37765e3019c6b6417736beae69f72e8cffcb2be3c7"
+    },
+    "hashNote": "h0 = 2166136261; h = fnv1a32(h, bytes of probe row ++ _from ++ _cur ++ _out as f64 LE) after every frame (hashEvery 1) or after frames (i+1)·hashEvery − 1 only; hashes[i] = h after frame (i+1)·hashEvery − 1",
+    "firstFrame": {
+      "probe": [
+        0.016666666666666666, 0, 0, 5, 1, 0.1, 0, 0, 0, 0, 0, -1, 0, 1, 1, 1, 1, 0, 5, 5, 0, 0, 1, 8.188660732472464,
+        8.188660732472464, 8.188660732472464, 8.188660732472464, 0.8542851498778773, 0.5198046582112675, 3, 301, 0, 3,
+        2.562855449633632, 1.5594139746338027, 0.05, 1, 0, 0, 0.6, 0.3, 0.1, 0.30000000000000004, 200, 0.4, 2, 3,
+        0.0006622419096402155, 0, 0.7012366333961735, 0.779412461990441, 1, 0.32139380484326957, 0.766044443118978,
+        -0.5566703992264195, 0.32139380484326957, 0.766044443118978, -0.5566703992264195, 0.4095760221444958,
+        0.573576436351046, -0.7094064799162225, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1012.2, 0, 0, 1012.2, 0, 0, 0, 0, 0, 0, 0,
+        "Infinity", 1, -99, 30, 60, -40, 60, 30, 0, -91.25, 0, 0, 0, "NaN", 12.7050317004323, 0, -1, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 99.01666666666667, 0, 0, -99, 6.426160152535886, 0.016666666666666666, 0, 0, 0, 2, 30, 0, 1, 0,
+        0, 0, 0, 2, 30, 0, 1, 0, 0, 0, 0, 2, 30, 0, 1, 0, 0, 0, 0, 2, 30, 0, 1, 0, 99.01666666666667, 0, 1, 0, 0.6,
+        0.7912979403281553, 0.7681511472425808, 0.6866853124288865, 0.05, 6, 0.5271151256969157, 0.5775804404214573,
+        0.5647115056965487, 0.023153366173251366, 0.04231141061442144, 0.04373502925049377, 1.1, 17.435252222846252,
+        -0.0355023437324608, -18.23585206774793, 184.56003074134642, 398.3076080781361, -307.70445966548607, 2048,
+        0.4232676699760063, 0.46778379610254284, 0.45641102317066595, 35, 170, 1.05, 0.9, 0.016666666666666666, 0,
+        2.562855449633632, 1.5594139746338027, 0.04271425749389387, 0.025990232910563377, 0.05, 0.0006622419096402155,
+        0, 0.1, 0, 0, 0, 0, 0, "NaN", -1, "NaN", 0, -1
+      ],
+      "from": [
+        0.45641102317066595, 0.5028864580233624, 0.5028864580233624, 0.4232676699760063, 0.46778379610254284,
+        0.45641102317066595, 0.015996293361446288, 0.03820437158923601, 0.04231141061442144, 0.028426039499072558,
+        0.06847816983662762, 0.07036009568874305, 0.09084171117479915, 0.19461783043107173, 0.1844749944900301,
+        0.0781874217970207, 0.17464740364527903, 0.16202937562896222, 0.7454042095350284, 0.7912979403281553,
+        0.76052450467022, 0.7912979403281553, 0.7681511472425808, 0.6866853124288865, 0.5271151256969157,
+        0.5775804404214573, 0.5647115056965487, 0.023153366173251366, 0.04231141061442144, 0.04373502925049377,
+        0.8879231178794775, 0.8713671191959567, 0.822785754392438, 1, 0.19806931954941637, 0.02732089163382382,
+        0.04817182422013895, 0.07618538147321911, 0.08021982030622662, 0.6000000000000001, 1.1, 0.050000000000000044, 6,
+        35, 0.49999999999999994, 0.8660254037844387, 50, 35, 170, 1.05, 0.9, 0.1, 200, 1, 0, 0, 300, 0.5, 0, 0.35, 45,
+        0, 0.6, 0.9, 0.75, 0.65, 0.95, 1, 1, 0.99, 0.015, 0.016, 0.015, 0.98, 0.10224173307914941, 0.14412847084818123,
+        0.14702726648767014, 0.8879231178794775, 0.85499260812105, 0.7912979403281553, 0.1, 0.22, 0.3231432091022285,
+        0.3712376804636741, 0.3712376804636741, 0.04, 0.5, 0, 3, 0, 0, 0.4, 0, 0, 0, 0.1, 0.05, 0, 0.6, 0.7, 0.3, 0.3,
+        0, 0, 0, 0.06, 0, 0, 0
+      ],
+      "cur": [
+        0.45641102317066595, 0.5028864580233624, 0.5028864580233624, 0.4232676699760063, 0.46778379610254284,
+        0.45641102317066595, 0.015996293361446288, 0.03820437158923601, 0.04231141061442144, 0.028426039499072558,
+        0.06847816983662762, 0.07036009568874305, 0.09084171117479915, 0.19461783043107173, 0.1844749944900301,
+        0.0781874217970207, 0.17464740364527903, 0.16202937562896222, 0.7454042095350284, 0.7912979403281553,
+        0.76052450467022, 0.7912979403281553, 0.7681511472425808, 0.6866853124288865, 0.5271151256969157,
+        0.5775804404214573, 0.5647115056965487, 0.023153366173251366, 0.04231141061442144, 0.04373502925049377,
+        0.8879231178794775, 0.8713671191959567, 0.822785754392438, 1, 0.19806931954941637, 0.02732089163382382,
+        0.04817182422013895, 0.07618538147321911, 0.08021982030622662, 0.6, 1.1, 0.05, 6, 35, 0.49999999999999994,
+        0.8660254037844387, 50, 35, 170, 1.05, 0.9, 0.1, 200, 1, 0, 0, 300, 0.5, 0, 0.35, 45, 0, 0.6, 0.9, 0.75, 0.65,
+        0.95, 1, 1, 0.99, 0.015, 0.016, 0.015, 0.98, 0.10224173307914941, 0.14412847084818123, 0.14702726648767014,
+        0.8879231178794775, 0.85499260812105, 0.7912979403281553, 0.1, 0.22, 0.3231432091022285, 0.3712376804636741,
+        0.3712376804636741, 0.04, 0.5, 0, 3, 0, 0, 0.4, 0, 0, 0, 0.1, 0.05, 0, 0.6, 0.7, 0.3, 0.3, 0, 0, 0, 0.06, 0, 0,
+        0
+      ],
+      "out": [
+        0.45641102317066595, 0.5028864580233624, 0.5028864580233624, 0.4232676699760063, 0.46778379610254284,
+        0.45641102317066595, 0.015996293361446288, 0.03820437158923601, 0.04231141061442144, 0.028426039499072558,
+        0.06847816983662762, 0.07036009568874305, 0.09084171117479915, 0.19461783043107173, 0.1844749944900301,
+        0.0781874217970207, 0.17464740364527903, 0.16202937562896222, 0.7454042095350284, 0.7912979403281553,
+        0.76052450467022, 0.7912979403281553, 0.7681511472425808, 0.6866853124288865, 0.5271151256969157,
+        0.5775804404214573, 0.5647115056965487, 0.023153366173251366, 0.04231141061442144, 0.04373502925049377,
+        0.8879231178794775, 0.8713671191959567, 0.822785754392438, 1, 0.19806931954941637, 0.02732089163382382,
+        0.04817182422013895, 0.07618538147321911, 0.08021982030622662, 0.6, 1.1, 0.05, 6, 35, 0.49999999999999994,
+        0.8660254037844387, 50, 35, 170, 1.05, 0.9, 0.1, 200, 1, 0, 0, 300, 0.5, 0, 0.35, 45, 0, 0.6, 0.9, 0.75, 0.65,
+        0.95, 1, 1, 0.99, 0.015, 0.016, 0.015, 0.98, 0.10224173307914941, 0.14412847084818123, 0.14702726648767014,
+        0.8879231178794775, 0.85499260812105, 0.7912979403281553, 0.1, 0.22, 0.3231432091022285, 0.3712376804636741,
+        0.3712376804636741, 0.04, 0.5, 0, 3, 0, 0, 0.4, 0, 0, 0, 0.1, 0.05, 0, 0.6, 0.7, 0.3, 0.3, 0, 0, 0, 0.06, 0, 0,
+        0
+      ]
+    },
+    "firstFrameNote": "probe row and packed palettes after frame 0 (diagnostics for a hash mismatch)",
+    "events": [
+      [-1, "weather:preset", "calm", "fog", 0, true, "Туман", 300, 3],
+      [0, "weather:preset", "fog", "fog", 0, false, "Туман", 289, 3],
+      [900, "weather:preset", "fog", "squall", 6, true, "Шквал", 289, 25],
+      [901, "weather:pressure", 1012.109738887496, -1],
+      [924, "weather:pressure", 1011.1020488938997, -1],
+      [949, "weather:pressure", 1010.0675449789251, -1],
+      [975, "weather:pressure", 1009.0550267985204, -1],
+      [1003, "weather:pressure", 1008.0324883178795, -1],
+      [1033, "weather:pressure", 1007.0099778031721, -1],
+      [1065, "weather:pressure", 1005.9968735083313, -1],
+      [1100, "weather:pressure", 1004.973691996058, -1],
+      [1138, "weather:pressure", 1003.9552215273088, -1],
+      [1179, "weather:pressure", 1002.9549252616192, -1],
+      [1225, "weather:pressure", 1001.9429573585455, -1],
+      [1277, "weather:pressure", 1000.9248235350715, -1],
+      [1336, "weather:pressure", 999.9124417951934, -1],
+      [1404, "weather:pressure", 998.9090807817995, -1],
+      [1485, "weather:pressure", 997.9077066749871, -1],
+      [1572, "weather:lightning", -491.1542840996717, 3.2836348075730797, 698.1551054352894, 0.5433852549642324, true],
+      [1586, "weather:pressure", 996.9014502172004, -1],
+      [1719, "weather:pressure", 995.8967788082184, -1],
+      [
+        1722, "weather:gust", 0.8513789054510055, 0.5245511980284172, 10.171159231290222, 5.9833333333333325,
+        79.81389458808799, -13.380416445788546, false
+      ]
+    ],
+    "bakes": [
+      [
+        -1, 0.45641102317066595, 0.5028864580233624, 0.5028864580233624, 0.4232676699760063, 0.46778379610254284,
+        0.45641102317066595, 0.015996293361446288, 0.03820437158923601, 0.04231141061442144, 0.7912979403281553,
+        0.7681511472425808, 0.6866853124288865, 0.4095760221444958, 0.573576436351046, -0.7094064799162225,
+        0.6000000000000001, 0.85
+      ],
+      [
+        0, 0.45641102317066595, 0.5028864580233624, 0.5028864580233624, 0.4232676699760063, 0.46778379610254284,
+        0.45641102317066595, 0.015996293361446288, 0.03820437158923601, 0.04231141061442144, 0.7912979403281553,
+        0.7681511472425808, 0.6866853124288865, 0.4095760221444958, 0.573576436351046, -0.7094064799162225, 0.6, 0.85
+      ],
+      [
+        900, 0.0787260603630614, 0.13534079353827488, 0.09579744221210518, 0.10438683784645625, 0.17027076416005188,
+        0.12437238930607264, 0.004851921433240317, 0.023253937414484685, 0.017806796507734323, 0.4586487472783576,
+        0.5724413649419465, 0.3935444305129914, 0.4095758600432139, 0.5735764668667265, -0.7094065488325751,
+        0.4808018607937825, 0.8499999978655737
+      ],
+      [
+        1141, 0.07625559765720721, 0.13291333203767802, 0.09315021934441779, 0.10232173261370588, 0.16832585305200726,
+        0.1222511306031896, 0.004777301575679383, 0.02314690840512603, 0.01764359660226107, 0.4564251857483283,
+        0.5710864887179047, 0.3917055544710024, -0.5246307954099102, 0.6817793866170937, -0.5098425212666989,
+        0.5439847158266349, 0.8420171524440507
+      ],
+      [
+        1382, 0.07618562244440855, 0.13286463524204592, 0.09306184091788777, 0.10224541938124976, 0.1682697819342354,
+        0.12214749600291516, 0.004776670777865987, 0.023151822695626025, 0.017641480270142222, 0.45640321902145486,
+        0.571112391039922, 0.3915858758023135, -0.6123724356957946, 0.7071067811865475, -0.35355339059327384,
+        0.5600168507927233, 0.8400000000000001
+      ],
+      [
+        1403, 0.07618558375817588, 0.13286522705196746, 0.09306137886236945, 0.10224482757132822, 0.16826972064618656,
+        0.12214609546084036, 0.0047767161634701474, 0.023152070490122374, 0.01764155640186714, 0.4564044719228196,
+        0.57111438794039, 0.3915837248373762, -0.6123724356957946, 0.7071067811865475, -0.35355339059327384,
+        0.5600141455162572, 0.8400000000000001
+      ]
+    ],
+    "queries": [
+      [900, "preset", true],
+      [1200, "forecast", []],
+      [
+        1200,
+        "windAt",
+        [
+          [13.067525690724516, 3.765338790573262],
+          [13.067525690724516, 3.765338790573262],
+          [13.067525690724516, 3.765338790573262],
+          [13.067525690724516, 3.765338790573262]
+        ]
+      ],
+      [1200, "cloudShadowAt", [0.9264268716118288, 1, 0.9086088970789771, 1]],
+      [1200, "detectBase", [136.62808641975295, 0.2893518518518514]]
+    ]
+  }
+}

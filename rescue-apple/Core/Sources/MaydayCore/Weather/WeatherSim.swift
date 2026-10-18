@@ -157,6 +157,67 @@ public struct WeatherCheckpoint: Equatable, Sendable, Codable {
   public var front: Front?
   public var pressure: Double
   public var wet: Double
+
+  public init(preset: String, scriptIdx: Int, tr: Tr, front: Front?, pressure: Double, wet: Double) {
+    self.preset = preset
+    self.scriptIdx = scriptIdx
+    self.tr = tr
+    self.front = front
+    self.pressure = pressure
+    self.wet = wet
+  }
+
+  /// From the web's JSON shape {preset, scriptIdx, tr: {…}, front: {t, ox, oz, dx, dz} | null, pressure, wet}
+  /// (mission checkpoints, vectors). Missing numbers read as NaN, missing flags as false; nil if not an object.
+  public init?(json s: JSONValue) {
+    guard case .object = s else { return nil }
+    let t = s["tr"]
+    let d = { (v: JSONValue) in v.double ?? .nan }
+    tr = Tr(active: t["active"].jsTruthy, t: d(t["t"]), over: d(t["over"]), wavesDown: t["wavesDown"].jsTruthy,
+            rainUp: t["rainUp"].jsTruthy, rainStart: d(t["rainStart"]), frontEnd: d(t["frontEnd"]))
+    let f = s["front"]
+    front = f.jsTruthy ? Front(t: d(f["t"]), ox: d(f["ox"]), oz: d(f["oz"]), dx: d(f["dx"]), dz: d(f["dz"])) : nil
+    preset = s["preset"].string ?? ""
+    scriptIdx = s["scriptIdx"].int ?? -1
+    pressure = d(s["pressure"])
+    wet = d(s["wet"])
+  }
+
+  /// The web's JSON shape (key order of checkpointState()); specials as the exporter's strings.
+  public var json: JSONValue {
+    func n(_ x: Double) -> JSONValue {
+      if x.isNaN { return .string("NaN") }
+      if x.isInfinite { return .string(x > 0 ? "Infinity" : "-Infinity") }
+      if x == 0 && x.sign == .minus { return .string("-0") }
+      return .number(x)
+    }
+    var t = JSONObject()
+    t.set("active", .bool(tr.active))
+    t.set("t", n(tr.t))
+    t.set("over", n(tr.over))
+    t.set("wavesDown", .bool(tr.wavesDown))
+    t.set("rainUp", .bool(tr.rainUp))
+    t.set("rainStart", n(tr.rainStart))
+    t.set("frontEnd", n(tr.frontEnd))
+    var o = JSONObject()
+    o.set("preset", .string(preset))
+    o.set("scriptIdx", .number(Double(scriptIdx)))
+    o.set("tr", .object(t))
+    if let f = front {
+      var fo = JSONObject()
+      fo.set("t", n(f.t))
+      fo.set("ox", n(f.ox))
+      fo.set("oz", n(f.oz))
+      fo.set("dx", n(f.dx))
+      fo.set("dz", n(f.dz))
+      o.set("front", .object(fo))
+    } else {
+      o.set("front", .null)
+    }
+    o.set("pressure", n(pressure))
+    o.set("wet", n(wet))
+    return .object(o)
+  }
 }
 
 /// forecast() entry {in, preset, label, short, severity, worse, windFrom}.
@@ -221,7 +282,7 @@ public final class WeatherSim {
   public var obstacles: [WeatherObstacle] = []
 
   // ---- outputs ---------------------------------------------------------------------------------------
-  public private(set) var state: WeatherState
+  public internal(set) var state: WeatherState
   public let gusts: GustFronts
   public let lightning: LightningSim
   public let endless: EndlessPlanner

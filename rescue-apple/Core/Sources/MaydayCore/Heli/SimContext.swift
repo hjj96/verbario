@@ -260,6 +260,10 @@ public protocol OceanQuery: AnyObject {
   func splash(_ x: Double, _ z: Double, _ radius: Double, _ strength: Double)
   func setDownwash(_ x: Double, _ z: Double, _ radius: Double, _ strength: Double)
   func setSearchlight(origin: V3, dir: V3, cosOuter: Double, level: Double)
+  /// addGlint(x, z, radius, intensity, color): a lamp's reflection on the water this frame (heli/lights.js)
+  func addGlint(_ x: Double, _ z: Double, _ radius: Double, _ intensity: Double, _ color: Color3)
+  /// false when the ocean has no addGlint (the web then skips the glint pass entirely)
+  var acceptsGlints: Bool { get }
 }
 
 extension OceanQuery {
@@ -267,6 +271,8 @@ extension OceanQuery {
   public func splash(_ x: Double, _ z: Double, _ radius: Double, _ strength: Double) {}
   public func setDownwash(_ x: Double, _ z: Double, _ radius: Double, _ strength: Double) {}
   public func setSearchlight(origin: V3, dir: V3, cosOuter: Double, level: Double) {}
+  public func addGlint(_ x: Double, _ z: Double, _ radius: Double, _ intensity: Double, _ color: Color3) {}
+  public var acceptsGlints: Bool { false }
 }
 
 /// ctx.weather
@@ -397,7 +403,7 @@ public final class StaticSettings: SettingsQuery {
   public func detail() -> Double { detailValue }
 }
 
-/// ctx.input as the heli reads it (InputState conforms; replays use a scripted source).
+/// ctx.input as the heli and the camera read it (InputState conforms; replays use a scripted source).
 public protocol HeliInput: AnyObject {
   func move() -> (x: Double, y: Double)
   func axis(_ name: InputAxis) -> Double
@@ -406,6 +412,13 @@ public protocol HeliInput: AnyObject {
   func consumeWheel() -> Double
   var lastDevice: InputDevice { get }
   var mouse: MouseState { get }
+  /// input.axesValues (photo-mode free camera: raw axes, ignoring `enabled`)
+  var axesValues: [InputAxis: Double] { get }
+  /// input.mouseButtons ('Mouse0', 'Mouse2' …) and input.keys (codes held), for the free camera
+  var mouseButtons: Set<String> { get }
+  var keys: Set<String> { get }
+  /// navigator.getGamepads() (the free camera reads LB / RB of the first connected pad itself)
+  var gamepads: [GamepadSnapshot?] { get }
 }
 
 extension InputState: HeliInput {}
@@ -447,9 +460,13 @@ public final class SimContext {
   public var autostart = false
   /// ctx.photo?.active
   public var photoActive: () -> Bool = { false }
-  /// ctx.cameraRig (heli aim: screenToWater); ctx.heli (camera subject)
-  // TEMP public weak var cameraRig: CameraRig?
-  // TEMP public weak var heli: Helicopter?
+  /// ctx.cameraRig (heli aim: screenToWater); ctx.heli (camera subject). Weak: the host owns both.
+  public weak var cameraRig: CameraRig?
+  public weak var heli: Helicopter?
+  /// renderer.domElement.clientWidth / clientHeight (|| window.innerWidth / innerHeight), CSS px:
+  /// worldToScreen and the free camera's metres-per-pixel.
+  public var viewportWidth: Double = 1280
+  public var viewportHeight: Double = 720
 
   public init(events: EventBus, settings: SettingsQuery = StaticSettings(), camera: PerspectiveCamera = PerspectiveCamera(),
               randomSeed: Double = 20261016) {
