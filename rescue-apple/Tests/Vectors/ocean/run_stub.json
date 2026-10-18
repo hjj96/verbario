@@ -1,7 +1,7 @@
 {
   "schema": "mayday.vectors.ocean.run_stub",
   "version": 1,
-  "source": "5475c0ec4a3c7d5feffdd49931dcfa1081c36a4e",
+  "source": "77cc2a049ecd9e9331eacd0c6fb7d964ea3df4bb",
   "sourceDirty": false,
   "sourceFiles": [
     "rescue/src/systems/ocean.js", "rescue/src/systems/ocean/waves.js", "rescue/src/systems/ocean/features.js",
@@ -42,7 +42,7 @@
         "note": "camera world position = heli + offset; world direction constant"
       },
       "order": "new Weather(ctx) (when weather), new Ocean(ctx); heli/camera of frame 0; actions of frame -1; weather.init(); ocean.init(); per frame f: time (dt, t += dt, frame++), heli/camera, pre actions, weather.update(dt), ocean.update(dt), post actions, ocean._lateUpload(), probe",
-      "renderer": "stub: EXT_color_buffer_float when memory; render(stampScene) records the frame's instance attributes (aA, aB, aC first count·4 each); clear() counts target clears"
+      "renderer": "stub: EXT_color_buffer_float when memory; render(advectScene) records the feature-flow uniforms, render(stampScene) the frame's instance attributes (aA, aB, aC first count·4 each); clear() counts target clears"
     },
     "actions": [
       {"frame": 50, "op": "splash", "x": 3, "z": 4, "phase": "post"},
@@ -166,7 +166,7 @@
       "shape": [600],
       "sha256": "85cd48ca51bb328193dd6e4386ac175f7202f1ed38c2883e48e0c4eb16fd48c6"
     },
-    "hashNote": "h0 = 2166136261; per frame h = fnv1a32(h, probe row), then each of: spl.x, spl.z, spl.t0, spl.r, spl.s, gl.x, gl.z, gl.r, gl.i, gl.c, memory aA, aB, aC (full, [] without memory), the frame's stamps (aA ++ aB ++ aC of the drawn instances)",
+    "hashNote": "h0 = 2166136261; per frame h = fnv1a32(h, probe row), then each of: spl.x, spl.z, spl.t0, spl.r, spl.s, gl.x, gl.z, gl.r, gl.i, gl.c, memory aA, aB, aC (full, [] without memory), the frame's stamps (aA ++ aB ++ aC of the drawn instances), the advect pass feature flow ([uFeatCount, uFeatA, uFeatB, uFeatC, uDownwash] when it ran this frame, else [])",
     "firstFrame": {
       "probe": [
         0.9966067671775818, 0.08231004327535629, 0.05235987901687622, 0.40000006556510925, 0.9223941564559937,
@@ -232,6 +232,7 @@
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [],
         [],
         [],
         [],

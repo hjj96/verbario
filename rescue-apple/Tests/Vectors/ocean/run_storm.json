@@ -1,7 +1,7 @@
 {
   "schema": "mayday.vectors.ocean.run_storm",
   "version": 1,
-  "source": "5475c0ec4a3c7d5feffdd49931dcfa1081c36a4e",
+  "source": "77cc2a049ecd9e9331eacd0c6fb7d964ea3df4bb",
   "sourceDirty": false,
   "sourceFiles": [
     "rescue/src/systems/ocean.js", "rescue/src/systems/ocean/waves.js", "rescue/src/systems/ocean/features.js",
@@ -42,7 +42,7 @@
         "note": "camera world position = heli + offset; world direction constant"
       },
       "order": "new Weather(ctx) (when weather), new Ocean(ctx); heli/camera of frame 0; actions of frame -1; weather.init(); ocean.init(); per frame f: time (dt, t += dt, frame++), heli/camera, pre actions, weather.update(dt), ocean.update(dt), post actions, ocean._lateUpload(), probe",
-      "renderer": "stub: EXT_color_buffer_float when memory; render(stampScene) records the frame's instance attributes (aA, aB, aC first count·4 each); clear() counts target clears"
+      "renderer": "stub: EXT_color_buffer_float when memory; render(advectScene) records the feature-flow uniforms, render(stampScene) the frame's instance attributes (aA, aB, aC first count·4 each); clear() counts target clears"
     },
     "actions": [
       {
@@ -10819,9 +10819,9 @@
       "file": "run_storm_hash.u32",
       "dtype": "u32",
       "shape": [1200],
-      "sha256": "44e6b289c63c4913fb4f474032349cec8fe9a78446344d863dd1cce228de91f5"
+      "sha256": "2200238b490399bb4938634ec6aa9128b9070dfbcfcde6f530bb9bf75b9f8a5d"
     },
-    "hashNote": "h0 = 2166136261; per frame h = fnv1a32(h, probe row), then each of: spl.x, spl.z, spl.t0, spl.r, spl.s, gl.x, gl.z, gl.r, gl.i, gl.c, memory aA, aB, aC (full, [] without memory), the frame's stamps (aA ++ aB ++ aC of the drawn instances)",
+    "hashNote": "h0 = 2166136261; per frame h = fnv1a32(h, probe row), then each of: spl.x, spl.z, spl.t0, spl.r, spl.s, gl.x, gl.z, gl.r, gl.i, gl.c, memory aA, aB, aC (full, [] without memory), the frame's stamps (aA ++ aB ++ aC of the drawn instances), the advect pass feature flow ([uFeatCount, uFeatA, uFeatB, uFeatC, uDownwash] when it ran this frame, else [])",
     "firstFrame": {
       "probe": [
         0.8172203302383423, 0.5763253569602966, 0.05235987901687622, 0.5930656790733337, 0.5991283655166626,
@@ -10949,6 +10949,10 @@
         [
           10, -5, 15.984999656677246, 0.0011158162960782647, 10, -5, 12.50999927520752, 0.009918367490172386, 1, 0,
           0.6000000238418579, 0, 0, 0, 1, 0, 1, 0.8199999928474426, 0, 1, 0, 0.699999988079071, 0, 1
+        ],
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0
         ]
       ]
     },

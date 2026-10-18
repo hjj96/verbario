@@ -104,6 +104,7 @@ public final class OceanSim {
   public var tune = Tune()
   public private(set) var memory: WaterMemoryQueue?
   public private(set) var quality = ""
+  /// QUALITY[quality] (a placeholder until init's buildMesh() reads the table)
   public private(set) var cfg = OceanQuality(grid: 300, waves: 8, q: 2, memory: 512, glints: 8)
   public private(set) var search = Search()
   var snapQ: Double = 0
@@ -357,7 +358,9 @@ public final class OceanSim {
 
     if let m = memory, dt > 0 {
       autoStamps(dt)
-      m.update(dt, focus.x, focus.y, look.wind.x, look.wind.y)
+      let flow = WaterMemoryQueue.Flow(count: uniforms.uFeatCount, a: features.uA, b: features.uB, c: features.uC,
+                                       downwash: uniforms.uDownwash)
+      m.update(dt, focus.x, focus.y, look.wind.x, look.wind.y, flow: flow)
       uniforms.uMemWin = V4(m.center.x, m.center.y, tables.memoryExtent, 1)
     }
   }

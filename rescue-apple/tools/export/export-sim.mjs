@@ -654,12 +654,12 @@ async function ocean() {
   F('look.wind.x', (o) => o.ctx.look.uniforms.uWind.value.x); F('look.wind.y', (o) => o.ctx.look.uniforms.uWind.value.y);
   }
   const extras = (o) => [o._spl.x, o._spl.z, o._spl.t0, o._spl.r, o._spl.s, o._gl.x, o._gl.z, o._gl.r, o._gl.i, o._gl.c,
-    o.memory ? o.memory.aA.array : [], o.memory ? o.memory.aB.array : [], o.memory ? o.memory.aC.array : [], o.ctx._stamps.last];
+    o.memory ? o.memory.aA.array : [], o.memory ? o.memory.aB.array : [], o.memory ? o.memory.aC.array : [], o.ctx._stamps.last, o.ctx._stamps.flow];
 
   function makeRun(sc) {
     const events = new EventBus();
     const log = [];
-    const stamps = { count: 0, clears: 0, last: [] };
+    const stamps = { count: 0, clears: 0, last: [], flow: [] };
     let memScene = null;
     const renderer = {
       toneMappingExposure: 1, autoClear: true,
@@ -667,6 +667,11 @@ async function ocean() {
       getRenderTarget: () => null, setRenderTarget() {}, getClearAlpha: () => 1, getClearColor: (c) => c, setClearColor() {},
       clear() { stamps.clears++; },
       render(scene) {
+        const mem = ctx.ocean?.memory;
+        if (mem && scene === mem.advectScene) {
+          const u = mem.advect.uniforms;
+          stamps.flow = [u.uFeatCount.value, ...u.uFeatA.value, ...u.uFeatB.value, ...u.uFeatC.value, ...flat(u.uDownwash.value)];
+        }
         if (memScene && scene === memScene()) {
           const m = ctx.ocean.memory;
           const n = m.stampGeo.instanceCount * 4;
@@ -773,7 +778,7 @@ async function ocean() {
       const dt = sc.dtAt ? sc.dtAt(f) : DT;
       ctx.time.realDt = dt; ctx.time.realT += dt; ctx.time.dt = dt; ctx.time.t += dt; ctx.time.frame++;
       ctx._frame = f;
-      ctx._stamps.count = 0; ctx._stamps.last = [];
+      ctx._stamps.count = 0; ctx._stamps.last = []; ctx._stamps.flow = [];
       place(f);
       for (const a of pre.get(f) || []) act(h, a, queries);
       if (w) w.update(dt);
@@ -806,12 +811,12 @@ async function ocean() {
           heliFormula: 't = frame/60; x = x0 + ax·sin(t·wx), y = y0 + ay·sin(t·wy), z = z0 + az·sin(t·wz); ctx.heli = {position, altitude: y, alive: frame < deadFrom, rotorRPM: rpm}',
           camera: { offset: CAM_OFF, direction: CAM_DIR, note: 'camera world position = heli + offset; world direction constant' },
           order: 'new Weather(ctx) (when weather), new Ocean(ctx); heli/camera of frame 0; actions of frame -1; weather.init(); ocean.init(); per frame f: time (dt, t += dt, frame++), heli/camera, pre actions, weather.update(dt), ocean.update(dt), post actions, ocean._lateUpload(), probe',
-          renderer: 'stub: EXT_color_buffer_float when memory; render(stampScene) records the frame\'s instance attributes (aA, aB, aC first count·4 each); clear() counts target clears',
+          renderer: 'stub: EXT_color_buffer_float when memory; render(advectScene) records the feature-flow uniforms, render(stampScene) the frame\'s instance attributes (aA, aB, aC first count·4 each); clear() counts target clears',
         },
         actions: sc.actions.map((a) => serialize(a)),
         fields: FIELDS.map(([n]) => n),
         every: sc.every, rows: rowsRef, hashEvery: sc.hashEvery, hashes: hashRef,
-        hashNote: 'h0 = 2166136261; per frame h = fnv1a32(h, probe row), then each of: spl.x, spl.z, spl.t0, spl.r, spl.s, gl.x, gl.z, gl.r, gl.i, gl.c, memory aA, aB, aC (full, [] without memory), the frame\'s stamps (aA ++ aB ++ aC of the drawn instances)',
+        hashNote: 'h0 = 2166136261; per frame h = fnv1a32(h, probe row), then each of: spl.x, spl.z, spl.t0, spl.r, spl.s, gl.x, gl.z, gl.r, gl.i, gl.c, memory aA, aB, aC (full, [] without memory), the frame\'s stamps (aA ++ aB ++ aC of the drawn instances), the advect pass feature flow ([uFeatCount, uFeatA, uFeatB, uFeatC, uDownwash] when it ran this frame, else [])',
         firstFrame: r.first,
         events: r.h.log,
         queries: r.queries,

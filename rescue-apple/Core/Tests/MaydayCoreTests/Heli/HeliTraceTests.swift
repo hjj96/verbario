@@ -12,6 +12,7 @@ final class HeliTraceTests: XCTestCase {
   func testHeliStormCrash() throws { try run("heli/heli_storm_crash") }
   func testHeliFuelShip() throws { try run("heli/heli_fuel_ship") }
   func testHeliWinchFailures() throws { try run("heli/heli_winch_failures") }
+  func testHeliStretcherDitch() throws { try run("heli/heli_stretcher_ditch") }
   func testRigModes() throws { try run("camera/rig_modes") }
   func testRigPhoto() throws { try run("camera/rig_photo") }
 

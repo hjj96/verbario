@@ -31,12 +31,34 @@ public final class WaterMemoryQueue {
     public var diffuse: Double = 0
   }
 
-  /// What the renderer draws for one update(): clear both targets first (needsClear), advect, then
-  /// `count` stamps (aA = x, z, radius, strength; aB = foam, dye, disturbance, oil; aC = shape, inner,
-  /// dirX, dirZ — 4 floats each per stamp).
+  /// The ocean feature uniforms the advect pass reads for its swirl (memory.js spreads the ocean's
+  /// uFeatCount / uFeatA / uFeatB / uFeatC / uDownwash into the advect material): their values when
+  /// update() runs — inside ocean.update, so uDownwash still holds the previous frame's _lateUpload.
+  public struct Flow: Equatable, Sendable {
+    public var count = 0
+    public var a: [Float] = []
+    public var b: [Float] = []
+    public var c: [Float] = []
+    public var downwash = V4(0, 0, 10, 0)
+
+    public init(count: Int = 0, a: [Float] = [], b: [Float] = [], c: [Float] = [], downwash: V4 = V4(0, 0, 10, 0)) {
+      self.count = count
+      self.a = a
+      self.b = b
+      self.c = c
+      self.downwash = downwash
+    }
+  }
+
+  /// What the renderer draws for one update(): clear both targets first (needsClear), advect (with
+  /// `flow`), then `count` stamps (aA = x, z, radius, strength; aB = foam, dye, disturbance, oil;
+  /// aC = shape, inner, dirX, dirZ — 4 floats each per stamp).
   public struct Frame: Equatable, Sendable {
+    /// 1, 2, 3 … per update(): a new value = a step to draw (the web only advances while dt > 0)
+    public var serial = 0
     public var clear = false
     public var advect: Advect
+    public var flow = Flow()
     public var count = 0
     public var aA: [Float] = []
     public var aB: [Float] = []
@@ -107,8 +129,8 @@ public final class WaterMemoryQueue {
   }
 
   /// update(dt, focusX, focusZ, windX, windZ): re-centre on the focus by whole texels, this step's advect
-  /// uniforms, then hand the queued stamps to the renderer (`frame`) and empty the queue.
-  public func update(_ dt: Double, _ focusX: Double, _ focusZ: Double, _ windX: Double, _ windZ: Double) {
+  /// uniforms, then hand the queued stamps (and the feature flow) to the renderer (`frame`) and empty the queue.
+  public func update(_ dt: Double, _ focusX: Double, _ focusZ: Double, _ windX: Double, _ windZ: Double, flow: Flow = Flow()) {
     let clearNow = needsClear
     needsClear = false
     let nx = JS.round(focusX / texel) * texel
@@ -126,7 +148,7 @@ public final class WaterMemoryQueue {
     advect.diffuse = JS.min(1, dt * 0.6)
     center = V2(nx, nz)
 
-    var fr = Frame(clear: clearNow, advect: advect)
+    var fr = Frame(serial: (frame?.serial ?? 0) + 1, clear: clearNow, advect: advect, flow: flow)
     if count > 0 {
       let n = count * 4
       fr.count = count

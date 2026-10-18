@@ -41,6 +41,7 @@ final class OceanRun {
   private var clears = 0
   private var stampCount = 0
   private var stampLast: [Double] = []
+  private var stampFlow: [Double] = []
 
   init(_ name: String) throws {
     self.name = name
@@ -259,7 +260,7 @@ final class OceanRun {
     func f(_ a: [Float]) -> [Double] { a.map { Double($0) } }
     let m = ocean.memory
     return [f(sp.x), f(sp.z), f(sp.t0), f(sp.r), f(sp.s), f(gl.x), f(gl.z), f(gl.r), f(gl.i), f(gl.c),
-            m.map { f($0.aA) } ?? [], m.map { f($0.aB) } ?? [], m.map { f($0.aC) } ?? [], stampLast]
+            m.map { f($0.aA) } ?? [], m.map { f($0.aB) } ?? [], m.map { f($0.aC) } ?? [], stampLast, stampFlow]
   }
 
   func run() throws -> (rows: [[Double]], hashes: [UInt32]) {
@@ -288,6 +289,7 @@ final class OceanRun {
       frame = f
       stampCount = 0
       stampLast = []
+      stampFlow = []
       place(f)
       for a in pre[f] ?? [] { try act(a) }
       weather?.update(dt)
@@ -295,6 +297,8 @@ final class OceanRun {
       // the renderer stub: memory.update ran (dt > 0 with a memory) → clears and drawn stamps
       if dt > 0, let fr = ocean.memory?.frame {
         if fr.clear { clears += 2 }
+        let fl = fr.flow
+        stampFlow = [Double(fl.count)] + (fl.a + fl.b + fl.c).map { Double($0) } + [fl.downwash.x, fl.downwash.y, fl.downwash.z, fl.downwash.w]
         if fr.count > 0 {
           stampCount = fr.count
           stampLast = (fr.aA + fr.aB + fr.aC).map { Double($0) }

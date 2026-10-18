@@ -51,6 +51,8 @@ node rescue-apple/tools/export/export-data.mjs        # Resources/Data/*.json, m
 node rescue-apple/tools/export/export-vectors.mjs     # Tests/Vectors/** (Node)
 node rescue-apple/tools/export/export-vectors.mjs --only ocean,heli   # группы: math,look,palette,ocean,heli,mission,text
 node rescue-apple/tools/export/export-core.mjs       # Tests/Vectors/{math/jsnumber,math/three_*,core/*,settings/*,input/*} (ядро: JSNumber, three, шина, цикл, настройки, ввод, вибрация)
+node rescue-apple/tools/export/export-sim.mjs        # Tests/Vectors/{weather,ocean}/run_*, endless*, gusts, lightning, sunrig, features (погода и океан по кадрам)
+node rescue-apple/tools/export/export-heli.mjs       # Tests/Vectors/heli/heli_*, camera/* (настоящие Helicopter и CameraRig на стабах; --only heli,camera)
 node rescue-apple/tools/export/export-browser.mjs     # Tests/Vectors/ocean/coast_<id>.json + .u8 (по умолчанию --missions 0,2)
 node rescue-apple/tools/export/verify.mjs             # разбор, обёртки, размеры, полнота и хеши manifest, сайдкары
 node rescue-apple/tools/export/verify.mjs --browser   # + сверка с живой игрой в Chromium, 0 ошибок консоли
@@ -62,7 +64,7 @@ node rescue-apple/tools/export/verify.mjs --browser   # + сверка с жив
 
 - **После любого изменения в `rescue/src`**, которое трогает:
   - таблицы: пресеты, кампанию, реплики, константы;
-  - логику, покрытую векторами: `core/math.js`, `core/look.js`, `ocean/waves.js`, `ocean/coast.js`, `heli/flight.js`, `mission/scoring.js`, `mission/prepare.js`, `radio/words.js`, `mission/text.js`, `weather/palette.js`.
+  - логику, покрытую векторами: `core/math.js`, `core/look.js`, `ocean/waves.js`, `ocean/coast.js`, `heli/flight.js` (и весь `systems/heli*`, `systems/camera*` — `export-heli.mjs`), `mission/scoring.js`, `mission/prepare.js`, `radio/words.js`, `mission/text.js`, `weather/palette.js`.
 
   Реэкспорт коммитится в том же PR, что и правка веба. Поле `source` во всех файлах равно `git rev-parse HEAD` веба. Если `rescue/` был грязным, ставится `sourceDirty: true`; такой экспорт не коммитить.
 - **Когда добавлен новый модуль в `rescue/src`.** `export-data` упадёт с сообщением «modules not assigned to any data file». Модуль нужно добавить в таблицу `FILES` (или в `NO_DATA`) в `export-data.mjs`.
@@ -147,6 +149,10 @@ node rescue-apple/tools/export/verify.mjs --browser   # + сверка с жив
 | `ocean/wavebank_<preset>.json` × 8 | состояние банка, `heightAt/normalAt/velocityAt` на сетках near 13² и wide 11² × 2 фокуса × t {0; 12,5; 600,25}; `tOff`; `forward`. В storm дополнительно 30 с сглаживания calm → storm и качество medium | побитово |
 | `ocean/coast_{first,fog}.json` + `.u8` | карта берега из живой игры (`quality=low`) и 500 точек `coastDistance` | побитово при данной карте |
 | `heli/flight_*.json` × 4 | FlightModel, 600 шагов по 1/60 с: зависание (standard), крейсер без ассиста с препятствием, full + лебёдка + удар о воду, посадка на площадку. На каждом шаге записаны входы и 19 полей состояния, плюс события | хаос: все 600 шагов побитово |
+| `heli/heli_{rescue,storm_crash,fuel_ship,winch_failures,stretcher_ditch}.json` + сайдкары | `export-heli.mjs`: настоящий `Helicopter.update` + `CameraRig.update` по кадрам (dt с джиттером: 0–2 подшага) на стабах из `setup` (WaveBank, аналитический ветер, площадки и корабль с качкой, выжившие, опасности, fx). Входы «пилотов» записаны покадрово (`*_inputs.f32`, `*_realdt.f64`), вмешательства — в `pokes`. Состояние ~200 полей (полёт, лебёдка, ops, камера) каждые 10 кадров, визуальное (ротор, корпус, прожектор, огни, член экипажа, рендер лебёдки) каждые 30; трос и кольцо (Float32), блики, журналы событий, fx и вызовов океана | хаос: всё побитово |
+| `camera/rig_{modes,photo}.json` + сайдкары | тот же прогон: attract → briefing → play (полосы, главы, зум, фокус, удар FOV, тряска, slow-mo, порыв, молния), cinematic, фоторежим (FreeCam: мышь, клавиши, стики, колесо, LB/RB) | хаос: всё побитово |
+| `camera/projection.json` | `worldToScreen` / `screenToWater` (GL) для 4 поз камеры, 202 точки и 123 NDC на позу | побитово |
+| `camera/shake.json` + `shake_<seed>.f64` | `CameraMotion` отдельно: дрейф, trauma, floor, gust push, кадры > 0,05 с | побитово |
 | `mission/scoring.json` | Scorer по 4 сложностям (все STYLES, цепочки, once, неизвестный стиль), `breakdown`, 420 кейсов `medalsFor` | побитово |
 | `mission/prepare.json` | `prepareDef` для 9 операций, endless (сид 20261016) и title | побитово |
 | `text/ru_words.json` | числительные, плюрализация, стороны света, квадраты, часы, км (radio/words и mission/text) | побайтно |
@@ -157,6 +163,10 @@ node rescue-apple/tools/export/verify.mjs --browser   # + сверка с жив
 | `settings/settings.json` | `Settings` на заглушках localStorage/matchMedia/location: дефолты, миграция `assistExplicit`, первый запуск, `?quality=`, `set`/`onChange`, мусор в хранилище; `loadProgress`/`saveProgress` | строки побайтно, числа побитово |
 | `input/input.json` | `Input` на заглушках DOM/геймпадов: последовательности `poll()` (клавиатура, мышь, геймпад, тач, `enabled`, перепривязка на лету), `bindableCode`, `defaultKeys`, `applyBindings` | побитово |
 | `input/haptics.json` | `Haptics` (core/haptics.js) на заглушке ctx: все правила RULES, граничные payload, ворота режима, устройства и `vibration` (ToNumber) | побитово |
+| `weather/run_{calm_to_storm,night_storm,fog,attract,restore_N}.json`, `endless_20min.json` (+ `.f64` строки, `_hash.u32`) | настоящий `Weather` на заглушке ctx (шина, настройки, `Look(7)`, `createNoise2D(1337)`, скриптованные вертолёт и камера), dt = 1/60: действия по кадрам (режимы, `mission:setup`, порывы, удары, оттенок, град, настройки, чекпоинты и `restoreCheckpoint`), строка состояния (235 полей) каждые N кадров, цепной FNV-1a каждого кадра, события `weather:*`, перепекания env, ответы API (`forecast`, `windAt`, `cloudShadowAt`, `detectBase`, `checkpointState`) | хаос: каждый кадр побитово |
+| `weather/{gusts,lightning,sunrig,endless}.json` | `Gusts` (спавн, переработка, расписание, `addWindAt` на сетке), `envelope`/`envelopeReduced`, `WeatherLights` (swing, бокс тени, снап к текселям, качества), `Endless` по секундам 20 мин | побитово |
+| `ocean/run_{storm,stub}.json` (+ `.f64`, `_hash.u32`) | настоящий `Ocean` (за ним настоящая погода или `null`): все uniform в порядке `createOceanUniforms` плюс внутреннее состояние (фокус, кадры деталей и полос, прожектор, пулы брызг и бликов, фичи, банк волн, окно и очередь памяти воды, нарисованные стампы) каждый кадр; мели, берег из рельефа, пауза, смена качества, запросы `heightAt`/`normalAt`/`velocityAt`/`featureHeightAt`/`featureFlowAt`/`searchlightAt` | хаос: каждый кадр побитово |
+| `ocean/features.json` | `FeatureSet`: скрипт `set`/`remove`/`update` с вытеснением и затуханием, `heightAt`/`flowAt`, упаковка `uA/uB/uC` | побитово |
 
 Каждый файл содержит:
 
@@ -214,13 +224,9 @@ Swift-тест повторяет вызовы и сравнивает резу�
 
 **Векторы, которые требуют W-задач веба:**
 
-- weather run;
-- ocean features/uniforms;
 - world terrain/setup;
 - hazards;
 - fx;
-- winch/ops;
-- camera;
 - survivors;
 - `replay_op1`.
 
@@ -229,3 +235,4 @@ Swift-тест повторяет вызовы и сравнивает резу�
 - `source` — строка с sha, а не объект;
 - список файлов-источников лежит в `sourceFiles`;
 - в `jsmath` 4096 входов на функцию вместо 100 000, чтобы набор оставался компактным.
+- вертолёт (PLAN §5.3): `ops`, `winch_*`, `searchlight`, `lights` не отдельные файлы — они сверяются внутри полных прогонов `Helicopter` (`heli/heli_<сценарий>.json`), а `camera/rig_*` — в тех же прогонах и в `rig_{modes,photo}`. Космический `Math.random` (брызги, дым, искры, `blinkSeed`) пересеян после `new Helicopter` (three.js тратит ≈ 2500 вызовов на uuid при сборке модели).

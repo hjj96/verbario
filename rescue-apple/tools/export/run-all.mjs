@@ -2,7 +2,7 @@
 //
 //   node rescue-apple/tools/export/run-all.mjs                 render + data + vectors + verify (Node only, ~5 s)
 //   node rescue-apple/tools/export/run-all.mjs --browser       + coast maps from Chromium + live spot checks
-//   node rescue-apple/tools/export/run-all.mjs --only data     render | data | vectors | core | sim | browser | verify
+//   node rescue-apple/tools/export/run-all.mjs --only data     render | data | vectors | core | sim | heli | browser | verify
 // render (three's DFG LUT) runs before data, whose manifest.json then hashes the fresh dfg_lut.rg16f.
 //
 // Each step is a separate Node process (the loader hooks and DOM shims stay per-process).
@@ -22,6 +22,7 @@ const steps = [
   ['vectors', ['export-vectors.mjs']],
   ['core', ['export-core.mjs']], // core foundation: jsnumber, three math, events, loop, settings, input
   ['sim', ['export-sim.mjs']], // weather / ocean sim: time-stepped runs, gusts, lightning, sun rig, endless, features
+  ['heli', ['export-heli.mjs']], // helicopter + camera rig traces (real Helicopter / CameraRig on stub systems), projection, shake
   ['browser', ['export-browser.mjs'], true],
   ['verify', ['verify.mjs', ...(browser ? ['--browser'] : [])]],
 ];

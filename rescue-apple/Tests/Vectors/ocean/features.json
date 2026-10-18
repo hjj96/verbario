@@ -1,7 +1,7 @@
 {
   "schema": "mayday.vectors.ocean.features",
   "version": 1,
-  "source": "5475c0ec4a3c7d5feffdd49931dcfa1081c36a4e",
+  "source": "77cc2a049ecd9e9331eacd0c6fb7d964ea3df4bb",
   "sourceDirty": false,
   "sourceFiles": ["rescue/src/systems/ocean/features.js"],
   "producer": "tools/export/export-sim.mjs",

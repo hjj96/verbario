@@ -14,7 +14,7 @@
 // floaters moving linearly, survivors = groups with linear drift and a nearest-pickable rule, hazards =
 // one downdraft / vortex / rogue lift / debris script. Inputs are produced by closed-loop "pilots" here and
 // RECORDED per frame, so the Swift side only replays them. Math.random is re-seeded (createRng) right
-// before `new Helicopter`, matching SimContext.random.
+// after `new Helicopter` and blinkSeed re-drawn, matching SimContext.random.
 //
 // Same wrapper / number / determinism rules as export-vectors.mjs (tools/README.md).
 // Usage: node rescue-apple/tools/export/export-heli.mjs [--only heli,camera] [--out <dir>]
@@ -253,12 +253,13 @@ function run(sc) {
     ocean, weather, world, hazards, survivors, fx, photo,
     mission: sc.mission ? { def: { area: { radius: sc.mission.radius } }, elapsed: 0 } : undefined,
   };
-  const rng = M.createRng(sc.seed);
-  let draws = 0;
-  const sites = new Map();
-  Math.random = () => { draws++; if (process.env.MAYDAY_HELI_DEBUG) { const k = new Error().stack.split('\n')[2].trim(); sites.set(k, (sites.get(k) || 0) + 1); } return rng.next(); };
   const h = new Helicopter(ctx);
-  if (process.env.MAYDAY_HELI_DEBUG) console.log(sc.id, 'Math.random draws in new Helicopter:', draws, [...sites.entries()]);
+  // three.js draws Math.random for every object's uuid while the model is built (≈ 2500 draws), so the
+  // cosmetic random stream is re-seeded AFTER construction and HeliLights.blinkSeed re-drawn as its first
+  // value — SimContext.random in Swift (createRng(seed)) draws blinkSeed first, exactly here.
+  const rng = M.createRng(sc.seed);
+  Math.random = () => rng.next();
+  h.lightsCtl.blinkSeed = Math.random() * 10;
   ctx.heli = h;
   const rig = new CameraRig(ctx);
   ctx.cameraRig = rig;
@@ -599,9 +600,9 @@ function scStorm() {
     env: { sunDir: [-0.2, 0.6, 0.4], sunDirShadow: [-0.2, 0.7, 0.4], palette: NIGHT_PALETTE }, settings: { assist: 'full', difficulty: 'ace', quality: 'medium', reduceFlashes: true },
     detail: 0.7,
     world: { pads: [{ type: 'rig', position: [200, 30, 150], radius: 18, refuel: true }] },
-    survivors: [{ id: 3, type: 'injured', position: [30, 0, -10], velocity: [0.4, 0, 0.2], remaining: 1, spotted: true }],
+    survivors: [{ id: 3, type: 'raft', position: [30, 0, -10], velocity: [0.4, 0, 0.2], remaining: 2, spotted: true }],
     hazards: { downdraft: { x: 25, z: -15, r: 40, s: 3, push: [1.5, -0.8] }, vortices: [{ type: 'waterspout', position: [60, 0, -40], core: 18, stage: 4 }],
-      rogue: { t0: 6, t1: 9, x: 30, z: -12, r: 30, h: 6 }, imminent: { type: 'rogue', position: [40, 0, -20], eta: 3, t0: 5, t1: 7 } },
+      rogue: { t0: 11, t1: 14, x: 30, z: -12, r: 30, h: 6 }, imminent: { type: 'rogue', position: [40, 0, -20], eta: 3, t0: 5, t1: 7 } },
     mission: { radius: 300 },
     pokes: { 1: [{ op: 'emit', name: 'mission:setup', payload: { def: { heli: { x: 0, z: 0, altitude: 25, heading: 0.4 } } } }],
       2: [{ op: 'emit', name: 'mission:start', payload: { def: {} } }],
@@ -632,12 +633,13 @@ function scStorm() {
 }
 
 // 3. fuel: boost to overheat, bingo → empty → autorotation onto a moving, turning, tilting ship deck (flare
-//    over the deck), deck damage on touch, autorotation landing, refuel + resupply (legacy pad.refuel),
-//    autoTakeoff lift-off.
+//    over the deck), deck damage on touch, autorotation landing, refuel + resupply (legacy pad.refuel), a
+//    shove off the deck (applyImpulse → takeoff) and re-landing, autoTakeoff, then a hull failure over the
+//    deck: the wreck comes down on it (ditch onto the pad, carried by the moving deck).
 function scFuel() {
   let phase = 'out';
   return {
-    id: 'fuel_ship', seed: 909, frames: 1800, every: 10, dt: jitterDt,
+    id: 'fuel_ship', seed: 909, frames: 2100, every: 10, dt: jitterDt,
     sea: { Hs: 0.6, swellAdd: 0.7, Q: 0.3, clearing: 0 }, wind: { base: [-3, 4], amp: 0.6 },
     weather: () => ({ turbulence: 0.1, rain: 0, fog: 0.4, intensity: 0.1, night: 0, flash: 0, stElmo: 0 }),
     env: { palette: STORM_PALETTE }, settings: { assist: 'off', difficulty: 'cadet', quality: 'low', invertLift: false },
@@ -646,7 +648,9 @@ function scFuel() {
     survivors: [],
     pokes: { 1: [{ op: 'emit', name: 'mission:setup', payload: { def: { heli: { x: -20, z: 0, y: 40, heading: 0 } } } }, { op: 'fuel', value: 0.27 }],
       700: [{ op: 'fuel', value: 0.004 }],
-      1500: [{ op: 'autoTakeoff', alt: 30 }] },
+      1380: [{ op: 'impulse', v: [4, 0, -1] }],
+      1600: [{ op: 'autoTakeoff', alt: 24 }],
+      1720: [{ op: 'damage', amount: 3, source: 'lightning' }] },
     pilot(frame, ctx, h) {
       const deck = ctx.world.pads[0];
       let u = { moveX: 0, moveY: 0, lift: 0, down: [], pressed: [], device: 'touch' };
@@ -661,6 +665,9 @@ function scFuel() {
         Object.assign(u, steer(h, deck.position.x, deck.position.z, { kp: 0.09, kd: 0.18 }));
         u.lift = -1;
         if (h.landed) phase = 'deck';
+      } else if (frame > 1600) {
+        // hold station over the moving deck (the crash comes down on it)
+        Object.assign(u, steer(h, deck.position.x, deck.position.z, { kp: 0.08, kd: 0.25, max: 0.6 }));
       }
       u.phase = phase;
       return u;
@@ -753,6 +760,60 @@ function scWinch() {
           hold(inj.position.x, inj.position.z);
           u.down.push('winch');
           break;
+      }
+      u.phase = phase;
+      return u;
+    },
+  };
+}
+
+// 5. stretcher + crash with a load: night, searchlight, an injured survivor (steadiness ≥ 0.6, 3 s capture,
+//    stretcher lift 1.5 m/s, 2 seats), land, unload the stretcher (3 s), refuel, take off; winch a swimmer
+//    and lose the hull while the person is on the cable (slip 'crash') → autorotation → ditch at sea →
+//    flotation bags, crew rocket (fx.burst), bobbing on the swell.
+function scStretcher() {
+  let phase = 'climb';
+  return {
+    id: 'stretcher_ditch', seed: 606, frames: 3900, every: 10, dt: jitterDt,
+    sea: { Hs: 0.5, swellAdd: 0.4, Q: 0.25, clearing: 0 }, wind: { base: [1.5, -1], amp: 0.3 },
+    weather: () => ({ turbulence: 0.05, rain: 0, fog: 0.15, intensity: 0.1, night: 0.95, flash: 0, stElmo: 0 }),
+    env: { sunDir: [0.1, 0.4, 0.9], palette: NIGHT_PALETTE }, settings: { assist: 'full', difficulty: 'pilot', quality: 'low' },
+    world: { pads: [{ type: 'pad', position: [0, 4, 0], radius: 12, services: { fuel: 25, resupply: false } }] },
+    survivors: [{ id: 7, type: 'injured', position: [-28, 0, 22], velocity: [0.05, 0, 0], remaining: 1, spotted: true },
+      { id: 8, type: 'swimmer', position: [-30, 0, -35], velocity: [0, 0, 0.1], remaining: 1, spotted: true }],
+    mission: { radius: 120 },
+    pokes: { 1: [{ op: 'emit', name: 'mission:setup', payload: { def: { heli: { pad: 0 } } } }, { op: 'fuel', value: 0.5 }] },
+    pilot(frame, ctx, h) {
+      const s = ctx.survivors.list[0];
+      const w = h.winch;
+      const pad = ctx.world.pads[0];
+      let u = { moveX: 0, moveY: 0, lift: 0, down: [], pressed: [], mouse: [0, -0.1], mouseMoved: false };
+      if (frame === 5) u.pressed.push('searchlight');
+      if (phase === 'climb') {
+        u.lift = 1;
+        if (h.altTarget > 12) { phase = 'fly'; u.pressed.push('altPreset1'); }
+      } else if (phase === 'fly') {
+        Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.06, kd: 0.18 }));
+        if (u.d < 2 && h.speed < 0.8) phase = 'winch';
+      } else if (phase === 'winch') {
+        Object.assign(u, steer(h, s.position.x, s.position.z, { useHoist: true, kp: 0.05, kd: 0.25, max: 0.3 }));
+        if (!w.load) u.down.push('winch');
+        if (h.cabin.length) phase = 'home';
+      } else if (phase === 'home') {
+        Object.assign(u, steer(h, pad.position.x, pad.position.z, { kp: 0.06, kd: 0.14 }));
+        if (u.d < 8) u.lift = -1;
+        if (h.landed) phase = 'pad';
+      } else if (phase === 'pad') {
+        if (!h.cabin.length && h.fuel >= 1 && frame % 60 === 0) { phase = 'out'; u.pressed.push('altPreset1'); }
+      } else if (phase === 'out') {
+        const s2 = ctx.survivors.list[1];
+        Object.assign(u, steer(h, s2.position.x, s2.position.z, { useHoist: true, kp: 0.06, kd: 0.16 }));
+        if (u.d < 2 && h.speed < 0.8) phase = 'out2';
+      } else if (phase === 'out2') {
+        const s2 = ctx.survivors.list[1];
+        Object.assign(u, steer(h, s2.position.x, s2.position.z, { useHoist: true, kp: 0.05, kd: 0.25, max: 0.3 }));
+        if (!w.load && h.alive) u.down.push('winch');
+        if (w.load && w.length < 9 && h.alive && !h.crash) u.pokes = [{ op: 'damage', amount: 5, source: 'debris' }];
       }
       u.phase = phase;
       return u;
@@ -882,6 +943,7 @@ async function heli() {
   writeRun('heli', 'heli_storm_crash', scStorm());
   writeRun('heli', 'heli_fuel_ship', scFuel());
   writeRun('heli', 'heli_winch_failures', scWinch());
+  writeRun('heli', 'heli_stretcher_ditch', scStretcher());
 }
 
 async function camera() {
