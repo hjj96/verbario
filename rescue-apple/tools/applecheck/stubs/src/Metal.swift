@@ -23,7 +23,7 @@ public enum MTLStoreAction: UInt { case dontCare = 0, store, multisampleResolve,
 public enum MTLDataType: UInt { case none = 0, float = 3, float2, float3, float4, int = 29, uint = 33, bool = 53 }
 public enum MTLBlendFactor: UInt { case zero = 0, one, sourceColor, oneMinusSourceColor, sourceAlpha, oneMinusSourceAlpha, destinationColor }
 public enum MTLBlendOperation: UInt { case add = 0, subtract, reverseSubtract, min, max }
-public enum MTLVertexFormat: UInt { case invalid = 0, float = 28, float2, float3, float4 }
+public enum MTLVertexFormat: UInt { case invalid = 0, uchar2Normalized = 7, uchar3Normalized = 8, uchar4Normalized = 9, short2Normalized = 22, short3Normalized = 23, short4Normalized = 24, half2 = 25, half3 = 26, half4 = 27, float = 28, float2, float3, float4 }
 public enum MTLVertexStepFunction: UInt { case constant = 0, perVertex, perInstance }
 
 public struct MTLViewport { public var originX: Double; public var originY: Double; public var width: Double; public var height: Double; public var znear: Double; public var zfar: Double

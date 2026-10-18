@@ -232,11 +232,23 @@ export const TEXTURE_KINDS = {
 
 /**
  * Resources/Data/manifest.json: every Resources/Data/*.json (except the manifest itself) and every
- * Resources/Textures/* file with schema, version, producer, bytes and sha256. Rebuilt from the
- * directories, so any exporter that writes into them (export-data, export-render) calls it last.
+ * Resources/Textures/* and Resources/Meshes/*.mmesh file with schema, version, producer, bytes and sha256.
+ * Rebuilt from the directories, so any exporter that writes into them (export-data, export-render,
+ * bake-meshes) calls it last.
  */
-export function writeManifest({ dataDir = path.join(APPLE, 'Resources/Data'), texDir = path.join(APPLE, 'Resources/Textures') } = {}) {
-  const g = gitInfo();
+// Baked meshes (tools/meshfmt/SPEC.md): every Resources/Meshes/*.mmesh, version read from its header.
+export const MESH_KINDS = {
+  '.mmesh': { schema: 'mayday.mmesh', producer: 'tools/export/bake-meshes.mjs' },
+};
+
+// keepRevision: keep the webRevision / webDirty already in the manifest (bake-meshes only refreshes the mesh
+// entries; the stamp belongs to the data export — DataCatalogTests checks every data file's source against it).
+export function writeManifest({ dataDir = path.join(APPLE, 'Resources/Data'), texDir = path.join(APPLE, 'Resources/Textures'), meshDir = path.join(APPLE, 'Resources/Meshes'), keepRevision = false } = {}) {
+  let g = gitInfo();
+  const mfPath = path.join(dataDir, 'manifest.json');
+  if (keepRevision && fs.existsSync(mfPath)) {
+    try { const old = JSON.parse(fs.readFileSync(mfPath, 'utf8')); if (old.webRevision) g = { rev: old.webRevision, dirty: !!old.webDirty }; } catch {}
+  }
   const entries = [];
   for (const f of fs.readdirSync(dataDir).sort()) {
     if (!f.endsWith('.json') || f === 'manifest.json') continue;
@@ -251,6 +263,14 @@ export function writeManifest({ dataDir = path.join(APPLE, 'Resources/Data'), te
     if (!kind) throw new Error(`manifest: Resources/Textures/${f} has no known kind (TEXTURE_KINDS in lib/common.mjs)`);
     const buf = fs.readFileSync(path.join(texDir, f));
     entries.push({ path: `Resources/Textures/${f}`, schema: kind.schema, version: 1, producer: kind.producer, bytes: buf.length, sha256: sha256(buf) });
+  }
+  for (const f of fs.existsSync(meshDir) ? fs.readdirSync(meshDir).sort() : []) {
+    if (f.startsWith('.') || !fs.statSync(path.join(meshDir, f)).isFile()) continue;
+    const kind = MESH_KINDS[path.extname(f)];
+    if (!kind) throw new Error(`manifest: Resources/Meshes/${f} has no known kind (MESH_KINDS in lib/common.mjs)`);
+    const buf = fs.readFileSync(path.join(meshDir, f));
+    const version = buf.length >= 6 ? buf.readUInt16LE(4) : null;
+    entries.push({ path: `Resources/Meshes/${f}`, schema: kind.schema, version, producer: kind.producer, bytes: buf.length, sha256: sha256(buf) });
   }
   const manifest = { schema: 'mayday.manifest', version: 1, formatVersion: 1, webRevision: g.rev, webDirty: g.dirty, files: entries };
   fs.writeFileSync(path.join(dataDir, 'manifest.json'), pretty(manifest) + '\n');

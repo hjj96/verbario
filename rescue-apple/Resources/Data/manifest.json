@@ -220,6 +220,166 @@
       "producer": "tools/export/export-data.mjs",
       "bytes": 1048576,
       "sha256": "a4ce9ae9d6db0de2f5c80aba42090e6501f0b7e1f3ee42d269a65b96fb01a26e"
+    },
+    {
+      "path": "Resources/Meshes/heli_basket.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 27424,
+      "sha256": "392e7c4d004a1d2194d8192aa2abbff485d9cb7f0583803158ac3a241665e697"
+    },
+    {
+      "path": "Resources/Meshes/heli_blades_shadow.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 7232,
+      "sha256": "bdb2276d1163fe27765b205e3f1b4a8be6e32a035a5a857bda96f3cb83b80d6a"
+    },
+    {
+      "path": "Resources/Meshes/heli_cable.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 2592,
+      "sha256": "d426fb535c53111bab558b1e41897da3ca95b5394eb94fe8103a8c1af73d740d"
+    },
+    {
+      "path": "Resources/Meshes/heli_crew_arm.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 14544,
+      "sha256": "5023902ea0ddcaac424227b279d9d53a3099487a3b6f71b095f9c256e3a0eb4c"
+    },
+    {
+      "path": "Resources/Meshes/heli_crew_body.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 45776,
+      "sha256": "a545d5b8a2791b567551b9347d5ba6fa94e9a20a8d4fe77a2d6c22cdbe6cca8a"
+    },
+    {
+      "path": "Resources/Meshes/heli_crew_head.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 10704,
+      "sha256": "9d3b078984c42852831070f35fb2d9386ead1e5bb767347b01d818d0f81d0e30"
+    },
+    {
+      "path": "Resources/Meshes/heli_flare.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 4208,
+      "sha256": "1ee906356cebf0048aaefed198150cdd27be2a5b3c88adaf54238f3249ca6379"
+    },
+    {
+      "path": "Resources/Meshes/heli_float.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 7136,
+      "sha256": "ff224a4c75ddff64b745e732f7540ef1ea3a7c6af027b0efa8463157f2eb2838"
+    },
+    {
+      "path": "Resources/Meshes/heli_heat_bay.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 2224,
+      "sha256": "8e776aa6ddb1326d861798925d15ad7f9c93d906867f327ac7895dea2271448b"
+    },
+    {
+      "path": "Resources/Meshes/heli_heat_plume.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 2144,
+      "sha256": "0ec319ebed547277f05f8a90650360f2482a949290d3526cab22d2db3407ba8b"
+    },
+    {
+      "path": "Resources/Meshes/heli_hub.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 36640,
+      "sha256": "af456c8267a413f9102e2db0d1eb895b4bba25e3f684f56e305fc102e0190348"
+    },
+    {
+      "path": "Resources/Meshes/heli_hull.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 160992,
+      "sha256": "4b79a0093bb6760112632dcc8de64943fb0da339db3c89c8821f8e0f5bf531e6"
+    },
+    {
+      "path": "Resources/Meshes/heli_lights.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 6896,
+      "sha256": "eef910d47fb4dea4b5617246003bd52a451a0e69afa6811bdf0006edf739fc19"
+    },
+    {
+      "path": "Resources/Meshes/heli_raft_pack.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 3472,
+      "sha256": "cf8a3968508a3b2f32b118f99a9ea154ee5406875038ba2424c8e8b387ed540a"
+    },
+    {
+      "path": "Resources/Meshes/heli_rescuer.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 27104,
+      "sha256": "b67b96d895a6ce7440779b78c38a3b4a6a75c974a2acacaef95e3039c60e546f"
+    },
+    {
+      "path": "Resources/Meshes/heli_ring.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 4096,
+      "sha256": "a93699bcf100935817342355e1bf2d4d93b8aa020dc644fee148c623ecb65cef"
+    },
+    {
+      "path": "Resources/Meshes/heli_rotor_main.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 5184,
+      "sha256": "eef25435f49597ef9b9c37bdd7614f6b7ac4b6f593a013ee3db0537c67dc9729"
+    },
+    {
+      "path": "Resources/Meshes/heli_rotor_main_low.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 4144,
+      "sha256": "d17059930720c4c61a4c2d3f6d381ef989ed2f39709405f4bff23438949b0c3c"
+    },
+    {
+      "path": "Resources/Meshes/heli_rotor_tail.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 3232,
+      "sha256": "223d30880c3b36d1fec8f63ea6de1c0f13049f7e73861d8e558faddd5811d6ae"
+    },
+    {
+      "path": "Resources/Meshes/heli_searchlight_cone.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 11264,
+      "sha256": "5a95defec400be3ba54f959cf37b49efa83f7c66da5c43811a796b6f16272df7"
     }
   ]
 }
