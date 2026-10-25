@@ -222,6 +222,310 @@
       "sha256": "a4ce9ae9d6db0de2f5c80aba42090e6501f0b7e1f3ee42d269a65b96fb01a26e"
     },
     {
+      "path": "Resources/Meshes/craft_boat.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 61936,
+      "sha256": "8696639bd56debe9387c162ea428bdb0997022fd28a7f219f4a8ceb62a4e4161"
+    },
+    {
+      "path": "Resources/Meshes/craft_container.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 114624,
+      "sha256": "4a927c9cf11ed6bae156b766b4b43831cf384f82af1093c629d98674bc154e43"
+    },
+    {
+      "path": "Resources/Meshes/craft_debris.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 65600,
+      "sha256": "ffab0266692b0c22754d6de2e2949ddc722aa9ac93d4dd71f57cd78203a2b1b2"
+    },
+    {
+      "path": "Resources/Meshes/craft_lostbuoy.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 11104,
+      "sha256": "57b02e8225a846699a1fa14f70e6fa75414a5bf3acbe7922c178e6184a64766b"
+    },
+    {
+      "path": "Resources/Meshes/craft_plane.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 108528,
+      "sha256": "67a806e9b1b2d05bdeaad431a105f132788df2e8cc9676a2cf9f5f0c243b035c"
+    },
+    {
+      "path": "Resources/Meshes/craft_raft.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 273152,
+      "sha256": "334c11895b106cc4466389565c6e20b85a9dafb54db2e80d3b074d98354a539b"
+    },
+    {
+      "path": "Resources/Meshes/craft_stretcher.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 40048,
+      "sha256": "e2f93519d7ec47206ae9c5a400ee508e6774f376fe6373ee67f4f015297fbff4"
+    },
+    {
+      "path": "Resources/Meshes/craft_yacht.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 58496,
+      "sha256": "697f0dba3626b1ed2877f2b7e06910f0136185e6086f2a410dc6f245d8d45c16"
+    },
+    {
+      "path": "Resources/Meshes/floater_barrel.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 13296,
+      "sha256": "d357ee8a45d0ad4a5304b3f2fed7db50c08a55d4cf6dec7d2c3165153dbb10b8"
+    },
+    {
+      "path": "Resources/Meshes/floater_buoy_east.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 92352,
+      "sha256": "8bd27c86f881a458db982741922d1260a216f60d0acaa1d3bcec5a52e4d98af5"
+    },
+    {
+      "path": "Resources/Meshes/floater_buoy_isolated.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 92944,
+      "sha256": "32e2172e9244017a9fa828ebe9179950415ac72dd203270ed50e4e3a0be7e088"
+    },
+    {
+      "path": "Resources/Meshes/floater_buoy_mark.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 24432,
+      "sha256": "60a0e3611ad669a8ff7ec808938f606e18802d3412abe5324183ac131db67a2b"
+    },
+    {
+      "path": "Resources/Meshes/floater_buoy_north.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 92368,
+      "sha256": "f860fed792277224b400adb47c15f34403be99910406b8a1a4fa1e29b4639b8c"
+    },
+    {
+      "path": "Resources/Meshes/floater_buoy_south.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 92368,
+      "sha256": "d1f06ba419e61fa1b6b0b9318a33e0699d1c8c0fecc8310e60cb8865bb1fcca6"
+    },
+    {
+      "path": "Resources/Meshes/floater_buoy_west.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 92352,
+      "sha256": "51c05078f314fe561bbf91b3a512389c55cc3f500e78e3bba8a499b60ffa85b3"
+    },
+    {
+      "path": "Resources/Meshes/floater_canister.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 7536,
+      "sha256": "9572cfdaa9b668994b0d779055ba5e59e3a6757262e17c578187069962f55d34"
+    },
+    {
+      "path": "Resources/Meshes/floater_duck.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 11072,
+      "sha256": "5d1aaa022e474357c7243bf72b94f31d6433ed21944c9409db922e09ee4bd4f0"
+    },
+    {
+      "path": "Resources/Meshes/floater_fender.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 13344,
+      "sha256": "91d5a8f9f6819ee342e1b3754c0dbe08a778409bfa875cdd89649832fa963afb"
+    },
+    {
+      "path": "Resources/Meshes/floater_fishbox.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 4992,
+      "sha256": "e8c57c7a05273c8eed6f27bf2335d39b55b298d5e74796c33dc5dd8e05ca6882"
+    },
+    {
+      "path": "Resources/Meshes/floater_float.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 5664,
+      "sha256": "56f2d5be0dab9fb963077a1203902b692afdac21f3fa526e8cc685d03fc016bb"
+    },
+    {
+      "path": "Resources/Meshes/floater_kayak.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 104432,
+      "sha256": "76491576af90091ded7d807555f30d91f2568d8fb9a1477d37cf345d0f4d2c03"
+    },
+    {
+      "path": "Resources/Meshes/floater_paddle.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 7104,
+      "sha256": "159e953a946ca45c80db953ccfb15b7f07c887da1df924aa20582c465e30180e"
+    },
+    {
+      "path": "Resources/Meshes/floater_plank.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 3408,
+      "sha256": "aaf613ecfb54dd90de72c5b582ede966bdb3545f1a9fa6f26f0d48c4c4844ebe"
+    },
+    {
+      "path": "Resources/Meshes/floater_ring.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 23216,
+      "sha256": "ede0bcf1c0fb245d1548d012b30c237ad8a8e5edafdbf758ba615b5f94aa7a69"
+    },
+    {
+      "path": "Resources/Meshes/floater_sail.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 95264,
+      "sha256": "9404ad2be299f840a2eab46afe6a6b59bd8106e93cae0f381c5d53fb257ae5d0"
+    },
+    {
+      "path": "Resources/Meshes/floater_suitcase.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 6576,
+      "sha256": "662654d359dad6fd1e5bc38c4f05e00755df2b2004311e58c9f4e00d2361dc1f"
+    },
+    {
+      "path": "Resources/Meshes/fx_dolphin.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 11872,
+      "sha256": "7df429aee62650c12695d465727e19e4550ee9ca783d3ac8ef72a90859412208"
+    },
+    {
+      "path": "Resources/Meshes/fx_glows.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 848,
+      "sha256": "068a90fdd9a8eb1097fc076e76788779c754e6b2c26f0f6f9f398c7c9a1555c3"
+    },
+    {
+      "path": "Resources/Meshes/fx_gull.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 12480,
+      "sha256": "490d20b4aa344505480f67ee6dc16b1baeabff34fe2de61fd82c375e31689c05"
+    },
+    {
+      "path": "Resources/Meshes/fx_heat.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 3856,
+      "sha256": "299117ca1487f9a4215234bf6d4c663da29d5315659aaa27892c826813b6f7cb"
+    },
+    {
+      "path": "Resources/Meshes/fx_motes.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 896,
+      "sha256": "0e98440b9d5fcf42c75469114f5954e7b888464e8a4e54f1d653f6ddfb1e473b"
+    },
+    {
+      "path": "Resources/Meshes/fx_particles_glow.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1008,
+      "sha256": "35904e7115e2c82ba10bfba3f71009d8c38b55ff91fc2d546eb7816d335c3106"
+    },
+    {
+      "path": "Resources/Meshes/fx_particles_smoke.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1024,
+      "sha256": "c627ea8e2976fb7f4ca7d1da9277132bf9ddfc80e055290e210050254ef240c6"
+    },
+    {
+      "path": "Resources/Meshes/fx_particles_spray.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1024,
+      "sha256": "cce536fc7ddc05f06136c2af3dac1cc0b2df263b435e0ebf439fbde1bec7bbfb"
+    },
+    {
+      "path": "Resources/Meshes/fx_rain.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1232,
+      "sha256": "4045d13a03b01b6067924e021645a9a7c5969d7d599bda0081984e856b915758"
+    },
+    {
+      "path": "Resources/Meshes/fx_rings.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 848,
+      "sha256": "0289036810e1d583bbacf73534e9a6b44f540063ec5935a601bcad67c991ef15"
+    },
+    {
+      "path": "Resources/Meshes/fx_whale.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 18816,
+      "sha256": "96237a19dc82896833c5a186797d5062536be65fbbef6a1187231b8a931adc77"
+    },
+    {
+      "path": "Resources/Meshes/fx_whale_shade.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1008,
+      "sha256": "9e7f84e8f64bfff86883ed1f40f7f6e8f3ce4e0d111d751b9bc5c8896bab1009"
+    },
+    {
       "path": "Resources/Meshes/heli_basket.mmesh",
       "schema": "mayday.mmesh",
       "version": 1,
@@ -380,6 +684,126 @@
       "producer": "tools/export/bake-meshes.mjs",
       "bytes": 11264,
       "sha256": "5061c7a0d0001371da5a178ead9863b06a42059569966c5868b3865280c17395"
+    },
+    {
+      "path": "Resources/Meshes/lighthouse_beam.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 10736,
+      "sha256": "d08d686008c7e924a732e6dfa97cec4b34ab9e7d1bf60f1b682422b35f80a77a"
+    },
+    {
+      "path": "Resources/Meshes/lighthouse_deck.rgba",
+      "schema": "raw.rgba8",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1048576,
+      "sha256": "824b4c81664cd3a94b59f62a1e9a4e6d8ec12af34c07ef386a05bd90adac48eb"
+    },
+    {
+      "path": "Resources/Meshes/lighthouse_high.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1739296,
+      "sha256": "aee4b58a24a1d410c59de1e209f53b49c705c2b0653ad671f580328282c9e5ad"
+    },
+    {
+      "path": "Resources/Meshes/lighthouse_low.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1737952,
+      "sha256": "4d7461badd5ef509c2959decd3b93eb0a8017ce427bf60f70c529224d75463c6"
+    },
+    {
+      "path": "Resources/Meshes/lighthouse_medium.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1739536,
+      "sha256": "bb9d7c8df5f3e4d1410edfb503b0f2e37ffa62529564792b62bda46a7f024aa4"
+    },
+    {
+      "path": "Resources/Meshes/surv_collar.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 2608,
+      "sha256": "f6bacab4fc0248b6db85b5b3b7e49f06bb9c099ef88809093ca9cb76ff9cc63a"
+    },
+    {
+      "path": "Resources/Meshes/surv_glow.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1120,
+      "sha256": "8a09be1c6a950a5172d4d17d15bc6eaff52a1d766f0d66123bd429aec1da5c07"
+    },
+    {
+      "path": "Resources/Meshes/surv_person.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 64160,
+      "sha256": "c33cf696913bcb73c4b135e5a3b781da59670f5842bedb4d7fe615c15b8dc7b0"
+    },
+    {
+      "path": "Resources/Meshes/veg_atlas.rgba",
+      "schema": "raw.rgba8",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 1048576,
+      "sha256": "2a018fc50f97c8b636e7846cb861427a3517a105f8accedf4e55532792184344"
+    },
+    {
+      "path": "Resources/Meshes/veg_shrub.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 3680,
+      "sha256": "b9777662b01b56a108f7aca01653a4fe0d4f7d91364186c5bd0e6228aa8b6b0d"
+    },
+    {
+      "path": "Resources/Meshes/veg_spruce.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 43440,
+      "sha256": "6fd7df12476e230cc3459828d35cd5c6abb2d97ba6559d29d9e1423bcb264cd4"
+    },
+    {
+      "path": "Resources/Meshes/veg_tuft.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 2560,
+      "sha256": "be018203b3625b28787a5d024348b9068efa3a4474fffb24aaaac230c9b1fd89"
+    },
+    {
+      "path": "Resources/Meshes/world_collar.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 2368,
+      "sha256": "ae2657e7f83e0111458d5331115c34fa16fe8730ea95f0a732a0af45326cfb9b"
+    },
+    {
+      "path": "Resources/Meshes/world_lamp.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 944,
+      "sha256": "3bfaec9c2067426ffe7812e061f326016d0fb4622b0b2fa7b1b2c8953c357cad"
+    },
+    {
+      "path": "Resources/Meshes/world_rigging.mmesh",
+      "schema": "mayday.mmesh",
+      "version": 1,
+      "producer": "tools/export/bake-meshes.mjs",
+      "bytes": 4464,
+      "sha256": "f86fdf627c77f585e89e1448e92c620d8253f3651d1e89f2329c7b329b64ee9e"
     }
   ]
 }

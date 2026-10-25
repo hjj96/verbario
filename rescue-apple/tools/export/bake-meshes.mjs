@@ -11,8 +11,18 @@
 // Each file's meta block carries the object's local transform chain, render flags, material parameters
 // (incl. the hull's weathering uniforms, produced by running the material's own onBeforeCompile) and the
 // thermal-view flags (systems/post/thermal.js _promoteHeat run on the built model).
+// The sea scene of op1 (sceneMeshes below; a real World / Survivors / Effects on stub contexts):
+//   world      lighthouse «Скалистый» prop mesh per quality (`lighthouse_<q>`: the structures are seated on that
+//              quality's island terrain), its double beam, the lamp and collar instance quads, the rigging stick,
+//              every floating-prop shape and buoy kind (`floater_*`), the island's three vegetation card meshes
+//   survivors  the person (crowd + ghost + keyline materials), every craft model (`craft_*`), collar and glow quads
+//   fx         the gull, the thermal heat sphere, the particle / glow / ring / rain / mote quads (their
+//              materials' own uniforms), dolphin and whale
+// Instanced attributes (per-frame data) are never baked; geometry ranges keep three's drawRange and the
+// shadow LOD (geometry.userData.shadowRange → range `shadow`).
 //
-// Usage: node rescue-apple/tools/export/bake-meshes.mjs [--out <dir>]
+// Usage: node rescue-apple/tools/export/bake-meshes.mjs [--out <dir>] [--canvas]
+//        (--canvas: also the two canvas textures, through headless Chromium — see bakeCanvases)
 //        (verify: node rescue-apple/tools/meshfmt/verify.mjs --web)
 import { gameImport, scopeOf } from './shims/loader.mjs';
 import path from 'node:path';
@@ -329,12 +339,292 @@ export function heliTransformVectors(poseCount = 6) {
   };
 }
 
+// ------------------------------------------------------------------------------------- the sea scene
+// World / Survivors / Effects are constructed on stub contexts (construction + op1's mission:setup only; the
+// stubs answer what the constructors ask: flat sea, no weather, no heli). Only the objects' geometry, local
+// transforms, render flags and material parameters are read.
+const { World } = await gameImport('systems/world.js');
+const { CAMPAIGN } = await gameImport('systems/mission/campaign.js');
+const { prepareDef } = await gameImport('systems/mission/prepare.js');
+const { Survivors } = await gameImport('systems/survivors.js');
+const { Effects } = await gameImport('systems/fx.js');
+const floatersScope = (await scopeOf('systems/world/floaters.js')).scope;
+const vegScope = (await scopeOf('systems/world/vegetation.js')).scope;
+
+export const SCENE_QUALITIES = ['high', 'medium', 'low'];
+// file-name prefixes the scene bake owns (stale files of an older bake are removed, verify checks them)
+export const SCENE_PREFIXES = ['lighthouse_', 'world_', 'floater_', 'veg_', 'surv_', 'craft_', 'fx_'];
+
+function stubSettings(quality) {
+  const vals = { quality, difficulty: 'pilot', reduceFlashes: false };
+  return { get: (k) => vals[k], set: (k, v) => { vals[k] = v; }, onChange: () => {}, detail: () => 1 };
+}
+
+function sceneCtx(quality) {
+  const camera = new THREE.PerspectiveCamera(40, 1280 / 720, 2, 1200);
+  camera.position.set(0, 220, 60);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x8899aa, 200, 900);
+  const ctx = {
+    THREE, look: new Look(7), scene, camera, settings: stubSettings(quality), events: new EventBus(), mode: 'play',
+    time: { t: 0, dt: 0, frame: 0 }, params: new URLSearchParams(''),
+  };
+  ctx.ocean = {
+    heightAt: () => 0, normalAt: (x, z, out) => (out || new THREE.Vector3()).set(0, 1, 0), searchlightAt: () => 0,
+    velocityAt: (x, z, out) => (out || new THREE.Vector3()).set(0, 0, 0), stamp() {}, setShoals() {}, applyTerrain() {},
+  };
+  return ctx;
+}
+
+// A real World after init() and op1's mission:setup (the lighthouse is built on `quality`'s island terrain).
+function buildWorld(quality) {
+  const ctx = sceneCtx(quality);
+  const world = new World(ctx);
+  ctx.world = world;
+  world.init();
+  ctx.events.emit('mission:setup', { def: prepareDef(CAMPAIGN[0], { index: 0 }) });
+  // one bank per floating-prop shape and buoy kind (op1 uses some; the files cover them all)
+  const shapes = Object.keys(floatersScope.SHAPES).filter((s) => !floatersScope.SHAPES[s].craft);
+  for (const s of shapes) world.floaters._bank(s, 1);
+  for (const k of floatersScope.BUOY_KINDS) world.floaters._bank(`buoy:${k}`, 1);
+  ctx.scene.updateMatrixWorld(true);
+  return { world, ctx, shapes };
+}
+
+// Real Survivors + Effects (construction only).
+function buildSea() {
+  const ctx = sceneCtx('high');
+  const survivors = new Survivors(ctx);
+  ctx.survivors = survivors;
+  const fx = new Effects(ctx);
+  ctx.scene.updateMatrixWorld(true);
+  return { survivors, fx, ctx };
+}
+
+// The geometry's own (non-instanced) attributes, optionally a subset, with three's drawRange and shadow LOD.
+function sceneGeometry(g, keep = null) {
+  const src = new THREE.BufferGeometry();
+  for (const [name, a] of Object.entries(g.attributes)) {
+    if (a.isInstancedBufferAttribute) continue;
+    if (keep && !keep.includes(name)) continue;
+    src.setAttribute(name, a);
+  }
+  if (g.index) src.setIndex(g.index);
+  src.drawRange = g.drawRange;
+  src.boundingSphere = g.boundingSphere;
+  src.boundingBox = g.boundingBox;
+  const out = geometryArrays(src);
+  const sr = g.userData?.shadowRange;
+  if (sr) out.ranges.push({ name: 'shadow', start: sr[0], count: sr[1] });
+  out.geometry = src;
+  return out;
+}
+
+// The material's parameters for the scene families: materialMeta + what the families branch on — the
+// material's own `defines`, alphaTest, map presence, three's program cache key (onBeforeCompile options such
+// as the craft lamp lift / debris / fouling show up there), and the uniforms its onBeforeCompile adds
+// (weathering presets) when it is run on three's standard program text.
+const SKIP_UNIFORM = /^fog|^uWxAtlas$|^uWxWet$/;
+function sceneMaterialMeta(mat, shared) {
+  const m = materialMeta(mat, shared);
+  if (mat.defines && Object.keys(mat.defines).length) m.defines = { ...mat.defines };
+  if (mat.alphaTest) m.alphaTest = mat.alphaTest;
+  if (mat.map) m.map = true;
+  if (typeof mat.customProgramCacheKey === 'function' && mat.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey) {
+    m.programKey = mat.customProgramCacheKey();
+  }
+  if (mat.polygonOffset) m.polygonOffset = [mat.polygonOffsetFactor, mat.polygonOffsetUnits];
+  if (typeof mat.onBeforeCompile === 'function' && mat.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) {
+    const lib = mat.type === 'MeshDepthMaterial' ? ShaderLib.depth : ShaderLib.standard;
+    const sh = { uniforms: {}, vertexShader: lib.vertexShader, fragmentShader: lib.fragmentShader, defines: {} };
+    mat.onBeforeCompile(sh, null);
+    const patched = {};
+    for (const [name, u] of Object.entries(sh.uniforms)) {
+      if (shared.has(u) || SKIP_UNIFORM.test(name) || (m.uniforms && name in m.uniforms)) continue;
+      const v = uniformValue(u?.value);
+      if (v !== undefined) patched[name] = v;
+    }
+    if (Object.keys(patched).length) m.uniforms = { ...(m.uniforms || {}), ...patched };
+    if (Object.keys(sh.defines).length) m.defines = { ...(m.defines || {}), ...sh.defines };
+  }
+  for (const k of Object.keys(m.uniforms || {})) if (SKIP_UNIFORM.test(k)) delete m.uniforms[k];
+  return m;
+}
+
+// One scene mesh: geometry of objects[0] (the objects share it), meta like the heli's plus `extra`.
+function sceneEntry(name, objects, { shared, module, keep = null, material = null, extra = null, geometry = null }) {
+  const o0 = objects[0];
+  const geo = sceneGeometry(geometry || o0.geometry, keep);
+  const roles = new Map();
+  const mat = material || o0.material;
+  const meta = {
+    name,
+    source: { web: GIT.rev, dirty: GIT.dirty, module, object: o0.name || null },
+    chains: objects.map((o) => chainOf(o, roles)),
+    object: {
+      renderOrder: o0.renderOrder, layers: o0.layers.mask, castShadow: o0.castShadow, receiveShadow: o0.receiveShadow,
+      frustumCulled: o0.frustumCulled, visible: o0.visible,
+    },
+    material: sceneMaterialMeta(mat, shared),
+    thermal: o0.layers.isEnabled(thermalScope.HEAT) ? { heat: Number.isFinite(o0.userData?.heat) ? o0.userData.heat : 1 } : null,
+    web: geo.web,
+  };
+  if (o0.customDepthMaterial) meta.depthMaterial = sceneMaterialMeta(o0.customDepthMaterial, shared);
+  if (extra) meta.extra = extra;
+  // `geometry`: what was baked (the object's geometry without its instanced attributes) — verify --web compares it
+  return { name, objects, geometry: geo.geometry, mesh: { attributes: geo.attributes, index: geo.index, ranges: geo.ranges, bounds: geo.bounds, meta } };
+}
+const GIT = gitInfo();
+
+function sharedUniforms(...looks) {
+  const s = new Set();
+  for (const l of looks) for (const u of Object.values(l.uniforms)) s.add(u);
+  return s;
+}
+
+/**
+ * Every scene mesh (world, survivors, fx) as { name, objects, mesh } — tools/meshfmt/verify.mjs --web compares
+ * the files with this live geometry like heliMeshes().
+ */
+export function sceneMeshes() {
+  const out = [];
+  // ---- world (lighthouse per quality; the rest from the high build, identical on every quality)
+  const builds = Object.fromEntries(SCENE_QUALITIES.map((q) => [q, buildWorld(q)]));
+  const W = builds.high.world;
+  const WM = 'systems/world/';
+  for (const q of SCENE_QUALITIES) {
+    const w = builds[q].world;
+    const lh = w.lighthouse;
+    const shared = sharedUniforms(w.look);
+    for (const u of Object.values(w.shared)) shared.add(u);
+    out.push(sceneEntry(`lighthouse_${q}`, [lh.mesh], {
+      shared, module: WM + 'lighthouse.js',
+      extra: { decal: { width: 512, height: 512, file: 'lighthouse_deck.rgba' }, quality: q },
+    }));
+  }
+  {
+    const lh = W.lighthouse;
+    const shared = sharedUniforms(W.look);
+    for (const u of Object.values(W.shared)) shared.add(u);
+    out.push(sceneEntry('lighthouse_beam', [lh.beam], { shared, module: WM + 'lighthouse.js' }));
+    out.push(sceneEntry('world_lamp', [W.lamps.mesh], { shared, module: WM + 'lamps.js', extra: { max: W.lamps.max } }));
+    out.push(sceneEntry('world_collar', [W.collars.mesh], { shared, module: WM + 'contact.js', extra: { max: W.collars.max } }));
+    out.push(sceneEntry('world_rigging', [W.rigging.mesh], { shared, module: WM + 'rigging.js', extra: { max: W.rigging.max } }));
+    const banks = W.floaters.banks;
+    for (const s of builds.high.shapes) {
+      const b = banks.get(s);
+      out.push(sceneEntry(`floater_${s}`, [b.mesh], { shared, module: WM + 'floaters.js', extra: { shape: s, y: b.def.y, R: b.def.R, k: b.def.k } }));
+    }
+    for (const k of floatersScope.BUOY_KINDS) {
+      const b = banks.get(`buoy:${k}`);
+      out.push(sceneEntry(`floater_buoy_${k}`, [b.mesh], { shared, module: WM + 'floaters.js', extra: { shape: `buoy:${k}`, y: b.def.y, R: b.def.R, k: b.def.k } }));
+    }
+    const veg = lh.land.veg.meshes;
+    for (const kind of ['spruce', 'shrub', 'tuft']) {
+      out.push(sceneEntry(`veg_${kind}`, [veg[kind]], {
+        shared, module: WM + 'vegetation.js',
+        extra: { atlas: { width: 512, height: 512, file: 'veg_atlas.rgba' }, prevail: [vegScope.PREVAIL.x, vegScope.PREVAIL.y] },
+      }));
+    }
+  }
+  // ---- survivors + fx
+  const { survivors: sv, fx, ctx: seaCtx } = buildSea();
+  const shared = sharedUniforms(seaCtx.look);
+  for (const u of Object.values(fx.air)) shared.add(u);
+  for (const u of [sv.rim, sv.nightAmb, sv.skyFill, sv.steelFill]) shared.add(u);
+  const SM = 'systems/survivors/';
+  const cr = sv.crowd;
+  out.push(sceneEntry('surv_person', [cr.mesh], {
+    shared, module: SM + 'crowd.js',
+    extra: {
+      max: cr.max, ghost: { material: sceneMaterialMeta(cr.ghostMaterial, shared), renderOrder: cr.ghost.renderOrder, heat: cr.ghost.userData.heat ?? null },
+      keyline: { material: sceneMaterialMeta(cr.keylineMaterial, shared), renderOrder: cr.keyline.renderOrder },
+      lines: { material: sceneMaterialMeta(sv.lines.material, shared), renderOrder: sv.lines.mesh.renderOrder, max: sv.lines.max },
+    },
+  }));
+  const CRAFT = { raft: 'raft', boat: 'boat', yacht: 'yacht', container: 'container', plane: 'plane', stretcher: 'stretcher', buoy: 'lostbuoy', debris: 'debris' };
+  for (const [key, file] of Object.entries(CRAFT)) {
+    const b = sv.batches[key];
+    const heat = sv.heat[key];
+    out.push(sceneEntry(`craft_${file}`, [b.mesh], {
+      shared, module: SM + 'craft.js',
+      extra: { batch: b.mesh.name, max: b.max, instanceColor: !!b.mesh.instanceColor, heat: heat ? heat.mesh.userData.heat : null },
+    }));
+  }
+  out.push(sceneEntry('surv_collar', [sv.collars.mesh], { shared, module: SM + 'water.js', extra: { max: sv.collars.max } }));
+  out.push(sceneEntry('surv_glow', [sv.glows.mesh], { shared, module: SM + 'water.js', extra: { max: sv.glows.max } }));
+  const FM = 'systems/fx/';
+  out.push(sceneEntry('fx_gull', [fx.gulls.mesh], { shared, module: FM + 'life.js', extra: { max: fx.gulls.max, scale: fx.gulls._s.x } }));
+  out.push(sceneEntry('fx_heat', [fx.signals.heat], { shared, module: FM + 'signals.js', extra: { max: fx.signals.heat.count === undefined ? null : fx.signals.flares.length + fx.signals.rockets.length } }));
+  for (const p of fx._poolList) out.push(sceneEntry(`fx_particles_${p.kind}`, [p.mesh], { shared, module: FM + 'particles.js', extra: { kind: p.kind, max: p.max } }));
+  out.push(sceneEntry('fx_glows', [fx.glows.mesh], { shared, module: FM + 'signals.js' }));
+  out.push(sceneEntry('fx_rings', [fx.rings.mesh], { shared, module: FM + 'signals.js' }));
+  out.push(sceneEntry('fx_rain', [fx.rain.mesh], {
+    shared, module: FM + 'rain.js',
+    extra: { local: { renderOrder: fx.rain.local.renderOrder }, localLight: { renderOrder: fx.rain.localLight.renderOrder }, R: fx.rain.R },
+  }));
+  out.push(sceneEntry('fx_motes', [fx.rain.motes], { shared, module: FM + 'rain.js' }));
+  out.push(sceneEntry('fx_dolphin', [fx.dolphins.mesh], { shared, module: FM + 'life.js', extra: { max: fx.dolphins.max } }));
+  out.push(sceneEntry('fx_whale', [fx.whale.mesh], { shared, module: FM + 'life.js' }));
+  out.push(sceneEntry('fx_whale_shade', [fx.whale.shade], { shared, module: FM + 'life.js' }));
+  return out;
+}
+
+// -------------------------------------------------------------------------------- canvas textures
+// Two scene textures are drawn by the web with the 2D canvas, which only a browser renders: the island's
+// vegetation card atlas (world/vegetation.js vegTexture, 512²) and the lighthouse helideck decal
+// (world/decals.js paintHelideck through look.canvasTexture, 512², repainted once the web fonts — Oswald —
+// arrive). `--canvas` opens op1 in headless Chromium (lib/browser.mjs; machine-wide lock), waits for the
+// fonts and the repaint, and reads both canvases back: raw RGBA8 (sRGB, straight alpha — what three uploads
+// with premultiplyAlpha false), rows flipped like three's CanvasTexture flipY so row 0 = v 0 (the Metal
+// upload takes the rows as they are). Written next to the meshes (Resources/Meshes/*.rgba).
+export const CANVAS_TEXTURES = ['veg_atlas.rgba', 'lighthouse_deck.rgba'];
+
+async function bakeCanvases(outDir) {
+  const { withBrowser } = await import('./lib/browser.mjs');
+  return withBrowser(async ({ page, open, errors }) => {
+    await open('mission=0&autostart&quality=high&nohud&stub=audio', { frames: 10 });
+    const fonts = await page.evaluate(async () => {
+      await document.fonts.ready;
+      await document.fonts.load("600 32px 'Oswald'");
+      await new Promise((r) => setTimeout(r, 300)); // decalTexture repaints in the fonts.ready continuation
+      return document.fonts.check("600 32px 'Oswald'");
+    });
+    const res = await page.evaluate(() => {
+      const read = (c) => {
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        const w = c.width, h = c.height, row = w * 4;
+        const flipped = new Uint8Array(d.length);
+        for (let y = 0; y < h; y++) flipped.set(d.subarray((h - 1 - y) * row, (h - y) * row), y * row);
+        let bin = '';
+        for (let i = 0; i < flipped.length; i += 0x8000) bin += String.fromCharCode.apply(null, flipped.subarray(i, i + 0x8000));
+        return { w, h, b64: btoa(bin) };
+      };
+      const lh = window.__game.world.lighthouse;
+      return { veg: read(lh.land.veg.meshes.spruce.material.map.image), deck: read(lh.decal.image) };
+    });
+    if (errors.length) throw new Error('canvas bake: page errors: ' + errors.slice(0, 5).join(' | '));
+    if (!fonts) console.log('note: Oswald did not load (offline?) — the deck decal text uses the fallback font');
+    const files = [];
+    for (const [file, r] of [['veg_atlas.rgba', res.veg], ['lighthouse_deck.rgba', res.deck]]) {
+      if (r.w !== 512 || r.h !== 512) throw new Error(`canvas bake: ${file} is ${r.w}×${r.h}`);
+      const buf = Buffer.from(r.b64, 'base64');
+      fs.writeFileSync(path.join(outDir, file), buf);
+      files.push(file);
+      console.log(`${file.padEnd(24)} ${r.w}×${r.h} RGBA8 ${String(buf.length).padStart(7)} B  fonts ${fonts ? 'Oswald' : 'fallback'}`);
+    }
+    return files;
+  });
+}
+
 // ------------------------------------------------------------------------------------------ main
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   console.warn = () => {};
   const argv = process.argv.slice(2);
   const outDir = argv.includes('--out') ? path.resolve(argv[argv.indexOf('--out') + 1]) : MESH_DIR;
-  const meshes = heliMeshes();
+  const meshes = [...heliMeshes(), ...sceneMeshes()];
   fs.mkdirSync(outDir, { recursive: true });
   const written = new Set();
   for (const { name, mesh } of meshes) {
@@ -342,8 +632,10 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     written.add(`${name}.mmesh`);
     console.log(`${name.padEnd(24)} ${String(r.vertexCount).padStart(5)} v ${String(r.indexCount / 3).padStart(5)} tris ${String(r.bytes).padStart(7)} B  ${r.sha256.slice(0, 12)}`);
   }
-  // a stale heli file from an older bake would ship unchecked: heli_* holds exactly what was baked
-  for (const f of fs.readdirSync(outDir)) if (/^heli_.*\.mmesh$/.test(f) && !written.has(f)) fs.rmSync(path.join(outDir, f));
+  if (argv.includes('--canvas')) await bakeCanvases(outDir);
+  // a stale file from an older bake would ship unchecked: heli_* and the scene prefixes hold exactly what was baked
+  const owned = (f) => f.endsWith('.mmesh') && (f.startsWith('heli_') || SCENE_PREFIXES.some((p) => f.startsWith(p)));
+  for (const f of fs.readdirSync(outDir)) if (owned(f) && !written.has(f)) fs.rmSync(path.join(outDir, f));
   if (outDir === MESH_DIR) writeManifest({ keepRevision: true }); // mesh entries only; the data's revision stamp stays
   if (outDir === MESH_DIR) {
     const v = writeWrapped(TRANSFORMS_VECTOR, {

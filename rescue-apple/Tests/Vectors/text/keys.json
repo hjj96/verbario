@@ -1,0 +1,42 @@
+{
+  "schema": "mayday.vectors.text.keys",
+  "version": 1,
+  "source": "48d787def98f6d96697a78c1d9107defb7ff7b77",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/ui/common/keys.js"],
+  "producer": "tools/export/export-mission.mjs",
+  "tolerance": {
+    "class": "bytes",
+    "note": "UTF-8 byte-exact (NBSP U+00A0 escaped as \\u00a0 in JSON); numbers bitwise"
+  },
+  "data": {
+    "labels": [
+      ["Space", "Пробел"],
+      ["ShiftLeft", "Shift"],
+      ["ShiftRight", "Shift П"],
+      ["KeyW", "W"],
+      ["KeyQ", "Q"],
+      ["Digit1", "1"],
+      ["Digit0", "0"],
+      ["Numpad5", "Num5"],
+      ["NumpadAdd", "Num +"],
+      ["NumpadEnter", "Num Enter"],
+      ["NumpadDecimal", "Num ."],
+      ["NumpadFoo", "Num Foo"],
+      ["ArrowUp", "↑"],
+      ["Tab", "Tab"],
+      ["Mouse0", "ЛКМ"],
+      ["Mouse2", "ПКМ"],
+      ["Backquote", "`"],
+      ["BracketLeft", "["],
+      ["BracketRight", "]"],
+      ["F5", "F5"],
+      ["Key<b>", "Keyb"],
+      ["ControlLeft", "ControlLeft"],
+      ["Escape", "Esc"],
+      ["", "—"],
+      [null, "—"],
+      [null, "—"]
+    ]
+  }
+}

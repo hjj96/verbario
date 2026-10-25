@@ -1,0 +1,22 @@
+{
+  "schema": "mayday.vectors.survivors.three_costs",
+  "version": 1,
+  "source": "48d787def98f6d96697a78c1d9107defb7ff7b77",
+  "sourceDirty": false,
+  "sourceFiles": [
+    "rescue/src/systems/survivors.js", "rescue/src/systems/survivors/craft.js",
+    "rescue/src/systems/survivors/carriers.js"
+  ],
+  "producer": "tools/export/export-survivors.mjs",
+  "tolerance": {"class": "bitwise", "note": "compare Double.bitPattern; strings byte-exact"},
+  "data": {
+    "groupObject": 4,
+    "hullFirst": {"boat": 40, "yacht": 40},
+    "hullNext": {"boat": 20, "yacht": 20},
+    "planeDecal": 20,
+    "bigBatch": {"barge": 1796, "ferry": 3564, "trawler": 1596},
+    "bigBatchAgain": {"barge": 0, "ferry": 0, "trawler": 0},
+    "bigBatchOtherDeck": {"barge": 1796, "ferry": 3564, "trawler": 1596},
+    "wreckDecal": {"ferry": 40, "trawler": 40}
+  }
+}

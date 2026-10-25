@@ -3,7 +3,8 @@
 //   node rescue-apple/tools/meshfmt/verify.mjs                 structure of every Resources/Meshes/*.mmesh,
 //                                                              manifest listing (bytes, sha256, schema, version)
 //   node rescue-apple/tools/meshfmt/verify.mjs --web           + rebuild the meshes from the live web code
-//                                                              (tools/export/bake-meshes.mjs heliMeshes) and
+//                                                              (tools/export/bake-meshes.mjs heliMeshes,
+//                                                              sceneMeshes) and
 //                                                              compare: every attribute per triangle corner
 //                                                              bit-identical to three's geometry, same index
 //                                                              (indexed sources), same meta, same bytes
@@ -117,7 +118,13 @@ function checkFiles() {
       if (e.bytes !== buf.length || e.sha256 !== sha256(buf)) problems.push(`manifest: Resources/Meshes/${f} bytes / sha256 differ (re-run bake-meshes.mjs)`);
       if (e.schema !== 'mayday.mmesh' || e.version !== 1) problems.push(`manifest: Resources/Meshes/${f} schema ${e.schema} version ${e.version}`);
     }
-    for (const e of manifest.files) if (e.path.startsWith('Resources/Meshes/') && !decoded.has(path.basename(e.path))) problems.push(`manifest: ${e.path} listed but missing`);
+    for (const e of manifest.files) if (e.path.startsWith('Resources/Meshes/') && e.path.endsWith('.mmesh') && !decoded.has(path.basename(e.path))) problems.push(`manifest: ${e.path} listed but missing`);
+    // the scene families' canvas textures (bake-meshes.mjs --canvas): listed with their bytes / sha256
+    for (const f of fs.readdirSync(DIR).filter((x) => x.endsWith('.rgba'))) {
+      const buf = fs.readFileSync(path.join(DIR, f));
+      const e = byPath.get(`Resources/Meshes/${f}`);
+      if (!e || e.bytes !== buf.length || e.sha256 !== sha256(buf)) problems.push(`manifest: Resources/Meshes/${f} not listed or bytes / sha256 differ (re-run bake-meshes.mjs)`);
+    }
   }
   console.log(`files: ${decoded.size} .mmesh in ${path.relative(process.cwd(), DIR) || DIR}`);
   return decoded;
@@ -125,16 +132,16 @@ function checkFiles() {
 
 // ------------------------------------------------------------------------------------- live web check
 async function checkWeb(decoded) {
-  const { heliMeshes } = await import('../export/bake-meshes.mjs');
-  const live = heliMeshes();
+  const { heliMeshes, sceneMeshes, SCENE_PREFIXES } = await import('../export/bake-meshes.mjs');
+  const live = [...heliMeshes(), ...sceneMeshes()];
   const seen = new Set();
-  for (const { name, objects, mesh } of live) {
+  for (const { name, objects, geometry, mesh } of live) {
     const f = `${name}.mmesh`;
     seen.add(f);
     const d = decoded.get(f);
     if (!d) { problems.push(`web: ${f} missing (re-run bake-meshes.mjs)`); continue; }
     const { m, buf } = d;
-    const g = objects[0].geometry;
+    const g = geometry || objects[0].geometry;
     // every attribute per triangle corner, bit-identical to three's view of the geometry
     for (const [aname, a] of Object.entries(g.attributes)) {
       const c = a.itemSize;
@@ -145,10 +152,20 @@ async function checkWeb(decoded) {
         for (let j = 0; j < c; j++) web[k * c + j] = a.array[v * c + j];
       }
       let file;
-      try { file = expandTriangles(m, aname); } catch (e) { problems.push(`web: ${f}: ${e.message}`); continue; }
+      // every triangle of the file (the main range may leave out shadow-only parts: scene meshes' shadow LOD)
+      const all = { ...m, ranges: [{ name: 'all', start: 0, count: m.indexed ? m.indexCount : m.vertexCount }] };
+      try { file = expandTriangles(all, aname, 'all'); } catch (e) { problems.push(`web: ${f}: ${e.message}`); continue; }
       if (!Buffer.from(bytesOf(file)).equals(Buffer.from(bytesOf(web)))) problems.push(`web: ${f}: ${aname} differs from the live geometry`);
     }
     if (m.attributes.length !== Object.keys(g.attributes).length) problems.push(`web: ${f}: attribute set differs`);
+    // ranges: main = three's drawRange (clamped), shadow = geometry.userData.shadowRange (scene meshes' shadow LOD)
+    const total = g.index ? g.index.count : g.attributes.position.count;
+    const main = m.ranges.find((r) => r.name === 'main');
+    const ds = Math.min(g.drawRange.start, total);
+    if (!main || main.start !== ds || main.count !== Math.min(g.drawRange.count, total - ds)) problems.push(`web: ${f}: main range differs from drawRange`);
+    const src = (objects[0].geometry || g).userData?.shadowRange;
+    const sh = m.ranges.find((r) => r.name === 'shadow');
+    if (src ? !sh || sh.start !== src[0] || sh.count !== src[1] : !!sh) problems.push(`web: ${f}: shadow range differs from userData.shadowRange`);
     if (g.index && m.index.join() !== Array.from(g.index.array).join()) problems.push(`web: ${f}: index differs (indexed sources keep three's numbering)`);
     if (g.index && m.vertexCount !== g.attributes.position.count) problems.push(`web: ${f}: vertex array of an indexed source changed`);
     const s = g.boundingSphere;
@@ -161,7 +178,7 @@ async function checkWeb(decoded) {
     const fresh = encodeMMesh(mesh).buffer;
     if (mesh.meta.source.web === m.meta.source.web && !fresh.equals(buf)) problems.push(`web: ${f}: a fresh bake is not byte-identical`);
   }
-  for (const f of decoded.keys()) if (f.startsWith('heli_') && !seen.has(f)) problems.push(`web: ${f} is not produced by the bake (stale)`);
+  for (const f of decoded.keys()) if ((f.startsWith('heli_') || SCENE_PREFIXES.some((p) => f.startsWith(p))) && !seen.has(f)) problems.push(`web: ${f} is not produced by the bake (stale)`);
   console.log(`web: ${live.length} meshes rebuilt from rescue/src and compared`);
 }
 

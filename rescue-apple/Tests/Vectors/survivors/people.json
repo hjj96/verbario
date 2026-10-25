@@ -1,0 +1,3962 @@
+{
+  "schema": "mayday.vectors.survivors.people",
+  "version": 1,
+  "source": "48d787def98f6d96697a78c1d9107defb7ff7b77",
+  "sourceDirty": false,
+  "sourceFiles": ["rescue/src/systems/survivors/people.js"],
+  "producer": "tools/export/export-survivors.mjs",
+  "tolerance": {"class": "bitwise", "note": "compare Double.bitPattern; strings byte-exact"},
+  "data": {
+    "fallback": [
+      {
+        "seed": 1,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "турист"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "турист"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "турист"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "яхтсмен"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "яхтсменка"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбачка"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "туристка"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "swimmer",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "туристка"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "яхтсмен"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "буфетчица"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "буфетчик"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "пассажир"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "пассажир"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "пассажир"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "буфетчик"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "пассажирка"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "пассажир"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбачка"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "raft",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "буфетчица"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "моторист"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "моторист"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "моторист"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "яхтсменка"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "яхтсмен"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "моторист"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "моторист"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "яхтсмен"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбачка"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбачка"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "hull",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "яхтсменка"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "моторист"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "электромеханик"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "электромеханик"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "container",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "матрос «Полярного ветра»"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "пассажирка"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "тралмейстер"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "тралмейстер"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "матрос"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбачка"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "тралмейстер"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "матрос"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "тралмейстер"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "тралмейстер"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбачка"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "injured",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "тралмейстер"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "электрик"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "повар буровой"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "повар буровой"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "повар буровой"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "электрик"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "вахтовик"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "электрик"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "повар буровой"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "электрик"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "повар буровой"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "повар буровой"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "вахтовик"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "оператор по добыче"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "оператор по добыче"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "электрик"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "оператор по добыче"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "электрик"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "электрик"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "повар буровой"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "deck",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "повар буровой"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "помощник бурильщика"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "повар буровой"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "вахтовик"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Лёва Рябов",
+            "first": "Лёва",
+            "surname": "Рябов",
+            "gender": "m",
+            "age": 11,
+            "child": true,
+            "occupation": "школьник"
+          },
+          {
+            "name": "Игорь Хабаров",
+            "first": "Игорь",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 33,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Илья Павлов",
+            "first": "Илья",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 26,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Дмитрий Медведев",
+            "first": "Дмитрий",
+            "surname": "Медведев",
+            "gender": "m",
+            "age": 44,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Алёна Шубина",
+            "first": "Алёна",
+            "surname": "Шубина",
+            "gender": "f",
+            "age": 35,
+            "child": false,
+            "occupation": "пенсионерка"
+          },
+          {
+            "name": "Ольга Мезенцева",
+            "first": "Ольга",
+            "surname": "Мезенцева",
+            "gender": "f",
+            "age": 29,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Татьяна Седых",
+            "first": "Татьяна",
+            "surname": "Седых",
+            "gender": "f",
+            "age": 46,
+            "child": false,
+            "occupation": "студентка"
+          },
+          {
+            "name": "Алексей Бобров",
+            "first": "Алексей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 47,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Михаил Лебедев",
+            "first": "Михаил",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Олег Иванов",
+            "first": "Олег",
+            "surname": "Иванов",
+            "gender": "m",
+            "age": 42,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Дмитрий Чупров",
+            "first": "Дмитрий",
+            "surname": "Чупров",
+            "gender": "m",
+            "age": 37,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Василий Павлов",
+            "first": "Василий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 51,
+            "child": false,
+            "occupation": "студент"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Олег Гусев",
+            "first": "Олег",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Тёма Воробьёв",
+            "first": "Тёма",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 7,
+            "child": true,
+            "occupation": "школьник"
+          },
+          {
+            "name": "Андрей Орлов",
+            "first": "Андрей",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 55,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 40,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Аня Корельская",
+            "first": "Аня",
+            "surname": "Корельская",
+            "gender": "f",
+            "age": 7,
+            "child": true,
+            "occupation": "школьница"
+          },
+          {
+            "name": "Миша Громов",
+            "first": "Миша",
+            "surname": "Громов",
+            "gender": "m",
+            "age": 11,
+            "child": true,
+            "occupation": "школьник"
+          },
+          {
+            "name": "Олег Захаров",
+            "first": "Олег",
+            "surname": "Захаров",
+            "gender": "m",
+            "age": 59,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Борис Крылов",
+            "first": "Борис",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 50,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Татьяна Титова",
+            "first": "Татьяна",
+            "surname": "Титова",
+            "gender": "f",
+            "age": 39,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Олег Захаров",
+            "first": "Олег",
+            "surname": "Захаров",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Юлия Белых",
+            "first": "Юлия",
+            "surname": "Белых",
+            "gender": "f",
+            "age": 34,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Надежда Корельская",
+            "first": "Надежда",
+            "surname": "Корельская",
+            "gender": "f",
+            "age": 21,
+            "child": false,
+            "occupation": "студентка"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Роман Сорокин",
+            "first": "Роман",
+            "surname": "Сорокин",
+            "gender": "m",
+            "age": 43,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Матвей Орлов",
+            "first": "Матвей",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 29,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Алексей Соколов",
+            "first": "Алексей",
+            "surname": "Соколов",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Елена Семёнова",
+            "first": "Елена",
+            "surname": "Семёнова",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "учительница из Териберки"
+          },
+          {
+            "name": "Юрий Гусев",
+            "first": "Юрий",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 45,
+            "child": false,
+            "occupation": "пенсионер"
+          },
+          {
+            "name": "Светлана Лебедева",
+            "first": "Светлана",
+            "surname": "Лебедева",
+            "gender": "f",
+            "age": 56,
+            "child": false,
+            "occupation": "студентка"
+          },
+          {
+            "name": "Матвей Рябов",
+            "first": "Матвей",
+            "surname": "Рябов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Светлана Соколова",
+            "first": "Светлана",
+            "surname": "Соколова",
+            "gender": "f",
+            "age": 21,
+            "child": false,
+            "occupation": "студентка"
+          },
+          {
+            "name": "Егор Бобров",
+            "first": "Егор",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 59,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Пётр Шергин",
+            "first": "Пётр",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 46,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Дарья Титова",
+            "first": "Дарья",
+            "surname": "Титова",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "пенсионерка"
+          },
+          {
+            "name": "Олег Беляев",
+            "first": "Олег",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 43,
+            "child": false,
+            "occupation": "студент"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Сёма Смирнов",
+            "first": "Сёма",
+            "surname": "Смирнов",
+            "gender": "m",
+            "age": 10,
+            "child": true,
+            "occupation": "школьник"
+          },
+          {
+            "name": "Павел Богданов",
+            "first": "Павел",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 43,
+            "child": false,
+            "occupation": "пенсионер"
+          },
+          {
+            "name": "Елена Гусева",
+            "first": "Елена",
+            "surname": "Гусева",
+            "gender": "f",
+            "age": 40,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 42,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Григорий Лебедев",
+            "first": "Григорий",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Михаил Макаров",
+            "first": "Михаил",
+            "surname": "Макаров",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Матвей Воробьёв",
+            "first": "Матвей",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Юрий Павлов",
+            "first": "Юрий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 44,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Сергей Никитин",
+            "first": "Сергей",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "учитель из Териберки"
+          },
+          {
+            "name": "Григорий Лебедев",
+            "first": "Григорий",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Пётр Корельский",
+            "first": "Пётр",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 64,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Светлана Ершова",
+            "first": "Светлана",
+            "surname": "Ершова",
+            "gender": "f",
+            "age": 60,
+            "child": false,
+            "occupation": "пенсионерка"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Дмитрий Мезенцев",
+            "first": "Дмитрий",
+            "surname": "Мезенцев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "учитель из Териберки"
+          },
+          {
+            "name": "Татьяна Беляева",
+            "first": "Татьяна",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 56,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Сергей Хабаров",
+            "first": "Сергей",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Миша Гусев",
+            "first": "Миша",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 8,
+            "child": true,
+            "occupation": "школьник"
+          },
+          {
+            "name": "Зоя Морозова",
+            "first": "Зоя",
+            "surname": "Морозова",
+            "gender": "f",
+            "age": 24,
+            "child": false,
+            "occupation": "пенсионерка"
+          },
+          {
+            "name": "Михаил Хабаров",
+            "first": "Михаил",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Анна Крылова",
+            "first": "Анна",
+            "surname": "Крылова",
+            "gender": "f",
+            "age": 45,
+            "child": false,
+            "occupation": "учительница из Териберки"
+          },
+          {
+            "name": "Илья Ильин",
+            "first": "Илья",
+            "surname": "Ильин",
+            "gender": "m",
+            "age": 40,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Виктор Двинской",
+            "first": "Виктор",
+            "surname": "Двинской",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "учитель из Териберки"
+          },
+          {
+            "name": "Катя Макарова",
+            "first": "Катя",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 11,
+            "child": true,
+            "occupation": "школьница"
+          },
+          {
+            "name": "Варвара Шевчук",
+            "first": "Варвара",
+            "surname": "Шевчук",
+            "gender": "f",
+            "age": 51,
+            "child": false,
+            "occupation": "пенсионерка"
+          },
+          {
+            "name": "Василий Поморцев",
+            "first": "Василий",
+            "surname": "Поморцев",
+            "gender": "m",
+            "age": 42,
+            "child": false,
+            "occupation": "пенсионер"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Илья Лебедев",
+            "first": "Илья",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 30,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Софья Иванова",
+            "first": "Софья",
+            "surname": "Иванова",
+            "gender": "f",
+            "age": 33,
+            "child": false,
+            "occupation": "студентка"
+          },
+          {
+            "name": "Ирина Соколова",
+            "first": "Ирина",
+            "surname": "Соколова",
+            "gender": "f",
+            "age": 37,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Павел Соколов",
+            "first": "Павел",
+            "surname": "Соколов",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Алексей Двинской",
+            "first": "Алексей",
+            "surname": "Двинской",
+            "gender": "m",
+            "age": 55,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Наталья Баранова",
+            "first": "Наталья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 64,
+            "child": false,
+            "occupation": "учительница из Териберки"
+          },
+          {
+            "name": "Маша Двинская",
+            "first": "Маша",
+            "surname": "Двинская",
+            "gender": "f",
+            "age": 8,
+            "child": true,
+            "occupation": "школьница"
+          },
+          {
+            "name": "Степан Никитин",
+            "first": "Степан",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "пенсионер"
+          },
+          {
+            "name": "Алексей Шевчук",
+            "first": "Алексей",
+            "surname": "Шевчук",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "учитель из Териберки"
+          },
+          {
+            "name": "Сергей Громов",
+            "first": "Сергей",
+            "surname": "Громов",
+            "gender": "m",
+            "age": 42,
+            "child": false,
+            "occupation": "пенсионер"
+          },
+          {
+            "name": "Борис Кузнецов",
+            "first": "Борис",
+            "surname": "Кузнецов",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Роман Волков",
+            "first": "Роман",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 50,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Дмитрий Корельский",
+            "first": "Дмитрий",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 34,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Ирина Соколова",
+            "first": "Ирина",
+            "surname": "Соколова",
+            "gender": "f",
+            "age": 35,
+            "child": false,
+            "occupation": "учительница из Териберки"
+          },
+          {
+            "name": "Григорий Хабаров",
+            "first": "Григорий",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 33,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Надежда Титова",
+            "first": "Надежда",
+            "surname": "Титова",
+            "gender": "f",
+            "age": 28,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Олег Сорокин",
+            "first": "Олег",
+            "surname": "Сорокин",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Миша Шубин",
+            "first": "Миша",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 9,
+            "child": true,
+            "occupation": "школьник"
+          },
+          {
+            "name": "Вера Морозова",
+            "first": "Вера",
+            "surname": "Морозова",
+            "gender": "f",
+            "age": 55,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Дмитрий Хабаров",
+            "first": "Дмитрий",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 29,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Борис Ильин",
+            "first": "Борис",
+            "surname": "Ильин",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Илья Корельский",
+            "first": "Илья",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 64,
+            "child": false,
+            "occupation": "учитель из Териберки"
+          },
+          {
+            "name": "Миша Гусев",
+            "first": "Миша",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 8,
+            "child": true,
+            "occupation": "школьник"
+          },
+          {
+            "name": "Варвара Шевчук",
+            "first": "Варвара",
+            "surname": "Шевчук",
+            "gender": "f",
+            "age": 56,
+            "child": false,
+            "occupation": "учительница из Териберки"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "wreck",
+        "count": 12,
+        "people": [
+          {
+            "name": "Софья Громова",
+            "first": "Софья",
+            "surname": "Громова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "студентка"
+          },
+          {
+            "name": "Аня Чупрова",
+            "first": "Аня",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 11,
+            "child": true,
+            "occupation": "школьница"
+          },
+          {
+            "name": "Юлия Шевчук",
+            "first": "Юлия",
+            "surname": "Шевчук",
+            "gender": "f",
+            "age": 40,
+            "child": false,
+            "occupation": "пенсионерка"
+          },
+          {
+            "name": "Илья Кузнецов",
+            "first": "Илья",
+            "surname": "Кузнецов",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "пенсионер"
+          },
+          {
+            "name": "Игорь Двинской",
+            "first": "Игорь",
+            "surname": "Двинской",
+            "gender": "m",
+            "age": 26,
+            "child": false,
+            "occupation": "матрос «Северянки»"
+          },
+          {
+            "name": "Юлия Рябова",
+            "first": "Юлия",
+            "surname": "Рябова",
+            "gender": "f",
+            "age": 61,
+            "child": false,
+            "occupation": "учительница из Териберки"
+          },
+          {
+            "name": "Дарья Павлова",
+            "first": "Дарья",
+            "surname": "Павлова",
+            "gender": "f",
+            "age": 25,
+            "child": false,
+            "occupation": "пенсионерка"
+          },
+          {
+            "name": "Даша Ковалёва",
+            "first": "Даша",
+            "surname": "Ковалёва",
+            "gender": "f",
+            "age": 7,
+            "child": true,
+            "occupation": "школьница"
+          },
+          {
+            "name": "Михаил Соболев",
+            "first": "Михаил",
+            "surname": "Соболев",
+            "gender": "m",
+            "age": 50,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Борис Титов",
+            "first": "Борис",
+            "surname": "Титов",
+            "gender": "m",
+            "age": 26,
+            "child": false,
+            "occupation": "студент"
+          },
+          {
+            "name": "Надежда Сорокина",
+            "first": "Надежда",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 58,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Григорий Двинской",
+            "first": "Григорий",
+            "surname": "Двинской",
+            "gender": "m",
+            "age": 50,
+            "child": false,
+            "occupation": "пассажир"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "пассажирка"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "доктор"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "доктор"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "доктор"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "пассажир"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "доктор"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "доктор"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "доктор"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "почтальон"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "почтальон"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "доктор"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "доктор"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "пассажирка"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "plane",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "доктор"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "пассажирка"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "пассажир"
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Егор Корельский",
+            "first": "Егор",
+            "surname": "Корельский",
+            "gender": "m",
+            "age": 24,
+            "child": false,
+            "occupation": "турист"
+          },
+          {
+            "name": "Дмитрий Беляев",
+            "first": "Дмитрий",
+            "surname": "Беляев",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Егор Воробьёв",
+            "first": "Егор",
+            "surname": "Воробьёв",
+            "gender": "m",
+            "age": 38,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Варвара Медведева",
+            "first": "Варвара",
+            "surname": "Медведева",
+            "gender": "f",
+            "age": 26,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          }
+        ]
+      },
+      {
+        "seed": 9798,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Гусев",
+            "first": "Николай",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 48,
+            "child": false,
+            "occupation": "турист"
+          },
+          {
+            "name": "Андрей Лебедев",
+            "first": "Андрей",
+            "surname": "Лебедев",
+            "gender": "m",
+            "age": 19,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Степан Хабаров",
+            "first": "Степан",
+            "surname": "Хабаров",
+            "gender": "m",
+            "age": 60,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Юрий Шергин",
+            "first": "Юрий",
+            "surname": "Шергин",
+            "gender": "m",
+            "age": 36,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 9800,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Степан Крылов",
+            "first": "Степан",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Евгений Голубев",
+            "first": "Евгений",
+            "surname": "Голубев",
+            "gender": "m",
+            "age": 27,
+            "child": false,
+            "occupation": "матрос"
+          },
+          {
+            "name": "Пётр Бобров",
+            "first": "Пётр",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 52,
+            "child": false,
+            "occupation": "турист"
+          },
+          {
+            "name": "Павел Белых",
+            "first": "Павел",
+            "surname": "Белых",
+            "gender": "m",
+            "age": 22,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 19599,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Фёдор Никитин",
+            "first": "Фёдор",
+            "surname": "Никитин",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "яхтсмен"
+          },
+          {
+            "name": "Зоя Сорокина",
+            "first": "Зоя",
+            "surname": "Сорокина",
+            "gender": "f",
+            "age": 52,
+            "child": false,
+            "occupation": "яхтсменка"
+          },
+          {
+            "name": "Павел Гусев",
+            "first": "Павел",
+            "surname": "Гусев",
+            "gender": "m",
+            "age": 21,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Пётр Нечаев",
+            "first": "Пётр",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 4242,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Андрей Волков",
+            "first": "Андрей",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Виктор Шубин",
+            "first": "Виктор",
+            "surname": "Шубин",
+            "gender": "m",
+            "age": 39,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дарья Баранова",
+            "first": "Дарья",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Алёна Баранова",
+            "first": "Алёна",
+            "surname": "Баранова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "рыбачка"
+          }
+        ]
+      },
+      {
+        "seed": 9799,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Николай Седых",
+            "first": "Николай",
+            "surname": "Седых",
+            "gender": "m",
+            "age": 58,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Дарья Беляева",
+            "first": "Дарья",
+            "surname": "Беляева",
+            "gender": "f",
+            "age": 48,
+            "child": false,
+            "occupation": "рыбачка"
+          },
+          {
+            "name": "Сергей Богданов",
+            "first": "Сергей",
+            "surname": "Богданов",
+            "gender": "m",
+            "age": 31,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Григорий Павлов",
+            "first": "Григорий",
+            "surname": "Павлов",
+            "gender": "m",
+            "age": 23,
+            "child": false,
+            "occupation": "рыбак"
+          }
+        ]
+      },
+      {
+        "seed": 123456789,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Игорь Волков",
+            "first": "Игорь",
+            "surname": "Волков",
+            "gender": "m",
+            "age": 32,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Фёдор Орлов",
+            "first": "Фёдор",
+            "surname": "Орлов",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Виктор Крылов",
+            "first": "Виктор",
+            "surname": "Крылов",
+            "gender": "m",
+            "age": 35,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Анна Макарова",
+            "first": "Анна",
+            "surname": "Макарова",
+            "gender": "f",
+            "age": 54,
+            "child": false,
+            "occupation": "туристка"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "type": "unknown",
+        "count": 4,
+        "people": [
+          {
+            "name": "Софья Поморцева",
+            "first": "Софья",
+            "surname": "Поморцева",
+            "gender": "f",
+            "age": 62,
+            "child": false,
+            "occupation": "туристка"
+          },
+          {
+            "name": "Алексей Нечаев",
+            "first": "Алексей",
+            "surname": "Нечаев",
+            "gender": "m",
+            "age": 61,
+            "child": false,
+            "occupation": "рыбак"
+          },
+          {
+            "name": "Полина Чупрова",
+            "first": "Полина",
+            "surname": "Чупрова",
+            "gender": "f",
+            "age": 30,
+            "child": false,
+            "occupation": "кок с сухогруза"
+          },
+          {
+            "name": "Матвей Бобров",
+            "first": "Матвей",
+            "surname": "Бобров",
+            "gender": "m",
+            "age": 66,
+            "child": false,
+            "occupation": "яхтсмен"
+          }
+        ]
+      }
+    ],
+    "feminize": [
+      ["Иванов", "Иванова"],
+      ["Смирнов", "Смирнова"],
+      ["Кузнецов", "Кузнецова"],
+      ["Соколов", "Соколова"],
+      ["Лебедев", "Лебедева"],
+      ["Морозов", "Морозова"],
+      ["Волков", "Волкова"],
+      ["Павлов", "Павлова"],
+      ["Семёнов", "Семёнова"],
+      ["Голубев", "Голубева"],
+      ["Богданов", "Богданова"],
+      ["Воробьёв", "Воробьёва"],
+      ["Фёдоров", "Фёдорова"],
+      ["Беляев", "Беляева"],
+      ["Комаров", "Комарова"],
+      ["Орлов", "Орлова"],
+      ["Макаров", "Макарова"],
+      ["Ковалёв", "Ковалёва"],
+      ["Ильин", "Ильина"],
+      ["Гусев", "Гусева"],
+      ["Титов", "Титова"],
+      ["Баранов", "Баранова"],
+      ["Сорокин", "Сорокина"],
+      ["Захаров", "Захарова"],
+      ["Медведев", "Медведева"],
+      ["Ершов", "Ершова"],
+      ["Никитин", "Никитина"],
+      ["Соболев", "Соболева"],
+      ["Рябов", "Рябова"],
+      ["Крылов", "Крылова"],
+      ["Бобров", "Боброва"],
+      ["Громов", "Громова"],
+      ["Хабаров", "Хабарова"],
+      ["Поморцев", "Поморцева"],
+      ["Шубин", "Шубина"],
+      ["Нечаев", "Нечаева"],
+      ["Корельский", "Корельская"],
+      ["Мезенцев", "Мезенцева"],
+      ["Двинской", "Двинская"],
+      ["Шергин", "Шергина"],
+      ["Чупров", "Чупрова"],
+      ["Белых", "Белых"],
+      ["Седых", "Седых"],
+      ["Шевчук", "Шевчук"],
+      ["Корельский", "Корельская"],
+      ["Двинской", "Двинская"],
+      ["Белых", "Белых"],
+      ["Шевчук", "Шевчук"],
+      ["Ильин", "Ильина"],
+      ["Бобров", "Боброва"],
+      ["Грецкий", "Грецкая"],
+      ["Толстой", "Толстой"],
+      ["Ковальчук", "Ковальчук"]
+    ],
+    "guessGender": [
+      ["Мария Иванова", "f"],
+      ["Илья Муромец", "m"],
+      ["Никита", "m"],
+      ["Саша Белых", "m"],
+      ["Анна", "f"],
+      ["Олег Петров", "m"],
+      ["  Ольга  Ковальчук", "f"],
+      ["", "m"],
+      ["Тёма", "m"],
+      ["Лука Ильин", "m"],
+      ["Зоя\u00a0Ершова", "f"]
+    ],
+    "conditionFor": [
+      [0, false, "сильное переохлаждение, без сознания"],
+      [0, true, "травма, переохлаждение"],
+      [0.1, false, "сильное переохлаждение, без сознания"],
+      [0.1, true, "травма, переохлаждение"],
+      [0.15, false, "сильное переохлаждение"],
+      [0.15, true, "травма, переохлаждение"],
+      [0.2, false, "сильное переохлаждение"],
+      [0.2, true, "травма, переохлаждение"],
+      [0.3, false, "переохлаждение"],
+      [0.3, true, "травма, переохлаждение"],
+      [0.34, false, "переохлаждение"],
+      [0.34, true, "травма, переохлаждение"],
+      [0.35, false, "переохлаждение"],
+      [0.35, true, "травма"],
+      [0.5, false, "переохлаждение"],
+      [0.5, true, "травма"],
+      [0.6, false, "стабильное"],
+      [0.6, true, "травма"],
+      [0.9, false, "стабильное"],
+      [0.9, true, "травма"],
+      [1, false, "стабильное"],
+      [1, true, "травма"]
+    ],
+    "quotes": [
+      {
+        "seed": 7,
+        "seq": [
+          ["f", ["any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["night", "any"], "Полоска на жилете вспыхнула — и вы сразу развернулись. Я это видел."],
+          ["m", ["raft", "storm", "any"], "Лампа на тенте мигает раз в секунду. Я считал вспышки, чтобы не уснуть."],
+          [
+            "f",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "А можно я потом покручу этот… пропеллер?"
+          ],
+          ["m", ["flower", "swimmer", "any"], "Мы держались за руки кругом. Так теплее и не страшно."],
+          ["m", ["pet", "hull", "any"], "Держались за киль втроём. Он скользкий, как совесть."],
+          ["f", ["deck", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["wreck", "night", "any"], "Крен рос, а мы держались за флагшток и друг за друга."],
+          ["m", ["container", "any"], "Контейнер — плохой плот. Но лучше, чем никакой."],
+          ["f", ["injured", "long", "cold", "any"], "Помню только корзину и чьи-то руки. Спасибо этим рукам."],
+          ["m", ["any"], "Сначала услышал вас, потом поверил."],
+          ["m", ["night", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["raft", "storm", "any"], "В плоту мы рассказывали анекдоты. Плохие. Смеялись всё равно."],
+          [
+            "m",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Сначала был только ваш свет. Он шёл по воде, как будто искал меня лично."
+          ],
+          ["m", ["flower", "swimmer", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["f", ["pet", "hull", "any"], "Он сам залез ко мне под куртку. Умный зверь."],
+          ["m", ["deck", "any"], "Снизу казалось, что вы висите на нитке. А вы висели как вкопанные."],
+          ["m", ["wreck", "night", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["f", ["container", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["injured", "long", "cold", "any"], "Пальцы перестали слушаться. Я держался зубами за свисток."],
+          ["m", ["any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["f", ["night", "any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["raft", "storm", "any"], "Волна накрыла, я досчитал до семи и вынырнул. А потом — вы."],
+          [
+            "m",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Мы слышали вас минут десять, прежде чем увидели. Кричали в молоко."
+          ],
+          ["f", ["flower", "swimmer", "any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["pet", "hull", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["deck", "any"], "Сначала услышал вас, потом поверил."],
+          ["f", ["wreck", "night", "any"], "Сначала услышала вас, потом поверила."],
+          ["m", ["container", "any"], "Сначала услышал вас, потом поверил."],
+          ["m", ["injured", "long", "cold", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["f", ["any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["night", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["raft", "storm", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          [
+            "f",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Сначала услышала вас, потом поверила."
+          ],
+          ["m", ["flower", "swimmer", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["pet", "hull", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["deck", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["wreck", "night", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["container", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["injured", "long", "cold", "any"], "Сначала услышала вас, потом поверила."]
+        ]
+      },
+      {
+        "seed": 3138,
+        "seq": [
+          ["f", ["any"], "Сначала услышала вас, потом поверила."],
+          ["m", ["night", "any"], "Сначала был только ваш свет. Он шёл по воде, как будто искал меня лично."],
+          ["m", ["raft", "storm", "any"], "В плоту мы рассказывали анекдоты. Плохие. Смеялись всё равно."],
+          [
+            "f",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "А можно я потом покручу этот… пропеллер?"
+          ],
+          ["m", ["flower", "swimmer", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["pet", "hull", "any"], "Он сам залез ко мне под куртку. Умный зверь."],
+          ["f", ["deck", "any"], "Снизу казалось, что вы висите на нитке. А вы висели как вкопанные."],
+          ["m", ["wreck", "night", "any"], "Крен рос, а мы держались за флагшток и друг за друга."],
+          ["m", ["container", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["injured", "long", "cold", "any"], "Помню только корзину и чьи-то руки. Спасибо этим рукам."],
+          ["m", ["any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["night", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["raft", "storm", "any"], "Волна накрыла, я досчитала до семи и вынырнула. А потом — вы."],
+          [
+            "m",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Лампа на тенте мигает раз в секунду. Я считал вспышки, чтобы не уснуть."
+          ],
+          ["m", ["flower", "swimmer", "any"], "Мы держались за руки кругом. Так теплее и не страшно."],
+          ["f", ["pet", "hull", "any"], "Держались за киль втроём. Он скользкий, как совесть."],
+          ["m", ["deck", "any"], "Сначала услышал вас, потом поверил."],
+          ["m", ["wreck", "night", "any"], "Полоска на жилете вспыхнула — и вы сразу развернулись. Я это видел."],
+          ["f", ["container", "any"], "Контейнер — плохой плот. Но лучше, чем никакой."],
+          ["m", ["injured", "long", "cold", "any"], "Пальцы перестали слушаться. Я держался зубами за свисток."],
+          ["m", ["any"], "Сначала услышал вас, потом поверил."],
+          ["f", ["night", "any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["raft", "storm", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          [
+            "m",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Мы слышали вас минут десять, прежде чем увидели. Кричали в молоко."
+          ],
+          ["f", ["flower", "swimmer", "any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["pet", "hull", "any"], "Сначала услышал вас, потом поверил."],
+          ["m", ["deck", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["f", ["wreck", "night", "any"], "Сначала услышала вас, потом поверила."],
+          ["m", ["container", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["injured", "long", "cold", "any"], "Сначала услышал вас, потом поверил."],
+          ["f", ["any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["night", "any"], "Сначала услышал вас, потом поверил."],
+          ["m", ["raft", "storm", "any"], "Сначала услышал вас, потом поверил."],
+          [
+            "f",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Я видела, как вы развернулись над нами. Этот звук я не забуду."
+          ],
+          ["m", ["flower", "swimmer", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["pet", "hull", "any"], "Сначала услышал вас, потом поверил."],
+          ["f", ["deck", "any"], "Сначала услышала вас, потом поверила."],
+          ["m", ["wreck", "night", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["container", "any"], "Сначала услышал вас, потом поверил."],
+          ["f", ["injured", "long", "cold", "any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."]
+        ]
+      },
+      {
+        "seed": 4242,
+        "seq": [
+          ["f", ["any"], "Сначала услышала вас, потом поверила."],
+          ["m", ["night", "any"], "Полоска на жилете вспыхнула — и вы сразу развернулись. Я это видел."],
+          ["m", ["raft", "storm", "any"], "Лампа на тенте мигает раз в секунду. Я считал вспышки, чтобы не уснуть."],
+          [
+            "f",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "А можно я потом покручу этот… пропеллер?"
+          ],
+          ["m", ["flower", "swimmer", "any"], "Мы держались за руки кругом. Так теплее и не страшно."],
+          ["m", ["pet", "hull", "any"], "Он сам залез ко мне под куртку. Умный зверь."],
+          ["f", ["deck", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["wreck", "night", "any"], "Сначала был только ваш свет. Он шёл по воде, как будто искал меня лично."],
+          ["m", ["container", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["injured", "long", "cold", "any"], "Помню только корзину и чьи-то руки. Спасибо этим рукам."],
+          ["m", ["any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["night", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["raft", "storm", "any"], "В плоту мы рассказывали анекдоты. Плохие. Смеялись всё равно."],
+          [
+            "m",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Волна накрыла, я досчитал до семи и вынырнул. А потом — вы."
+          ],
+          ["m", ["flower", "swimmer", "any"], "Сначала услышал вас, потом поверил."],
+          ["f", ["pet", "hull", "any"], "Держались за киль втроём. Он скользкий, как совесть."],
+          ["m", ["deck", "any"], "Снизу казалось, что вы висите на нитке. А вы висели как вкопанные."],
+          ["m", ["wreck", "night", "any"], "Крен рос, а мы держались за флагшток и друг за друга."],
+          ["f", ["container", "any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["injured", "long", "cold", "any"], "Пальцы перестали слушаться. Я держался зубами за свисток."],
+          ["m", ["any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["night", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["raft", "storm", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          [
+            "m",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Я видел, как вы развернулись над нами. Этот звук я не забуду."
+          ],
+          ["f", ["flower", "swimmer", "any"], "Сначала услышала вас, потом поверила."],
+          ["m", ["pet", "hull", "any"], "Сначала услышал вас, потом поверил."],
+          ["m", ["deck", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["f", ["wreck", "night", "any"], "Сначала услышала вас, потом поверила."],
+          ["m", ["container", "any"], "Сначала услышал вас, потом поверил."],
+          ["m", ["injured", "long", "cold", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["f", ["any"], "Я видела, как вы развернулись над нами. Этот звук я не забуду."],
+          ["m", ["night", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["raft", "storm", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          [
+            "f",
+            ["child", "injured", "raft", "night", "storm", "fog", "long", "cold", "any"],
+            "Мы слышали вас минут десять, прежде чем увидели. Кричали в молоко."
+          ],
+          ["m", ["flower", "swimmer", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["pet", "hull", "any"], "Я видел, как вы развернулись над нами. Этот звук я не забуду."],
+          ["f", ["deck", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["wreck", "night", "any"], "Корзина пришла прямо в руки. Как будто так и надо."],
+          ["m", ["container", "any"], "Контейнер — плохой плот. Но лучше, чем никакой."],
+          ["f", ["injured", "long", "cold", "any"], "Корзина пришла прямо в руки. Как будто так и надо."]
+        ]
+      }
+    ]
+  }
+}

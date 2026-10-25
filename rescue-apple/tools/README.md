@@ -54,6 +54,7 @@ node rescue-apple/tools/export/export-core.mjs       # Tests/Vectors/{math/jsnum
 node rescue-apple/tools/export/export-sim.mjs        # Tests/Vectors/{weather,ocean}/run_*, endless*, gusts, lightning, sunrig, features (погода и океан по кадрам)
 node rescue-apple/tools/export/export-heli.mjs       # Tests/Vectors/heli/heli_*, camera/* (настоящие Helicopter и CameraRig на стабах; --only heli,camera)
 node rescue-apple/tools/export/export-app.mjs        # Tests/Vectors/app/* (слой приложения: boot + кадр main.js на настоящих системах с настоящим Input — session_flight; touch.js — touch)
+node rescue-apple/tools/export/export-world.mjs      # Tests/Vectors/world/* (настоящий World на стабах: рельеф op1, растительность, setup, покадровые трассы маяка, буёв, плавучих объектов; --only noise,landmass,terrain,setup,run,rhythms)
 node rescue-apple/tools/export/export-browser.mjs     # Tests/Vectors/ocean/coast_<id>.json + .u8 (по умолчанию --missions 0,2)
 node rescue-apple/tools/export/verify.mjs             # разбор, обёртки, размеры, полнота и хеши manifest, сайдкары
 node rescue-apple/tools/export/verify.mjs --browser   # + сверка с живой игрой в Chromium, 0 ошибок консоли
@@ -168,6 +169,10 @@ node rescue-apple/tools/export/verify.mjs --browser   # + сверка с жив
 | `weather/{gusts,lightning,sunrig,endless}.json` | `Gusts` (спавн, переработка, расписание, `addWindAt` на сетке), `envelope`/`envelopeReduced`, `WeatherLights` (swing, бокс тени, снап к текселям, качества), `Endless` по секундам 20 мин | побитово |
 | `ocean/run_{storm,stub}.json` (+ `.f64`, `_hash.u32`) | настоящий `Ocean` (за ним настоящая погода или `null`): все uniform в порядке `createOceanUniforms` плюс внутреннее состояние (фокус, кадры деталей и полос, прожектор, пулы брызг и бликов, фичи, банк волн, окно и очередь памяти воды, нарисованные стампы) каждый кадр; мели, берег из рельефа, пауза, смена качества, запросы `heightAt`/`normalAt`/`velocityAt`/`featureHeightAt`/`featureFlowAt`/`searchlightAt` | хаос: каждый кадр побитово |
 | `ocean/features.json` | `FeatureSet`: скрипт `set`/`remove`/`update` с вытеснением и затуханием, `heightAt`/`flowAt`, упаковка `uA/uB/uC` | побитово |
+| `world/terrain_noise.json`, `landmass_first.json` | `export-world.mjs`: шум terrain.js (`hashi`, `noise2`, `fbm2`, `ridged2`, `sstep`, `smax`, `footDist`); `islandDef()`, `rockDef()` скал op1 (сиды как в `createRockField`) и `makeHeightFn` в точках | побитово |
+| `world/terrain_first_{high,medium,low}.json` (+ `_grid.f32`, `_veg.f32`) | `buildIslandTerrain` / `buildRockTerrain` по качествам: сетка, массивы сэмплера (сайдкар на high, sha256 всегда), меш (sha256 позиций, нормалей, `aTerr`, индексов), запросы сэмплера, `fitShoals`, `terrainColumns`, `scatterBoulders` + матрицы валунов, растительность острова (матрицы, цвета, `aInst`); `world/boulders.json` — `boulderGeometry(7, …BOULDER_SEG)` | побитово |
+| `world/setup_first_{high,medium,low}.json` | настоящий `World` после `mission:setup` с подготовленным op1: площадки, препятствия, маяк (лампы, сваи, шест ветроуказателя), отмели, лампы (Float32), плавучие объекты и банки, валуны и растительность, вершины рельефа для карты берега и сама карта (`bakeCoast`, `coastDistance`) | побитово |
+| `world/run_{first,mix}.json` (+ `_inputs.f64`, `_rows.f64`, `_bulk.f64/.f32`, `_hash.u32`) | `World.update` по кадрам (dt с джиттером и паузами) на записанных входах (погода, палитра, туман сцены, камера, вертолёт, опасность, события, настройки): env, каналы ламп, общие uniform, луч и свет маяка, засветки, коллары, ветроуказатель, позы плавучих объектов, лампы буёв, ревун, `setShoals`, смыв контейнеров; `mix` — все смеси обломков, контейнеры, утки, все типы буёв, маяк вне начала координат, low → high; `world/rhythms.json` — `buoyRhythm` | хаос: каждый кадр побитово |
 
 Каждый файл содержит:
 
@@ -225,7 +230,6 @@ Swift-тест повторяет вызовы и сравнивает резу�
 
 **Векторы, которые требуют W-задач веба:**
 
-- world terrain/setup;
 - hazards;
 - fx;
 - survivors;
@@ -237,3 +241,4 @@ Swift-тест повторяет вызовы и сравнивает резу�
 - список файлов-источников лежит в `sourceFiles`;
 - в `jsmath` 4096 входов на функцию вместо 100 000, чтобы набор оставался компактным.
 - вертолёт (PLAN §5.3): `ops`, `winch_*`, `searchlight`, `lights` не отдельные файлы — они сверяются внутри полных прогонов `Helicopter` (`heli/heli_<сценарий>.json`), а `camera/rig_*` — в тех же прогонах и в `rig_{modes,photo}`. Космический `Math.random` (брызги, дым, искры, `blinkSeed`) пересеян после `new Helicopter` (three.js тратит ≈ 2500 вызовов на uuid при сборке модели).
+- мир (PLAN §5.3): `world/setup_*` считается в Node (настоящий `World` на стабах), а не в Chromium; вместо `channels.json` и `windsock.json` каналы ламп и ветроуказатель сверяются покадрово в `world/run_{first,mix}`; `meshkit.json` пока покрывает только валун (`world/boulders.json`); `vessel.json` (судно) — M5.

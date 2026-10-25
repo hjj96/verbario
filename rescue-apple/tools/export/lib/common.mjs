@@ -236,9 +236,11 @@ export const TEXTURE_KINDS = {
  * Rebuilt from the directories, so any exporter that writes into them (export-data, export-render,
  * bake-meshes) calls it last.
  */
-// Baked meshes (tools/meshfmt/SPEC.md): every Resources/Meshes/*.mmesh, version read from its header.
+// Baked meshes (tools/meshfmt/SPEC.md): every Resources/Meshes/*.mmesh, version read from its header; the
+// scene families' canvas textures baked beside them (bake-meshes.mjs --canvas: raw RGBA8, row 0 = v 0).
 export const MESH_KINDS = {
   '.mmesh': { schema: 'mayday.mmesh', producer: 'tools/export/bake-meshes.mjs' },
+  '.rgba': { schema: 'raw.rgba8', producer: 'tools/export/bake-meshes.mjs' },
 };
 
 // keepRevision: keep the webRevision / webDirty already in the manifest (bake-meshes only refreshes the mesh
@@ -269,7 +271,7 @@ export function writeManifest({ dataDir = path.join(APPLE, 'Resources/Data'), te
     const kind = MESH_KINDS[path.extname(f)];
     if (!kind) throw new Error(`manifest: Resources/Meshes/${f} has no known kind (MESH_KINDS in lib/common.mjs)`);
     const buf = fs.readFileSync(path.join(meshDir, f));
-    const version = buf.length >= 6 ? buf.readUInt16LE(4) : null;
+    const version = kind.schema !== 'mayday.mmesh' ? 1 : buf.length >= 6 ? buf.readUInt16LE(4) : null;
     entries.push({ path: `Resources/Meshes/${f}`, schema: kind.schema, version, producer: kind.producer, bytes: buf.length, sha256: sha256(buf) });
   }
   const manifest = { schema: 'mayday.manifest', version: 1, formatVersion: 1, webRevision: g.rev, webDirty: g.dirty, files: entries };
