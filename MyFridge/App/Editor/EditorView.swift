@@ -1,11 +1,12 @@
 import PhotosUI
 import SwiftUI
 
-/// The main screen: the door takes most of the space, tools appear for the selected thing.
+/// The main screen: the door takes most of the space, the tray below holds everything
+/// that can go on it, and tools appear for the selected thing.
 struct EditorView: View {
     enum Sheet: Identifiable {
         case note(UUID?)
-        case magnets
+        case word
         case collection
         case settings
         case widgetGuide
@@ -13,7 +14,7 @@ struct EditorView: View {
         var id: String {
             switch self {
             case .note(let itemID): return "note-\(itemID?.uuidString ?? "new")"
-            case .magnets: return "magnets"
+            case .word: return "word"
             case .collection: return "collection"
             case .settings: return "settings"
             case .widgetGuide: return "widgetGuide"
@@ -27,35 +28,40 @@ struct EditorView: View {
     }
 
     @Environment(FridgeStore.self) private var store
+    @Environment(MotionLight.self) private var motion
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("didShowWidgetGuide") private var didShowWidgetGuide = false
 
     @State private var selection: UUID?
     @State private var sheet: Sheet?
+    @State private var tab: TrayTab = .magnets
     @State private var showsPhotoPicker = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var pendingPhoto: PendingPhoto?
     @State private var isLoadingPhoto = false
 
-    private let panelHeight: CGFloat = 268
+    private let panelHeight: CGFloat = 262
 
     var body: some View {
         VStack(spacing: 0) {
             header
             DoorCanvas(selection: $selection)
+                .environment(\.magnetLight, reduceMotion ? MagnetLight() : motion.light)
                 .aspectRatio(ItemMetrics.doorAspect, contentMode: .fit)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 18)
+                .padding(.top, 10)
+                .padding(.bottom, 16)
             panel
                 .frame(height: panelHeight, alignment: .top)
         }
-        .background { EditorBackground().ignoresSafeArea() }
+        .background { Color.paper.ignoresSafeArea() }
         .overlay {
             if isLoadingPhoto {
                 ProgressView()
                     .controlSize(.large)
-                    .padding(24)
-                    .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.regularMaterial))
+                    .padding(26)
+                    .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.regularMaterial))
             }
         }
         .overlay(alignment: .bottom) { ToastHost() }
@@ -68,10 +74,12 @@ struct EditorView: View {
                 placed(placementID, isFirstPhoto: store.photoItems.count == 1)
             }
             .environment(store)
+            .environment(motion)
         }
         .sheet(item: $sheet) { sheet in
             sheetContent(sheet)
                 .environment(store)
+                .environment(motion)
         }
         .onOpenURL { _ in
             // The widget opens the editor for its door.
@@ -79,35 +87,38 @@ struct EditorView: View {
             pendingPhoto = nil
             selection = nil
         }
+        .onAppear { if !reduceMotion { motion.start() } }
+        .onDisappear { motion.stop() }
         .animation(.snappy(duration: 0.25), value: selection)
     }
 
     // MARK: Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
-                Text("Мой холодильник")
-                    .font(.system(size: 28, weight: .bold))
+        HStack(alignment: .bottom, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                SaveStatusLabel(status: store.saveStatus)
+                Text(store.design.nameplate.isEmpty ? "Мой холодильник" : store.design.nameplate)
+                    .font(.serif(30))
+                    .foregroundStyle(Color.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                Spacer(minLength: 8)
-                HeaderButton(systemImage: "arrow.uturn.backward", label: "Отменить") {
-                    store.undo()
-                }
-                .disabled(!store.canUndo)
-                HeaderButton(systemImage: "arrow.uturn.forward", label: "Повторить") {
-                    store.redo()
-                }
-                .disabled(!store.canRedo)
-                HeaderButton(systemImage: "gearshape", label: "Настройки") {
-                    sheet = .settings
-                }
             }
-            SaveStatusView(status: store.saveStatus)
+            Spacer(minLength: 8)
+            RoundIconButton(systemImage: "arrow.uturn.backward", label: "Отменить") {
+                store.undo()
+            }
+            .disabled(!store.canUndo)
+            RoundIconButton(systemImage: "arrow.uturn.forward", label: "Повторить") {
+                store.redo()
+            }
+            .disabled(!store.canRedo)
+            RoundIconButton(systemImage: "slider.horizontal.3", label: "Дверца и настройки") {
+                sheet = .settings
+            }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 8)
+        .padding(.top, 6)
     }
 
     // MARK: Panel
@@ -118,15 +129,17 @@ struct EditorView: View {
             SelectionPanel(placement: placement,
                            content: content,
                            onDone: { selection = nil },
+                           onSelect: { selection = $0 },
                            onEditNote: { itemID in sheet = .note(itemID) })
-                .transition(.opacity)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
         } else {
-            HomePanel(onAddPhoto: { showsPhotoPicker = true },
-                      onAddNote: { sheet = .note(nil) },
-                      onMagnets: { sheet = .magnets },
-                      onCollection: { sheet = .collection },
-                      onSelect: { selection = $0 })
-                .transition(.opacity)
+            TrayView(tab: $tab,
+                     onPlaced: { selection = $0 },
+                     onAddPhoto: { showsPhotoPicker = true },
+                     onAddNote: { sheet = .note(nil) },
+                     onWord: { sheet = .word },
+                     onCollection: { sheet = .collection })
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
     }
 
@@ -137,12 +150,12 @@ struct EditorView: View {
             NoteEditorView(editingItemID: itemID) { placementID in
                 placed(placementID, isFirstPhoto: false)
             }
-        case .magnets:
-            MagnetPickerView { placementID in
+        case .word:
+            WordComposerView { placementID in
                 placed(placementID, isFirstPhoto: false)
             }
         case .collection:
-            CollectionView { placementID in
+            MagnetCollectionView { placementID in
                 selection = placementID
             }
         case .settings:
@@ -198,28 +211,33 @@ struct EditorView: View {
     }
 }
 
-private struct SaveStatusView: View {
+private struct SaveStatusLabel: View {
     let status: FridgeStore.SaveStatus
 
     var body: some View {
         HStack(spacing: 5) {
-            switch status {
-            case .saved:
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(Color.green)
-                Text("Сохранено · виджет обновится сам")
-            case .saving:
-                ProgressView()
-                    .controlSize(.mini)
-                Text("Сохраняю…")
-            case .failed:
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(Color.orange)
-                Text("Не удалось сохранить")
-            }
+            Circle()
+                .fill(dotColor)
+                .frame(width: 6, height: 6)
+            SectionLabel(text: text)
         }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
-        .frame(height: 18)
+        .frame(height: 14)
+        .animation(.easeOut(duration: 0.2), value: status)
+    }
+
+    private var text: String {
+        switch status {
+        case .saved: return "Сохранено"
+        case .saving: return "Сохраняю"
+        case .failed: return "Не удалось сохранить"
+        }
+    }
+
+    private var dotColor: Color {
+        switch status {
+        case .saved: return Color(hex: 0x3FA66B)
+        case .saving: return Color(hex: 0xE0A43A)
+        case .failed: return Color(hex: 0xC8372D)
+        }
     }
 }

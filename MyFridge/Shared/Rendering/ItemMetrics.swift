@@ -3,69 +3,72 @@ import SwiftUI
 /// Everything a view needs to draw one thing on the door.
 enum RenderContent {
     case photo(PhotoContent, UIImage?)
-    case note(NoteContent, seed: UInt64)
-    case magnet(MagnetDefinition)
+    case note(NoteContent, id: UUID)
+    case magnet(MagnetArt)
+    case letter(LetterMagnet)
 
     /// How far the thing stands off the metal: paper is flat, ceramic is thick.
     var depth: CGFloat {
         switch self {
         case .photo(let photo, _):
-            return photo.style == .cutout ? 1.0 : 0.8
+            switch photo.style {
+            case .card: return 0.8
+            case .cutout: return 1.1
+            case .round, .heart: return 1.25
+            }
         case .note:
             return 0.6
-        case .magnet(let magnet):
-            if case .star = magnet.art { return 1.1 }
-            return 1.5
+        case .magnet(let art):
+            return 0.8 + art.thickness / 10
+        case .letter:
+            return 1.3
         }
     }
 
-    /// Ready magnets hold themselves; photos and notes can get a separate fastener.
+    /// Photo cards and notes can get a separate fastener; magnets hold themselves.
     var acceptsFastener: Bool {
-        if case .magnet = self { return false }
-        return true
+        switch self {
+        case .photo(let photo, _): return photo.style == .card || photo.style == .cutout
+        case .note: return true
+        case .magnet, .letter: return false
+        }
     }
 
     var title: String {
         switch self {
         case .photo(let photo, _): return photo.style.title
-        case .note: return "Записка"
-        case .magnet(let magnet): return magnet.title
+        case .note(let note, _): return note.isTask ? "Дело" : "Записка"
+        case .magnet(let art): return art.title
+        case .letter(let letter): return "Буква «\(letter.character)»"
         }
     }
-}
-
-/// Shared proportions of the door (fractions of the door size).
-enum DoorGeometry {
-    /// The seam between the top cap and the rest of the door.
-    static let seam: CGFloat = 0.12
-    static let handleX: CGFloat = 0.9
-    static let handleTop: CGFloat = 0.3
-    static let handleBottom: CGFloat = 0.72
-    /// Outer corner radius in the app (the widget uses the system shape).
-    static let cornerRadius: CGFloat = 0.075
 }
 
 enum ItemMetrics {
     /// Width / height of the door. Matches the large widget on iPhone, so the editor shows
     /// exactly what the Home Screen will show.
     static let doorAspect: CGFloat = 338.0 / 354.0
-    static let minWidth: CGFloat = 0.07
+    static let minWidth: CGFloat = 0.06
     static let maxWidth: CGFloat = 0.9
     /// Keeps the widget well inside its memory budget.
-    static let maxPlacements = 20
+    static let maxPlacements = 30
+    /// Width / height of a letter's box.
+    static let letterAspect: CGFloat = 0.86
 
     static func aspect(of content: RenderContent) -> CGFloat {
         switch content {
         case .photo(let photo, _):
-            let imageAspect = CGFloat(photo.aspect)
-            if photo.style == .card {
-                return PhotoCardLayout.outerAspect(imageAspect: imageAspect)
+            switch photo.style {
+            case .card: return PhotoCardLayout.outerAspect(imageAspect: CGFloat(photo.aspect))
+            case .cutout: return max(CGFloat(photo.aspect), 0.2)
+            case .round, .heart: return PhotoShapes.unitSize.width / PhotoShapes.unitSize.height
             }
-            return max(imageAspect, 0.2)
         case .note(let note, _):
             return note.shape.aspect
-        case .magnet:
-            return 1
+        case .magnet(let art):
+            return art.aspect
+        case .letter:
+            return letterAspect
         }
     }
 
@@ -82,19 +85,18 @@ enum ItemMetrics {
         let base: CGFloat
         switch content {
         case .photo(let photo, _):
-            if photo.style == .card {
-                base = photo.aspect > 1.1 ? 0.46 : 0.36
-            } else {
-                base = 0.42
+            switch photo.style {
+            case .card: base = photo.aspect > 1.1 ? 0.46 : 0.36
+            case .cutout: base = 0.42
+            case .round: base = 0.3
+            case .heart: base = 0.32
             }
         case .note(let note, _):
             base = note.shape.defaultWidth
-        case .magnet(let magnet):
-            if case .star = magnet.art {
-                base = 0.11
-            } else {
-                base = 0.15
-            }
+        case .magnet(let art):
+            base = art.doorWidth
+        case .letter:
+            base = 0.11
         }
         // Tall things should not cover more than half of the door.
         let limit = 0.5 * aspect(of: content) / doorAspect

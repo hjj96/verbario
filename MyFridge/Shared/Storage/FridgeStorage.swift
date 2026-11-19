@@ -65,6 +65,19 @@ enum FridgeStorage {
         try data.write(to: stateURL, options: [.atomic])
     }
 
+    /// Flips a to-do note on disk. Used by the widget's checkbox.
+    /// Returns the new done state, or nil if the note was not found.
+    @discardableResult
+    static func toggleTask(itemID: UUID) -> Bool? {
+        guard case .loaded(var state) = loadState(backupOnFailure: false),
+              let index = state.items.firstIndex(where: { $0.id == itemID }),
+              case .note(var note) = state.items[index].content else { return nil }
+        note.isDone.toggle()
+        state.items[index].content = .note(note)
+        try? save(state)
+        return note.isDone
+    }
+
     // MARK: Images
 
     static func imageURL(_ file: String, variant: ImageVariant) -> URL {

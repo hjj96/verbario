@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The interactive door: drag things, pinch and twist with two fingers, or use the corner
-/// knob of the selected thing to resize and rotate it with one finger.
+/// knob of the selected thing to resize and rotate it with one finger. Things from the tray
+/// can be dropped right where they should hang.
 struct DoorCanvas: View {
     static let space = "door"
 
@@ -11,10 +12,13 @@ struct DoorCanvas: View {
     @State private var move: Move?
     @State private var transform: Transform?
     @State private var fastenerMove: FastenerMove?
+    @State private var isDropTargeted = false
 
     private struct Move: Equatable {
         var id: UUID
         var translation: CGSize
+        /// Degrees of swing from the hand's speed.
+        var sway: Double
     }
 
     private struct Transform: Equatable {
@@ -31,24 +35,36 @@ struct DoorCanvas: View {
     var body: some View {
         GeometryReader { geo in
             let size = geo.size
-            let style = store.state.door.style
+            let design = store.design
             let radius = size.width * DoorGeometry.cornerRadius
+            let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
             ZStack {
                 ZStack {
-                    DoorBackgroundView(style: style)
+                    DoorBackgroundView(design: design)
                         .contentShape(Rectangle())
                         .onTapGesture { selection = nil }
                     ForEach(store.state.door.placements) { placement in
                         item(placement, doorSize: size)
                     }
-                    DoorHandleView(style: style)
+                    DoorHandleView(design: design)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+                .clipShape(shape)
                 .background {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(Color.black.opacity(0.28))
-                        .blur(radius: 16)
-                        .offset(y: 12)
+                    shape
+                        .fill(Color.black.opacity(0.3))
+                        .blur(radius: 18)
+                        .offset(y: 14)
+                }
+                .overlay {
+                    shape
+                        .strokeBorder(Color(hex: 0x2F55D4).opacity(isDropTargeted ? 0.85 : 0), lineWidth: 3)
+                        .shadow(color: Color(hex: 0x2F55D4).opacity(isDropTargeted ? 0.6 : 0), radius: 10)
+                        .allowsHitTesting(false)
+                }
+                .dropDestination(for: String.self) { tokens, location in
+                    drop(tokens, at: location, doorSize: size)
+                } isTargeted: { targeted in
+                    withAnimation(.easeOut(duration: 0.2)) { isDropTargeted = targeted }
                 }
 
                 selectionOverlay(doorSize: size)
@@ -56,6 +72,7 @@ struct DoorCanvas: View {
             .coordinateSpace(.named(Self.space))
             .simultaneousGesture(pinchAndRotate)
         }
+        .environment(\.noteInteraction, .app({ itemID in store.toggleTask(itemID: itemID) }))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Дверца холодильника")
     }
@@ -71,7 +88,8 @@ struct DoorCanvas: View {
                            placement: shown,
                            doorSize: doorSize,
                            lifted: isMoving,
-                           showsFastener: selection != placement.id)
+                           showsFastener: selection != placement.id,
+                           sway: isMoving ? (move?.sway ?? 0) : 0)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     if selection != placement.id {
@@ -82,7 +100,6 @@ struct DoorCanvas: View {
                 .gesture(moveGesture(placement, doorSize: doorSize))
                 .position(x: shown.x * doorSize.width, y: shown.y * doorSize.height)
                 .zIndex(isMoving ? 1 : 0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.68), value: isMoving)
                 .accessibilityLabel(content.title)
                 .accessibilityAddTraits(.isButton)
         }
@@ -106,25 +123,44 @@ struct DoorCanvas: View {
         return result
     }
 
+    private func drop(_ tokens: [String], at location: CGPoint, doorSize: CGSize) -> Bool {
+        guard let token = tokens.first, let payload = TrayPayload(token: token) else { return false }
+        let point = CGPoint(x: location.x / max(doorSize.width, 1), y: location.y / max(doorSize.height, 1))
+        guard let placementID = store.place(payload, at: point) else { return false }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+            selection = placementID
+        }
+        Feedback.attach()
+        return true
+    }
+
     // MARK: Gestures
 
     private func moveGesture(_ placement: Placement, doorSize: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
             .onChanged { value in
-                if move?.id != placement.id {
+                let target = Double((value.velocity.width / 70).clamped(to: -11...11))
+                if let current = move, current.id == placement.id {
+                    move = Move(id: placement.id, translation: value.translation,
+                                sway: current.sway * 0.78 + target * 0.22)
+                } else {
                     Feedback.lift()
                     selection = placement.id
+                    withAnimation(.spring(response: 0.22, dampingFraction: 0.7)) {
+                        move = Move(id: placement.id, translation: value.translation, sway: 0)
+                    }
                 }
-                move = Move(id: placement.id, translation: value.translation)
             }
             .onEnded { value in
                 let dx = value.translation.width / max(doorSize.width, 1)
                 let dy = value.translation.height / max(doorSize.height, 1)
-                store.updatePlacement(placement.id) { stored in
-                    stored.x = (stored.x + dx).clamped(to: 0.03...0.97)
-                    stored.y = (stored.y + dy).clamped(to: 0.03...0.97)
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.42)) {
+                    store.updatePlacement(placement.id) { stored in
+                        stored.x = (stored.x + dx).clamped(to: 0.03...0.97)
+                        stored.y = (stored.y + dy).clamped(to: 0.03...0.97)
+                    }
+                    move = nil
                 }
-                move = nil
                 Feedback.attach()
             }
     }
@@ -204,16 +240,17 @@ struct DoorCanvas: View {
             let shown = effective(stored, doorSize: doorSize)
             let itemSize = ItemMetrics.size(of: content, width: shown.width, in: doorSize)
             let center = CGPoint(x: shown.x * doorSize.width, y: shown.y * doorSize.height)
-            let angle = Angle.degrees(shown.rotation)
+            let angle = Angle.degrees(shown.rotation + (move?.id == id ? (move?.sway ?? 0) : 0))
             let pad: CGFloat = 7
             let isMoving = move?.id == id
             let corner = CGPoint(x: itemSize.width / 2 + pad, y: itemSize.height / 2 + pad).rotated(by: angle)
 
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.95), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                .shadow(color: Color.black.opacity(0.35), radius: 1.5)
                 .frame(width: itemSize.width + pad * 2, height: itemSize.height + pad * 2)
                 .rotationEffect(angle)
-                .scaleEffect(isMoving ? 1.05 : 1)
+                .scaleEffect(isMoving ? 1.06 : 1)
                 .position(center)
                 .allowsHitTesting(false)
 
@@ -254,9 +291,9 @@ private struct ResizeKnob: View {
             .overlay {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color(hex: 0x18262F))
             }
-            .shadow(color: Color.black.opacity(0.25), radius: 3, y: 1)
+            .shadow(color: Color.black.opacity(0.3), radius: 3, y: 1)
             .frame(width: 44, height: 44)
             .contentShape(Circle())
     }

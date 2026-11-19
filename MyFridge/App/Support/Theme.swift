@@ -1,5 +1,8 @@
 import SwiftUI
 
+// MARK: - Palette and type
+
+/// The look of the concept book: warm paper, deep ink, a calm blue and serif headings.
 extension Color {
     /// A colour that switches between light and dark appearance.
     static func adaptive(light: UInt32, dark: UInt32) -> Color {
@@ -12,16 +15,36 @@ extension Color {
         })
     }
 
-    static let editorTop = Color.adaptive(light: 0xEEF0F6, dark: 0x15171C)
-    static let editorBottom = Color.adaptive(light: 0xE1E5EE, dark: 0x0E0F12)
-    static let tileBackground = Color(.secondarySystemGroupedBackground)
+    static let paper = Color.adaptive(light: 0xF3F0E8, dark: 0x10171C)
+    static let card = Color.adaptive(light: 0xFCFBF7, dark: 0x1A242B)
+    static let ink = Color.adaptive(light: 0x18262F, dark: 0xEEF0EF)
+    static let inkSoft = Color.adaptive(light: 0x6A757C, dark: 0x9AA6AD)
+    static let hairline = Color.adaptive(light: 0xE2DDD1, dark: 0x2A353D)
+    /// Text on an ink-coloured button.
+    static let onInk = Color.adaptive(light: 0xF6F3EC, dark: 0x10171C)
 }
 
-struct EditorBackground: View {
-    var body: some View {
-        LinearGradient(colors: [.editorTop, .editorBottom], startPoint: .top, endPoint: .bottom)
+extension Font {
+    /// New York, like the headings of the concept book.
+    static func serif(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .serif)
     }
 }
+
+/// Small spaced capitals, as in the book's running heads.
+struct SectionLabel: View {
+    let text: String
+    var color: Color = .inkSoft
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: 11, weight: .semibold))
+            .tracking(1.6)
+            .foregroundStyle(color)
+    }
+}
+
+// MARK: - Buttons
 
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
@@ -29,11 +52,11 @@ struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.onInk)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(Capsule().fill(Color.accentColor))
-            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
+            .background(Capsule().fill(Color.ink))
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.4)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
@@ -43,52 +66,16 @@ struct PrimaryButtonStyle: ButtonStyle {
 struct PressableStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
             .opacity(configuration.isPressed ? 0.85 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
-/// Light brushed-steel tile used behind previews.
-struct SteelTile: View {
-    var cornerRadius: CGFloat = 16
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        shape
-            .fill(LinearGradient(colors: [Color(hex: 0xDCDFE3), Color(hex: 0xB3B8BE)],
-                                 startPoint: .topLeading, endPoint: .bottomTrailing))
-            .overlay {
-                BrushedMetalTexture()
-                    .opacity(0.8)
-                    .clipShape(shape)
-            }
-            .overlay {
-                shape.strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
-            }
-    }
-}
-
-/// One item drawn at a given width, with its shadow, for sheets and tiles.
-struct ItemPreview: View {
-    let content: RenderContent
-    var fastener: FastenerKind?
-    var rotation: Double = -2
-    /// Width of the item in points.
-    let width: CGFloat
-
-    var body: some View {
-        let relativeWidth = ItemMetrics.defaultWidth(for: content)
-        let door = CGSize(width: width / relativeWidth, height: width / relativeWidth / ItemMetrics.doorAspect)
-        let placement = Placement(source: .magnet("preview"), x: 0.5, y: 0.5, width: relativeWidth,
-                                  rotation: rotation, fastener: fastener.map { Fastener.standard($0) })
-        PlacedItemView(content: content, placement: placement, doorSize: door)
-    }
-}
-
-struct HeaderButton: View {
+struct RoundIconButton: View {
     let systemImage: String
     let label: String
+    var size: CGFloat = 42
     let action: () -> Void
 
     @Environment(\.isEnabled) private var isEnabled
@@ -96,37 +83,14 @@ struct HeaderButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 40, height: 40)
-                .background(Circle().fill(Color.tileBackground))
-                .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.4))
+                .font(.system(size: size * 0.38, weight: .semibold))
+                .frame(width: size, height: size)
+                .background(Circle().fill(Color.card))
+                .overlay { Circle().strokeBorder(Color.hairline, lineWidth: 1) }
+                .foregroundStyle(isEnabled ? Color.ink : Color.inkSoft.opacity(0.4))
         }
         .buttonStyle(PressableStyle())
         .accessibilityLabel(label)
-    }
-}
-
-struct SecondaryTile: View {
-    let title: String
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 5) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                Text(title)
-                    .font(.footnote.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(Color.primary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 58)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.tileBackground))
-        }
-        .buttonStyle(PressableStyle())
     }
 }
 
@@ -142,14 +106,17 @@ struct ToolButton: View {
                 Image(systemName: systemImage)
                     .font(.system(size: 17, weight: .semibold))
                 Text(title)
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
             }
-            .foregroundStyle(isDestructive ? Color.red : Color.primary)
+            .foregroundStyle(isDestructive ? Color(hex: 0xC8372D) : Color.ink)
             .frame(maxWidth: .infinity)
             .frame(height: 58)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.tileBackground))
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.card))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1)
+            }
         }
         .buttonStyle(PressableStyle())
     }
@@ -157,7 +124,7 @@ struct ToolButton: View {
 
 struct ChoiceChip: View {
     let title: String
-    var font: Font = .subheadline.weight(.semibold)
+    var font: Font = .system(size: 15, weight: .semibold)
     let isSelected: Bool
     let action: () -> Void
 
@@ -166,10 +133,11 @@ struct ChoiceChip: View {
             Text(title)
                 .font(font)
                 .lineLimit(1)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 15)
                 .frame(height: 38)
-                .foregroundStyle(isSelected ? Color.white : Color.primary)
-                .background(Capsule().fill(isSelected ? Color.accentColor : Color.tileBackground))
+                .foregroundStyle(isSelected ? Color.onInk : Color.ink)
+                .background(Capsule().fill(isSelected ? Color.ink : Color.card))
+                .overlay { Capsule().strokeBorder(isSelected ? Color.clear : Color.hairline, lineWidth: 1) }
         }
         .buttonStyle(PressableStyle())
     }
@@ -181,14 +149,85 @@ struct OptionSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            SectionLabel(text: title)
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
+
+/// A rounded card on the paper background.
+struct PaperCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            content
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.card))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1)
+        }
+    }
+}
+
+// MARK: - Steel and previews
+
+/// Light brushed-steel surface used for shelves and previews.
+struct SteelTile: View {
+    var cornerRadius: CGFloat = 16
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        shape
+            .fill(LinearGradient(colors: [Color(hex: 0xDEE1E5), Color(hex: 0xC3C8CD), Color(hex: 0xAEB3B9)],
+                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+            .overlay {
+                BrushedMetalTexture()
+                    .opacity(0.8)
+                    .clipShape(shape)
+            }
+            .overlay {
+                shape.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.85), Color.black.opacity(0.15)],
+                                                  startPoint: .top, endPoint: .bottom),
+                                   lineWidth: 1)
+            }
+    }
+}
+
+/// One item drawn at a given width, with its shadow, for sheets and tiles.
+struct ItemPreview: View {
+    let content: RenderContent
+    var fastener: FastenerKind?
+    var rotation: Double = 0
+    /// Width of the item in points.
+    let width: CGFloat
+
+    var body: some View {
+        let relativeWidth = ItemMetrics.defaultWidth(for: content)
+        let door = CGSize(width: width / relativeWidth, height: width / relativeWidth / ItemMetrics.doorAspect)
+        let placement = Placement(source: .magnet("preview"), x: 0.5, y: 0.5, width: relativeWidth,
+                                  rotation: rotation, fastener: fastener.map { Fastener.standard($0) })
+        PlacedItemView(content: content, placement: placement, doorSize: door)
+    }
+}
+
+/// Fits an item into a square box, keeping its proportions.
+struct ItemThumb: View {
+    let content: RenderContent
+    let box: CGFloat
+
+    var body: some View {
+        let aspect = ItemMetrics.aspect(of: content)
+        let width = aspect >= 1 ? box : box * aspect
+        ItemPreview(content: content, width: width)
+            .frame(width: box, height: box)
+    }
+}
+
+// MARK: - Toast
 
 /// Shows the store's toast with an optional "Отменить" button.
 struct ToastHost: View {
@@ -200,18 +239,20 @@ struct ToastHost: View {
                 HStack(spacing: 14) {
                     Text(toast.message)
                         .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.onInk)
                         .lineLimit(2)
                     if toast.undoable {
                         Button("Отменить") { store.undoFromToast() }
                             .font(.subheadline.weight(.bold))
+                            .foregroundStyle(Color(hex: 0x9DB4FF))
                     }
                 }
                 .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .background(Capsule().fill(.regularMaterial))
-                .shadow(color: Color.black.opacity(0.15), radius: 12, y: 4)
+                .padding(.vertical, 13)
+                .background(Capsule().fill(Color.ink))
+                .shadow(color: Color.black.opacity(0.2), radius: 14, y: 6)
                 .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .onTapGesture { store.dismissToast() }
             }

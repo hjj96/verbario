@@ -96,23 +96,48 @@ enum PhotoProcessing {
         return UIImage(cgImage: output)
     }
 
-    /// Centre-crops very long or very tall photos so a card stays card-shaped.
-    static func cardImage(from image: UIImage) -> UIImage {
-        guard let cgImage = image.cgImage else { return image }
+    /// The most interesting point of the photo (top-left origin, 0...1), from Vision saliency.
+    static func focusPoint(of image: UIImage) async -> CGPoint {
+        let fallback = CGPoint(x: 0.5, y: 0.45)
+        guard let cgImage = image.cgImage else { return fallback }
+        return await Task.detached(priority: .userInitiated) { () -> CGPoint in
+            let request = VNGenerateAttentionBasedSaliencyImageRequest()
+            let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                return fallback
+            }
+            guard let objects = request.results?.first?.salientObjects, let first = objects.first else { return fallback }
+            let box = objects.dropFirst().reduce(first.boundingBox) { $0.union($1.boundingBox) }
+            // Vision uses a bottom-left origin.
+            return CGPoint(x: box.midX, y: 1 - box.midY)
+        }.value
+    }
+
+    /// Crops to the given aspect around the focus point.
+    static func crop(_ image: UIImage, aspect: CGFloat, focus: CGPoint) -> UIImage {
+        guard let cgImage = image.cgImage, aspect > 0 else { return image }
         let width = CGFloat(cgImage.width)
         let height = CGFloat(cgImage.height)
-        let aspect = width / height
-        let target = aspect.clamped(to: 0.7...1.45)
-        var rect = CGRect(x: 0, y: 0, width: width, height: height)
-        if aspect > target {
-            rect.size.width = height * target
-            rect.origin.x = (width - rect.width) / 2
-        } else if aspect < target {
-            rect.size.height = width / target
-            rect.origin.y = (height - rect.height) / 2
+        var cropWidth = width
+        var cropHeight = width / aspect
+        if cropHeight > height {
+            cropHeight = height
+            cropWidth = height * aspect
         }
-        guard let cropped = cgImage.cropping(to: rect.integral) else { return image }
+        let x = (focus.x * width - cropWidth / 2).clamped(to: 0...max(0, width - cropWidth))
+        let y = (focus.y * height - cropHeight / 2).clamped(to: 0...max(0, height - cropHeight))
+        guard let cropped = cgImage.cropping(to: CGRect(x: x, y: y, width: cropWidth, height: cropHeight).integral) else { return image }
         return UIImage(cgImage: cropped)
+    }
+
+    /// A card keeps the photo's own shape unless it is very long or very tall.
+    static func cardImage(from image: UIImage, focus: CGPoint) -> UIImage {
+        let aspect = image.size.width / max(image.size.height, 1)
+        let target = aspect.clamped(to: 0.7...1.45)
+        guard abs(target - aspect) > 0.01 else { return image }
+        return crop(image, aspect: target, focus: focus)
     }
 
     /// Writes the editor copy and the small widget copy. Returns what the collection stores.

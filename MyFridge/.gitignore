@@ -3,3 +3,6 @@ DerivedData/
 build/
 *.xcuserstate
 .DS_Store
+Design/magnets/.venv/
+Design/magnets/preview.html
+__pycache__/

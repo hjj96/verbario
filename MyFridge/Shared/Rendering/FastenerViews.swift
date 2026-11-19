@@ -23,28 +23,53 @@ struct FastenerView: View {
         case .clip:
             BinderClipView(size: size)
         case .star:
-            MetalStarView()
-                .frame(width: size * 1.2, height: size * 1.2)
-                .shadow(color: Color.black.opacity(0.35), radius: size * 0.06, x: size * 0.05, y: size * 0.08)
+            MiniMagnet(id: "star", size: size * 1.25)
         case .strawberry:
-            EmojiFastener(emoji: "🍓", size: size)
+            MiniMagnet(id: "strawberry", size: size * 1.3)
         case .daisy:
-            EmojiFastener(emoji: "🌼", size: size)
+            MiniMagnet(id: "daisy", size: size * 1.3)
         }
     }
 }
 
-/// Glossy round magnet lit from the top left.
+/// A small magnet from the collection used as a fastener.
+private struct MiniMagnet: View {
+    let id: String
+    let size: CGFloat
+
+    var body: some View {
+        if let art = MagnetLibrary.shared.magnet(id) {
+            CatalogMagnetView(art: art)
+                .frame(width: size, height: size)
+                .compositingGroup()
+                .shadow(color: Color.black.opacity(0.35), radius: size * 0.03, x: size * 0.02, y: size * 0.05)
+                .shadow(color: Color.black.opacity(0.18), radius: size * 0.1, x: size * 0.05, y: size * 0.1)
+        } else {
+            RoundMagnetView(tones: [0xF0576A, 0xC8102E, 0x6E0716], size: size * 0.8)
+        }
+    }
+}
+
+/// Glossy round magnet: a dome on a short puck, lit from the top left.
 struct RoundMagnetView: View {
     /// Light, base and dark tone.
     let tones: [UInt32]
     let size: CGFloat
 
+    @Environment(\.magnetLight) private var light
+
     var body: some View {
+        let direction = light.extrusion(base: MagnetLibrary.shared.extrusion)
+        let depth = size * 0.1
         ZStack {
+            ForEach(1...5, id: \.self) { step in
+                Circle()
+                    .fill(Color(hex: tones[2]))
+                    .offset(x: direction.dx * depth * CGFloat(step) / 5, y: direction.dy * depth * CGFloat(step) / 5)
+            }
             Circle()
                 .fill(RadialGradient(colors: tones.map { Color(hex: $0) },
-                                     center: UnitPoint(x: 0.36, y: 0.3),
+                                     center: UnitPoint(x: 0.36 - light.tilt.dx * 0.08, y: 0.3 - light.tilt.dy * 0.08),
                                      startRadius: 0, endRadius: size * 0.65))
             Circle()
                 .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.35), Color.black.opacity(0.35)],
@@ -55,9 +80,10 @@ struct RoundMagnetView: View {
                                      startPoint: .top, endPoint: .bottom))
                 .frame(width: size * 0.5, height: size * 0.3)
                 .rotationEffect(.degrees(-25))
-                .offset(x: -size * 0.12, y: -size * 0.17)
+                .offset(x: -size * (0.12 - light.tilt.dx * 0.06), y: -size * (0.17 - light.tilt.dy * 0.06))
         }
         .frame(width: size, height: size)
+        .compositingGroup()
         .shadow(color: Color.black.opacity(0.35), radius: size * 0.05, x: size * 0.05, y: size * 0.08)
         .shadow(color: Color.black.opacity(0.18), radius: size * 0.16, x: size * 0.08, y: size * 0.16)
     }
@@ -68,6 +94,9 @@ struct MetalDiscView: View {
 
     var body: some View {
         ZStack {
+            Circle()
+                .fill(Color(white: 0.42))
+                .offset(x: size * 0.02, y: size * 0.06)
             Circle()
                 .fill(AngularGradient(colors: [Color(white: 0.95), Color(white: 0.6), Color(white: 0.88),
                                                Color(white: 0.55), Color(white: 0.95)],
@@ -82,6 +111,7 @@ struct MetalDiscView: View {
                                      startRadius: 0, endRadius: size * 0.35))
         }
         .frame(width: size, height: size)
+        .compositingGroup()
         .shadow(color: Color.black.opacity(0.35), radius: size * 0.05, x: size * 0.05, y: size * 0.08)
     }
 }
@@ -99,6 +129,10 @@ struct BinderClipView: View {
                 .frame(width: size * 0.82, height: size * 0.62)
                 .offset(y: -size * 0.24)
             RoundedRectangle(cornerRadius: size * 0.08, style: .continuous)
+                .fill(Color(white: 0.4))
+                .frame(width: size * 1.1, height: size * 0.5)
+                .offset(x: size * 0.02, y: size * 0.18)
+            RoundedRectangle(cornerRadius: size * 0.08, style: .continuous)
                 .fill(LinearGradient(colors: [Color(white: 0.95), Color(white: 0.62), Color(white: 0.82)],
                                      startPoint: .top, endPoint: .bottom))
                 .overlay {
@@ -109,6 +143,7 @@ struct BinderClipView: View {
                 .offset(y: size * 0.14)
         }
         .frame(width: size * 1.2, height: size * 1.2)
+        .compositingGroup()
         .shadow(color: Color.black.opacity(0.35), radius: size * 0.05, x: size * 0.04, y: size * 0.08)
     }
 }
@@ -124,69 +159,5 @@ private struct ClipWire: Shape {
                           control: CGPoint(x: rect.midX, y: rect.minY - rect.height * 0.25))
         path.addLine(to: CGPoint(x: right, y: rect.maxY))
         return path
-    }
-}
-
-private struct EmojiFastener: View {
-    let emoji: String
-    let size: CGFloat
-
-    var body: some View {
-        Text(emoji)
-            .font(.system(size: size * 1.05))
-            .frame(width: size * 1.3, height: size * 1.3)
-            .shadow(color: Color.black.opacity(0.4), radius: size * 0.03, x: size * 0.03, y: size * 0.05)
-            .shadow(color: Color.black.opacity(0.2), radius: size * 0.12, x: size * 0.06, y: size * 0.12)
-    }
-}
-
-/// Faceted metal star. Every ray has a lit and a shaded side.
-struct MetalStarView: View {
-    var body: some View {
-        Canvas { context, size in
-            let center = CGPoint(x: size.width / 2, y: size.height * 0.53)
-            let outer = min(size.width, size.height) * 0.5
-            let inner = outer * 0.46
-            var tips: [CGPoint] = []
-            var valleys: [CGPoint] = []
-            for index in 0..<5 {
-                let angle = -Double.pi / 2 + Double(index) * 2 * Double.pi / 5
-                tips.append(CGPoint(x: center.x + outer * CGFloat(cos(angle)),
-                                    y: center.y + outer * CGFloat(sin(angle))))
-                let valleyAngle = angle + Double.pi / 5
-                valleys.append(CGPoint(x: center.x + inner * CGFloat(cos(valleyAngle)),
-                                       y: center.y + inner * CGFloat(sin(valleyAngle))))
-            }
-
-            let light = -3 * Double.pi / 4
-            for index in 0..<5 {
-                let tip = tips[index]
-                let sides = [valleys[(index + 4) % 5], valleys[index]]
-                for (sideIndex, valley) in sides.enumerated() {
-                    var facet = Path()
-                    facet.move(to: center)
-                    facet.addLine(to: tip)
-                    facet.addLine(to: valley)
-                    facet.closeSubpath()
-                    let mid = CGPoint(x: (tip.x + valley.x) / 2 - center.x, y: (tip.y + valley.y) / 2 - center.y)
-                    let facing = atan2(Double(mid.y), Double(mid.x))
-                    let shade = 0.5 + 0.5 * cos(facing - light)
-                    let tone = 0.36 + 0.56 * shade + (sideIndex == 0 ? 0.05 : -0.05)
-                    context.fill(facet, with: .color(Color(white: min(1, max(0, tone)))))
-                }
-            }
-
-            var outline = Path()
-            for index in 0..<5 {
-                if index == 0 {
-                    outline.move(to: tips[index])
-                } else {
-                    outline.addLine(to: tips[index])
-                }
-                outline.addLine(to: valleys[index])
-            }
-            outline.closeSubpath()
-            context.stroke(outline, with: .color(Color.white.opacity(0.55)), lineWidth: max(0.5, outer * 0.03))
-        }
     }
 }

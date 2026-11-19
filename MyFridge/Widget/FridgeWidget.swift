@@ -3,19 +3,22 @@ import WidgetKit
 
 struct FridgeEntry: TimelineEntry {
     let date: Date
-    let style: DoorStyle
+    let design: DoorDesign
     let placements: [Placement]
     /// Prepared content for every placement, keyed by placement id.
     let contents: [UUID: RenderContent]
 
     static func make(from state: FridgeState, loadImages: Bool) -> FridgeEntry {
         var contents: [UUID: RenderContent] = [:]
+        let library = MagnetLibrary.shared
         for placement in state.door.placements {
             switch placement.source {
             case .magnet(let magnetID):
-                if let magnet = MagnetCatalog.magnet(magnetID) {
-                    contents[placement.id] = .magnet(magnet)
+                if let art = library.magnet(magnetID) {
+                    contents[placement.id] = .magnet(art)
                 }
+            case .letter(let letter):
+                contents[placement.id] = .letter(letter)
             case .item(let itemID):
                 guard let item = state.item(itemID) else { continue }
                 switch item.content {
@@ -23,11 +26,11 @@ struct FridgeEntry: TimelineEntry {
                     let image = loadImages ? FridgeStorage.loadWidgetImage(photo.file) : nil
                     contents[placement.id] = .photo(photo, image)
                 case .note(let note):
-                    contents[placement.id] = .note(note, seed: item.id.seed)
+                    contents[placement.id] = .note(note, id: item.id)
                 }
             }
         }
-        return FridgeEntry(date: Date(), style: state.door.style, placements: state.door.placements, contents: contents)
+        return FridgeEntry(date: Date(), design: state.door.design, placements: state.door.placements, contents: contents)
     }
 
     /// The door saved by the app, or nil before the first launch.
@@ -42,7 +45,7 @@ struct FridgeEntry: TimelineEntry {
 }
 
 /// The widget only shows the saved door. The app asks WidgetKit to reload after every save,
-/// so the timeline never needs to refresh on its own.
+/// and the to-do checkbox reloads it after its intent runs.
 struct FridgeProvider: TimelineProvider {
     func placeholder(in context: Context) -> FridgeEntry {
         .demo
@@ -63,14 +66,15 @@ struct FridgeWidgetView: View {
     let entry: FridgeEntry
 
     var body: some View {
-        FridgeCompositionView(style: entry.style,
+        FridgeCompositionView(design: entry.design,
                               placements: entry.placements,
                               showsDoor: false,
                               showsOutline: renderingMode != .fullColor) { placement in
             entry.contents[placement.id]
         }
+        .environment(\.noteInteraction, .widget)
         .containerBackground(for: .widget) {
-            DoorBackgroundView(style: entry.style)
+            DoorBackgroundView(design: entry.design)
         }
         .widgetURL(URL(string: "myfridge://door"))
     }
@@ -82,7 +86,7 @@ struct FridgeWidget: Widget {
             FridgeWidgetView(entry: entry)
         }
         .configurationDisplayName("Мой холодильник")
-        .description("Твои фото, записки и магнитики на домашнем экране.")
+        .description("Твои фото, записки и магнитики на домашнем экране. Дела можно отмечать прямо здесь.")
         .supportedFamilies([.systemSmall, .systemLarge])
         .contentMarginsDisabled()
     }

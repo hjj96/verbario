@@ -28,18 +28,38 @@ enum ItemContent: Codable, Hashable {
     case note(NoteContent)
 }
 
-enum PhotoStyle: String, Codable, Hashable, CaseIterable {
-    /// The object is cut out of the photo and gets a thin sticker edge.
+enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
+    /// The object is cut out of the photo: a thick sticker with a white edge.
     case cutout
     /// The whole snapshot in a paper frame, usually held by a separate magnet.
     case card
+    /// A round resin-dome photo magnet.
+    case round
+    /// A heart-shaped resin-dome photo magnet.
+    case heart
+
+    var id: String { rawValue }
 
     var title: String {
         switch self {
         case .cutout: return "Фотомагнит"
         case .card: return "Фотокарточка"
+        case .round: return "Круглый магнит"
+        case .heart: return "Сердечко"
         }
     }
+
+    var shortTitle: String {
+        switch self {
+        case .cutout: return "Вырезать"
+        case .card: return "Карточка"
+        case .round: return "Круг"
+        case .heart: return "Сердце"
+        }
+    }
+
+    /// Shaped magnets store a square crop of the photo.
+    var isShaped: Bool { self == .round || self == .heart }
 }
 
 struct PhotoContent: Codable, Hashable {
@@ -55,6 +75,29 @@ struct NoteContent: Codable, Hashable {
     var paper: PaperColor = .cream
     var shape: NoteShape = .torn
     var font: NoteFont = .caveat
+    /// A to-do note shows a checkbox that can be ticked in the app and on the widget.
+    var isTask = false
+    var isDone = false
+    /// Optional local notification time.
+    var reminder: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case text, paper, shape, font, isTask, isDone, reminder
+    }
+}
+
+extension NoteContent {
+    /// Tolerant decoding: fields added later get their defaults.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(text: try container.decode(String.self, forKey: .text))
+        paper = try container.decodeIfPresent(PaperColor.self, forKey: .paper) ?? .cream
+        shape = try container.decodeIfPresent(NoteShape.self, forKey: .shape) ?? .torn
+        font = try container.decodeIfPresent(NoteFont.self, forKey: .font) ?? .caveat
+        isTask = try container.decodeIfPresent(Bool.self, forKey: .isTask) ?? false
+        isDone = try container.decodeIfPresent(Bool.self, forKey: .isDone) ?? false
+        reminder = try container.decodeIfPresent(Date.self, forKey: .reminder)
+    }
 }
 
 enum PaperColor: String, Codable, Hashable, CaseIterable, Identifiable {
@@ -116,6 +159,8 @@ enum NoteShape: String, Codable, Hashable, CaseIterable, Identifiable {
         case .ticket: return .greenMagnet
         }
     }
+
+    var supportsTasks: Bool { self != .ticket }
 }
 
 enum NoteFont: String, Codable, Hashable, CaseIterable, Identifiable {
@@ -132,12 +177,36 @@ enum NoteFont: String, Codable, Hashable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Letters
+
+/// A plastic magnetic letter.
+struct LetterMagnet: Codable, Hashable {
+    var character: String
+    var color: LetterColor
+}
+
+enum LetterColor: String, Codable, Hashable, CaseIterable, Identifiable {
+    case red, orange, yellow, green, blue, purple, pink, white
+
+    var id: String { rawValue }
+
+    /// Colours used one after another for a word in "rainbow" mode.
+    static let rainbow: [LetterColor] = [.red, .orange, .yellow, .green, .blue, .purple, .pink]
+
+    var next: LetterColor {
+        let all = LetterColor.allCases
+        let index = all.firstIndex(of: self) ?? 0
+        return all[(index + 1) % all.count]
+    }
+}
+
 // MARK: - Door
 
-/// What a placement shows: an item from the collection or a magnet from the starter set.
+/// What a placement shows: an item from the collection, a magnet from the set, or a letter.
 enum PlacementSource: Codable, Hashable {
     case item(UUID)
     case magnet(String)
+    case letter(LetterMagnet)
 }
 
 /// One thing hanging on the door. Order in `FridgeDoor.placements` is the layer order
@@ -191,40 +260,93 @@ enum FastenerKind: String, Codable, Hashable, CaseIterable, Identifiable {
     }
 }
 
-enum DoorStyle: String, Codable, Hashable, CaseIterable, Identifiable {
-    case steel, warm, enamel
+enum DoorFinish: String, Codable, Hashable, CaseIterable, Identifiable {
+    case steel, champagne, blueRim, graphite, cream, sky, mint, cherry
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .steel: return "Стальной ретро"
-        case .warm: return "Тёплый металл"
-        case .enamel: return "Голубая эмаль"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .steel: return "Холодная сталь и хромированная ручка"
-        case .warm: return "Тёплый оттенок металла и светлая ручка"
-        case .enamel: return "Сталь в голубой эмалевой рамке"
+        case .steel: return "Сталь"
+        case .champagne: return "Тёплый металл"
+        case .blueRim: return "Сталь в голубой раме"
+        case .graphite: return "Графит"
+        case .cream: return "Сливочная эмаль"
+        case .sky: return "Голубая эмаль"
+        case .mint: return "Мятная эмаль"
+        case .cherry: return "Вишнёвая эмаль"
         }
     }
 }
 
+enum HandleStyle: String, Codable, Hashable, CaseIterable, Identifiable {
+    case chromeBow, creamBow, shortBow
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .chromeBow: return "Хромированная дуга"
+        case .creamBow: return "Сливочная ручка"
+        case .shortBow: return "Короткая скоба"
+        }
+    }
+}
+
+/// How the fridge itself looks.
+struct DoorDesign: Codable, Hashable {
+    var finish: DoorFinish = .steel
+    var handle: HandleStyle = .chromeBow
+    /// Chrome script plate on the top cap; empty means no plate.
+    var nameplate = ""
+
+    private enum CodingKeys: String, CodingKey {
+        case finish, handle, nameplate
+    }
+}
+
+extension DoorDesign {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        finish = try container.decodeIfPresent(DoorFinish.self, forKey: .finish) ?? .steel
+        handle = try container.decodeIfPresent(HandleStyle.self, forKey: .handle) ?? .chromeBow
+        nameplate = try container.decodeIfPresent(String.self, forKey: .nameplate) ?? ""
+    }
+}
+
 struct FridgeDoor: Codable, Hashable {
-    var style: DoorStyle = .steel
+    var design = DoorDesign()
     var placements: [Placement] = []
 }
 
 /// Everything the app and the widget share. Stored as JSON in the App Group container.
 struct FridgeState: Codable, Hashable {
-    var version = 1
+    var version = 2
     var items: [FridgeItem] = []
     var door = FridgeDoor()
 
     func item(_ id: UUID) -> FridgeItem? {
         items.first { $0.id == id }
+    }
+}
+
+extension FridgeState {
+    /// The first door: a note, a few magnets and a word, so the fridge never starts empty.
+    /// The person adds their own photo next.
+    static var starter: FridgeState {
+        let note = FridgeItem(content: .note(NoteContent(text: "Хорошо быть дома", paper: .cream, shape: .torn, font: .caveat)))
+        var door = FridgeDoor()
+        door.placements = [
+            Placement(source: .magnet("lemon"), x: 0.22, y: 0.31, width: 0.2, rotation: -8),
+            Placement(source: .item(note.id), x: 0.43, y: 0.6, width: 0.46, rotation: -4,
+                      fastener: Fastener(kind: .greenMagnet, x: 0.5, y: 0.08)),
+            Placement(source: .magnet("strawberry"), x: 0.62, y: 0.28, width: 0.16, rotation: 10),
+            Placement(source: .magnet("heart"), x: 0.7, y: 0.84, width: 0.16, rotation: -12),
+            Placement(source: .letter(LetterMagnet(character: "Д", color: .red)), x: 0.19, y: 0.85, width: 0.11, rotation: -6),
+            Placement(source: .letter(LetterMagnet(character: "О", color: .yellow)), x: 0.29, y: 0.86, width: 0.11, rotation: 4),
+            Placement(source: .letter(LetterMagnet(character: "М", color: .green)), x: 0.39, y: 0.85, width: 0.11, rotation: -3),
+        ]
+        return FridgeState(items: [note], door: door)
     }
 }

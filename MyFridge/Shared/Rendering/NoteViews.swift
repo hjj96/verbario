@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 
 extension PaperColor {
@@ -46,41 +47,166 @@ extension NoteFont {
     }
 }
 
+/// How a to-do checkbox on a note reacts to a tap.
+enum NoteInteraction {
+    /// Only drawn (previews, collection).
+    case none
+    /// The editor toggles the note through the store.
+    case app((UUID) -> Void)
+    /// The widget toggles the note with an App Intent, right on the Home Screen.
+    case widget
+}
+
+private struct NoteInteractionKey: EnvironmentKey {
+    static let defaultValue: NoteInteraction = .none
+}
+
+extension EnvironmentValues {
+    var noteInteraction: NoteInteraction {
+        get { self[NoteInteractionKey.self] }
+        set { self[NoteInteractionKey.self] = newValue }
+    }
+}
+
 /// A note in any paper shape.
 struct NoteView: View {
     let note: NoteContent
     let size: CGSize
-    let seed: UInt64
+    let itemID: UUID
 
     var body: some View {
-        switch note.shape {
-        case .torn:
-            TornNoteView(note: note, size: size, seed: seed)
-        case .sticky:
-            StickyNoteView(note: note, size: size)
-        case .card:
-            IndexCardNoteView(note: note, size: size)
-        case .ticket:
-            TicketNoteView(note: note, size: size)
+        Group {
+            switch note.shape {
+            case .torn:
+                TornNoteView(note: note, size: size, seed: itemID.seed, itemID: itemID)
+            case .sticky:
+                StickyNoteView(note: note, size: size, itemID: itemID)
+            case .card:
+                IndexCardNoteView(note: note, size: size, itemID: itemID)
+            case .ticket:
+                TicketNoteView(note: note, size: size)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let reminder = note.reminder, !note.isDone, note.shape != .ticket {
+                ReminderBadge(date: reminder, height: size.width * 0.075)
+                    .padding(.trailing, size.width * 0.07)
+                    .padding(.bottom, size.height * 0.07)
+            }
         }
     }
 }
 
 private let inkColor = Color(hex: 0x2A2521)
+private let checkInk = Color(hex: 0x2F55D4)
 
 private struct NoteText: View {
     let text: String
     let font: NoteFont
     let pointSize: CGFloat
     var alignment: TextAlignment = .center
+    var isDone = false
 
     var body: some View {
         Text(text.isEmpty ? " " : text)
+            .strikethrough(isDone, color: inkColor.opacity(0.75))
             .font(font.font(size: pointSize * font.sizeFactor))
-            .foregroundStyle(inkColor.opacity(0.92))
+            .foregroundStyle(inkColor.opacity(isDone ? 0.5 : 0.92))
             .multilineTextAlignment(alignment)
             .lineLimit(4)
             .minimumScaleFactor(0.3)
+    }
+}
+
+/// Text of a note, with a checkbox in front when the note is a to-do.
+private struct NoteBody: View {
+    let note: NoteContent
+    let itemID: UUID
+    let pointSize: CGFloat
+    var alignment: TextAlignment = .center
+
+    var body: some View {
+        if note.isTask {
+            HStack(alignment: .center, spacing: pointSize * 0.35) {
+                TaskCheckbox(isDone: note.isDone, itemID: itemID, size: pointSize * 0.9)
+                NoteText(text: note.text, font: note.font, pointSize: pointSize, alignment: .leading, isDone: note.isDone)
+            }
+        } else {
+            NoteText(text: note.text, font: note.font, pointSize: pointSize, alignment: alignment)
+        }
+    }
+}
+
+private struct TaskCheckbox: View {
+    let isDone: Bool
+    let itemID: UUID
+    let size: CGFloat
+
+    @Environment(\.noteInteraction) private var interaction
+
+    var body: some View {
+        switch interaction {
+        case .none:
+            box
+        case .app(let toggle):
+            Button {
+                toggle(itemID)
+            } label: {
+                box
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isDone ? "Сделано" : "Не сделано")
+        case .widget:
+            Button(intent: ToggleTaskIntent(itemID: itemID)) {
+                box
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var box: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+                .strokeBorder(inkColor.opacity(0.8), lineWidth: max(1, size * 0.1))
+            if isDone {
+                CheckMark()
+                    .stroke(checkInk, style: StrokeStyle(lineWidth: max(1.2, size * 0.16), lineCap: .round, lineJoin: .round))
+                    .frame(width: size * 1.1, height: size * 1.1)
+                    .offset(x: size * 0.12, y: -size * 0.12)
+            }
+        }
+        .frame(width: size, height: size)
+        .contentShape(Rectangle())
+    }
+}
+
+/// A quick hand-drawn tick that runs past the box, like a pen would.
+private struct CheckMark: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.12, y: rect.minY + rect.height * 0.55))
+        path.addQuadCurve(to: CGPoint(x: rect.minX + rect.width * 0.4, y: rect.minY + rect.height * 0.82),
+                          control: CGPoint(x: rect.minX + rect.width * 0.28, y: rect.minY + rect.height * 0.66))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - rect.width * 0.02, y: rect.minY + rect.height * 0.08),
+                          control: CGPoint(x: rect.minX + rect.width * 0.6, y: rect.minY + rect.height * 0.35))
+        return path
+    }
+}
+
+private struct ReminderBadge: View {
+    let date: Date
+    let height: CGFloat
+
+    var body: some View {
+        let isToday = Calendar.current.isDateInToday(date)
+        HStack(spacing: height * 0.2) {
+            Image(systemName: "bell.fill")
+            Text(date.formatted(date: isToday ? .omitted : .abbreviated, time: .shortened))
+        }
+        .font(.system(size: height * 0.62, weight: .semibold, design: .rounded))
+        .foregroundStyle(inkColor.opacity(0.7))
+        .lineLimit(1)
+        .fixedSize()
     }
 }
 
@@ -90,6 +216,7 @@ private struct TornNoteView: View {
     let note: NoteContent
     let size: CGSize
     let seed: UInt64
+    let itemID: UUID
 
     var body: some View {
         let shape = TornPaperShape(seed: seed)
@@ -97,7 +224,7 @@ private struct TornNoteView: View {
             shape.fill(LinearGradient(colors: [note.paper.base, note.paper.shade],
                                       startPoint: .topLeading, endPoint: .bottomTrailing))
             shape.stroke(Color.white.opacity(0.35), lineWidth: max(0.5, size.width * 0.004))
-            NoteText(text: note.text, font: note.font, pointSize: size.width * 0.13)
+            NoteBody(note: note, itemID: itemID, pointSize: size.width * 0.13)
                 .padding(.horizontal, size.width * 0.1)
                 .padding(.vertical, size.height * 0.14)
                 .rotationEffect(.degrees(-3))
@@ -150,6 +277,7 @@ struct TornPaperShape: Shape {
 private struct StickyNoteView: View {
     let note: NoteContent
     let size: CGSize
+    let itemID: UUID
 
     var body: some View {
         let curl = size.width * 0.17
@@ -161,7 +289,7 @@ private struct StickyNoteView: View {
                 .fill(LinearGradient(colors: [Color.white.opacity(0.9), note.paper.shade],
                                      startPoint: .bottomTrailing, endPoint: .topLeading))
                 .shadow(color: Color.black.opacity(0.2), radius: curl * 0.12, x: -curl * 0.06, y: -curl * 0.06)
-            NoteText(text: note.text, font: note.font, pointSize: size.width * 0.15)
+            NoteBody(note: note, itemID: itemID, pointSize: size.width * 0.15)
                 .padding(size.width * 0.12)
                 .padding(.bottom, curl * 0.3)
         }
@@ -205,6 +333,7 @@ private struct CornerCurlShape: Shape {
 private struct IndexCardNoteView: View {
     let note: NoteContent
     let size: CGSize
+    let itemID: UUID
 
     var body: some View {
         let paper = note.paper == .cream ? Color(hex: 0xFFFDF7) : note.paper.base
@@ -227,7 +356,7 @@ private struct IndexCardNoteView: View {
                 header.addLine(to: CGPoint(x: canvasSize.width, y: canvasSize.height * 0.2))
                 context.stroke(header, with: .color(Color(hex: 0xD9534F).opacity(0.55)), lineWidth: lineWidth * 1.3)
             }
-            NoteText(text: note.text, font: note.font, pointSize: size.width * 0.12, alignment: .leading)
+            NoteBody(note: note, itemID: itemID, pointSize: size.width * 0.12, alignment: .leading)
                 .padding(.leading, size.width * 0.08)
                 .padding(.trailing, size.width * 0.06)
                 .padding(.top, size.height * 0.23)
