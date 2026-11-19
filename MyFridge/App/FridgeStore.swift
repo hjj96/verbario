@@ -196,6 +196,48 @@ final class FridgeStore {
         add(FridgeItem(content: .photo(photo)))
     }
 
+    /// Adds several photos at once, e.g. one sticker per object cut from the same photo.
+    /// Each gets its own free spot. Returns the last placement id.
+    @discardableResult
+    func addPhotos(_ photos: [PhotoContent]) -> UUID? {
+        guard !photos.isEmpty else { return nil }
+        var items: [FridgeItem] = []
+        var placements: [Placement] = []
+        var occupied = state.door.placements
+        for photo in photos {
+            let item = FridgeItem(content: .photo(photo))
+            items.append(item)
+            if occupied.count < ItemMetrics.maxPlacements {
+                let placement = newPlacement(source: .item(item.id), content: content(for: item), avoiding: occupied)
+                placements.append(placement)
+                occupied.append(placement)
+            }
+        }
+        apply { state in
+            state.items.append(contentsOf: items)
+            state.door.placements.append(contentsOf: placements)
+        }
+        if placements.count < items.count {
+            showToast("Не всё поместилось на дверцу — остальное в коллекции")
+        }
+        return placements.last?.id
+    }
+
+    /// Turns a cut-out into a sticker, a holographic sticker or a magnet. Everywhere it hangs.
+    func setPhotoStyle(itemID: UUID, style: PhotoStyle) {
+        apply { state in
+            guard style.isCutoutFamily,
+                  let index = state.items.firstIndex(where: { $0.id == itemID }),
+                  case .photo(var photo) = state.items[index].content,
+                  photo.style.isCutoutFamily else { return }
+            photo.style = style
+            state.items[index].content = .photo(photo)
+            for placementIndex in state.door.placements.indices where state.door.placements[placementIndex].source == .item(itemID) {
+                state.door.placements[placementIndex].fastener = nil
+            }
+        }
+    }
+
     @discardableResult
     func addNote(_ note: NoteContent, id: UUID = UUID()) -> UUID? {
         add(FridgeItem(id: id, content: .note(note)))
@@ -465,8 +507,8 @@ final class FridgeStore {
         return placement?.id
     }
 
-    private func newPlacement(source: PlacementSource, content: RenderContent) -> Placement {
-        let spot = freeSpot(preferLow: false)
+    private func newPlacement(source: PlacementSource, content: RenderContent, avoiding: [Placement]? = nil) -> Placement {
+        let spot = freeSpot(preferLow: false, avoiding: avoiding)
         var placement = Placement(source: source, x: spot.x, y: spot.y,
                                   width: ItemMetrics.defaultWidth(for: content),
                                   rotation: Double.random(in: -6...6))
@@ -487,8 +529,8 @@ final class FridgeStore {
 
     /// The candidate spot farthest from everything already on the door.
     /// The strip near the handle stays free.
-    private func freeSpot(preferLow: Bool) -> CGPoint {
-        let existing = state.door.placements
+    private func freeSpot(preferLow: Bool, avoiding: [Placement]? = nil) -> CGPoint {
+        let existing = avoiding ?? state.door.placements
         let columns: [CGFloat] = [0.26, 0.46, 0.64]
         let rows: [CGFloat] = preferLow ? [0.7, 0.84, 0.52, 0.34] : [0.34, 0.52, 0.7, 0.84]
         var best = CGPoint(x: 0.45, y: 0.5)

@@ -8,7 +8,7 @@ enum TrayTab: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .magnets: return "Магниты"
-        case .photos: return "Фото"
+        case .photos: return "Мои"
         case .notes: return "Записки"
         case .letters: return "Буквы"
         }
@@ -35,7 +35,7 @@ struct TrayView: View {
             shelf
             HStack(spacing: 10) {
                 Button(action: onAddPhoto) {
-                    Label("Магнитик из фото", systemImage: "plus")
+                    Label("Вырезать из фото", systemImage: "scissors")
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 RoundIconButton(systemImage: "square.and.pencil", label: "Новая записка", size: 52, action: onAddNote)
@@ -82,7 +82,7 @@ struct TrayView: View {
                         TrayTile(content: .magnet(art), payload: .magnet(art.id)) { place(.magnet(art.id)) }
                     }
                 case .photos:
-                    AddTile(title: "Фото", systemImage: "photo.badge.plus", action: onAddPhoto)
+                    AddTile(title: "Из фото", systemImage: "scissors", action: onAddPhoto)
                     ForEach(store.photoItems) { item in
                         TrayTile(content: store.content(for: item), payload: .item(item.id)) { place(.item(item.id)) }
                     }

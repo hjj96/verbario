@@ -15,6 +15,9 @@ struct ItemContentView: View {
             case .cutout:
                 CutoutMagnetView(image: image)
                     .frame(width: size.width, height: size.height)
+            case .sticker, .holo:
+                StickerView(image: image, isHolographic: photo.style == .holo)
+                    .frame(width: size.width, height: size.height)
             case .round, .heart:
                 ShapedPhotoMagnetView(image: image, style: photo.style)
                     .frame(width: size.width, height: size.height)

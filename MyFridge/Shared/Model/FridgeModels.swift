@@ -29,8 +29,12 @@ enum ItemContent: Codable, Hashable {
 }
 
 enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
-    /// The object is cut out of the photo: a thick sticker with a white edge.
+    /// A cut-out object made into a thick magnet with a white edge.
     case cutout
+    /// A cut-out object as a flat vinyl sticker with a laminated sheen.
+    case sticker
+    /// A cut-out object as a holographic sticker that shimmers when the phone tilts.
+    case holo
     /// The whole snapshot in a paper frame, usually held by a separate magnet.
     case card
     /// A round resin-dome photo magnet.
@@ -43,6 +47,8 @@ enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .cutout: return "Фотомагнит"
+        case .sticker: return "Стикер"
+        case .holo: return "Голо-стикер"
         case .card: return "Фотокарточка"
         case .round: return "Круглый магнит"
         case .heart: return "Сердечко"
@@ -51,7 +57,9 @@ enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var shortTitle: String {
         switch self {
-        case .cutout: return "Вырезать"
+        case .cutout: return "Магнит"
+        case .sticker: return "Стикер"
+        case .holo: return "Голо"
         case .card: return "Карточка"
         case .round: return "Круг"
         case .heart: return "Сердце"
@@ -60,6 +68,13 @@ enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
 
     /// Shaped magnets store a square crop of the photo.
     var isShaped: Bool { self == .round || self == .heart }
+
+    /// Stickers and cut-out magnets share the same transparent image and can be turned
+    /// into one another.
+    var isCutoutFamily: Bool { self == .cutout || self == .sticker || self == .holo }
+
+    static let cutoutFinishes: [PhotoStyle] = [.sticker, .holo, .cutout]
+    static let wholeFinishes: [PhotoStyle] = [.card, .round, .heart]
 }
 
 struct PhotoContent: Codable, Hashable {

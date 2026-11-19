@@ -70,8 +70,8 @@ struct EditorView: View {
             loadPicked(item)
         }
         .sheet(item: $pendingPhoto) { pending in
-            PhotoCreatorView(source: pending.image) { placementID in
-                placed(placementID, isFirstPhoto: store.photoItems.count == 1)
+            PhotoStudioView(source: pending.image) { placementID in
+                placed(placementID, isFirstPhoto: true)
             }
             .environment(store)
             .environment(motion)

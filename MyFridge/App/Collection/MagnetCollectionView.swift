@@ -39,6 +39,11 @@ struct MagnetCollectionView: View {
                         .fontWeight(.semibold)
                 }
             }
+            .navigationDestination(for: UUID.self) { itemID in
+                OwnItemDetailView(itemID: itemID) { placementID in
+                    close(selecting: placementID)
+                }
+            }
             .navigationDestination(for: String.self) { magnetID in
                 if let art = library.magnet(magnetID) {
                     MagnetDetailView(art: art) {
@@ -71,7 +76,7 @@ struct MagnetCollectionView: View {
                 .font(.serif(34))
                 .foregroundStyle(Color.ink)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("\(library.magnets.count) магнитов в \(library.sets.count) наборах · своих фото: \(store.photoItems.count)")
+            Text("\(library.magnets.count) магнитов в \(library.sets.count) наборах · своих: \(store.photoItems.count)")
                 .font(.subheadline)
                 .foregroundStyle(Color.inkSoft)
         }
@@ -85,7 +90,7 @@ struct MagnetCollectionView: View {
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     SectionLabel(text: "Свои")
-                    Text("Мои фотомагниты")
+                    Text("Мои стикеры и магниты")
                         .font(.serif(22))
                         .foregroundStyle(Color.ink)
                 }
@@ -93,9 +98,7 @@ struct MagnetCollectionView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .bottom, spacing: 14) {
                         ForEach(photos) { item in
-                            Button {
-                                target = item
-                            } label: {
+                            NavigationLink(value: item.id) {
                                 ShelfItem(content: store.content(for: item),
                                           caption: store.isOnDoor(item.id) ? "на дверце" : "в коллекции")
                             }

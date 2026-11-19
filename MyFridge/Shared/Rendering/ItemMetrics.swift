@@ -14,6 +14,7 @@ enum RenderContent {
             switch photo.style {
             case .card: return 0.8
             case .cutout: return 1.1
+            case .sticker, .holo: return 0.42
             case .round, .heart: return 1.25
             }
         case .note:
@@ -28,7 +29,7 @@ enum RenderContent {
     /// Photo cards and notes can get a separate fastener; magnets hold themselves.
     var acceptsFastener: Bool {
         switch self {
-        case .photo(let photo, _): return photo.style == .card || photo.style == .cutout
+        case .photo(let photo, _): return photo.style == .card
         case .note: return true
         case .magnet, .letter: return false
         }
@@ -60,7 +61,7 @@ enum ItemMetrics {
         case .photo(let photo, _):
             switch photo.style {
             case .card: return PhotoCardLayout.outerAspect(imageAspect: CGFloat(photo.aspect))
-            case .cutout: return max(CGFloat(photo.aspect), 0.2)
+            case .cutout, .sticker, .holo: return max(CGFloat(photo.aspect), 0.2)
             case .round, .heart: return PhotoShapes.unitSize.width / PhotoShapes.unitSize.height
             }
         case .note(let note, _):
@@ -88,6 +89,7 @@ enum ItemMetrics {
             switch photo.style {
             case .card: base = photo.aspect > 1.1 ? 0.46 : 0.36
             case .cutout: base = 0.42
+            case .sticker, .holo: base = 0.4
             case .round: base = 0.3
             case .heart: base = 0.32
             }

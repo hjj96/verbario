@@ -15,6 +15,12 @@ struct SelectionPanel: View {
         return id
     }
 
+    /// The collection item behind a sticker or cut-out magnet, with its current finish.
+    private var cutoutItem: (id: UUID, style: PhotoStyle)? {
+        guard case .item(let id) = placement.source, case .photo(let photo, _) = content, photo.style.isCutoutFamily else { return nil }
+        return (id, photo.style)
+    }
+
     private var letter: LetterMagnet? {
         if case .letter(let letter) = placement.source { return letter }
         return nil
@@ -30,6 +36,8 @@ struct SelectionPanel: View {
             switch photo.style {
             case .card: return "Держится на отдельном креплении"
             case .cutout: return "Вырезанный объект с толщиной"
+            case .sticker: return "Плоский виниловый стикер"
+            case .holo: return "Переливается, если наклонить телефон"
             case .round, .heart: return "Фото под глянцевой линзой"
             }
         case .note(let note, _):
@@ -57,6 +65,8 @@ struct SelectionPanel: View {
 
             if content.acceptsFastener {
                 fastenerPicker
+            } else if let cutoutItem {
+                finishPicker(itemID: cutoutItem.id, current: cutoutItem.style)
             } else if let letter {
                 letterColors(letter)
             } else {
@@ -90,6 +100,25 @@ struct SelectionPanel: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 2)
             }
+        }
+        .frame(height: 82, alignment: .top)
+    }
+
+    private func finishPicker(itemID: UUID, current: PhotoStyle) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(text: "Сделать")
+                .padding(.horizontal, 20)
+            HStack(spacing: 8) {
+                ForEach(PhotoStyle.cutoutFinishes) { style in
+                    ChoiceChip(title: style.title, isSelected: current == style) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                            store.setPhotoStyle(itemID: itemID, style: style)
+                        }
+                        Feedback.attach()
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
         }
         .frame(height: 82, alignment: .top)
     }

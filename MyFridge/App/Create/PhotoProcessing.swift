@@ -41,30 +41,6 @@ enum PhotoProcessing {
         return FridgeStorage.downsampledImage(from: source, maxPixel: maxPixel)
     }
 
-    /// Lifts the main subjects off the background (Vision, iOS 17+).
-    /// Returns nil when nothing was found or the device cannot do it (for example, the Simulator).
-    static func liftSubject(from image: UIImage) async -> UIImage? {
-        guard let cgImage = image.cgImage else { return nil }
-        return await Task.detached(priority: .userInitiated) { () -> UIImage? in
-            let request = VNGenerateForegroundInstanceMaskRequest()
-            let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
-            do {
-                try handler.perform([request])
-                guard let observation = request.results?.first, !observation.allInstances.isEmpty else { return nil }
-                let buffer = try observation.generateMaskedImage(ofInstances: observation.allInstances,
-                                                                 from: handler,
-                                                                 croppedToInstancesExtent: true)
-                let lifted = CIImage(cvPixelBuffer: buffer)
-                guard let output = context.createCGImage(lifted, from: lifted.extent) else { return nil }
-                // Tiny specks are not worth a magnet.
-                guard output.width > 24, output.height > 24 else { return nil }
-                return UIImage(cgImage: output)
-            } catch {
-                return nil
-            }
-        }.value
-    }
-
     /// Adds a soft white sticker edge around the cut-out.
     static func sticker(from cutout: UIImage, border: StickerBorder) -> UIImage {
         let source = resized(cutout, maxPixel: 1400, opaque: false)
@@ -142,7 +118,7 @@ enum PhotoProcessing {
 
     /// Writes the editor copy and the small widget copy. Returns what the collection stores.
     static func store(_ image: UIImage, style: PhotoStyle) throws -> PhotoContent {
-        let isCutout = style == .cutout
+        let isCutout = style.isCutoutFamily
         let file = "\(UUID().uuidString).\(isCutout ? "png" : "jpg")"
         let full = resized(image, maxPixel: 1400, opaque: !isCutout)
         let small = resized(image, maxPixel: 520, opaque: !isCutout)
