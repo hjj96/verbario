@@ -42,7 +42,7 @@ struct EditorView: View {
     @State private var pendingPhoto: PendingPhoto?
     @State private var isLoadingPhoto = false
 
-    private let panelHeight: CGFloat = 262
+    private let panelHeight: CGFloat = 230
 
     var body: some View {
         VStack(spacing: 0) {
