@@ -36,17 +36,18 @@ struct DoorCanvas: View {
         GeometryReader { geo in
             let size = geo.size
             let design = store.design
-            let radius = size.width * DoorGeometry.cornerRadius
+            let format = store.format
+            let radius = DoorGeometry.cornerRadius(format: format, size: size)
             let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
             ZStack {
                 ZStack {
-                    DoorBackgroundView(design: design)
+                    DoorBackgroundView(design: design, format: format)
                         .contentShape(Rectangle())
                         .onTapGesture { selection = nil }
-                    ForEach(store.state.door.placements) { placement in
+                    ForEach(store.placements) { placement in
                         item(placement, doorSize: size)
                     }
-                    DoorHandleView(design: design)
+                    DoorHandleView(design: design, format: format)
                 }
                 .clipShape(shape)
                 .background {

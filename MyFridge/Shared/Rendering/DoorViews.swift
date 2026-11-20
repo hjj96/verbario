@@ -1,165 +1,276 @@
 import SwiftUI
 
-/// Colours of one door finish.
-struct DoorPalette {
-    var panel: [Color]
-    /// Painted enamel instead of brushed metal.
-    var isEnamel: Bool
-    var brushOpacity: Double
-    var rim: [Color]
-    /// Rim width as a fraction of the door width.
-    var rimWidth: CGFloat
-    var rimIsEnamel: Bool
-}
+// MARK: - Materials
 
 extension DoorFinish {
-    var palette: DoorPalette {
-        let chromeRim = [Color(hex: 0xF3F4F5), Color(hex: 0xC4C8CC), Color(hex: 0x878C92)]
-        let steelPanel = [Color(hex: 0xDCDFE2), Color(hex: 0xC1C5CA), Color(hex: 0xA2A7AD)]
+    /// Brushed metal: panel (top-leading → bottom-trailing) and the door edge.
+    var metalPanel: [Color] {
         switch self {
-        case .steel:
-            return DoorPalette(panel: steelPanel, isEnamel: false, brushOpacity: 0.9,
-                               rim: chromeRim, rimWidth: 0.02, rimIsEnamel: false)
-        case .champagne:
-            return DoorPalette(panel: [Color(hex: 0xDCD3C9), Color(hex: 0xC0B5A9), Color(hex: 0x9F9488)],
-                               isEnamel: false, brushOpacity: 0.8,
-                               rim: [Color(hex: 0xF0EAE3), Color(hex: 0xC3B9AE), Color(hex: 0x877C71)],
-                               rimWidth: 0.02, rimIsEnamel: false)
-        case .blueRim:
-            return DoorPalette(panel: steelPanel, isEnamel: false, brushOpacity: 0.9,
-                               rim: [Color(hex: 0xBBD5EF), Color(hex: 0x8DB4DB), Color(hex: 0x5E8BBA)],
-                               rimWidth: 0.045, rimIsEnamel: true)
-        case .graphite:
-            return DoorPalette(panel: [Color(hex: 0x737A81), Color(hex: 0x50565C), Color(hex: 0x33383D)],
-                               isEnamel: false, brushOpacity: 0.55,
-                               rim: [Color(hex: 0xA3A9AF), Color(hex: 0x5B6168), Color(hex: 0x2E3236)],
-                               rimWidth: 0.02, rimIsEnamel: false)
-        case .cream:
-            return DoorPalette(panel: [Color(hex: 0xF8F0DC), Color(hex: 0xEBDCBC), Color(hex: 0xD8C39A)],
-                               isEnamel: true, brushOpacity: 0, rim: chromeRim, rimWidth: 0.016, rimIsEnamel: false)
-        case .sky:
-            return DoorPalette(panel: [Color(hex: 0xD3E6F5), Color(hex: 0xA9CBE8), Color(hex: 0x7FAAD3)],
-                               isEnamel: true, brushOpacity: 0, rim: chromeRim, rimWidth: 0.016, rimIsEnamel: false)
-        case .mint:
-            return DoorPalette(panel: [Color(hex: 0xDAF0E2), Color(hex: 0xB5DDC4), Color(hex: 0x8CC4A3)],
-                               isEnamel: true, brushOpacity: 0, rim: chromeRim, rimWidth: 0.016, rimIsEnamel: false)
-        case .cherry:
-            return DoorPalette(panel: [Color(hex: 0xF0857A), Color(hex: 0xD94B44), Color(hex: 0xA92D29)],
-                               isEnamel: true, brushOpacity: 0, rim: chromeRim, rimWidth: 0.016, rimIsEnamel: false)
+        case .graphite: return [Color(hex: 0x7A8188), Color(hex: 0x555B61), Color(hex: 0x34393E)]
+        case .champagne: return [Color(hex: 0xE3DACF), Color(hex: 0xC6BBAF), Color(hex: 0xA2978B)]
+        default: return [Color(hex: 0xDFE2E5), Color(hex: 0xC4C8CD), Color(hex: 0xA3A8AE)]
         }
     }
 
-    /// Two colours for a round swatch in settings.
+    /// Enamel paint: light, base, shade and the darker door edge.
+    var paint: [Color] {
+        switch self {
+        case .cream: return [Color(hex: 0xFBF4E4), Color(hex: 0xEEE1C4), Color(hex: 0xD6C59F), Color(hex: 0xB9A57C)]
+        case .mint: return [Color(hex: 0xE3F5EA), Color(hex: 0xBDE2CC), Color(hex: 0x93C6A9), Color(hex: 0x6FA387)]
+        case .sky: return [Color(hex: 0xDCEDF9), Color(hex: 0xA8CDEA), Color(hex: 0x7FAED4), Color(hex: 0x5D8DB7)]
+        case .cherry: return [Color(hex: 0xF47E73), Color(hex: 0xD63C35), Color(hex: 0xA9241F), Color(hex: 0x7E1714)]
+        case .lemon: return [Color(hex: 0xFCF0B0), Color(hex: 0xF3D667), Color(hex: 0xD8B43D), Color(hex: 0xAD8B22)]
+        case .powder: return [Color(hex: 0xFCE6EA), Color(hex: 0xF1C3CB), Color(hex: 0xD89FA9), Color(hex: 0xB97A86)]
+        case .black: return [Color(hex: 0x53585E), Color(hex: 0x2B2E32), Color(hex: 0x18191C), Color(hex: 0x0C0D0E)]
+        default: return [Color(hex: 0xFBF4E4), Color(hex: 0xEEE1C4), Color(hex: 0xD6C59F), Color(hex: 0xB9A57C)]
+        }
+    }
+
+    var edge: [Color] {
+        switch self {
+        case .steel: return [Color(hex: 0xF4F5F6), Color(hex: 0xC5C9CD), Color(hex: 0x80858B)]
+        case .graphite: return [Color(hex: 0xA9AFB5), Color(hex: 0x5E646A), Color(hex: 0x2C3034)]
+        case .champagne: return [Color(hex: 0xF2ECE5), Color(hex: 0xC6BCB1), Color(hex: 0x857A6F)]
+        default: return [paint[2], paint[3]]
+        }
+    }
+
+    var brushOpacity: Double {
+        switch self {
+        case .graphite: return 0.55
+        case .champagne: return 0.8
+        default: return 0.9
+        }
+    }
+
+    /// Two colours for a round swatch in pickers.
     var swatch: [Color] {
-        let panel = palette.panel
-        return [panel[0], panel[2]]
+        isMetal ? [metalPanel[0], metalPanel[2]] : [paint[0], paint[2]]
     }
 }
 
-/// Shared proportions of the door (fractions of the door size).
+/// Polished chrome across a round bar: dark rim, bright highlight, reflected room.
+let chromeStops: [Gradient.Stop] = [
+    Gradient.Stop(color: Color(hex: 0x4F5459), location: 0),
+    Gradient.Stop(color: Color(hex: 0xD9DDE1), location: 0.16),
+    Gradient.Stop(color: Color(hex: 0xFFFFFF), location: 0.3),
+    Gradient.Stop(color: Color(hex: 0x9CA2A8), location: 0.48),
+    Gradient.Stop(color: Color(hex: 0x3F4449), location: 0.6),
+    Gradient.Stop(color: Color(hex: 0xCDD2D7), location: 0.82),
+    Gradient.Stop(color: Color(hex: 0x6B7076), location: 1),
+]
+
+private let creamStops: [Gradient.Stop] = [
+    Gradient.Stop(color: Color(hex: 0xA8946C), location: 0),
+    Gradient.Stop(color: Color(hex: 0xEADFC4), location: 0.2),
+    Gradient.Stop(color: Color(hex: 0xFFFBF0), location: 0.34),
+    Gradient.Stop(color: Color(hex: 0xE2D4B4), location: 0.55),
+    Gradient.Stop(color: Color(hex: 0xB9A47C), location: 0.75),
+    Gradient.Stop(color: Color(hex: 0x8F7B57), location: 1),
+]
+
+/// Shared proportions of a door.
 enum DoorGeometry {
-    /// The seam between the top cap and the rest of the door.
+    /// The seam (metal) or chrome trim (enamel) under the top section, as a fraction of the face.
     static let seam: CGFloat = 0.12
-    static let handleX: CGFloat = 0.9
-    /// Outer corner radius in the app (the widget uses the system shape).
-    static let cornerRadius: CGFloat = 0.075
+
+    /// Outer corner radius in the app. The widget uses the system shape, which this matches.
+    static func cornerRadius(format: FridgeFormat, size: CGSize) -> CGFloat {
+        switch format {
+        case .tall: return size.width * 0.062
+        case .square: return size.width * 0.13
+        case .wide: return size.height * 0.13
+        }
+    }
+
+    static func edgeWidth(finish: DoorFinish, size: CGSize) -> CGFloat {
+        min(size.width, size.height) * (finish.isMetal ? 0.022 : 0.03)
+    }
 }
 
-/// The door without the handle: rim, panel, top cap, seam and the optional nameplate.
-/// Fills the proposed rectangle; the caller (or the widget container) clips the corners.
+// MARK: - Door
+
+/// The door without the handle: edge, face, top section, gasket and nameplate.
+/// Fills the proposed rectangle; the caller (or the widget container) clips the outer corners.
 struct DoorBackgroundView: View {
     let design: DoorDesign
+    let format: FridgeFormat
 
     var body: some View {
         GeometryReader { geo in
-            let palette = design.finish.palette
-            let rim = geo.size.width * palette.rimWidth
+            let size = geo.size
+            let shortSide = min(size.width, size.height)
+            let edge = DoorGeometry.edgeWidth(finish: design.finish, size: size)
+            let radius = DoorGeometry.cornerRadius(format: format, size: size)
+            let face = RoundedRectangle(cornerRadius: max(radius - edge * 0.9, 3), style: .continuous)
             ZStack {
-                LinearGradient(colors: palette.rim, startPoint: .top, endPoint: .bottom)
-                if palette.rimIsEnamel {
-                    LinearGradient(stops: [
-                        Gradient.Stop(color: Color.white.opacity(0.55), location: 0),
-                        Gradient.Stop(color: Color.white.opacity(0), location: 0.3),
-                        Gradient.Stop(color: Color.black.opacity(0), location: 0.75),
-                        Gradient.Stop(color: Color.black.opacity(0.18), location: 1),
-                    ], startPoint: .top, endPoint: .bottom)
-                }
-                DoorPanelView(palette: palette, cornerRadius: max(geo.size.width * 0.045, 6))
-                    .padding(rim)
-                if !design.nameplate.isEmpty {
+                LinearGradient(colors: design.finish.edge, startPoint: .top, endPoint: .bottom)
+                DoorFace(finish: design.finish, format: format)
+                    .clipShape(face)
+                    .overlay {
+                        // The door face rolls off towards its edges.
+                        face
+                            .stroke(Color.black.opacity(design.finish.isMetal ? 0.2 : 0.28), lineWidth: shortSide * 0.018)
+                            .blur(radius: shortSide * 0.01)
+                            .clipShape(face)
+                    }
+                    .overlay {
+                        face.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.9), Color.white.opacity(0.15), Color.black.opacity(0.3)],
+                                                         startPoint: .top, endPoint: .bottom),
+                                          lineWidth: 1.2)
+                    }
+                    .padding(edge)
+                RoundedRectangle(cornerRadius: max(radius - edge * 0.4, 2), style: .continuous)
+                    .strokeBorder(Color.black.opacity(0.18), lineWidth: 0.8)
+                    .padding(edge * 0.45)
+                if !design.nameplate.isEmpty && format != .wide {
+                    let faceHeight = size.height - edge * 2
                     NameplateView(text: design.nameplate, finish: design.finish)
-                        .frame(height: geo.size.height * DoorGeometry.seam * 0.62)
-                        .frame(maxWidth: geo.size.width * 0.62, alignment: .leading)
-                        .position(x: geo.size.width * 0.07 + geo.size.width * 0.31,
-                                  y: rim + (geo.size.height - rim * 2) * DoorGeometry.seam * 0.52)
+                        .frame(width: size.width * 0.62, height: faceHeight * DoorGeometry.seam * 0.78)
+                        .position(x: size.width * 0.08 + size.width * 0.31,
+                                  y: edge + faceHeight * DoorGeometry.seam * 0.5)
                 }
             }
         }
     }
 }
 
-/// Brushed metal or enamel panel with soft reflections, the top cap and the seam under it.
-struct DoorPanelView: View {
-    let palette: DoorPalette
-    let cornerRadius: CGFloat
+/// The face of the door: brushed metal or glossy enamel, with its reflections.
+private struct DoorFace: View {
+    let finish: DoorFinish
+    let format: FridgeFormat
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         GeometryReader { geo in
             let height = geo.size.height
             let seamY = height * DoorGeometry.seam
-            let edge = max(1, geo.size.width * 0.006)
             ZStack(alignment: .top) {
-                LinearGradient(colors: palette.panel, startPoint: .topLeading, endPoint: .bottomTrailing)
-                if !palette.isEnamel {
+                if finish.isMetal {
+                    LinearGradient(colors: finish.metalPanel, startPoint: .topLeading, endPoint: .bottomTrailing)
                     BrushedMetalTexture()
-                        .opacity(palette.brushOpacity)
+                        .opacity(finish.brushOpacity)
+                    MetalSheen()
+                    LinearGradient(stops: [
+                        Gradient.Stop(color: Color.black.opacity(0.16), location: 0),
+                        Gradient.Stop(color: Color.black.opacity(0), location: 0.1),
+                        Gradient.Stop(color: Color.black.opacity(0), location: 0.88),
+                        Gradient.Stop(color: Color.black.opacity(0.2), location: 1),
+                    ], startPoint: .leading, endPoint: .trailing)
+                } else {
+                    LinearGradient(stops: [
+                        Gradient.Stop(color: finish.paint[0], location: 0),
+                        Gradient.Stop(color: finish.paint[1], location: 0.35),
+                        Gradient.Stop(color: finish.paint[2], location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(stops: [
+                        Gradient.Stop(color: Color.black.opacity(0.14), location: 0),
+                        Gradient.Stop(color: Color.black.opacity(0), location: 0.1),
+                        Gradient.Stop(color: Color.white.opacity(0.12), location: 0.3),
+                        Gradient.Stop(color: Color.white.opacity(0), location: 0.55),
+                        Gradient.Stop(color: Color.black.opacity(0), location: 0.86),
+                        Gradient.Stop(color: Color.black.opacity(0.18), location: 1),
+                    ], startPoint: .leading, endPoint: .trailing)
+                    EnamelReflections(isWide: format == .wide)
+                    LinearGradient(stops: [
+                        Gradient.Stop(color: Color.white.opacity(0.35), location: 0),
+                        Gradient.Stop(color: Color.white.opacity(0), location: 0.22),
+                        Gradient.Stop(color: Color.black.opacity(0), location: 0.8),
+                        Gradient.Stop(color: Color.black.opacity(0.12), location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
                 }
-                DoorSheen(isEnamel: palette.isEnamel)
-                LinearGradient(colors: [Color.white.opacity(palette.isEnamel ? 0.3 : 0.4), Color.white.opacity(0.04)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: seamY)
-                VStack(spacing: 0) {
-                    Color.black.opacity(0.3).frame(height: 1.2)
-                    Color.white.opacity(0.6).frame(height: 1)
-                    LinearGradient(colors: [Color.black.opacity(0.1), Color.black.opacity(0)],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: height * 0.03)
+                if format != .wide {
+                    if finish.isMetal {
+                        LinearGradient(colors: [Color.white.opacity(0.42), Color.white.opacity(0.04)],
+                                       startPoint: .top, endPoint: .bottom)
+                            .frame(height: seamY)
+                        VStack(spacing: 0) {
+                            Color.black.opacity(0.32).frame(height: 1.2)
+                            Color.white.opacity(0.6).frame(height: 1)
+                            LinearGradient(colors: [Color.black.opacity(0.1), Color.black.opacity(0)],
+                                           startPoint: .top, endPoint: .bottom)
+                                .frame(height: height * 0.03)
+                        }
+                        .offset(y: seamY)
+                    } else {
+                        ChromeTrim(thickness: max(3, height * 0.014))
+                            .offset(y: seamY)
+                    }
                 }
-                .offset(y: seamY)
-            }
-            .clipShape(shape)
-            .overlay {
-                shape.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.85), Color.white.opacity(0.15), Color.black.opacity(0.35)],
-                                                  startPoint: .top, endPoint: .bottom),
-                                   lineWidth: edge)
-            }
-            .overlay {
-                shape.inset(by: edge)
-                    .strokeBorder(Color.black.opacity(0.08), lineWidth: 1)
             }
         }
     }
 }
 
-/// Broad reflections that slide across the door when the phone tilts.
-private struct DoorSheen: View {
-    let isEnamel: Bool
+/// Soft vertical bands of light across horizontally brushed metal. They slide with tilt.
+private struct MetalSheen: View {
+    @Environment(\.magnetLight) private var light
+
+    var body: some View {
+        let shift = light.tilt.dx * 0.15
+        LinearGradient(stops: [
+            Gradient.Stop(color: Color.white.opacity(0), location: 0),
+            Gradient.Stop(color: Color.white.opacity(0), location: max(0, 0.22 + shift)),
+            Gradient.Stop(color: Color.white.opacity(0.3), location: min(1, 0.32 + shift)),
+            Gradient.Stop(color: Color.white.opacity(0), location: min(1, 0.42 + shift)),
+            Gradient.Stop(color: Color.white.opacity(0), location: min(1, 0.6 + shift)),
+            Gradient.Stop(color: Color.white.opacity(0.14), location: min(1, 0.68 + shift)),
+            Gradient.Stop(color: Color.white.opacity(0), location: min(1, 0.76 + shift)),
+            Gradient.Stop(color: Color.white.opacity(0), location: 1),
+        ], startPoint: .leading, endPoint: .trailing)
+        .allowsHitTesting(false)
+    }
+}
+
+/// A window reflected in glossy paint: two soft panes on the left. They slide with tilt.
+private struct EnamelReflections: View {
+    let isWide: Bool
 
     @Environment(\.magnetLight) private var light
 
     var body: some View {
-        let shiftX = light.tilt.dx * 0.25
-        let shiftY = light.tilt.dy * 0.25
-        let strong = isEnamel ? 0.34 : 0.24
-        LinearGradient(stops: [
-            Gradient.Stop(color: Color.white.opacity(0), location: 0),
-            Gradient.Stop(color: Color.white.opacity(strong), location: 0.3),
-            Gradient.Stop(color: Color.white.opacity(0), location: isEnamel ? 0.4 : 0.46),
-            Gradient.Stop(color: Color.white.opacity(strong * 0.5), location: 0.64),
-            Gradient.Stop(color: Color.white.opacity(0), location: 0.8),
-        ], startPoint: UnitPoint(x: -shiftX, y: -shiftY), endPoint: UnitPoint(x: 1 - shiftX, y: 1 - shiftY))
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let top = h * (isWide ? 0.12 : 0.05)
+            let length = h * (isWide ? 0.7 : 0.82)
+            let shift = light.tilt.dx * w * 0.06
+            let pane = LinearGradient(stops: [
+                Gradient.Stop(color: Color.white.opacity(0.55), location: 0),
+                Gradient.Stop(color: Color.white.opacity(0.22), location: 0.45),
+                Gradient.Stop(color: Color.white.opacity(0), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: w * 0.02, style: .continuous)
+                    .fill(pane)
+                    .frame(width: w * 0.085, height: length)
+                    .offset(x: w * 0.11 + shift, y: top + light.tilt.dy * h * 0.03)
+                RoundedRectangle(cornerRadius: w * 0.01, style: .continuous)
+                    .fill(pane)
+                    .frame(width: w * 0.025, height: length * 0.9)
+                    .offset(x: w * 0.215 + shift * 1.2, y: top + light.tilt.dy * h * 0.03)
+            }
+            .blur(radius: min(w, h) * 0.012)
+        }
         .allowsHitTesting(false)
+    }
+}
+
+/// The polished strip that separates the top section of an enamel door.
+private struct ChromeTrim: View {
+    let thickness: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            LinearGradient(stops: [
+                Gradient.Stop(color: Color.white, location: 0),
+                Gradient.Stop(color: Color(hex: 0xC3C8CD), location: 0.35),
+                Gradient.Stop(color: Color(hex: 0x6E747B), location: 0.6),
+                Gradient.Stop(color: Color(hex: 0xE6E9EC), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+                .frame(height: thickness)
+            LinearGradient(colors: [Color.black.opacity(0.22), Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: thickness * 1.6)
+        }
     }
 }
 
@@ -188,6 +299,17 @@ struct BrushedMetalTexture: View {
     }
 }
 
+/// A plain swatch of a finish, e.g. as the backdrop of a preview.
+struct DoorPanelView: View {
+    let finish: DoorFinish
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        DoorFace(finish: finish, format: .wide)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
 /// A retro chrome script plate.
 private struct NameplateView: View {
     let text: String
@@ -200,7 +322,7 @@ private struct NameplateView: View {
             ZStack(alignment: .leading) {
                 Text(text)
                     .font(font)
-                    .foregroundStyle(Color.black.opacity(finish == .graphite ? 0.55 : 0.35))
+                    .foregroundStyle(Color.black.opacity(finish == .graphite || finish == .black ? 0.55 : 0.35))
                     .offset(x: size * 0.03, y: size * 0.06)
                     .blur(radius: size * 0.02)
                 Text(text)
@@ -223,50 +345,134 @@ private struct NameplateView: View {
     }
 }
 
-// MARK: - Handle
+// MARK: - Handles
 
-/// The handle with two mounts. Drawn above the magnets.
+/// The handle. Drawn above the magnets.
 struct DoorHandleView: View {
     let design: DoorDesign
+    let format: FridgeFormat
 
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-            let isShort = design.handle == .shortBow
-            let x = w * DoorGeometry.handleX
-            let top = h * (isShort ? 0.4 : 0.3)
-            let bottom = h * (isShort ? 0.62 : 0.72)
-            let barWidth = w * (isShort ? 0.05 : 0.042)
-            let bow = w * (isShort ? 0.04 : 0.036)
-            let mountSize: CGSize = isShort ? CGSize(width: w * 0.085, height: w * 0.085) : CGSize(width: w * 0.07, height: w * 0.095)
-            let curveSize = CGSize(width: bow, height: bottom - top)
-            let curveCenter = CGPoint(x: x + bow / 2, y: (top + bottom) / 2)
-            let bar: [Color] = design.handle == .creamBow
-                ? [Color(hex: 0xB09B74), Color(hex: 0xEADFC4), Color(hex: 0xFFFBF0)]
-                : [Color(hex: 0x5F656C), Color(hex: 0xC9CDD2), Color(hex: 0xFFFFFF)]
-            let mount: [Color] = [Color(hex: 0xF7F8F9), Color(hex: 0xB3B8BE), Color(hex: 0x737980)]
-
-            ZStack {
-                HandleCurve()
-                    .stroke(Color.black.opacity(0.3), style: StrokeStyle(lineWidth: barWidth, lineCap: .round))
-                    .frame(width: curveSize.width, height: curveSize.height)
-                    .blur(radius: w * 0.01)
-                    .position(x: curveCenter.x + w * 0.016, y: curveCenter.y + w * 0.024)
-                HandleMount(colors: mount, size: mountSize)
-                    .position(x: x, y: top)
-                HandleMount(colors: mount, size: mountSize)
-                    .position(x: x, y: bottom)
-                HandleBar(colors: bar, width: barWidth)
-                    .frame(width: curveSize.width, height: curveSize.height)
-                    .position(curveCenter)
+            if format == .wide {
+                HorizontalBarHandle(size: geo.size, stops: design.handle == .cream ? creamStops : chromeStops)
+            } else if design.handle == .bow {
+                BowHandle(size: geo.size)
+            } else {
+                StraightBarHandle(size: geo.size, stops: design.handle == .cream ? creamStops : chromeStops)
             }
         }
         .allowsHitTesting(false)
     }
 }
 
-/// Centre line of the handle: leaves the top mount, bows outwards, returns to the bottom mount.
+/// A straight round bar on two stand-offs, like on retro fridges.
+private struct StraightBarHandle: View {
+    let size: CGSize
+    let stops: [Gradient.Stop]
+
+    var body: some View {
+        let w = size.width
+        let h = size.height
+        let x = w * 0.9
+        let top = h * 0.3
+        let bottom = h * 0.7
+        let bar = min(w, h / FridgeFormat.tall.aspect) * 0.046
+        let mount = CGSize(width: bar * 1.25, height: bar * 1.6)
+        ZStack {
+            Capsule()
+                .fill(Color.black.opacity(0.34))
+                .frame(width: bar, height: bottom - top)
+                .blur(radius: bar * 0.35)
+                .position(x: x + bar * 0.5, y: (top + bottom) / 2 + bar * 0.65)
+            MountPlate(size: mount)
+                .position(x: x, y: top + bar * 0.7)
+            MountPlate(size: mount)
+                .position(x: x, y: bottom - bar * 0.7)
+            Capsule()
+                .fill(LinearGradient(stops: stops, startPoint: .leading, endPoint: .trailing))
+                .overlay { Capsule().strokeBorder(Color.black.opacity(0.18), lineWidth: 0.6) }
+                .frame(width: bar, height: bottom - top)
+                .position(x: x, y: (top + bottom) / 2)
+        }
+    }
+}
+
+/// A horizontal bar along the top of a wide door.
+private struct HorizontalBarHandle: View {
+    let size: CGSize
+    let stops: [Gradient.Stop]
+
+    var body: some View {
+        let w = size.width
+        let h = size.height
+        let left = w * 0.32
+        let right = w * 0.68
+        let y = h * 0.16
+        let bar = max(5, h * 0.075)
+        let mount = CGSize(width: bar * 1.1, height: bar * 1.6)
+        ZStack {
+            Capsule()
+                .fill(Color.black.opacity(0.35))
+                .frame(width: right - left, height: bar)
+                .blur(radius: bar * 0.35)
+                .position(x: (left + right) / 2 + bar * 0.4, y: y + bar * 1.3)
+            MountPlate(size: mount)
+                .position(x: left + bar * 0.6, y: y + bar * 0.6)
+            MountPlate(size: mount)
+                .position(x: right - bar * 0.6, y: y + bar * 0.6)
+            Capsule()
+                .fill(LinearGradient(stops: stops, startPoint: .top, endPoint: .bottom))
+                .overlay { Capsule().strokeBorder(Color.black.opacity(0.18), lineWidth: 0.6) }
+                .frame(width: right - left, height: bar)
+                .position(x: (left + right) / 2, y: y + bar / 2)
+        }
+    }
+}
+
+/// The bowed chrome handle of a steel door.
+private struct BowHandle: View {
+    let size: CGSize
+
+    var body: some View {
+        let w = min(size.width, size.height / FridgeFormat.tall.aspect)
+        let h = size.height
+        let x = size.width * 0.9
+        let top = h * 0.3
+        let bottom = h * 0.72
+        let barWidth = w * 0.042
+        let bow = w * 0.036
+        let mountSize = CGSize(width: w * 0.07, height: w * 0.095)
+        let curveSize = CGSize(width: bow, height: bottom - top)
+        let curveCenter = CGPoint(x: x + bow / 2, y: (top + bottom) / 2)
+        ZStack {
+            HandleCurve()
+                .stroke(Color.black.opacity(0.3), style: StrokeStyle(lineWidth: barWidth, lineCap: .round))
+                .frame(width: curveSize.width, height: curveSize.height)
+                .blur(radius: w * 0.01)
+                .position(x: curveCenter.x + w * 0.016, y: curveCenter.y + w * 0.024)
+            MountPlate(size: mountSize)
+                .position(x: x, y: top)
+            MountPlate(size: mountSize)
+                .position(x: x, y: bottom)
+            ZStack {
+                HandleCurve()
+                    .stroke(Color(hex: 0x5F656C), style: StrokeStyle(lineWidth: barWidth, lineCap: .round))
+                HandleCurve()
+                    .stroke(Color(hex: 0xD9DDE1), style: StrokeStyle(lineWidth: barWidth * 0.62, lineCap: .round))
+                    .offset(x: -barWidth * 0.1)
+                HandleCurve()
+                    .stroke(Color.white, style: StrokeStyle(lineWidth: barWidth * 0.2, lineCap: .round))
+                    .offset(x: -barWidth * 0.2)
+                    .opacity(0.9)
+            }
+            .frame(width: curveSize.width, height: curveSize.height)
+            .position(curveCenter)
+        }
+    }
+}
+
+/// Centre line of the bow handle: leaves the top mount, bows outwards, returns to the bottom.
 struct HandleCurve: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -278,73 +484,46 @@ struct HandleCurve: Shape {
     }
 }
 
-/// A round bar shaded like a cylinder lit from the top left.
-private struct HandleBar: View {
-    let colors: [Color]
-    let width: CGFloat
-
-    var body: some View {
-        ZStack {
-            HandleCurve()
-                .stroke(colors[0], style: StrokeStyle(lineWidth: width, lineCap: .round))
-            HandleCurve()
-                .stroke(colors[1], style: StrokeStyle(lineWidth: width * 0.62, lineCap: .round))
-                .offset(x: -width * 0.1)
-            HandleCurve()
-                .stroke(colors[2], style: StrokeStyle(lineWidth: width * 0.2, lineCap: .round))
-                .offset(x: -width * 0.2)
-                .opacity(0.9)
-        }
-    }
-}
-
-private struct HandleMount: View {
-    let colors: [Color]
+/// A chrome stand-off plate with a screw.
+private struct MountPlate: View {
     let size: CGSize
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: min(size.width, size.height) * 0.48, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: min(size.width, size.height) * 0.42, style: .continuous)
         ZStack {
-            shape.fill(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
+            shape.fill(LinearGradient(colors: [Color(hex: 0xF7F8F9), Color(hex: 0xB3B8BE), Color(hex: 0x737980)],
+                                      startPoint: .top, endPoint: .bottom))
             shape.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.9), Color.black.opacity(0.35)],
                                               startPoint: .top, endPoint: .bottom),
                                lineWidth: max(0.6, size.width * 0.05))
-            VStack(spacing: size.height * 0.4) {
-                Screw(size: size.width * 0.17)
-                Screw(size: size.width * 0.17)
-            }
+            Circle()
+                .fill(RadialGradient(colors: [Color.white, Color(white: 0.55)],
+                                     center: UnitPoint(x: 0.35, y: 0.3),
+                                     startRadius: 0, endRadius: size.width * 0.12))
+                .overlay { Circle().strokeBorder(Color.black.opacity(0.35), lineWidth: max(0.4, size.width * 0.02)) }
+                .frame(width: size.width * 0.18, height: size.width * 0.18)
+                .offset(y: -size.height * 0.28)
         }
         .frame(width: size.width, height: size.height)
         .shadow(color: Color.black.opacity(0.3), radius: size.width * 0.08, x: size.width * 0.06, y: size.width * 0.1)
     }
 }
 
-private struct Screw: View {
-    let size: CGFloat
-
-    var body: some View {
-        Circle()
-            .fill(RadialGradient(colors: [Color.white, Color(white: 0.55)],
-                                 center: UnitPoint(x: 0.35, y: 0.3),
-                                 startRadius: 0, endRadius: size * 0.7))
-            .overlay {
-                Circle().strokeBorder(Color.black.opacity(0.35), lineWidth: max(0.4, size * 0.12))
-            }
-            .frame(width: size, height: size)
-    }
-}
-
 /// Seam line for tinted and clear Home Screen modes, where the system removes the door background.
 struct DoorOutlineView: View {
+    let format: FridgeFormat
+
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width
-            let y = geo.size.height * DoorGeometry.seam
-            Path { path in
-                path.move(to: CGPoint(x: w * 0.06, y: y))
-                path.addLine(to: CGPoint(x: w * 0.94, y: y))
+            if format != .wide {
+                let w = geo.size.width
+                let y = geo.size.height * DoorGeometry.seam
+                Path { path in
+                    path.move(to: CGPoint(x: w * 0.06, y: y))
+                    path.addLine(to: CGPoint(x: w * 0.94, y: y))
+                }
+                .stroke(Color.white.opacity(0.35), lineWidth: 1)
             }
-            .stroke(Color.white.opacity(0.35), lineWidth: 1)
         }
         .allowsHitTesting(false)
     }

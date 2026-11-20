@@ -37,6 +37,8 @@ enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
     case holo
     /// The whole snapshot in a paper frame, usually held by a separate magnet.
     case card
+    /// A square instant photo with a wide bottom margin and a handwritten caption.
+    case polaroid
     /// A round resin-dome photo magnet.
     case round
     /// A heart-shaped resin-dome photo magnet.
@@ -50,6 +52,7 @@ enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
         case .sticker: return "Стикер"
         case .holo: return "Голо-стикер"
         case .card: return "Фотокарточка"
+        case .polaroid: return "Полароид"
         case .round: return "Круглый магнит"
         case .heart: return "Сердечко"
         }
@@ -61,20 +64,21 @@ enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
         case .sticker: return "Стикер"
         case .holo: return "Голо"
         case .card: return "Карточка"
+        case .polaroid: return "Полароид"
         case .round: return "Круг"
         case .heart: return "Сердце"
         }
     }
 
-    /// Shaped magnets store a square crop of the photo.
-    var isShaped: Bool { self == .round || self == .heart }
+    /// Shaped magnets and polaroids store a square crop of the photo.
+    var isShaped: Bool { self == .round || self == .heart || self == .polaroid }
 
     /// Stickers and cut-out magnets share the same transparent image and can be turned
     /// into one another.
     var isCutoutFamily: Bool { self == .cutout || self == .sticker || self == .holo }
 
     static let cutoutFinishes: [PhotoStyle] = [.sticker, .holo, .cutout]
-    static let wholeFinishes: [PhotoStyle] = [.card, .round, .heart]
+    static let wholeFinishes: [PhotoStyle] = [.polaroid, .card, .round, .heart]
 }
 
 struct PhotoContent: Codable, Hashable {
@@ -83,6 +87,22 @@ struct PhotoContent: Codable, Hashable {
     var file: String
     /// Width / height of the stored image.
     var aspect: Double
+    /// Handwritten line under a polaroid.
+    var caption = ""
+
+    private enum CodingKeys: String, CodingKey {
+        case style, file, aspect, caption
+    }
+}
+
+extension PhotoContent {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(style: try container.decode(PhotoStyle.self, forKey: .style),
+                  file: try container.decode(String.self, forKey: .file),
+                  aspect: try container.decode(Double.self, forKey: .aspect))
+        caption = try container.decodeIfPresent(String.self, forKey: .caption) ?? ""
+    }
 }
 
 struct NoteContent: Codable, Hashable {
@@ -224,7 +244,7 @@ enum PlacementSource: Codable, Hashable {
     case letter(LetterMagnet)
 }
 
-/// One thing hanging on the door. Order in `FridgeDoor.placements` is the layer order
+/// One thing hanging on the door. Order in `Fridge.placements` is the layer order
 /// (the last one is on top).
 struct Placement: Codable, Identifiable, Hashable {
     var id = UUID()
@@ -276,43 +296,51 @@ enum FastenerKind: String, Codable, Hashable, CaseIterable, Identifiable {
 }
 
 enum DoorFinish: String, Codable, Hashable, CaseIterable, Identifiable {
-    case steel, champagne, blueRim, graphite, cream, sky, mint, cherry
+    case steel, graphite, champagne
+    case cream, mint, sky, cherry, lemon, powder, black
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .steel: return "Сталь"
-        case .champagne: return "Тёплый металл"
-        case .blueRim: return "Сталь в голубой раме"
         case .graphite: return "Графит"
-        case .cream: return "Сливочная эмаль"
-        case .sky: return "Голубая эмаль"
-        case .mint: return "Мятная эмаль"
-        case .cherry: return "Вишнёвая эмаль"
+        case .champagne: return "Шампань"
+        case .cream: return "Сливочный"
+        case .mint: return "Мятный"
+        case .sky: return "Небесный"
+        case .cherry: return "Вишнёвый"
+        case .lemon: return "Лимонный"
+        case .powder: return "Пудровый"
+        case .black: return "Чёрный глянец"
         }
     }
+
+    var isMetal: Bool { self == .steel || self == .graphite || self == .champagne }
+
+    static let metals: [DoorFinish] = [.steel, .graphite, .champagne]
+    static let enamels: [DoorFinish] = [.cream, .mint, .sky, .cherry, .lemon, .powder, .black]
 }
 
 enum HandleStyle: String, Codable, Hashable, CaseIterable, Identifiable {
-    case chromeBow, creamBow, shortBow
+    case bar, bow, cream
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .chromeBow: return "Хромированная дуга"
-        case .creamBow: return "Сливочная ручка"
-        case .shortBow: return "Короткая скоба"
+        case .bar: return "Хромированная скоба"
+        case .bow: return "Дуга"
+        case .cream: return "Сливочная скоба"
         }
     }
 }
 
-/// How the fridge itself looks.
+/// How a fridge looks.
 struct DoorDesign: Codable, Hashable {
     var finish: DoorFinish = .steel
-    var handle: HandleStyle = .chromeBow
-    /// Chrome script plate on the top cap; empty means no plate.
+    var handle: HandleStyle = .bow
+    /// Chrome script plate on the top; empty means no plate.
     var nameplate = ""
 
     private enum CodingKeys: String, CodingKey {
@@ -324,35 +352,178 @@ extension DoorDesign {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init()
-        finish = try container.decodeIfPresent(DoorFinish.self, forKey: .finish) ?? .steel
-        handle = try container.decodeIfPresent(HandleStyle.self, forKey: .handle) ?? .chromeBow
+        finish = (try? container.decodeIfPresent(DoorFinish.self, forKey: .finish)) ?? .steel
+        handle = (try? container.decodeIfPresent(HandleStyle.self, forKey: .handle)) ?? .bow
         nameplate = try container.decodeIfPresent(String.self, forKey: .nameplate) ?? ""
     }
 }
 
-struct FridgeDoor: Codable, Hashable {
+/// The shape of a fridge door. Each matches a Home Screen widget size.
+enum FridgeFormat: String, Codable, Hashable, CaseIterable, Identifiable {
+    /// Small widget.
+    case square
+    /// Medium widget: a wide door with the handle along the top.
+    case wide
+    /// Large widget (and the extra large one on iPad).
+    case tall
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .square: return "Маленький"
+        case .wide: return "Широкий"
+        case .tall: return "Большой"
+        }
+    }
+
+    var widgetHint: String {
+        switch self {
+        case .square: return "для маленького виджета"
+        case .wide: return "для среднего виджета"
+        case .tall: return "для большого виджета"
+        }
+    }
+
+    /// Width / height of the door.
+    var aspect: CGFloat {
+        switch self {
+        case .square: return 1
+        case .wide: return 2.14
+        case .tall: return 338.0 / 354.0
+        }
+    }
+
+    /// Items are sized against the width a tall door of the same height would have,
+    /// so a magnet looks the same on every format. This is that size per door width.
+    var unitPerWidth: CGFloat {
+        min(1, FridgeFormat.tall.aspect / aspect)
+    }
+}
+
+/// One fridge (a board): its own look and its own composition. The collection is shared.
+struct Fridge: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var name: String
+    var format: FridgeFormat = .tall
     var design = DoorDesign()
     var placements: [Placement] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, format, design, placements
+    }
+}
+
+extension Fridge {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(name: try container.decodeIfPresent(String.self, forKey: .name) ?? "Холодильник")
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        format = (try? container.decodeIfPresent(FridgeFormat.self, forKey: .format)) ?? .tall
+        design = (try? container.decodeIfPresent(DoorDesign.self, forKey: .design)) ?? DoorDesign()
+        placements = (try? container.decodeIfPresent([Placement].self, forKey: .placements)) ?? []
+    }
+}
+
+/// A ready combination for a new fridge.
+struct FridgePreset: Identifiable, Hashable {
+    let name: String
+    let finish: DoorFinish
+    let handle: HandleStyle
+
+    var id: String { finish.rawValue }
+
+    static let all: [FridgePreset] = [
+        FridgePreset(name: "Стальной", finish: .steel, handle: .bow),
+        FridgePreset(name: "Мятный", finish: .mint, handle: .bar),
+        FridgePreset(name: "Вишнёвый", finish: .cherry, handle: .bar),
+        FridgePreset(name: "Сливочный", finish: .cream, handle: .bar),
+        FridgePreset(name: "Небесный", finish: .sky, handle: .bar),
+        FridgePreset(name: "Лимонный", finish: .lemon, handle: .bar),
+        FridgePreset(name: "Пудровый", finish: .powder, handle: .bar),
+        FridgePreset(name: "Чёрный", finish: .black, handle: .bar),
+        FridgePreset(name: "Графитовый", finish: .graphite, handle: .bar),
+        FridgePreset(name: "Шампань", finish: .champagne, handle: .cream),
+    ]
 }
 
 /// Everything the app and the widget share. Stored as JSON in the App Group container.
 struct FridgeState: Codable, Hashable {
-    var version = 2
+    var version = 3
     var items: [FridgeItem] = []
-    var door = FridgeDoor()
+    var fridges: [Fridge] = []
+    var currentFridgeID: UUID?
+
+    private enum CodingKeys: String, CodingKey {
+        case version, items, fridges, currentFridgeID, door
+    }
+
+    /// The single door of earlier versions, read once and turned into a fridge.
+    private struct LegacyDoor: Decodable {
+        var design: DoorDesign?
+        var placements: [Placement]?
+    }
+
+    init(items: [FridgeItem] = [], fridges: [Fridge] = [], currentFridgeID: UUID? = nil) {
+        self.items = items
+        self.fridges = fridges
+        self.currentFridgeID = currentFridgeID
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decodeIfPresent([FridgeItem].self, forKey: .items) ?? []
+        fridges = try container.decodeIfPresent([Fridge].self, forKey: .fridges) ?? []
+        currentFridgeID = try container.decodeIfPresent(UUID.self, forKey: .currentFridgeID)
+        if fridges.isEmpty, let legacy = try? container.decodeIfPresent(LegacyDoor.self, forKey: .door) {
+            fridges = [Fridge(name: "Кухня", format: .tall, design: legacy.design ?? DoorDesign(),
+                              placements: legacy.placements ?? [])]
+        }
+        if fridges.isEmpty {
+            fridges = [Fridge(name: "Кухня")]
+        }
+        version = 3
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(version, forKey: .version)
+        try container.encode(items, forKey: .items)
+        try container.encode(fridges, forKey: .fridges)
+        try container.encodeIfPresent(currentFridgeID, forKey: .currentFridgeID)
+    }
 
     func item(_ id: UUID) -> FridgeItem? {
         items.first { $0.id == id }
     }
+
+    func fridge(_ id: UUID?) -> Fridge? {
+        guard let id else { return nil }
+        return fridges.first { $0.id == id }
+    }
+
+    /// Index of the fridge being edited; always valid while there is at least one fridge.
+    var currentIndex: Int {
+        if let id = currentFridgeID, let index = fridges.firstIndex(where: { $0.id == id }) {
+            return index
+        }
+        return 0
+    }
+
+    /// The fridge that best fits a widget: the chosen one, else the first of the right format.
+    func fridge(for format: FridgeFormat, preferred: UUID?) -> Fridge? {
+        if let chosen = fridge(preferred) { return chosen }
+        return fridges.first { $0.format == format } ?? fridges.first
+    }
 }
 
 extension FridgeState {
-    /// The first door: a note, a few magnets and a word, so the fridge never starts empty.
-    /// The person adds their own photo next.
+    /// The first fridge: a note, a few magnets and a word, so it never starts empty.
+    /// The person adds their own photos next.
     static var starter: FridgeState {
         let note = FridgeItem(content: .note(NoteContent(text: "Хорошо быть дома", paper: .cream, shape: .torn, font: .caveat)))
-        var door = FridgeDoor()
-        door.placements = [
+        var fridge = Fridge(name: "Кухня", format: .tall, design: DoorDesign(finish: .steel, handle: .bow))
+        fridge.placements = [
             Placement(source: .magnet("lemon"), x: 0.22, y: 0.31, width: 0.2, rotation: -8),
             Placement(source: .item(note.id), x: 0.43, y: 0.6, width: 0.46, rotation: -4,
                       fastener: Fastener(kind: .greenMagnet, x: 0.5, y: 0.08)),
@@ -362,6 +533,6 @@ extension FridgeState {
             Placement(source: .letter(LetterMagnet(character: "О", color: .yellow)), x: 0.29, y: 0.86, width: 0.11, rotation: 4),
             Placement(source: .letter(LetterMagnet(character: "М", color: .green)), x: 0.39, y: 0.85, width: 0.11, rotation: -3),
         ]
-        return FridgeState(items: [note], door: door)
+        return FridgeState(items: [note], fridges: [fridge], currentFridgeID: fridge.id)
     }
 }

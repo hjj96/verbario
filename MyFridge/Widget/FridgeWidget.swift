@@ -1,17 +1,17 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
 
 struct FridgeEntry: TimelineEntry {
     let date: Date
-    let design: DoorDesign
-    let placements: [Placement]
+    let fridge: Fridge
     /// Prepared content for every placement, keyed by placement id.
     let contents: [UUID: RenderContent]
 
-    static func make(from state: FridgeState, loadImages: Bool) -> FridgeEntry {
+    static func make(fridge: Fridge, state: FridgeState, loadImages: Bool) -> FridgeEntry {
         var contents: [UUID: RenderContent] = [:]
         let library = MagnetLibrary.shared
-        for placement in state.door.placements {
+        for placement in fridge.placements {
             switch placement.source {
             case .magnet(let magnetID):
                 if let art = library.magnet(magnetID) {
@@ -30,64 +30,123 @@ struct FridgeEntry: TimelineEntry {
                 }
             }
         }
-        return FridgeEntry(date: Date(), design: state.door.design, placements: state.door.placements, contents: contents)
+        return FridgeEntry(date: Date(), fridge: fridge, contents: contents)
     }
 
-    /// The door saved by the app, or nil before the first launch.
-    static func stored() -> FridgeEntry? {
-        guard case .loaded(let state) = FridgeStorage.loadState(backupOnFailure: false) else { return nil }
-        return make(from: state, loadImages: true)
+    /// The configured fridge (or the best one for this widget size) from the app's saved state.
+    static func stored(preferred: String?, format: FridgeFormat) -> FridgeEntry? {
+        guard case .loaded(let state) = FridgeStorage.loadState(backupOnFailure: false),
+              let fridge = state.fridge(for: format, preferred: preferred.flatMap(UUID.init(uuidString:))) else { return nil }
+        return make(fridge: fridge, state: state, loadImages: true)
     }
 
-    static var demo: FridgeEntry {
-        make(from: .starter, loadImages: false)
+    static func demo(format: FridgeFormat) -> FridgeEntry {
+        let starter = FridgeState.starter
+        var fridge = starter.fridges[0]
+        fridge.format = format
+        if format == .wide {
+            fridge.design = DoorDesign(finish: .mint, handle: .bar)
+            fridge.placements = [
+                Placement(source: .magnet("lemon"), x: 0.14, y: 0.55, width: 0.2, rotation: -8),
+                Placement(source: fridge.placements[1].source, x: 0.42, y: 0.6, width: 0.44, rotation: -3,
+                          fastener: Fastener(kind: .greenMagnet, x: 0.5, y: 0.08)),
+                Placement(source: .magnet("strawberry"), x: 0.7, y: 0.5, width: 0.16, rotation: 10),
+                Placement(source: .magnet("heart"), x: 0.86, y: 0.7, width: 0.16, rotation: -12),
+            ]
+        }
+        return make(fridge: fridge, state: starter, loadImages: false)
     }
 }
 
-/// The widget only shows the saved door. The app asks WidgetKit to reload after every save,
+extension WidgetFamily {
+    /// The fridge format that fills this widget exactly.
+    var fridgeFormat: FridgeFormat {
+        switch self {
+        case .systemSmall: return .square
+        case .systemMedium: return .wide
+        default: return .tall
+        }
+    }
+}
+
+/// Shows the saved fridge. The app asks WidgetKit to reload after every save,
 /// and the to-do checkbox reloads it after its intent runs.
-struct FridgeProvider: TimelineProvider {
+struct FridgeProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> FridgeEntry {
-        .demo
+        .demo(format: context.family.fridgeFormat)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (FridgeEntry) -> Void) {
-        completion(FridgeEntry.stored() ?? .demo)
+    func snapshot(for configuration: SelectFridgeIntent, in context: Context) async -> FridgeEntry {
+        entry(for: configuration, family: context.family)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<FridgeEntry>) -> Void) {
-        let entry = FridgeEntry.stored() ?? .demo
-        completion(Timeline(entries: [entry], policy: .never))
+    func timeline(for configuration: SelectFridgeIntent, in context: Context) async -> Timeline<FridgeEntry> {
+        Timeline(entries: [entry(for: configuration, family: context.family)], policy: .never)
+    }
+
+    private func entry(for configuration: SelectFridgeIntent, family: WidgetFamily) -> FridgeEntry {
+        let format = family.fridgeFormat
+        return FridgeEntry.stored(preferred: configuration.fridge?.id, format: format) ?? .demo(format: format)
     }
 }
 
 struct FridgeWidgetView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.widgetFamily) private var family
     let entry: FridgeEntry
 
     var body: some View {
-        FridgeCompositionView(design: entry.design,
-                              placements: entry.placements,
-                              showsDoor: false,
-                              showsOutline: renderingMode != .fullColor) { placement in
-            entry.contents[placement.id]
+        let target = family.fridgeFormat
+        let fridge = entry.fridge
+        GeometryReader { geo in
+            let area = fittedArea(for: fridge.format, in: geo.size, target: target)
+            ZStack(alignment: .topLeading) {
+                if renderingMode != .fullColor {
+                    DoorOutlineView(format: target)
+                }
+                FridgeCompositionView(design: fridge.design,
+                                      format: fridge.format,
+                                      placements: fridge.placements,
+                                      showsDoor: false,
+                                      showsHandle: fridge.format == target) { placement in
+                    entry.contents[placement.id]
+                }
+                .frame(width: area.width, height: area.height)
+                .offset(x: area.minX, y: area.minY)
+                if fridge.format != target {
+                    DoorHandleView(design: fridge.design, format: target)
+                }
+            }
         }
         .environment(\.noteInteraction, .widget)
         .containerBackground(for: .widget) {
-            DoorBackgroundView(design: entry.design)
+            DoorBackgroundView(design: fridge.design, format: target)
         }
-        .widgetURL(URL(string: "myfridge://door"))
+        .widgetURL(URL(string: "myfridge://fridge/\(fridge.id.uuidString)"))
+    }
+
+    /// A fridge of another shape is shown centred at its own proportions on a door of this size.
+    private func fittedArea(for format: FridgeFormat, in size: CGSize, target: FridgeFormat) -> CGRect {
+        guard format != target, size.width > 0, size.height > 0 else { return CGRect(origin: .zero, size: size) }
+        let aspect = format.aspect
+        var width = size.width
+        var height = width / aspect
+        if height > size.height {
+            height = size.height
+            width = height * aspect
+        }
+        return CGRect(x: (size.width - width) / 2, y: (size.height - height) / 2, width: width, height: height)
     }
 }
 
 struct FridgeWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: FridgeStorage.widgetKind, provider: FridgeProvider()) { entry in
+        AppIntentConfiguration(kind: FridgeStorage.widgetKind, intent: SelectFridgeIntent.self, provider: FridgeProvider()) { entry in
             FridgeWidgetView(entry: entry)
         }
         .configurationDisplayName("Мой холодильник")
-        .description("Твои фото, записки и магнитики на домашнем экране. Дела можно отмечать прямо здесь.")
-        .supportedFamilies([.systemSmall, .systemLarge])
+        .description("Твои стикеры, фото, записки и магнитики. Удержи виджет, чтобы выбрать холодильник.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge])
         .contentMarginsDisabled()
     }
 }

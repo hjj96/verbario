@@ -117,7 +117,7 @@ enum PhotoProcessing {
     }
 
     /// Writes the editor copy and the small widget copy. Returns what the collection stores.
-    static func store(_ image: UIImage, style: PhotoStyle) throws -> PhotoContent {
+    static func store(_ image: UIImage, style: PhotoStyle, caption: String = "") throws -> PhotoContent {
         let isCutout = style.isCutoutFamily
         let file = "\(UUID().uuidString).\(isCutout ? "png" : "jpg")"
         let full = resized(image, maxPixel: 1400, opaque: !isCutout)
@@ -129,7 +129,7 @@ enum PhotoProcessing {
         try fullData.write(to: FridgeStorage.imageURL(file, variant: .full), options: [.atomic])
         try smallData.write(to: FridgeStorage.imageURL(file, variant: .widget), options: [.atomic])
         let aspect = Double(full.size.width / max(full.size.height, 1))
-        return PhotoContent(style: style, file: file, aspect: aspect)
+        return PhotoContent(style: style, file: file, aspect: aspect, caption: caption)
     }
 
     static func resized(_ image: UIImage, maxPixel: CGFloat, opaque: Bool) -> UIImage {

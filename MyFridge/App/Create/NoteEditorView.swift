@@ -106,7 +106,7 @@ struct NoteEditorView: View {
         }
         shown.reminder = hasReminder ? reminderDate : nil
         return ZStack {
-            DoorPanelView(palette: store.design.finish.palette, cornerRadius: 24)
+            DoorPanelView(finish: store.design.finish, cornerRadius: 24)
             ItemPreview(content: .note(shown, id: itemID),
                         fastener: note.shape.defaultFastener,
                         rotation: -2,

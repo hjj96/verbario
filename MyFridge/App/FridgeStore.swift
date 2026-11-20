@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-/// Something that can be put on the door from the tray, by tap or by drag and drop.
+/// Something that can be put on a fridge from the tray, by tap or by drag and drop.
 enum TrayPayload: Hashable {
     case magnet(String)
     case item(UUID)
@@ -47,8 +47,8 @@ enum WordColoring: Hashable {
     }
 }
 
-/// The single source of truth for the app: the collection, the door and its undo history.
-/// Every change is saved to the App Group container and the widget is asked to reload.
+/// The single source of truth for the app: the shared collection, the fridges and the undo
+/// history. Every change is saved to the App Group container and the widget is asked to reload.
 @MainActor
 @Observable
 final class FridgeStore {
@@ -85,12 +85,95 @@ final class FridgeStore {
         }
     }
 
+    // MARK: Fridges
+
+    /// The fridge being edited.
+    var fridge: Fridge {
+        state.fridges[state.currentIndex]
+    }
+
+    var design: DoorDesign { fridge.design }
+    var format: FridgeFormat { fridge.format }
+    var placements: [Placement] { fridge.placements }
+
+    func selectFridge(_ id: UUID) {
+        guard state.fridges.contains(where: { $0.id == id }), state.currentFridgeID != id else { return }
+        // Switching fridges is navigation, not an edit: it does not go into the undo history.
+        state.currentFridgeID = id
+        scheduleSave()
+    }
+
+    /// Creates a fridge and makes it current. Returns its id.
+    @discardableResult
+    func addFridge(name: String, format: FridgeFormat, design: DoorDesign) -> UUID {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallback = FridgePreset.all.first { $0.finish == design.finish }?.name ?? "Холодильник"
+        let fridge = Fridge(name: String((trimmed.isEmpty ? fallback : trimmed).prefix(24)), format: format, design: design)
+        apply { state in
+            state.fridges.append(fridge)
+            state.currentFridgeID = fridge.id
+        }
+        return fridge.id
+    }
+
+    func renameFridge(_ id: UUID, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        apply { state in
+            guard let index = state.fridges.firstIndex(where: { $0.id == id }) else { return }
+            state.fridges[index].name = String(trimmed.prefix(24))
+        }
+    }
+
+    @discardableResult
+    func duplicateFridge(_ id: UUID) -> UUID? {
+        guard let original = state.fridge(id) else { return nil }
+        var copy = original
+        copy.id = UUID()
+        copy.name = "\(original.name) — копия"
+        copy.placements = original.placements.map { placement in
+            var moved = placement
+            moved.id = UUID()
+            return moved
+        }
+        apply { state in
+            state.fridges.append(copy)
+            state.currentFridgeID = copy.id
+        }
+        return copy.id
+    }
+
+    /// Removes a fridge; its things stay in the collection. The last fridge cannot be removed.
+    func deleteFridge(_ id: UUID) {
+        guard state.fridges.count > 1, let fridge = state.fridge(id) else { return }
+        apply { state in
+            state.fridges.removeAll { $0.id == id }
+            if state.currentFridgeID == id {
+                state.currentFridgeID = state.fridges.first?.id
+            }
+        }
+        showToast("«\(fridge.name)» удалён, предметы остались в коллекции", undoable: true)
+    }
+
+    func updateDesign(_ change: (inout DoorDesign) -> Void) {
+        updateCurrent { change(&$0.design) }
+    }
+
+    func setFormat(_ format: FridgeFormat) {
+        updateCurrent { $0.format = format }
+    }
+
+    func clearDoor() {
+        guard !placements.isEmpty else { return }
+        updateCurrent { $0.placements.removeAll() }
+        showToast("Дверца очищена", undoable: true)
+    }
+
     // MARK: Reading
 
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
-    var isDoorFull: Bool { state.door.placements.count >= ItemMetrics.maxPlacements }
-    var design: DoorDesign { state.door.design }
+    var isDoorFull: Bool { placements.count >= ItemMetrics.maxPlacements }
 
     var photoItems: [FridgeItem] {
         state.items.filter(\.isPhoto).sorted { $0.createdAt > $1.createdAt }
@@ -101,19 +184,26 @@ final class FridgeStore {
     }
 
     func placement(_ id: UUID) -> Placement? {
-        state.door.placements.first { $0.id == id }
+        placements.first { $0.id == id }
     }
 
+    /// Placements of an item on the current fridge.
     func placementIDs(of itemID: UUID) -> [UUID] {
-        state.door.placements.filter { $0.source == .item(itemID) }.map(\.id)
+        placements.filter { $0.source == .item(itemID) }.map(\.id)
     }
 
+    /// Whether the item hangs on the current fridge.
     func isOnDoor(_ itemID: UUID) -> Bool {
-        state.door.placements.contains { $0.source == .item(itemID) }
+        placements.contains { $0.source == .item(itemID) }
+    }
+
+    /// Every fridge the item hangs on.
+    func fridges(showing itemID: UUID) -> [Fridge] {
+        state.fridges.filter { fridge in fridge.placements.contains { $0.source == .item(itemID) } }
     }
 
     func count(ofMagnet id: String) -> Int {
-        state.door.placements.filter { $0.source == .magnet(id) }.count
+        placements.filter { $0.source == .magnet(id) }.count
     }
 
     func content(for placement: Placement) -> RenderContent? {
@@ -173,6 +263,15 @@ final class FridgeStore {
         scheduleSave()
     }
 
+    /// Changes the current fridge as one undoable step.
+    func updateCurrent(_ change: (inout Fridge) -> Void) {
+        apply { state in
+            let index = state.currentIndex
+            guard state.fridges.indices.contains(index) else { return }
+            change(&state.fridges[index])
+        }
+    }
+
     func undo() {
         guard let previous = undoStack.popLast() else { return }
         redoStack.append(state)
@@ -190,37 +289,40 @@ final class FridgeStore {
 
     // MARK: Adding
 
-    /// Adds a new photo to the collection and hangs it on the door. Returns the placement id.
+    /// Adds a new photo to the collection and hangs it on the current fridge. Returns the placement id.
     @discardableResult
     func addPhoto(_ photo: PhotoContent) -> UUID? {
-        add(FridgeItem(content: .photo(photo)))
+        addPhotos([photo], hang: true)
     }
 
     /// Adds several photos at once, e.g. one sticker per object cut from the same photo.
-    /// Each gets its own free spot. Returns the last placement id.
+    /// With `hang`, each gets its own free spot on the current fridge. Returns the last placement id.
     @discardableResult
-    func addPhotos(_ photos: [PhotoContent]) -> UUID? {
+    func addPhotos(_ photos: [PhotoContent], hang: Bool) -> UUID? {
         guard !photos.isEmpty else { return nil }
         var items: [FridgeItem] = []
-        var placements: [Placement] = []
-        var occupied = state.door.placements
+        var newPlacements: [Placement] = []
+        var occupied = placements
         for photo in photos {
             let item = FridgeItem(content: .photo(photo))
             items.append(item)
-            if occupied.count < ItemMetrics.maxPlacements {
+            if hang, occupied.count < ItemMetrics.maxPlacements {
                 let placement = newPlacement(source: .item(item.id), content: content(for: item), avoiding: occupied)
-                placements.append(placement)
+                newPlacements.append(placement)
                 occupied.append(placement)
             }
         }
         apply { state in
             state.items.append(contentsOf: items)
-            state.door.placements.append(contentsOf: placements)
+            let index = state.currentIndex
+            state.fridges[index].placements.append(contentsOf: newPlacements)
         }
-        if placements.count < items.count {
+        if !hang {
+            showToast(items.count == 1 ? "Сохранено в коллекцию" : "Сохранено в коллекцию: \(items.count)")
+        } else if newPlacements.count < items.count {
             showToast("Не всё поместилось на дверцу — остальное в коллекции")
         }
-        return placements.last?.id
+        return newPlacements.last?.id
     }
 
     /// Turns a cut-out into a sticker, a holographic sticker or a magnet. Everywhere it hangs.
@@ -232,15 +334,39 @@ final class FridgeStore {
                   photo.style.isCutoutFamily else { return }
             photo.style = style
             state.items[index].content = .photo(photo)
-            for placementIndex in state.door.placements.indices where state.door.placements[placementIndex].source == .item(itemID) {
-                state.door.placements[placementIndex].fastener = nil
+            for fridgeIndex in state.fridges.indices {
+                for placementIndex in state.fridges[fridgeIndex].placements.indices
+                where state.fridges[fridgeIndex].placements[placementIndex].source == .item(itemID) {
+                    state.fridges[fridgeIndex].placements[placementIndex].fastener = nil
+                }
             }
+        }
+    }
+
+    func setCaption(itemID: UUID, caption: String) {
+        apply { state in
+            guard let index = state.items.firstIndex(where: { $0.id == itemID }),
+                  case .photo(var photo) = state.items[index].content else { return }
+            photo.caption = String(caption.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
+            state.items[index].content = .photo(photo)
         }
     }
 
     @discardableResult
     func addNote(_ note: NoteContent, id: UUID = UUID()) -> UUID? {
-        add(FridgeItem(id: id, content: .note(note)))
+        let item = FridgeItem(id: id, content: .note(note))
+        let placement = isDoorFull ? nil : newPlacement(source: .item(item.id), content: content(for: item))
+        apply { state in
+            state.items.append(item)
+            if let placement {
+                let index = state.currentIndex
+                state.fridges[index].placements.append(placement)
+            }
+        }
+        if placement == nil {
+            showToast("Дверца заполнена — сохранено в коллекции")
+        }
+        return placement?.id
     }
 
     func updateNote(itemID: UUID, note: NoteContent) {
@@ -260,8 +386,8 @@ final class FridgeStore {
         Feedback.attach()
     }
 
-    /// Puts something from the tray on the door, at `point` (door fractions) or in a free spot.
-    /// An item that already hangs on the door is moved instead of copied. Returns the placement id.
+    /// Puts something from the tray on the current fridge, at `point` (door fractions) or in a
+    /// free spot. An item that already hangs there is moved instead of copied. Returns the placement id.
     @discardableResult
     func place(_ payload: TrayPayload, at point: CGPoint? = nil) -> UUID? {
         if case .item(let itemID) = payload, let existing = placementIDs(of: itemID).last {
@@ -289,8 +415,14 @@ final class FridgeStore {
             placement.x = point.x.clamped(to: 0.03...0.97)
             placement.y = point.y.clamped(to: 0.03...0.97)
         }
-        apply { $0.door.placements.append(placement) }
+        updateCurrent { $0.placements.append(placement) }
         return placement.id
+    }
+
+    /// Puts an item from the collection on the current fridge. Returns the placement id.
+    @discardableResult
+    func place(itemID: UUID) -> UUID? {
+        place(.item(itemID))
     }
 
     /// Lays a word out as separate magnetic letters. Returns the id of the last letter.
@@ -299,13 +431,14 @@ final class FridgeStore {
         let characters = text.uppercased().map(String.init)
         let letters = characters.filter { $0 != " " }
         guard !letters.isEmpty else { return nil }
-        guard state.door.placements.count + letters.count <= ItemMetrics.maxPlacements else {
+        guard placements.count + letters.count <= ItemMetrics.maxPlacements else {
             showToast("Для такого слова на дверце мало места")
             return nil
         }
+        let format = self.format
         let width: CGFloat = 0.11
-        let step: CGFloat = 0.097
-        let perRow = 8
+        let step: CGFloat = 0.097 * format.unitPerWidth
+        let perRow = format == .wide ? 12 : 8
         var rows: [[String]] = [[]]
         for character in characters {
             if character == " " {
@@ -316,32 +449,26 @@ final class FridgeStore {
             }
         }
         let center = freeSpot(preferLow: true)
-        let rowHeight = width / ItemMetrics.letterAspect * ItemMetrics.doorAspect * 1.05
-        var placements: [Placement] = []
+        let rowHeight = width / ItemMetrics.letterAspect * min(format.aspect, FridgeFormat.tall.aspect) * 1.05
+        var newPlacements: [Placement] = []
         var colorIndex = 0
         for (rowIndex, row) in rows.enumerated() {
             let trimmed = row.last == " " ? Array(row.dropLast()) : row
-            let rowWidth = CGFloat(trimmed.count - 1) * step
+            let rowWidth = CGFloat(max(trimmed.count - 1, 0)) * step
             let startX = (center.x - rowWidth / 2).clamped(to: 0.08...max(0.08, 0.84 - rowWidth))
             let y = (center.y + (CGFloat(rowIndex) - CGFloat(rows.count - 1) / 2) * rowHeight).clamped(to: 0.16...0.94)
             for (index, character) in trimmed.enumerated() where character != " " {
                 let letter = LetterMagnet(character: character, color: coloring.color(at: colorIndex))
                 colorIndex += 1
-                placements.append(Placement(source: .letter(letter),
-                                            x: startX + CGFloat(index) * step,
-                                            y: y + CGFloat.random(in: -0.008...0.008),
-                                            width: width,
-                                            rotation: Double.random(in: -7...7)))
+                newPlacements.append(Placement(source: .letter(letter),
+                                               x: startX + CGFloat(index) * step,
+                                               y: y + CGFloat.random(in: -0.008...0.008),
+                                               width: width,
+                                               rotation: Double.random(in: -7...7)))
             }
         }
-        apply { $0.door.placements.append(contentsOf: placements) }
-        return placements.last?.id
-    }
-
-    /// Puts an item from the collection back on the door. Returns the placement id.
-    @discardableResult
-    func place(itemID: UUID) -> UUID? {
-        place(.item(itemID))
+        updateCurrent { $0.placements.append(contentsOf: newPlacements) }
+        return newPlacements.last?.id
     }
 
     @discardableResult
@@ -356,20 +483,20 @@ final class FridgeStore {
         copy.x = (original.x + 0.05).clamped(to: 0.03...0.97)
         copy.y = (original.y + 0.04).clamped(to: 0.03...0.97)
         copy.rotation = original.rotation + Double.random(in: -6...6)
-        apply { $0.door.placements.append(copy) }
+        updateCurrent { $0.placements.append(copy) }
         return copy.id
     }
 
     // MARK: Changing placements
 
     func updatePlacement(_ id: UUID, _ change: (inout Placement) -> Void) {
-        apply { state in
-            guard let index = state.door.placements.firstIndex(where: { $0.id == id }) else { return }
-            change(&state.door.placements[index])
+        updateCurrent { fridge in
+            guard let index = fridge.placements.firstIndex(where: { $0.id == id }) else { return }
+            change(&fridge.placements[index])
         }
     }
 
-    /// Takes one thing off the door. Photos and notes stay in the collection.
+    /// Takes one thing off the current fridge. Photos and notes stay in the collection.
     func removePlacement(_ id: UUID) {
         let wasItem: Bool
         if let existing = placement(id), case .item = existing.source {
@@ -377,51 +504,43 @@ final class FridgeStore {
         } else {
             wasItem = false
         }
-        apply { state in
-            state.door.placements.removeAll { $0.id == id }
+        updateCurrent { fridge in
+            fridge.placements.removeAll { $0.id == id }
         }
         showToast(wasItem ? "Снято с дверцы и осталось в коллекции" : "Снято с дверцы", undoable: true)
     }
 
     func removeFromDoor(itemID: UUID) {
-        apply { state in
-            state.door.placements.removeAll { $0.source == .item(itemID) }
+        updateCurrent { fridge in
+            fridge.placements.removeAll { $0.source == .item(itemID) }
         }
         showToast("Снято с дверцы и осталось в коллекции", undoable: true)
     }
 
-    /// Removes the item from the collection and from the door. Can be undone.
+    /// Removes the item from the collection and from every fridge. Can be undone.
     func deleteItem(_ itemID: UUID) {
         apply { state in
             state.items.removeAll { $0.id == itemID }
-            state.door.placements.removeAll { $0.source == .item(itemID) }
+            for index in state.fridges.indices {
+                state.fridges[index].placements.removeAll { $0.source == .item(itemID) }
+            }
         }
         showToast("Удалено из коллекции", undoable: true)
     }
 
     func bringForward(_ id: UUID) {
-        apply { state in
-            guard let index = state.door.placements.firstIndex(where: { $0.id == id }),
-                  index < state.door.placements.count - 1 else { return }
-            state.door.placements.swapAt(index, index + 1)
+        updateCurrent { fridge in
+            guard let index = fridge.placements.firstIndex(where: { $0.id == id }),
+                  index < fridge.placements.count - 1 else { return }
+            fridge.placements.swapAt(index, index + 1)
         }
     }
 
     func sendBackward(_ id: UUID) {
-        apply { state in
-            guard let index = state.door.placements.firstIndex(where: { $0.id == id }), index > 0 else { return }
-            state.door.placements.swapAt(index, index - 1)
+        updateCurrent { fridge in
+            guard let index = fridge.placements.firstIndex(where: { $0.id == id }), index > 0 else { return }
+            fridge.placements.swapAt(index, index - 1)
         }
-    }
-
-    func updateDesign(_ change: (inout DoorDesign) -> Void) {
-        apply { change(&$0.door.design) }
-    }
-
-    func clearDoor() {
-        guard !state.door.placements.isEmpty else { return }
-        apply { $0.door.placements.removeAll() }
-        showToast("Дверца очищена", undoable: true)
     }
 
     // MARK: Outside changes
@@ -493,20 +612,6 @@ final class FridgeStore {
 
     // MARK: Helpers
 
-    private func add(_ item: FridgeItem) -> UUID? {
-        let placement = isDoorFull ? nil : newPlacement(source: .item(item.id), content: content(for: item))
-        apply { state in
-            state.items.append(item)
-            if let placement {
-                state.door.placements.append(placement)
-            }
-        }
-        if placement == nil {
-            showToast("Дверца заполнена — сохранено в коллекции")
-        }
-        return placement?.id
-    }
-
     private func newPlacement(source: PlacementSource, content: RenderContent, avoiding: [Placement]? = nil) -> Placement {
         let spot = freeSpot(preferLow: false, avoiding: avoiding)
         var placement = Placement(source: source, x: spot.x, y: spot.y,
@@ -516,6 +621,8 @@ final class FridgeStore {
         case .photo(let photo, _):
             if photo.style == .card {
                 placement.fastener = .standard(.redMagnet)
+            } else if photo.style == .polaroid {
+                placement.fastener = .standard(.whiteMagnet)
             }
         case .note(let note, _):
             if let kind = note.shape.defaultFastener {
@@ -530,14 +637,25 @@ final class FridgeStore {
     /// The candidate spot farthest from everything already on the door.
     /// The strip near the handle stays free.
     private func freeSpot(preferLow: Bool, avoiding: [Placement]? = nil) -> CGPoint {
-        let existing = avoiding ?? state.door.placements
-        let columns: [CGFloat] = [0.26, 0.46, 0.64]
-        let rows: [CGFloat] = preferLow ? [0.7, 0.84, 0.52, 0.34] : [0.34, 0.52, 0.7, 0.84]
-        var best = CGPoint(x: 0.45, y: 0.5)
+        let existing = avoiding ?? placements
+        let columns: [CGFloat]
+        var rows: [CGFloat]
+        switch format {
+        case .wide:
+            columns = [0.14, 0.3, 0.46, 0.62, 0.78]
+            rows = [0.5, 0.76]
+        case .square, .tall:
+            columns = [0.26, 0.46, 0.64]
+            rows = [0.34, 0.52, 0.7, 0.84]
+        }
+        if preferLow {
+            rows.reverse()
+        }
+        var best = CGPoint(x: 0.45, y: 0.55)
         var bestDistance: CGFloat = -1
         for y in rows {
             for x in columns {
-                let distance = existing.map { hypot($0.x - x, $0.y - y) }.min() ?? 1
+                let distance = existing.map { hypot(($0.x - x) * format.aspect, $0.y - y) }.min() ?? 1
                 if distance > bestDistance + 0.01 {
                     bestDistance = distance
                     best = CGPoint(x: x, y: y)

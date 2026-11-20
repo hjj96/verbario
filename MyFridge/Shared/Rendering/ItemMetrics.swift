@@ -12,7 +12,7 @@ enum RenderContent {
         switch self {
         case .photo(let photo, _):
             switch photo.style {
-            case .card: return 0.8
+            case .card, .polaroid: return 0.8
             case .cutout: return 1.1
             case .sticker, .holo: return 0.42
             case .round, .heart: return 1.25
@@ -29,7 +29,7 @@ enum RenderContent {
     /// Photo cards and notes can get a separate fastener; magnets hold themselves.
     var acceptsFastener: Bool {
         switch self {
-        case .photo(let photo, _): return photo.style == .card
+        case .photo(let photo, _): return photo.style == .card || photo.style == .polaroid
         case .note: return true
         case .magnet, .letter: return false
         }
@@ -61,6 +61,7 @@ enum ItemMetrics {
         case .photo(let photo, _):
             switch photo.style {
             case .card: return PhotoCardLayout.outerAspect(imageAspect: CGFloat(photo.aspect))
+            case .polaroid: return PolaroidLayout.outerAspect
             case .cutout, .sticker, .holo: return max(CGFloat(photo.aspect), 0.2)
             case .round, .heart: return PhotoShapes.unitSize.width / PhotoShapes.unitSize.height
             }
@@ -73,13 +74,19 @@ enum ItemMetrics {
         }
     }
 
+    /// The length item widths are measured against: the width of a tall door of the same
+    /// height. A magnet keeps its size on square, wide and tall fridges alike.
+    static func unit(in door: CGSize) -> CGFloat {
+        min(door.width, door.height * FridgeFormat.tall.aspect)
+    }
+
     static func size(of content: RenderContent, width: CGFloat, in door: CGSize) -> CGSize {
-        let w = width * door.width
+        let w = width * unit(in: door)
         return CGSize(width: w, height: w / aspect(of: content))
     }
 
     static func fastenerSize(in door: CGSize) -> CGFloat {
-        door.width * 0.075
+        unit(in: door) * 0.075
     }
 
     static func defaultWidth(for content: RenderContent) -> CGFloat {
@@ -88,6 +95,7 @@ enum ItemMetrics {
         case .photo(let photo, _):
             switch photo.style {
             case .card: base = photo.aspect > 1.1 ? 0.46 : 0.36
+            case .polaroid: base = 0.34
             case .cutout: base = 0.42
             case .sticker, .holo: base = 0.4
             case .round: base = 0.3
@@ -103,6 +111,16 @@ enum ItemMetrics {
         // Tall things should not cover more than half of the door.
         let limit = 0.5 * aspect(of: content) / doorAspect
         return min(base, limit)
+    }
+}
+
+/// An instant photo: a square picture with narrow sides and a wide bottom for a caption.
+enum PolaroidLayout {
+    static let side: CGFloat = 0.06
+    static let bottom: CGFloat = 0.26
+
+    static var outerAspect: CGFloat {
+        1 / ((1 - 2 * side) + side + bottom)
     }
 }
 

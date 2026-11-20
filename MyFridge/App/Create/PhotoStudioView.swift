@@ -36,7 +36,8 @@ struct PhotoStudioView: View {
     @State private var lassoCut: UIImage?
 
     @State private var finish: PhotoStyle = .sticker
-    @State private var wholeStyle: PhotoStyle = .card
+    @State private var wholeStyle: PhotoStyle = .polaroid
+    @State private var caption = ""
     @State private var border: StickerBorder = .thin
     @State private var separately = false
     @State private var results: [UIImage] = []
@@ -227,16 +228,17 @@ struct PhotoStudioView: View {
 
     private var wholePreview: some View {
         ZStack {
-            DoorPanelView(palette: store.design.finish.palette, cornerRadius: 26)
+            DoorPanelView(finish: store.design.finish, cornerRadius: 26)
             GeometryReader { geo in
                 if let image = wholeImage {
-                    let photo = PhotoContent(style: wholeStyle, file: "", aspect: Double(image.size.width / max(image.size.height, 1)))
+                    let photo = PhotoContent(style: wholeStyle, file: "", aspect: Double(image.size.width / max(image.size.height, 1)),
+                                             caption: wholeStyle == .polaroid ? caption : "")
                     let content = RenderContent.photo(photo, image)
                     let aspect = ItemMetrics.aspect(of: content)
                     let width = min(geo.size.width * 0.62, geo.size.height * 0.72 * aspect)
                     ItemPreview(content: content,
-                                fastener: wholeStyle == .card ? .redMagnet : nil,
-                                rotation: wholeStyle == .card ? -3 : 0,
+                                fastener: wholeStyle == .card ? .redMagnet : (wholeStyle == .polaroid ? .whiteMagnet : nil),
+                                rotation: wholeStyle == .card || wholeStyle == .polaroid ? -3 : 0,
                                 width: width)
                         .position(x: geo.size.width / 2, y: geo.size.height / 2)
                         .id(wholeStyle)
@@ -316,7 +318,7 @@ struct PhotoStudioView: View {
 
     private var resultShelf: some View {
         ZStack {
-            DoorPanelView(palette: store.design.finish.palette, cornerRadius: 24)
+            DoorPanelView(finish: store.design.finish, cornerRadius: 24)
             if results.isEmpty {
                 Text(mode == .lasso ? "Здесь появится вырезанный предмет" : "Выбери предмет на фото")
                     .font(.footnote.weight(.medium))
@@ -350,41 +352,73 @@ struct PhotoStudioView: View {
                     }
                 }
             }
-            Text(wholeStyle == .card
-                 ? "Карточку держит отдельный магнит. Его можно заменить и передвинуть по краю."
-                 : "Фото под толстой глянцевой линзой. Кадр выбран по самому интересному месту снимка.")
+            if wholeStyle == .polaroid {
+                TextField("Подпись от руки, например «Лето, 2026»", text: $caption)
+                    .font(NoteFont.caveat.font(size: 24))
+                    .padding(14)
+                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.card))
+                    .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1) }
+                    .onChange(of: caption) { _, newValue in
+                        if newValue.count > 40 {
+                            caption = String(newValue.prefix(40))
+                        }
+                    }
+            }
+            Text(wholeHint)
                 .font(.footnote)
                 .foregroundStyle(Color.inkSoft)
         }
     }
 
-    private var bottomBar: some View {
-        HStack(spacing: 10) {
-            Button {
-                save()
-            } label: {
-                if isSaving {
-                    ProgressView().tint(Color.onInk)
-                } else if isCutMode && results.count > 1 {
-                    Label("Прикрепить \(results.count)", systemImage: "plus")
-                } else {
-                    Label("Прикрепить на дверцу", systemImage: "plus")
-                }
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .disabled(!canSave || isSaving)
+    private var wholeHint: String {
+        switch wholeStyle {
+        case .polaroid: return "Квадратный кадр и широкое поле снизу для подписи. Подпись можно поменять потом."
+        case .card: return "Карточку держит отдельный магнит. Его можно заменить и передвинуть по краю."
+        default: return "Фото под толстой глянцевой линзой. Кадр выбран по самому интересному месту снимка."
+        }
+    }
 
-            if isCutMode && !shareURLs.isEmpty {
-                ShareLink(items: shareURLs) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundStyle(Color.ink)
-                        .frame(width: 52, height: 52)
-                        .background(Circle().fill(Color.card))
-                        .overlay { Circle().strokeBorder(Color.hairline, lineWidth: 1) }
+    private var bottomBar: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 10) {
+                Button {
+                    save(hang: true)
+                } label: {
+                    if isSaving {
+                        ProgressView().tint(Color.onInk)
+                    } else if isCutMode && results.count > 1 {
+                        Label("На дверцу: \(results.count)", systemImage: "plus")
+                    } else {
+                        Label("На дверцу «\(store.fridge.name)»", systemImage: "plus")
+                    }
                 }
-                .accessibilityLabel("Поделиться стикером")
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(!canSave || isSaving)
+
+                if isCutMode && !shareURLs.isEmpty {
+                    ShareLink(items: shareURLs) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(Color.ink)
+                            .frame(width: 52, height: 52)
+                            .background(Circle().fill(Color.card))
+                            .overlay { Circle().strokeBorder(Color.hairline, lineWidth: 1) }
+                    }
+                    .accessibilityLabel("Поделиться стикером")
+                }
             }
+            Button {
+                save(hang: false)
+            } label: {
+                Text("Только сохранить в коллекцию")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.ink)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSave || isSaving)
+            .opacity(canSave ? 1 : 0.4)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
@@ -513,8 +547,9 @@ struct PhotoStudioView: View {
         return urls
     }
 
-    private func save() {
+    private func save(hang: Bool) {
         let style = isCutMode ? finish : wholeStyle
+        let caption = style == .polaroid ? self.caption : ""
         let images: [UIImage]
         if isCutMode {
             images = results
@@ -529,9 +564,9 @@ struct PhotoStudioView: View {
         Task { @MainActor in
             do {
                 let photos = try await Task.detached(priority: .userInitiated) {
-                    try images.map { try PhotoProcessing.store($0, style: style) }
+                    try images.map { try PhotoProcessing.store($0, style: style, caption: caption) }
                 }.value
-                if let placementID = store.addPhotos(photos) {
+                if let placementID = store.addPhotos(photos, hang: hang) {
                     onPlaced(placementID)
                 }
                 dismiss()

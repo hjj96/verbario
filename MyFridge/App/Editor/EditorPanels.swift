@@ -21,6 +21,15 @@ struct SelectionPanel: View {
         return (id, photo.style)
     }
 
+    /// The polaroid behind this placement, if it is one.
+    private var polaroidItem: (id: UUID, caption: String)? {
+        guard case .item(let id) = placement.source, case .photo(let photo, _) = content, photo.style == .polaroid else { return nil }
+        return (id, photo.caption)
+    }
+
+    @State private var editsCaption = false
+    @State private var captionDraft = ""
+
     private var letter: LetterMagnet? {
         if case .letter(let letter) = placement.source { return letter }
         return nil
@@ -35,6 +44,7 @@ struct SelectionPanel: View {
         case .photo(let photo, _):
             switch photo.style {
             case .card: return "Держится на отдельном креплении"
+            case .polaroid: return photo.caption.isEmpty ? "Можно подписать от руки" : "«\(photo.caption)»"
             case .cutout: return "Вырезанный объект с толщиной"
             case .sticker: return "Плоский виниловый стикер"
             case .holo: return "Переливается, если наклонить телефон"
@@ -79,6 +89,17 @@ struct SelectionPanel: View {
 
             tools
                 .padding(.horizontal, 20)
+        }
+        .alert("Подпись", isPresented: $editsCaption) {
+            TextField("Например, Лето, 2026", text: $captionDraft)
+            Button("Готово") {
+                if let polaroidItem {
+                    store.setCaption(itemID: polaroidItem.id, caption: captionDraft)
+                }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Строчка от руки под фотографией.")
         }
     }
 
@@ -174,6 +195,12 @@ struct SelectionPanel: View {
             if let noteItemID {
                 ToolButton(title: "Текст", systemImage: "pencil") {
                     onEditNote(noteItemID)
+                }
+            }
+            if let polaroidItem {
+                ToolButton(title: "Подпись", systemImage: "signature") {
+                    captionDraft = polaroidItem.caption
+                    editsCaption = true
                 }
             }
             ToolButton(title: "Снять", systemImage: "tray.and.arrow.down", isDestructive: true) {

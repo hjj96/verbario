@@ -12,6 +12,8 @@ struct ItemContentView: View {
             switch photo.style {
             case .card:
                 PhotoCardView(image: image, size: size)
+            case .polaroid:
+                PolaroidView(image: image, caption: photo.caption, size: size)
             case .cutout:
                 CutoutMagnetView(image: image)
                     .frame(width: size.width, height: size.height)
@@ -64,6 +66,7 @@ struct PhotoCardView: View {
             Rectangle()
                 .fill(LinearGradient(colors: [Color(hex: 0xFDFBF6), Color(hex: 0xEFEBE2)],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
+            PaperGrain(seed: 11, density: 0.6)
             Group {
                 if let image {
                     PhotoImage(image: image)
@@ -117,7 +120,7 @@ struct PlacedItemView: View {
                 }
             }
             .rotationEffect(.degrees(placement.rotation + sway))
-            .modifier(ItemShadow(depth: content.depth, unit: doorSize.width, lifted: lifted))
+            .modifier(ItemShadow(depth: content.depth, unit: ItemMetrics.unit(in: doorSize), lifted: lifted))
             .scaleEffect(lifted ? 1.06 : 1)
     }
 }
@@ -143,12 +146,14 @@ struct ItemShadow: ViewModifier {
     }
 }
 
-/// A finished, non-interactive door: used by the widget and by previews in the app.
+/// A finished, non-interactive fridge: used by the widget and by previews in the app.
 struct FridgeCompositionView: View {
     let design: DoorDesign
+    let format: FridgeFormat
     let placements: [Placement]
     var showsDoor = true
     var showsOutline = false
+    var showsHandle = true
     let resolve: (Placement) -> RenderContent?
 
     var body: some View {
@@ -156,10 +161,10 @@ struct FridgeCompositionView: View {
             let size = geo.size
             ZStack {
                 if showsDoor {
-                    DoorBackgroundView(design: design)
+                    DoorBackgroundView(design: design, format: format)
                 }
                 if showsOutline {
-                    DoorOutlineView()
+                    DoorOutlineView(format: format)
                 }
                 ForEach(placements) { placement in
                     if let content = resolve(placement) {
@@ -167,8 +172,92 @@ struct FridgeCompositionView: View {
                             .position(x: placement.x * size.width, y: placement.y * size.height)
                     }
                 }
-                DoorHandleView(design: design)
+                if showsHandle {
+                    DoorHandleView(design: design, format: format)
+                }
             }
         }
+    }
+}
+
+extension FridgeCompositionView {
+    /// A preview of a whole fridge.
+    init(fridge: Fridge, resolve: @escaping (Placement) -> RenderContent?) {
+        self.init(design: fridge.design, format: fridge.format, placements: fridge.placements, resolve: resolve)
+    }
+}
+
+/// An instant photo: square picture, wide bottom margin and a handwritten caption.
+struct PolaroidView: View {
+    let image: UIImage?
+    let caption: String
+    let size: CGSize
+
+    var body: some View {
+        let side = size.width * PolaroidLayout.side
+        let picture = size.width - side * 2
+        let bottom = size.height - side - picture
+        ZStack(alignment: .top) {
+            Rectangle()
+                .fill(LinearGradient(colors: [Color(hex: 0xFEFDF9), Color(hex: 0xF1EEE6)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+            PaperGrain(seed: 23, density: 0.7)
+            Group {
+                if let image {
+                    PhotoImage(image: image)
+                        .scaledToFill()
+                } else {
+                    PhotoPlaceholder()
+                }
+            }
+            .frame(width: picture, height: picture)
+            .clipped()
+            .overlay {
+                // A slightly sunken picture with a faint gloss, like real instant film.
+                ZStack {
+                    LinearGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0), Color.black.opacity(0.06)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                    Rectangle().strokeBorder(Color.black.opacity(0.18), lineWidth: max(0.5, size.width * 0.004))
+                }
+            }
+            .padding(.top, side)
+            if !caption.isEmpty {
+                Text(caption)
+                    .font(NoteFont.caveat.font(size: size.width * 0.12))
+                    .foregroundStyle(Color(hex: 0x2A2521).opacity(0.88))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+                    .padding(.horizontal, side * 1.5)
+                    .frame(width: size.width, height: bottom)
+                    .rotationEffect(.degrees(-1.5))
+                    .offset(y: side + picture)
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .overlay {
+            Rectangle().strokeBorder(Color.black.opacity(0.06), lineWidth: 0.5)
+        }
+    }
+}
+
+/// Fine speckles that make paper read as paper. Seeded, so it never flickers.
+struct PaperGrain: View {
+    var seed: UInt64 = 5
+    var density: Double = 1
+
+    var body: some View {
+        Canvas { context, size in
+            var random = SeededRandom(seed: seed)
+            let count = Int(size.width * size.height / 26 * density)
+            for _ in 0..<min(count, 2400) {
+                let x = random.range(0...size.width)
+                let y = random.range(0...size.height)
+                let isDark = random.chance(0.6)
+                let alpha = Double(random.range(0.03...0.09))
+                let dot = Path(ellipseIn: CGRect(x: x, y: y, width: random.range(0.5...1.3), height: random.range(0.5...1.3)))
+                context.fill(dot, with: .color(isDark ? Color.black.opacity(alpha) : Color.white.opacity(alpha * 2)))
+            }
+        }
+        .allowsHitTesting(false)
     }
 }

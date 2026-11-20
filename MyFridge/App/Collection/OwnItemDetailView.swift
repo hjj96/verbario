@@ -15,6 +15,17 @@ struct OwnItemDetailView: View {
     @State private var drag: CGSize = .zero
     @State private var shareURL: URL?
     @State private var confirmsDelete = false
+    @State private var editsCaption = false
+    @State private var captionDraft = ""
+
+    /// Where the item hangs, in words.
+    private var placesText: String {
+        let names = store.fridges(showing: itemID).map(\.name)
+        if names.isEmpty {
+            return "Хранится в коллекции"
+        }
+        return "Висит: " + names.joined(separator: ", ")
+    }
 
     private var photo: PhotoContent? {
         guard let item = store.state.item(itemID), case .photo(let photo) = item.content else { return nil }
@@ -37,9 +48,22 @@ struct OwnItemDetailView: View {
                         Text(photo.style.title)
                             .font(.serif(32))
                             .foregroundStyle(Color.ink)
-                        Text(store.isOnDoor(itemID) ? "Висит на дверце" : "Хранится в коллекции")
+                        Text(placesText)
                             .font(.subheadline)
                             .foregroundStyle(Color.inkSoft)
+                            .multilineTextAlignment(.center)
+                        if photo.style == .polaroid {
+                            Button {
+                                captionDraft = photo.caption
+                                editsCaption = true
+                            } label: {
+                                Label(photo.caption.isEmpty ? "Подписать" : "«\(photo.caption)»", systemImage: "signature")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.ink)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 4)
+                        }
                     }
                     if photo.style.isCutoutFamily {
                         HStack(spacing: 8) {
@@ -78,6 +102,13 @@ struct OwnItemDetailView: View {
             Button("Отмена", role: .cancel) {}
         } message: {
             Text("Предмет исчезнет из коллекции и с дверцы. Сразу после удаления его можно вернуть кнопкой «Отменить».")
+        }
+        .alert("Подпись", isPresented: $editsCaption) {
+            TextField("Например, Лето, 2026", text: $captionDraft)
+            Button("Готово") {
+                store.setCaption(itemID: itemID, caption: captionDraft)
+            }
+            Button("Отмена", role: .cancel) {}
         }
         .task(id: photo?.file) { await prepareShare() }
         .onAppear { if !reduceMotion { motion.start() } }
@@ -154,6 +185,7 @@ struct OwnItemDetailView: View {
         case .sticker, .holo: name = "Стикер"
         case .cutout, .round, .heart: name = "Магнит"
         case .card: name = "Фото"
+        case .polaroid: name = "Полароид"
         }
         let ext = (photo.file as NSString).pathExtension
         shareURL = await Task.detached(priority: .utility) { () -> URL? in

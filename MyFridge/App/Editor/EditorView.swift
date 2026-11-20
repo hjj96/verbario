@@ -9,6 +9,7 @@ struct EditorView: View {
         case word
         case collection
         case settings
+        case fridges
         case widgetGuide
 
         var id: String {
@@ -17,6 +18,7 @@ struct EditorView: View {
             case .word: return "word"
             case .collection: return "collection"
             case .settings: return "settings"
+            case .fridges: return "fridges"
             case .widgetGuide: return "widgetGuide"
             }
         }
@@ -47,7 +49,10 @@ struct EditorView: View {
             header
             DoorCanvas(selection: $selection)
                 .environment(\.magnetLight, reduceMotion ? MagnetLight() : motion.light)
-                .aspectRatio(ItemMetrics.doorAspect, contentMode: .fit)
+                .aspectRatio(store.format.aspect, contentMode: .fit)
+                .id(store.fridge.id)
+                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .opacity))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 18)
                 .padding(.top, 10)
@@ -81,10 +86,16 @@ struct EditorView: View {
                 .environment(store)
                 .environment(motion)
         }
-        .onOpenURL { _ in
-            // The widget opens the editor for its door.
+        .onOpenURL { url in
+            // The widget opens the editor for its fridge: myfridge://fridge/<id>
             sheet = nil
             pendingPhoto = nil
+            selection = nil
+            if url.host == "fridge", let id = UUID(uuidString: url.lastPathComponent) {
+                withAnimation(.snappy) { store.selectFridge(id) }
+            }
+        }
+        .onChange(of: store.fridge.id) { _, _ in
             selection = nil
         }
         .onAppear { if !reduceMotion { motion.start() } }
@@ -98,11 +109,22 @@ struct EditorView: View {
         HStack(alignment: .bottom, spacing: 8) {
             VStack(alignment: .leading, spacing: 3) {
                 SaveStatusLabel(status: store.saveStatus)
-                Text(store.design.nameplate.isEmpty ? "Мой холодильник" : store.design.nameplate)
-                    .font(.serif(30))
-                    .foregroundStyle(Color.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                Button {
+                    sheet = .fridges
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(store.fridge.name)
+                            .font(.serif(30))
+                            .foregroundStyle(Color.ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.inkSoft)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Холодильник \(store.fridge.name). Выбрать другой")
             }
             Spacer(minLength: 8)
             RoundIconButton(systemImage: "arrow.uturn.backward", label: "Отменить") {
@@ -113,7 +135,7 @@ struct EditorView: View {
                 store.redo()
             }
             .disabled(!store.canRedo)
-            RoundIconButton(systemImage: "slider.horizontal.3", label: "Дверца и настройки") {
+            RoundIconButton(systemImage: "slider.horizontal.3", label: "Вид холодильника и настройки") {
                 sheet = .settings
             }
         }
@@ -160,6 +182,8 @@ struct EditorView: View {
             }
         case .settings:
             SettingsView()
+        case .fridges:
+            FridgesView()
         case .widgetGuide:
             NavigationStack {
                 WidgetGuideView()

@@ -11,7 +11,9 @@ struct WidgetGuideView: View {
         ("Добавь виджет",
          "Нажми «Изменить» в левом верхнем углу и выбери «Добавить виджет» (в старых версиях iOS — кнопка «+»)."),
         ("Найди холодильник",
-         "Введи в поиске «Холодильник» и выбери размер: маленький или большой."),
+         "Введи в поиске «Холодильник» и выбери размер: маленький, средний или большой."),
+        ("Выбери холодильник",
+         "Удержи виджет и нажми «Изменить виджет», чтобы выбрать, какой холодильник он показывает. Можно поставить несколько разных."),
         ("Возвращайся касанием",
          "Чтобы что-то поменять, коснись дверцы — откроется редактор. Галочки на делах отмечаются прямо на виджете."),
     ]
@@ -20,8 +22,8 @@ struct WidgetGuideView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 HStack(alignment: .bottom, spacing: 16) {
-                    preview(width: 156, square: false)
-                    preview(width: 78, square: true)
+                    preview(height: 150)
+                    preview(height: store.format == .wide ? 40 : 76)
                     Spacer(minLength: 0)
                 }
                 .padding(.top, 8)
@@ -58,12 +60,14 @@ struct WidgetGuideView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func preview(width: CGFloat, square: Bool) -> some View {
-        FridgeCompositionView(design: store.design, placements: store.state.door.placements) { placement in
+    private func preview(height: CGFloat) -> some View {
+        let fridge = store.fridge
+        let width = height * fridge.format.aspect
+        return FridgeCompositionView(fridge: fridge) { placement in
             store.content(for: placement)
         }
-        .frame(width: width, height: square ? width : width / ItemMetrics.doorAspect)
-        .clipShape(RoundedRectangle(cornerRadius: width * 0.14, style: .continuous))
+        .frame(width: min(width, 230), height: min(width, 230) / fridge.format.aspect)
+        .clipShape(RoundedRectangle(cornerRadius: min(height, 150) * 0.14, style: .continuous))
         .shadow(color: Color.black.opacity(0.18), radius: 8, y: 4)
     }
 }

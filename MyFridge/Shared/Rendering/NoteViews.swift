@@ -223,6 +223,8 @@ private struct TornNoteView: View {
         ZStack {
             shape.fill(LinearGradient(colors: [note.paper.base, note.paper.shade],
                                       startPoint: .topLeading, endPoint: .bottomTrailing))
+            PaperGrain(seed: seed, density: 0.9)
+                .clipShape(shape)
             shape.stroke(Color.white.opacity(0.35), lineWidth: max(0.5, size.width * 0.004))
             NoteBody(note: note, itemID: itemID, pointSize: size.width * 0.13)
                 .padding(.horizontal, size.width * 0.1)
@@ -285,6 +287,8 @@ private struct StickyNoteView: View {
             StickyPaperShape(curl: curl)
                 .fill(LinearGradient(colors: [note.paper.base, note.paper.shade],
                                      startPoint: .top, endPoint: .bottom))
+            PaperGrain(seed: 31, density: 0.8)
+                .clipShape(StickyPaperShape(curl: curl))
             CornerCurlShape(curl: curl)
                 .fill(LinearGradient(colors: [Color.white.opacity(0.9), note.paper.shade],
                                      startPoint: .bottomTrailing, endPoint: .topLeading))
@@ -340,6 +344,7 @@ private struct IndexCardNoteView: View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: size.width * 0.02, style: .continuous)
                 .fill(paper)
+            PaperGrain(seed: 41, density: 0.6)
             Canvas { context, canvasSize in
                 let lineWidth = max(0.5, canvasSize.width * 0.004)
                 var y = canvasSize.height * 0.36

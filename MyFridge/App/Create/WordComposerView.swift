@@ -100,7 +100,7 @@ struct WordComposerView: View {
         let shown = letters.isEmpty ? "ДОМ".map(String.init) : letters
         let letterWidth = min(40, 300 / CGFloat(max(shown.count, 1)))
         return ZStack {
-            DoorPanelView(palette: store.design.finish.palette, cornerRadius: 24)
+            DoorPanelView(finish: store.design.finish, cornerRadius: 24)
             HStack(spacing: -4) {
                 ForEach(Array(shown.enumerated()), id: \.offset) { index, character in
                     if character == " " {
