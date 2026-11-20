@@ -45,7 +45,6 @@ struct SettingsView: View {
                     }
                     FormatPicker(format: formatBinding)
                     FinishPicker(design: designBinding, format: store.format)
-                    HandlePicker(handle: designBinding.handle)
                     plate
                     feelings
                     widget

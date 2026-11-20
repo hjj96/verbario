@@ -642,11 +642,11 @@ final class FridgeStore {
         var rows: [CGFloat]
         switch format {
         case .wide:
-            columns = [0.14, 0.3, 0.46, 0.62, 0.78]
-            rows = [0.5, 0.76]
+            columns = [0.12, 0.3, 0.5, 0.7, 0.88]
+            rows = [0.32, 0.68]
         case .square, .tall:
-            columns = [0.26, 0.46, 0.64]
-            rows = [0.34, 0.52, 0.7, 0.84]
+            columns = [0.22, 0.5, 0.78]
+            rows = [0.2, 0.42, 0.62, 0.82]
         }
         if preferLow {
             rows.reverse()

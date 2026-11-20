@@ -45,7 +45,7 @@ struct FridgeEntry: TimelineEntry {
         var fridge = starter.fridges[0]
         fridge.format = format
         if format == .wide {
-            fridge.design = DoorDesign(finish: .mint, handle: .bar)
+            fridge.design = DoorDesign(finish: .mint)
             fridge.placements = [
                 Placement(source: .magnet("lemon"), x: 0.14, y: 0.55, width: 0.2, rotation: -8),
                 Placement(source: fridge.placements[1].source, x: 0.42, y: 0.6, width: 0.44, rotation: -3,
@@ -101,21 +101,14 @@ struct FridgeWidgetView: View {
         GeometryReader { geo in
             let area = fittedArea(for: fridge.format, in: geo.size, target: target)
             ZStack(alignment: .topLeading) {
-                if renderingMode != .fullColor {
-                    DoorOutlineView(format: target)
-                }
                 FridgeCompositionView(design: fridge.design,
                                       format: fridge.format,
                                       placements: fridge.placements,
-                                      showsDoor: false,
-                                      showsHandle: fridge.format == target) { placement in
+                                      showsDoor: false) { placement in
                     entry.contents[placement.id]
                 }
                 .frame(width: area.width, height: area.height)
                 .offset(x: area.minX, y: area.minY)
-                if fridge.format != target {
-                    DoorHandleView(design: fridge.design, format: target)
-                }
             }
         }
         .environment(\.noteInteraction, .widget)

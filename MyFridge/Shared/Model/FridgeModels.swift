@@ -322,29 +322,14 @@ enum DoorFinish: String, Codable, Hashable, CaseIterable, Identifiable {
     static let enamels: [DoorFinish] = [.cream, .mint, .sky, .cherry, .lemon, .powder, .black]
 }
 
-enum HandleStyle: String, Codable, Hashable, CaseIterable, Identifiable {
-    case bar, bow, cream
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .bar: return "Хромированная скоба"
-        case .bow: return "Дуга"
-        case .cream: return "Сливочная скоба"
-        }
-    }
-}
-
 /// How a fridge looks.
 struct DoorDesign: Codable, Hashable {
     var finish: DoorFinish = .steel
-    var handle: HandleStyle = .bow
     /// Chrome script plate on the top; empty means no plate.
     var nameplate = ""
 
     private enum CodingKeys: String, CodingKey {
-        case finish, handle, nameplate
+        case finish, nameplate
     }
 }
 
@@ -353,7 +338,6 @@ extension DoorDesign {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init()
         finish = (try? container.decodeIfPresent(DoorFinish.self, forKey: .finish)) ?? .steel
-        handle = (try? container.decodeIfPresent(HandleStyle.self, forKey: .handle)) ?? .bow
         nameplate = try container.decodeIfPresent(String.self, forKey: .nameplate) ?? ""
     }
 }
@@ -429,21 +413,20 @@ extension Fridge {
 struct FridgePreset: Identifiable, Hashable {
     let name: String
     let finish: DoorFinish
-    let handle: HandleStyle
 
     var id: String { finish.rawValue }
 
     static let all: [FridgePreset] = [
-        FridgePreset(name: "Стальной", finish: .steel, handle: .bow),
-        FridgePreset(name: "Мятный", finish: .mint, handle: .bar),
-        FridgePreset(name: "Вишнёвый", finish: .cherry, handle: .bar),
-        FridgePreset(name: "Сливочный", finish: .cream, handle: .bar),
-        FridgePreset(name: "Небесный", finish: .sky, handle: .bar),
-        FridgePreset(name: "Лимонный", finish: .lemon, handle: .bar),
-        FridgePreset(name: "Пудровый", finish: .powder, handle: .bar),
-        FridgePreset(name: "Чёрный", finish: .black, handle: .bar),
-        FridgePreset(name: "Графитовый", finish: .graphite, handle: .bar),
-        FridgePreset(name: "Шампань", finish: .champagne, handle: .cream),
+        FridgePreset(name: "Стальной", finish: .steel),
+        FridgePreset(name: "Мятный", finish: .mint),
+        FridgePreset(name: "Вишнёвый", finish: .cherry),
+        FridgePreset(name: "Сливочный", finish: .cream),
+        FridgePreset(name: "Небесный", finish: .sky),
+        FridgePreset(name: "Лимонный", finish: .lemon),
+        FridgePreset(name: "Пудровый", finish: .powder),
+        FridgePreset(name: "Чёрный", finish: .black),
+        FridgePreset(name: "Графитовый", finish: .graphite),
+        FridgePreset(name: "Шампань", finish: .champagne),
     ]
 }
 
@@ -522,7 +505,7 @@ extension FridgeState {
     /// The person adds their own photos next.
     static var starter: FridgeState {
         let note = FridgeItem(content: .note(NoteContent(text: "Хорошо быть дома", paper: .cream, shape: .torn, font: .caveat)))
-        var fridge = Fridge(name: "Кухня", format: .tall, design: DoorDesign(finish: .steel, handle: .bow))
+        var fridge = Fridge(name: "Кухня", format: .tall, design: DoorDesign(finish: .steel))
         fridge.placements = [
             Placement(source: .magnet("lemon"), x: 0.22, y: 0.31, width: 0.2, rotation: -8),
             Placement(source: .item(note.id), x: 0.43, y: 0.6, width: 0.46, rotation: -4,

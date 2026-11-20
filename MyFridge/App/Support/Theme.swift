@@ -181,18 +181,10 @@ struct SteelTile: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        shape
-            .fill(LinearGradient(colors: [Color(hex: 0xDEE1E5), Color(hex: 0xC3C8CD), Color(hex: 0xAEB3B9)],
-                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+        DoorSurfaceView(finish: .steel)
+            .clipShape(shape)
             .overlay {
-                BrushedMetalTexture()
-                    .opacity(0.8)
-                    .clipShape(shape)
-            }
-            .overlay {
-                shape.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.85), Color.black.opacity(0.15)],
-                                                  startPoint: .top, endPoint: .bottom),
-                                   lineWidth: 1)
+                shape.strokeBorder(Color.black.opacity(0.06), lineWidth: 0.5)
             }
     }
 }

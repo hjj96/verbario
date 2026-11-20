@@ -182,7 +182,7 @@ struct NewFridgeView: View {
 
     @State private var name = ""
     @State private var format: FridgeFormat = .tall
-    @State private var design = DoorDesign(finish: .mint, handle: .bar)
+    @State private var design = DoorDesign(finish: .mint)
 
     var body: some View {
         ScrollView {
@@ -204,7 +204,6 @@ struct NewFridgeView: View {
                 }
                 FormatPicker(format: $format)
                 FinishPicker(design: $design, format: format)
-                HandlePicker(handle: $design.handle)
             }
             .padding(20)
         }
@@ -272,18 +271,12 @@ struct FinishPicker: View {
                         Button {
                             withAnimation(.snappy) {
                                 design.finish = finish
-                                if finish == .champagne && design.handle == .bar {
-                                    design.handle = .cream
-                                }
                             }
                             Feedback.select()
                         } label: {
                             VStack(spacing: 6) {
-                                ZStack {
-                                    DoorBackgroundView(design: DoorDesign(finish: finish, handle: design.handle), format: .square)
-                                    DoorHandleView(design: DoorDesign(finish: finish, handle: design.handle), format: .square)
-                                }
-                                .frame(width: 58, height: 58)
+                                DoorSurfaceView(finish: finish)
+                                    .frame(width: 58, height: 58)
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 .shadow(color: Color.black.opacity(0.18), radius: 4, y: 2)
                                 .padding(3)
@@ -305,25 +298,6 @@ struct FinishPicker: View {
                     }
                 }
                 .padding(.vertical, 2)
-            }
-        }
-    }
-}
-
-struct HandlePicker: View {
-    @Binding var handle: HandleStyle
-
-    var body: some View {
-        OptionSection(title: "Ручка") {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(HandleStyle.allCases) { option in
-                        ChoiceChip(title: option.title, isSelected: handle == option) {
-                            withAnimation(.snappy) { handle = option }
-                            Feedback.select()
-                        }
-                    }
-                }
             }
         }
     }

@@ -152,8 +152,6 @@ struct FridgeCompositionView: View {
     let format: FridgeFormat
     let placements: [Placement]
     var showsDoor = true
-    var showsOutline = false
-    var showsHandle = true
     let resolve: (Placement) -> RenderContent?
 
     var body: some View {
@@ -163,17 +161,11 @@ struct FridgeCompositionView: View {
                 if showsDoor {
                     DoorBackgroundView(design: design, format: format)
                 }
-                if showsOutline {
-                    DoorOutlineView(format: format)
-                }
                 ForEach(placements) { placement in
                     if let content = resolve(placement) {
                         PlacedItemView(content: content, placement: placement, doorSize: size)
                             .position(x: placement.x * size.width, y: placement.y * size.height)
                     }
-                }
-                if showsHandle {
-                    DoorHandleView(design: design, format: format)
                 }
             }
         }

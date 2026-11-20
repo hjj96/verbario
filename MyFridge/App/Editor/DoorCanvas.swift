@@ -47,7 +47,6 @@ struct DoorCanvas: View {
                     ForEach(store.placements) { placement in
                         item(placement, doorSize: size)
                     }
-                    DoorHandleView(design: design, format: format)
                 }
                 .clipShape(shape)
                 .background {
