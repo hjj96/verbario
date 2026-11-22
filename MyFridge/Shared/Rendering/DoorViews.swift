@@ -59,16 +59,16 @@ extension DoorFinish {
     /// Average colour of the surface: shown before the texture loads.
     var baseColor: Color {
         switch self {
-        case .steel: return Color(hex: 0xC2C6C9)
-        case .graphite: return Color(hex: 0x52565B)
-        case .champagne: return Color(hex: 0xCAC0B0)
-        case .cream: return Color(hex: 0xEDE4C9)
-        case .mint: return Color(hex: 0xB9E4CC)
-        case .sky: return Color(hex: 0xA6CBE8)
-        case .cherry: return Color(hex: 0xCD3C3A)
-        case .lemon: return Color(hex: 0xEFD667)
-        case .powder: return Color(hex: 0xEFC6CF)
-        case .black: return Color(hex: 0x36373A)
+        case .steel: return Color(hex: 0xC1C2C5)
+        case .graphite: return Color(hex: 0x3D4045)
+        case .champagne: return Color(hex: 0xC8BAA5)
+        case .cream: return Color(hex: 0xF0E6C9)
+        case .mint: return Color(hex: 0xBAE3C9)
+        case .sky: return Color(hex: 0xA6CCE6)
+        case .cherry: return Color(hex: 0xCB3637)
+        case .lemon: return Color(hex: 0xF2D55C)
+        case .powder: return Color(hex: 0xF1C4CC)
+        case .black: return Color(hex: 0x313131)
         }
     }
 
