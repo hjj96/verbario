@@ -635,7 +635,6 @@ final class FridgeStore {
     }
 
     /// The candidate spot farthest from everything already on the door.
-    /// The strip near the handle stays free.
     private func freeSpot(preferLow: Bool, avoiding: [Placement]? = nil) -> CGPoint {
         let existing = avoiding ?? placements
         let columns: [CGFloat]

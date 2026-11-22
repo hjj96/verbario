@@ -317,8 +317,9 @@ struct MagnetDetailView: View {
                         .modifier(ItemShadow(depth: 0.8 + art.thickness / 10, unit: 900))
                         .scaleEffect(x: 1 - abs(tilt.dx) * 0.06, y: 1 - abs(tilt.dy) * 0.06)
                         .offset(x: drag.width * 0.08, y: drag.height * 0.08)
-                        .environment(\.magnetLight, MagnetLight(tilt: tilt, depth: 2.2))
                 }
+                // the steel catches the light too, so the whole scene turns in the hand
+                .environment(\.magnetLight, MagnetLight(tilt: tilt, depth: 2.2))
                 .frame(height: 340)
                 .contentShape(Rectangle())
                 .gesture(

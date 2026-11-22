@@ -91,7 +91,6 @@ struct FridgeProvider: AppIntentTimelineProvider {
 }
 
 struct FridgeWidgetView: View {
-    @Environment(\.widgetRenderingMode) private var renderingMode
     @Environment(\.widgetFamily) private var family
     let entry: FridgeEntry
 

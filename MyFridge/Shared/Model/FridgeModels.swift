@@ -346,7 +346,7 @@ extension DoorDesign {
 enum FridgeFormat: String, Codable, Hashable, CaseIterable, Identifiable {
     /// Small widget.
     case square
-    /// Medium widget: a wide door with the handle along the top.
+    /// Medium widget: a wide, low door.
     case wide
     /// Large widget (and the extra large one on iPad).
     case tall

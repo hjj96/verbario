@@ -125,8 +125,8 @@ struct OwnItemDetailView: View {
             ItemPreview(content: content, rotation: 0, width: width)
                 .scaleEffect(x: 1 - abs(tilt.dx) * 0.05, y: 1 - abs(tilt.dy) * 0.05)
                 .offset(x: drag.width * 0.08, y: drag.height * 0.08)
-                .environment(\.magnetLight, MagnetLight(tilt: tilt, depth: 2.2))
         }
+        .environment(\.magnetLight, MagnetLight(tilt: tilt, depth: 2.2))
         .frame(height: 340)
         .contentShape(Rectangle())
         .gesture(
