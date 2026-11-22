@@ -107,7 +107,7 @@ final class FridgeStore {
     @discardableResult
     func addFridge(name: String, format: FridgeFormat, design: DoorDesign) -> UUID {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let fallback = FridgePreset.all.first { $0.finish == design.finish }?.name ?? "Холодильник"
+        let fallback = FridgePreset.suggestedName(for: design)
         let fridge = Fridge(name: String((trimmed.isEmpty ? fallback : trimmed).prefix(24)), format: format, design: design)
         apply { state in
             state.fridges.append(fridge)
@@ -637,7 +637,7 @@ final class FridgeStore {
     /// The candidate spot farthest from everything already on the door.
     private func freeSpot(preferLow: Bool, avoiding: [Placement]? = nil) -> CGPoint {
         let existing = avoiding ?? placements
-        let columns: [CGFloat]
+        var columns: [CGFloat]
         var rows: [CGFloat]
         switch format {
         case .wide:
@@ -646,6 +646,17 @@ final class FridgeStore {
         case .square, .tall:
             columns = [0.22, 0.5, 0.78]
             rows = [0.2, 0.42, 0.62, 0.82]
+        }
+        // keep clear of a retro handle and of the badge at the top
+        if let handle = design.handle {
+            let limit = DoorHardware.handleZoneStart(handle, format: format)
+            let count = columns.count
+            let left = columns[0]
+            let right = min(columns[count - 1], limit - 0.1)
+            columns = (0..<count).map { left + (right - left) * CGFloat($0) / CGFloat(max(count - 1, 1)) }
+        }
+        if design.model == .thaw, !design.nameplate.isEmpty, format != .wide {
+            rows = rows.map { $0 * 0.85 + 0.12 }
         }
         if preferLow {
             rows.reverse()

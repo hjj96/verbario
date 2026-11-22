@@ -155,7 +155,7 @@ private struct FridgeCard<MenuContent: View>: View {
                             .foregroundStyle(Color.ink)
                             .lineLimit(1)
                     }
-                    Text("\(fridge.format.title) · \(fridge.design.finish.title)")
+                    Text("\(fridge.design.model.isRetro ? fridge.design.model.title : fridge.format.title) · \(fridge.design.finish.title)")
                         .font(.caption)
                         .foregroundStyle(Color.inkSoft)
                         .lineLimit(1)
@@ -182,12 +182,12 @@ struct NewFridgeView: View {
 
     @State private var name = ""
     @State private var format: FridgeFormat = .tall
-    @State private var design = DoorDesign(finish: .mint)
+    @State private var design = DoorDesign(finish: .mint, model: .fifties)
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                FridgeCompositionView(design: design, format: format, placements: []) { _ in nil }
+                FridgeCompositionView(design: previewDesign, format: format, placements: []) { _ in nil }
                     .aspectRatio(format.aspect, contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .shadow(color: Color.black.opacity(0.25), radius: 16, y: 10)
@@ -202,14 +202,21 @@ struct NewFridgeView: View {
                         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.card))
                         .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1) }
                 }
-                FormatPicker(format: $format)
+                ModelPicker(design: $design)
                 FinishPicker(design: $design, format: format)
+                FormatPicker(format: $format)
             }
             .padding(20)
         }
         .safeAreaInset(edge: .bottom) {
             Button {
-                store.addFridge(name: name, format: format, design: design)
+                var look = design
+                if look.model.isRetro {
+                    // a retro fridge wears its name in chrome
+                    let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    look.nameplate = String((title.isEmpty ? placeholder : title).prefix(16))
+                }
+                store.addFridge(name: name, format: format, design: look)
                 Feedback.attach()
                 onCreated()
             } label: {
@@ -226,11 +233,79 @@ struct NewFridgeView: View {
     }
 
     private var placeholder: String {
-        FridgePreset.all.first { $0.finish == design.finish }?.name ?? "Холодильник"
+        FridgePreset.suggestedName(for: design)
+    }
+
+    /// The new fridge as it will look, its name already in chrome.
+    private var previewDesign: DoorDesign {
+        var look = design
+        if look.model.isRetro {
+            let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            look.nameplate = String((title.isEmpty ? placeholder : title).prefix(16))
+        }
+        return look
     }
 }
 
 // MARK: - Shared pickers
+
+/// The kind of fridge, shown as small live doors in the current colour.
+struct ModelPicker: View {
+    @Binding var design: DoorDesign
+
+    var body: some View {
+        OptionSection(title: "Модель") {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(DoorModel.allCases) { model in
+                        Button {
+                            withAnimation(.snappy) {
+                                design.model = model
+                                design.showsHandle = true
+                            }
+                            Feedback.select()
+                        } label: {
+                            VStack(spacing: 6) {
+                                FridgeCompositionView(design: sample(model), format: .tall, placements: []) { _ in nil }
+                                    .frame(width: 84, height: 88)
+                                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                                    .shadow(color: Color.black.opacity(0.2), radius: 5, y: 3)
+                                    .padding(3)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .strokeBorder(design.model == model ? Color.ink : Color.clear, lineWidth: 2)
+                                    }
+                                Text(model.title)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.ink)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .buttonStyle(PressableStyle())
+                        .accessibilityLabel(model.title)
+                        .accessibilityHint(model.subtitle)
+                        .accessibilityAddTraits(design.model == model ? .isSelected : [])
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            Text(design.model.subtitle)
+                .font(.footnote)
+                .foregroundStyle(Color.inkSoft)
+        }
+    }
+
+    /// The model in the current colour, with a sample name so its emblem shows.
+    private func sample(_ model: DoorModel) -> DoorDesign {
+        var sample = design
+        sample.model = model
+        sample.showsHandle = true
+        if sample.nameplate.isEmpty {
+            sample.nameplate = "Кухня"
+        }
+        return sample
+    }
+}
 
 struct FormatPicker: View {
     @Binding var format: FridgeFormat

@@ -322,14 +322,76 @@ enum DoorFinish: String, Codable, Hashable, CaseIterable, Identifiable {
     static let enamels: [DoorFinish] = [.cream, .mint, .sky, .cherry, .lemon, .powder, .black]
 }
 
+/// The kind of fridge: the shape of its door and its chrome hardware. The retro models
+/// follow real fridges of their era: a cushioned door with deep rounded edges, a chunky
+/// chrome handle and a chrome name.
+enum DoorModel: String, Codable, Hashable, CaseIterable, Identifiable {
+    /// A flat modern door without a handle.
+    case modern
+    /// American 1950s: a long bar handle with a push button, a chrome script name on top.
+    case fifties
+    /// Italian revival of the 50s look: a chunky grip and a wide-spaced name at the bottom.
+    case riviera
+    /// Soviet 1960s: a lever with a lock and a chrome badge with wings.
+    case thaw
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .modern: return "Современный"
+        case .fifties: return "Пятидесятые"
+        case .riviera: return "Ривьера"
+        case .thaw: return "Оттепель"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .modern: return "Плоская дверца без ручки"
+        case .fifties: return "Американская классика: ручка с кнопкой и надпись хромированным почерком"
+        case .riviera: return "Итальянский ретро: массивная ручка и имя внизу дверцы"
+        case .thaw: return "Советские шестидесятые: рычаг с замком и шильдик с крылышками"
+        }
+    }
+
+    /// A cushioned door with deep rounded edges and chrome hardware.
+    var isRetro: Bool { self != .modern }
+
+    /// What the name on the door is called in settings.
+    var nameplateTitle: String {
+        switch self {
+        case .modern, .fifties: return "Надпись"
+        case .riviera: return "Имя на дверце"
+        case .thaw: return "Шильдик"
+        }
+    }
+
+    var nameplateHint: String {
+        switch self {
+        case .modern, .fifties: return "Хромированный почерк наверху дверцы. Оставь пустым, чтобы убрать."
+        case .riviera: return "Хромированные строчные буквы внизу дверцы, широко, как у итальянских холодильников."
+        case .thaw: return "Слово на красной эмали в хромированной рамке с крылышками. Лучше коротко: «Дом», «Дача»."
+        }
+    }
+}
+
 /// How a fridge looks.
 struct DoorDesign: Codable, Hashable {
     var finish: DoorFinish = .steel
-    /// Chrome script plate on the top; empty means no plate.
+    /// Chrome name on the door; empty means none.
     var nameplate = ""
+    var model: DoorModel = .modern
+    /// Retro models can hide their handle.
+    var showsHandle = true
+
+    /// The handle on the door, if any.
+    var handle: DoorModel? {
+        model.isRetro && showsHandle ? model : nil
+    }
 
     private enum CodingKeys: String, CodingKey {
-        case finish, nameplate
+        case finish, nameplate, model, showsHandle
     }
 }
 
@@ -339,6 +401,8 @@ extension DoorDesign {
         self.init()
         finish = (try? container.decodeIfPresent(DoorFinish.self, forKey: .finish)) ?? .steel
         nameplate = try container.decodeIfPresent(String.self, forKey: .nameplate) ?? ""
+        model = (try? container.decodeIfPresent(DoorModel.self, forKey: .model)) ?? .modern
+        showsHandle = (try? container.decodeIfPresent(Bool.self, forKey: .showsHandle)) ?? true
     }
 }
 
@@ -412,22 +476,25 @@ extension Fridge {
 /// A ready combination for a new fridge.
 struct FridgePreset: Identifiable, Hashable {
     let name: String
-    let finish: DoorFinish
+    let design: DoorDesign
 
-    var id: String { finish.rawValue }
+    var id: String { "\(design.model.rawValue)-\(design.finish.rawValue)" }
 
     static let all: [FridgePreset] = [
-        FridgePreset(name: "Стальной", finish: .steel),
-        FridgePreset(name: "Мятный", finish: .mint),
-        FridgePreset(name: "Вишнёвый", finish: .cherry),
-        FridgePreset(name: "Сливочный", finish: .cream),
-        FridgePreset(name: "Небесный", finish: .sky),
-        FridgePreset(name: "Лимонный", finish: .lemon),
-        FridgePreset(name: "Пудровый", finish: .powder),
-        FridgePreset(name: "Чёрный", finish: .black),
-        FridgePreset(name: "Графитовый", finish: .graphite),
-        FridgePreset(name: "Шампань", finish: .champagne),
+        FridgePreset(name: "Кухня", design: DoorDesign(finish: .mint, nameplate: "Кухня", model: .fifties)),
+        FridgePreset(name: "Дача", design: DoorDesign(finish: .cherry, nameplate: "дача", model: .riviera)),
+        FridgePreset(name: "Дом", design: DoorDesign(finish: .cream, nameplate: "Дом", model: .thaw)),
+        FridgePreset(name: "Детская", design: DoorDesign(finish: .sky, model: .fifties)),
+        FridgePreset(name: "Студия", design: DoorDesign(finish: .steel, model: .modern)),
     ]
+
+    /// A name to suggest for a new fridge of this look.
+    static func suggestedName(for design: DoorDesign) -> String {
+        if let preset = all.first(where: { $0.design.model == design.model && $0.design.finish == design.finish }) {
+            return preset.name
+        }
+        return design.model.isRetro ? design.model.title : design.finish.title
+    }
 }
 
 /// Everything the app and the widget share. Stored as JSON in the App Group container.
@@ -505,7 +572,8 @@ extension FridgeState {
     /// The person adds their own photos next.
     static var starter: FridgeState {
         let note = FridgeItem(content: .note(NoteContent(text: "Хорошо быть дома", paper: .cream, shape: .torn, font: .caveat)))
-        var fridge = Fridge(name: "Кухня", format: .tall, design: DoorDesign(finish: .steel))
+        var fridge = Fridge(name: "Кухня", format: .tall,
+                            design: DoorDesign(finish: .mint, nameplate: "Кухня", model: .fifties))
         fridge.placements = [
             Placement(source: .magnet("lemon"), x: 0.22, y: 0.31, width: 0.2, rotation: -8),
             Placement(source: .item(note.id), x: 0.43, y: 0.6, width: 0.46, rotation: -4,

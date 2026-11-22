@@ -25,6 +25,14 @@ struct SettingsView: View {
         })
     }
 
+    private var handleBinding: Binding<Bool> {
+        Binding(get: { store.design.showsHandle }, set: { newValue in
+            withAnimation(.snappy) {
+                store.updateDesign { $0.showsHandle = newValue }
+            }
+        })
+    }
+
     private var formatBinding: Binding<FridgeFormat> {
         Binding(get: { store.format }, set: { store.setFormat($0) })
     }
@@ -43,9 +51,16 @@ struct SettingsView: View {
                             .submitLabel(.done)
                             .onSubmit { commitName() }
                     }
-                    FormatPicker(format: formatBinding)
+                    ModelPicker(design: designBinding)
+                    if store.design.model.isRetro {
+                        PaperCard {
+                            Toggle("Хромированная ручка", isOn: handleBinding)
+                        }
+                        .tint(Color(hex: 0x2F55D4))
+                    }
                     FinishPicker(design: designBinding, format: store.format)
                     plate
+                    FormatPicker(format: formatBinding)
                     feelings
                     widget
                     door
@@ -103,7 +118,7 @@ struct SettingsView: View {
     }
 
     private var plate: some View {
-        OptionSection(title: "Табличка") {
+        OptionSection(title: store.design.model.nameplateTitle) {
             TextField("Например: Дом, Семья, Дача", text: $nameplate)
                 .font(.custom("MarckScript-Regular", size: 22))
                 .padding(14)
@@ -118,7 +133,7 @@ struct SettingsView: View {
                     }
                 }
                 .onSubmit { commitNameplate() }
-            Text("Хромированная надпись наверху дверцы, как у старых холодильников. Оставь пустым, чтобы убрать.")
+            Text(store.design.model.nameplateHint)
                 .font(.footnote)
                 .foregroundStyle(Color.inkSoft)
         }

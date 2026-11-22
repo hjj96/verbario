@@ -22,11 +22,16 @@ enum DoorTexture {
 
     /// A layer decoded no larger than `maxPixel` (the widget has little memory).
     static func image(for finish: DoorFinish, layer: Layer, maxPixel: CGFloat) -> UIImage? {
-        let bucket = Int((min(max(maxPixel, 64), layer.maxPixel) / 128).rounded(.up)) * 128
-        let name = layer.resource(for: finish)
+        bundled(layer.resource(for: finish), ext: "jpg", maxPixel: maxPixel, limit: layer.maxPixel)
+    }
+
+    /// Any bundled door image (volume layers, handles, badges), decoded no larger than
+    /// `maxPixel` and never larger than the file (`limit`).
+    static func bundled(_ name: String, ext: String, maxPixel: CGFloat, limit: CGFloat) -> UIImage? {
+        let bucket = Int((min(max(maxPixel, 64), limit) / 128).rounded(.up)) * 128
         let key = "\(name)-\(bucket)" as NSString
         if let cached = cache.object(forKey: key) { return cached }
-        guard let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
+        guard let url = Bundle.main.url(forResource: name, withExtension: ext),
               let image = FridgeStorage.downsampledImage(at: url, maxPixel: CGFloat(bucket)) else { return nil }
         cache.setObject(image, forKey: key)
         return image
@@ -118,25 +123,23 @@ enum DoorGeometry {
 
 // MARK: - Door
 
-/// The door: its surface and the optional chrome nameplate. Fills the proposed rectangle;
-/// the caller (or the widget container) clips the corners.
+/// The door: its surface, the cushioned edges of a retro model and its chrome name.
+/// Fills the proposed rectangle; the caller (or the widget container) clips the corners.
+/// The handle is drawn separately, above the things on the door (`DoorHandleView`).
 struct DoorBackgroundView: View {
     let design: DoorDesign
     let format: FridgeFormat
 
     var body: some View {
         GeometryReader { geo in
-            let size = geo.size
             ZStack {
                 DoorSurfaceView(finish: design.finish)
-                if !design.nameplate.isEmpty {
-                    let height = format == .wide ? size.height * 0.12 : size.height * 0.075
-                    NameplateView(text: design.nameplate, finish: design.finish)
-                        .frame(width: size.width * 0.6, height: height)
-                        .position(x: size.width * 0.07 + size.width * 0.3,
-                                  y: size.height * (format == .wide ? 0.13 : 0.075))
+                if design.model.isRetro {
+                    DoorVolumeView(format: format)
                 }
+                DoorEmblemView(design: design, format: format, size: geo.size)
             }
+            .compositingGroup()
         }
     }
 }
@@ -152,11 +155,36 @@ struct DoorPanelView: View {
     }
 }
 
-/// A retro chrome script badge: raised mirror-polished letters that reflect a bright sky
-/// above a dark horizon, with a dark bevelled edge and a small shadow on the door.
-private struct NameplateView: View {
+/// The chrome script name used by the modern and fifties doors.
+struct ScriptNameplate: View {
     let text: String
     let finish: DoorFinish
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = geo.size.height * 0.95
+            ChromeLettering(text: text,
+                            font: .custom("MarckScript-Regular", fixedSize: size),
+                            size: size,
+                            isDark: finish.isDark)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .leading)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Raised mirror-polished letters: they reflect a bright sky above a dark horizon, have a
+/// dark bevelled edge and cast a small shadow on what they are mounted on.
+struct ChromeLettering: View {
+    let text: String
+    let font: Font
+    /// The point size, which sets the bevel and the shadow.
+    let size: CGFloat
+    var tracking: CGFloat = 0
+    var edgeColor: Color = Color(hex: 0x2E3339)
+    var isDark = false
+    var alignment: Alignment = .leading
 
     private static let chrome = LinearGradient(stops: [
         Gradient.Stop(color: Color(hex: 0xFFFFFF), location: 0),
@@ -169,47 +197,41 @@ private struct NameplateView: View {
     ], startPoint: .top, endPoint: .bottom)
 
     var body: some View {
-        GeometryReader { geo in
-            let size = geo.size.height * 0.95
-            let font = Font.custom("MarckScript-Regular", fixedSize: size)
-            let edge = max(size * 0.022, 0.5)
-            ZStack(alignment: .leading) {
-                // shadow on the door
-                Text(text)
-                    .font(font)
-                    .foregroundStyle(Color.black.opacity(finish.isDark ? 0.6 : 0.38))
-                    .offset(x: size * 0.035, y: size * 0.07)
-                    .blur(radius: size * 0.035)
-                // the bevelled edge, seen all round the letters
-                ForEach(0..<8, id: \.self) { index in
-                    let angle = CGFloat(index) * .pi / 4
-                    Text(text)
-                        .font(font)
-                        .foregroundStyle(Color(hex: 0x2E3339))
-                        .offset(x: cos(angle) * edge, y: sin(angle) * edge + edge * 0.4)
-                }
-                // polished face
-                Text(text)
-                    .font(font)
-                    .foregroundStyle(Self.chrome)
-                // a hairline of light along the top of each stroke
-                Text(text)
-                    .font(font)
-                    .foregroundStyle(Color.white.opacity(0.75))
-                    .overlay {
-                        Text(text)
-                            .font(font)
-                            .foregroundStyle(Color.black)
-                            .offset(y: edge * 1.2)
-                            .blendMode(.destinationOut)
-                    }
-                    .compositingGroup()
+        let edge = max(size * 0.022, 0.5)
+        ZStack(alignment: alignment) {
+            // shadow on the door
+            letters
+                .foregroundStyle(Color.black.opacity(isDark ? 0.6 : 0.38))
+                .offset(x: size * 0.035, y: size * 0.07)
+                .blur(radius: size * 0.035)
+            // the bevelled edge, seen all round the letters
+            ForEach(0..<8, id: \.self) { index in
+                let angle = CGFloat(index) * .pi / 4
+                letters
+                    .foregroundStyle(edgeColor)
+                    .offset(x: cos(angle) * edge, y: sin(angle) * edge + edge * 0.4)
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .leading)
+            // polished face
+            letters
+                .foregroundStyle(Self.chrome)
+            // a hairline of light along the top of each stroke
+            letters
+                .foregroundStyle(Color.white.opacity(0.75))
+                .overlay {
+                    letters
+                        .foregroundStyle(Color.black)
+                        .offset(y: edge * 1.2)
+                        .blendMode(.destinationOut)
+                }
+                .compositingGroup()
         }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        // tracking adds space after the last letter too; keep the word visually centred
+        .offset(x: alignment == .center ? tracking / 2 : 0)
+        .lineLimit(1)
+        .minimumScaleFactor(0.4)
+    }
+
+    private var letters: Text {
+        Text(text).font(font).tracking(tracking)
     }
 }

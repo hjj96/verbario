@@ -152,6 +152,8 @@ struct FridgeCompositionView: View {
     let format: FridgeFormat
     let placements: [Placement]
     var showsDoor = true
+    /// The handle stands off the door, so it is drawn above the things on it.
+    var showsHandle = true
     let resolve: (Placement) -> RenderContent?
 
     var body: some View {
@@ -166,6 +168,9 @@ struct FridgeCompositionView: View {
                         PlacedItemView(content: content, placement: placement, doorSize: size)
                             .position(x: placement.x * size.width, y: placement.y * size.height)
                     }
+                }
+                if showsHandle {
+                    DoorHandleView(design: design, format: format)
                 }
             }
         }

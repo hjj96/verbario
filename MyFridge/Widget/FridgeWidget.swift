@@ -45,7 +45,7 @@ struct FridgeEntry: TimelineEntry {
         var fridge = starter.fridges[0]
         fridge.format = format
         if format == .wide {
-            fridge.design = DoorDesign(finish: .mint)
+            fridge.design = DoorDesign(finish: .cherry, nameplate: "дача", model: .riviera)
             fridge.placements = [
                 Placement(source: .magnet("lemon"), x: 0.14, y: 0.55, width: 0.2, rotation: -8),
                 Placement(source: fridge.placements[1].source, x: 0.42, y: 0.6, width: 0.44, rotation: -3,
@@ -103,11 +103,15 @@ struct FridgeWidgetView: View {
                 FridgeCompositionView(design: fridge.design,
                                       format: fridge.format,
                                       placements: fridge.placements,
-                                      showsDoor: false) { placement in
+                                      showsDoor: false,
+                                      showsHandle: false) { placement in
                     entry.contents[placement.id]
                 }
                 .frame(width: area.width, height: area.height)
                 .offset(x: area.minX, y: area.minY)
+                // the handle belongs to the widget's door, whatever the fridge's own shape
+                DoorHandleView(design: fridge.design, format: target)
+                    .frame(width: geo.size.width, height: geo.size.height)
             }
         }
         .environment(\.noteInteraction, .widget)
