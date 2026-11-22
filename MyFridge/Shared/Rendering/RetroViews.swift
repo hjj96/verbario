@@ -32,20 +32,21 @@ enum DoorHardware {
         case .modern:
             return nil
         case .fifties:
-            return Piece(resource: "handle-fifties", frame: CGRect(x: 0.0794, y: 0.0294, width: 0.5079, height: 0.7353),
-                         imageAspect: 378.0 / 816.0, pixelHeight: 816)
+            return Piece(resource: "handle-fifties", frame: CGRect(x: 0.1080, y: 0.0360, width: 0.3882, height: 0.7194),
+                         imageAspect: 356.0 / 890.0, pixelHeight: 890)
         case .riviera:
-            return Piece(resource: "handle-riviera", frame: CGRect(x: 0.0704, y: 0.0294, width: 0.5634, height: 0.7353),
-                         imageAspect: 426.0 / 816.0, pixelHeight: 816)
+            return Piece(resource: "handle-riviera", frame: CGRect(x: 0.1021, y: 0.0360, width: 0.4212, height: 0.7194),
+                         imageAspect: 376.0 / 890.0, pixelHeight: 890)
         case .thaw:
-            return Piece(resource: "handle-thaw", frame: CGRect(x: 0.0746, y: 0.0294, width: 0.5373, height: 0.7353),
-                         imageAspect: 402.0 / 816.0, pixelHeight: 816)
+            return Piece(resource: "handle-thaw", frame: CGRect(x: 0.0967, y: 0.0360, width: 0.4520, height: 0.7194),
+                         imageAspect: 397.0 / 890.0, pixelHeight: 890)
         }
     }
 
     /// The Soviet badge: a red enamel field in a chrome rim, with three chrome wings each side.
-    static let badge = Piece(resource: "badge-thaw", frame: CGRect(x: 0.0106, y: 0.0323, width: 0.9574, height: 0.8065),
-                             imageAspect: 752.0 / 248.0, pixelHeight: 248)
+    /// About five times as wide as it is tall.
+    static let badge = Piece(resource: "badge-thaw", frame: CGRect(x: 0.0078, y: 0.0741, width: 0.9687, height: 0.6173),
+                             imageAspect: 1024.0 / 324.0, pixelHeight: 324)
 
     /// Length (share of the door height) and centre (share of the height) of a handle.
     private static func handlePlacement(_ model: DoorModel, format: FridgeFormat) -> (length: CGFloat, centerY: CGFloat) {
@@ -143,7 +144,7 @@ struct DoorEmblemView: View {
             case .thaw:
                 let width = size.width * (format == .wide ? 0.42 : format == .square ? 0.68 : 0.62)
                 ThawBadge(text: text)
-                    .frame(width: width, height: width / 3.6)
+                    .frame(width: width, height: width / DoorHardware.badge.aspect)
                     .position(x: size.width * (format == .wide ? 0.45 : 0.5),
                               y: size.height * (format == .wide ? 0.16 : format == .square ? 0.1 : 0.085))
             }
@@ -183,12 +184,12 @@ private struct ThawBadge: View {
         GeometryReader { geo in
             let piece = CGRect(origin: .zero, size: geo.size)
             let rect = DoorHardware.badge.imageRect(around: piece)
-            // the enamel field is 1.06 x 0.54 of the badge's 3.6 x 1
-            let field = CGSize(width: geo.size.width * 1.06 / 3.6, height: geo.size.height * 0.54)
+            // the enamel field: 30 % of the badge's width with the wings, 75 % of its height
+            let field = CGSize(width: geo.size.width * 0.297, height: geo.size.height * 0.75)
             let size = field.height * 0.72
             ZStack {
                 if let image = DoorTexture.bundled(DoorHardware.badge.resource, ext: "png",
-                                                   maxPixel: rect.width * displayScale, limit: 752) {
+                                                   maxPixel: rect.width * displayScale, limit: 1024) {
                     PhotoImage(image: image)
                         .frame(width: rect.width, height: rect.height)
                         .position(x: rect.midX, y: rect.midY)

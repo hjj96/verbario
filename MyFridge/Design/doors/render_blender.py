@@ -155,7 +155,11 @@ def studio(door_w, door_h, strip=True, only_strip=False, metal=False):
     """A small photo studio inside a room. The walls, floor and ceiling are out of frame but
     show in the rolled edges and in chrome; the tall softbox strip is what slides in the app."""
     s = max(door_w, door_h)
-    strip_strength = 60.0 if metal else 9.0
+    strip_strength = 45.0 if metal else 9.0
+    if metal and not only_strip:
+        # a white studio all round: even the steepest edge, which looks behind the door,
+        # mirrors something light instead of a black void
+        bpy.context.scene.world.node_tree.nodes["Background"].inputs["Color"].default_value = (6.0, 6.0, 6.0, 1)
     if only_strip:
         bpy.context.scene.world.node_tree.nodes["Background"].inputs["Color"].default_value = (0, 0, 0, 1)
         mat = strip_material(door_w, door_h, strip_strength)
@@ -172,9 +176,9 @@ def studio(door_w, door_h, strip=True, only_strip=False, metal=False):
     if metal:
         # stainless steel is shot in a white studio: its rolled edges mirror bright walls,
         # the right one a little dimmer, the floor a light grey sweep
-        room_wall = sweep_material(11.0)
-        room_dark = sweep_material(6.5)
-        floor = sweep_material(4.0)
+        room_wall = sweep_material(9.0)
+        room_dark = sweep_material(6.0)
+        floor = sweep_material(5.0)
     else:
         room_wall = diffuse_material("wall", (0.55, 0.52, 0.47))
         room_dark = diffuse_material("dark", (0.03, 0.03, 0.03))
@@ -185,7 +189,7 @@ def studio(door_w, door_h, strip=True, only_strip=False, metal=False):
     plane("right", (8, 4), (2.6, -2, 0.7), (0, -math.pi / 2, 0), room_dark)
     # behind the camera: a dim room for enamel; for metal a white sweep, as stainless steel
     # is always shot, brighter at the top
-    sweep = sweep_material(14.0 if metal else 1.2)
+    sweep = sweep_material(10.0 if metal else 1.2)
     plane("back", (8, 4), (0, -4.2, 0.7), (math.pi / 2, 0, 0), sweep)
     # a window on the left wall: the left rolled edge picks it up
     plane("window", (1.6, 1.4), (-2.55, -1.2, 1.0), (0, math.pi / 2, 0), emission_material("sky", 3.0, (0.92, 0.96, 1.0)))
@@ -351,7 +355,7 @@ def finish_material(name):
         bsdf.inputs["Roughness"].default_value = 0.2
         # brushing: fine grooves that run top to bottom (local Y of the door curve)
         mapping = nodes.new("ShaderNodeMapping")
-        mapping.inputs["Scale"].default_value = (1100, 4, 1100)
+        mapping.inputs["Scale"].default_value = (650, 650, 2.5)  # x, depth, height: grooves run top to bottom
         noise = nodes.new("ShaderNodeTexNoise")
         noise.inputs["Scale"].default_value = 1.0
         noise.inputs["Detail"].default_value = 6
@@ -362,13 +366,13 @@ def finish_material(name):
         links.new(mapping.outputs["Vector"], rough_noise.inputs["Vector"])
         rough_noise.inputs["Scale"].default_value = 0.35
         bump = nodes.new("ShaderNodeBump")
-        bump.inputs["Strength"].default_value = 0.12
+        bump.inputs["Strength"].default_value = 0.28
         bump.inputs["Distance"].default_value = 0.0003
         links.new(noise.outputs["Fac"], bump.inputs["Height"])
         links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
         rough = nodes.new("ShaderNodeMapRange")
-        rough.inputs["To Min"].default_value = 0.17
-        rough.inputs["To Max"].default_value = 0.26
+        rough.inputs["To Min"].default_value = 0.14
+        rough.inputs["To Max"].default_value = 0.3
         links.new(rough_noise.outputs["Fac"], rough.inputs["Value"])
         links.new(rough.outputs[0], bsdf.inputs["Roughness"])
     return mat
