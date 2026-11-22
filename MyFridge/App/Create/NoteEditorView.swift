@@ -29,7 +29,7 @@ struct NoteEditorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     preview
-                    TextField("Например: Купить цветы", text: $note.text, axis: .vertical)
+                    TextField("For example: Buy flowers", text: $note.text, axis: .vertical)
                         .font(.system(size: 18))
                         .lineLimit(1...4)
                         .focused($isTextFocused)
@@ -43,7 +43,7 @@ struct NoteEditorView: View {
                                 note.text = String(newValue.prefix(Self.maxLength))
                             }
                         }
-                    OptionSection(title: "Форма") {
+                    OptionSection(title: "Shape") {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(NoteShape.allCases) { shape in
@@ -54,7 +54,7 @@ struct NoteEditorView: View {
                             }
                         }
                     }
-                    OptionSection(title: "Бумага") {
+                    OptionSection(title: "Paper") {
                         HStack(spacing: 12) {
                             ForEach(PaperColor.allCases) { paper in
                                 PaperSwatch(paper: paper, isSelected: note.paper == paper) {
@@ -64,7 +64,7 @@ struct NoteEditorView: View {
                         }
                     }
                     if note.shape != .ticket {
-                        OptionSection(title: "Почерк") {
+                        OptionSection(title: "Handwriting") {
                             HStack(spacing: 8) {
                                 ForEach(NoteFont.allCases) { font in
                                     ChoiceChip(title: font.title,
@@ -82,14 +82,14 @@ struct NoteEditorView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color.paper)
-            .navigationTitle(editingItemID == nil ? "Новая записка" : "Записка")
+            .navigationTitle(editingItemID == nil ? "New note" : "Note")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(editingItemID == nil ? "Прикрепить" : "Сохранить") { save() }
+                    Button(editingItemID == nil ? "Pin up" : "Save") { save() }
                         .fontWeight(.semibold)
                         .disabled(trimmedText.isEmpty)
                 }
@@ -102,7 +102,7 @@ struct NoteEditorView: View {
         let itemID = editingItemID ?? newItemID
         var shown = note
         if shown.text.isEmpty {
-            shown.text = "Купить цветы"
+            shown.text = "Buy flowers"
         }
         shown.reminder = hasReminder ? reminderDate : nil
         return ZStack {
@@ -124,9 +124,9 @@ struct NoteEditorView: View {
         PaperCard {
             Toggle(isOn: $note.isTask.animation(.snappy)) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Дело с галочкой")
+                    Text("To-do with a checkbox")
                         .font(.body.weight(.medium))
-                    Text("Отмечается прямо на виджете")
+                    Text("Tick it right on the widget")
                         .font(.footnote)
                         .foregroundStyle(Color.inkSoft)
                 }
@@ -134,9 +134,9 @@ struct NoteEditorView: View {
             Divider()
             Toggle(isOn: $hasReminder.animation(.snappy)) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Напомнить")
+                    Text("Remind me")
                         .font(.body.weight(.medium))
-                    Text("Придёт уведомление с текстом записки")
+                    Text("You’ll get a notification with the note")
                         .font(.footnote)
                         .foregroundStyle(Color.inkSoft)
                 }
@@ -152,10 +152,10 @@ struct NoteEditorView: View {
                 }
             }
             if hasReminder {
-                DatePicker("Когда", selection: $reminderDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                DatePicker("When", selection: $reminderDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
             }
             if notificationsDenied {
-                Text("Уведомления выключены. Их можно включить в Настройках iPhone → Холодильник.")
+                Text("Notifications are off. Turn them on in iPhone Settings → My Fridge.")
                     .font(.footnote)
                     .foregroundStyle(Color(hex: 0xC8372D))
             }

@@ -2,9 +2,9 @@ import SwiftUI
 
 // MARK: - Hardware geometry
 
-/// Where the chrome hardware of each retro model sits on a door. The images are made by
-/// `Design/doors/handles.py`; each includes its shadow, so the piece itself is a known
-/// rectangle inside the image.
+/// Where the chrome hardware of each retro model sits on a door. The images are rendered by
+/// `Design/doors/render_blender.py` over a shadow-catching door, so each includes its own
+/// shadow; the piece itself is a known rectangle inside the image.
 enum DoorHardware {
     struct Piece {
         let resource: String
@@ -87,48 +87,6 @@ enum DoorHardware {
         let door = CGSize(width: 1000 * format.aspect, height: 1000)
         let rect = handleRect(model, format: format, door: door)
         return max(0.5, (rect.minX - door.width * 0.03) / door.width)
-    }
-}
-
-// MARK: - Cushioned door
-
-/// The rounded "pillow" of a retro door: its top edge catches the ceiling light, the left
-/// edge reflects the softbox, and the bottom and right edges turn towards the darker room.
-/// Pre-rendered per format by `Design/doors/volume.py`, matching the widget's corners.
-struct DoorVolumeView: View {
-    let format: FridgeFormat
-
-    @Environment(\.displayScale) private var displayScale
-
-    var body: some View {
-        GeometryReader { geo in
-            let maxPixel = max(geo.size.width, geo.size.height) * displayScale
-            let name = Self.layerFormat(format, size: geo.size).rawValue
-            ZStack {
-                if let shade = DoorTexture.bundled("volume-\(name)-shade", ext: "jpg", maxPixel: maxPixel, limit: 900) {
-                    Image(uiImage: shade)
-                        .resizable()
-                        .blendMode(.multiply)
-                }
-                if let light = DoorTexture.bundled("volume-\(name)-light", ext: "jpg", maxPixel: maxPixel, limit: 900) {
-                    Image(uiImage: light)
-                        .resizable()
-                        .blendMode(.screen)
-                }
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
-        }
-        .allowsHitTesting(false)
-    }
-
-    /// The layers are made for the three door shapes. A door of another shape (the extra
-    /// large widget on iPad or iPhone) uses the closest one, so the edges are not stretched.
-    private static func layerFormat(_ format: FridgeFormat, size: CGSize) -> FridgeFormat {
-        guard size.width > 0, size.height > 0 else { return format }
-        let ratio = size.width / size.height
-        if ratio > 1.6 { return .wide }
-        if ratio < 0.85 || (format == .wide && ratio < 1.3) { return .tall }
-        return format
     }
 }
 

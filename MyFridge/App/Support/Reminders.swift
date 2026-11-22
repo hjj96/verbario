@@ -33,7 +33,7 @@ enum Reminders {
             }
             for (identifier, reminder) in wanted {
                 let content = UNMutableNotificationContent()
-                content.title = "Записка на холодильнике"
+                content.title = "Note on the fridge"
                 content.body = reminder.text
                 content.sound = .default
                 let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: reminder.date)

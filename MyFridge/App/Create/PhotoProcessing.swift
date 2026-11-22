@@ -10,9 +10,9 @@ enum StickerBorder: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .none: return "Без обводки"
-        case .thin: return "Тонкая"
-        case .wide: return "Широкая"
+        case .none: return "None"
+        case .thin: return "Thin"
+        case .wide: return "Wide"
         }
     }
 

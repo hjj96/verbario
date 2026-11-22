@@ -40,18 +40,18 @@ struct SelectionPanel: View {
         case .magnet(let art):
             return art.note
         case .letter:
-            return "Пластиковая буква"
+            return "Plastic letter"
         case .photo(let photo, _):
             switch photo.style {
-            case .card: return "Держится на отдельном креплении"
-            case .polaroid: return photo.caption.isEmpty ? "Можно подписать от руки" : "«\(photo.caption)»"
-            case .cutout: return "Вырезанный объект с толщиной"
-            case .sticker: return "Плоский виниловый стикер"
-            case .holo: return "Переливается, если наклонить телефон"
-            case .round, .heart: return "Фото под глянцевой линзой"
+            case .card: return "Held by a separate magnet"
+            case .polaroid: return photo.caption.isEmpty ? "Add a handwritten caption" : "“\(photo.caption)”"
+            case .cutout: return "A cut-out with real thickness"
+            case .sticker: return "A flat vinyl sticker"
+            case .holo: return "Shimmers when you tilt your phone"
+            case .round, .heart: return "A photo under a glossy dome"
             }
         case .note(let note, _):
-            return note.isTask ? "Отметь галочкой, когда сделаешь" : "Записка от руки"
+            return note.isTask ? "Tick it off when it’s done" : "A handwritten note"
         }
     }
 
@@ -67,7 +67,7 @@ struct SelectionPanel: View {
                         .foregroundStyle(Color.inkSoft)
                 }
                 Spacer()
-                Button("Готово", action: onDone)
+                Button("Done", action: onDone)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.ink)
             }
@@ -80,7 +80,7 @@ struct SelectionPanel: View {
             } else if let letter {
                 letterColors(letter)
             } else {
-                Text("Перетащи пальцем, а белым уголком измени размер и поворот — или сведи и поверни двумя пальцами.")
+                Text("Drag to move. Use the white corner to resize and rotate, or pinch and twist with two fingers.")
                     .font(.subheadline)
                     .foregroundStyle(Color.inkSoft)
                     .frame(maxWidth: .infinity, minHeight: 74, alignment: .topLeading)
@@ -90,22 +90,22 @@ struct SelectionPanel: View {
             tools
                 .padding(.horizontal, 20)
         }
-        .alert("Подпись", isPresented: $editsCaption) {
-            TextField("Например, Лето, 2026", text: $captionDraft)
-            Button("Готово") {
+        .alert("Caption", isPresented: $editsCaption) {
+            TextField("For example, Summer 2026", text: $captionDraft)
+            Button("Done") {
                 if let polaroidItem {
                     store.setCaption(itemID: polaroidItem.id, caption: captionDraft)
                 }
             }
-            Button("Отмена", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Строчка от руки под фотографией.")
+            Text("A handwritten line under the photo.")
         }
     }
 
     private var fastenerPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Крепление")
+            SectionLabel(text: "Holder")
                 .padding(.horizontal, 20)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -127,7 +127,7 @@ struct SelectionPanel: View {
 
     private func finishPicker(itemID: UUID, current: PhotoStyle) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Сделать")
+            SectionLabel(text: "Make")
                 .padding(.horizontal, 20)
             HStack(spacing: 8) {
                 ForEach(PhotoStyle.cutoutFinishes) { style in
@@ -146,7 +146,7 @@ struct SelectionPanel: View {
 
     private func letterColors(_ letter: LetterMagnet) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Цвет")
+            SectionLabel(text: "Color")
                 .padding(.horizontal, 20)
             HStack(spacing: 10) {
                 ForEach(LetterColor.allCases) { color in
@@ -175,35 +175,35 @@ struct SelectionPanel: View {
 
     private var tools: some View {
         HStack(spacing: 7) {
-            ToolButton(title: "Выше", systemImage: "square.3.layers.3d.top.filled") {
+            ToolButton(title: "Forward", systemImage: "square.3.layers.3d.top.filled") {
                 store.bringForward(placement.id)
             }
-            ToolButton(title: "Ниже", systemImage: "square.3.layers.3d.bottom.filled") {
+            ToolButton(title: "Backward", systemImage: "square.3.layers.3d.bottom.filled") {
                 store.sendBackward(placement.id)
             }
-            ToolButton(title: "Копия", systemImage: "plus.square.on.square") {
+            ToolButton(title: "Copy", systemImage: "plus.square.on.square") {
                 if let copy = store.duplicate(placement.id) {
                     Feedback.attach()
                     onSelect(copy)
                 }
             }
-            ToolButton(title: "Ровно", systemImage: "level") {
+            ToolButton(title: "Straighten", systemImage: "level") {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) {
                     store.updatePlacement(placement.id) { $0.rotation = 0 }
                 }
             }
             if let noteItemID {
-                ToolButton(title: "Текст", systemImage: "pencil") {
+                ToolButton(title: "Text", systemImage: "pencil") {
                     onEditNote(noteItemID)
                 }
             }
             if let polaroidItem {
-                ToolButton(title: "Подпись", systemImage: "signature") {
+                ToolButton(title: "Caption", systemImage: "signature") {
                     captionDraft = polaroidItem.caption
                     editsCaption = true
                 }
             }
-            ToolButton(title: "Снять", systemImage: "tray.and.arrow.down", isDestructive: true) {
+            ToolButton(title: "Take off", systemImage: "tray.and.arrow.down", isDestructive: true) {
                 store.removePlacement(placement.id)
                 onDone()
             }
@@ -251,7 +251,7 @@ private struct FastenerChip: View {
             }
         }
         .buttonStyle(PressableStyle())
-        .accessibilityLabel(kind?.title ?? "Без крепления")
+        .accessibilityLabel(kind?.title ?? "No holder")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

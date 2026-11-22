@@ -13,13 +13,13 @@ def rad(cx, cy, r, *stops):
     return {"type": "radial", "center": [cx, cy], "radius": r, "stops": [list(s) if len(s) == 3 else [s[0], s[1], 1.0] for s in stops]}
 
 SETS = [
-    ("garden", "Сад", "Ягоды и фрукты из летнего сада"),
-    ("flowers", "Цветы", "Букет, который не вянет"),
-    ("sea", "Море", "Привезено с побережья"),
-    ("sky", "Небо", "Солнце, облака и звёзды"),
-    ("home", "Дом", "Маленькие вещи, которые греют"),
-    ("sweets", "Сладкое", "Десерт без сахара"),
-    ("travel", "Поездки", "Сувениры из дорог"),
+    ("garden", "Garden", "Berries and fruit from a summer garden"),
+    ("flowers", "Flowers", "A bouquet that never wilts"),
+    ("sea", "Seaside", "Brought back from the coast"),
+    ("sky", "Sky", "Sun, clouds and stars"),
+    ("home", "Home", "Little things that keep you warm"),
+    ("sweets", "Sweets", "Dessert without the sugar"),
+    ("travel", "Travel", "Souvenirs from the road"),
 ]
 
 MAGNETS = []
@@ -42,9 +42,9 @@ class Magnet:
         self.gloss.append((cx, cy, rx, ry, rot)); return self
 
 
-# ---------------------------------------------------------------- Сад
+# ---------------------------------------------------------------- Garden
 def strawberry():
-    m = Magnet("strawberry", "Клубника", "garden", "glossy", 6, note="Глазурованная керамика")
+    m = Magnet("strawberry", "Strawberry", "garden", "glossy", 6, note="Glazed ceramic")
     berry = S([(50, 33), (70, 31), (84, 40), (85, 56), (76, 74), (62, 89), (50, 94), (38, 89), (24, 74), (15, 56), (16, 40), (30, 31)])
     sep = []
     for ang, ln in [(-66, 19), (-33, 17), (0, 14), (33, 17), (66, 19)]:
@@ -72,7 +72,7 @@ def strawberry():
     m.spot(34, 48, 13, 8).spot(56, 24, 5, 2.5)
 
 def lemon():
-    m = Magnet("lemon", "Долька лимона", "garden", "glossy", 5, note="Эмаль")
+    m = Magnet("lemon", "Lemon slice", "garden", "glossy", 5, note="Enamel")
     cx, cy = 50, 50
     rind = C(cx, cy, 42)
     m.outline = rind
@@ -91,7 +91,7 @@ def lemon():
     m.spot(32, 28, 16, 8)
 
 def orange():
-    m = Magnet("orange", "Апельсин", "garden", "ceramic", 6, note="Расписная керамика")
+    m = Magnet("orange", "Orange", "garden", "ceramic", 6, note="Painted ceramic")
     fruit = C(50, 57, 35)
     lf = leaf((54, 22), (86, 10), 14, bend=-0.08)
     stem = R(47.5, 17, 5, 9, 2)
@@ -108,7 +108,7 @@ def orange():
     m.spot(36, 44, 14, 9)
 
 def cherries():
-    m = Magnet("cherries", "Вишня", "garden", "glossy", 6, note="Эмаль")
+    m = Magnet("cherries", "Cherries", "garden", "glossy", 6, note="Enamel")
     c1, c2 = C(33, 72, 17), C(66, 74, 17)
     s1 = L(bez((35, 56), (37, 40), (47, 26), (58, 15)), 3.2)
     s2 = L(bez((64, 58), (64, 42), (61, 28), (58, 15)), 3.2)
@@ -126,7 +126,7 @@ def cherries():
     m.spot(26, 65, 6.5, 4).spot(59, 67, 6.5, 4)
 
 def watermelon():
-    m = Magnet("watermelon", "Арбуз", "garden", "glossy", 5, size=1.1, note="Эмаль")
+    m = Magnet("watermelon", "Watermelon", "garden", "glossy", 5, size=1.1, note="Enamel")
     cx, cy = 50, 28
     def half(r):
         return rounded(ring_sector(cx, cy, 0, r, 0, 180, 80), 1.2)
@@ -147,9 +147,9 @@ def watermelon():
     m.layer(R(6, 28, 88, 2.2), solid("#FFFFFF", 0.35))
     m.spot(34, 40, 16, 6, -10)
 
-# ---------------------------------------------------------------- Цветы
+# ---------------------------------------------------------------- Flowers
 def daisy():
-    m = Magnet("daisy", "Ромашка", "flowers", "ceramic", 5, note="Фарфор")
+    m = Magnet("daisy", "Daisy", "flowers", "ceramic", 5, note="Porcelain")
     petals = [E(*polar(50, 50, 25, a), 7.2, 17, a + 90) for a in range(0, 360, 30)]
     pet = U(petals)
     center = C(50, 50, 13.5)
@@ -167,7 +167,7 @@ def daisy():
     m.spot(40, 40, 7, 4).spot(30, 24, 6, 3)
 
 def tulip():
-    m = Magnet("tulip", "Тюльпан", "flowers", "glossy", 5, note="Эмаль")
+    m = Magnet("tulip", "Tulip", "flowers", "glossy", 5, note="Enamel")
     head = S([(30, 16), (40, 30), (50, 10), (60, 30), (70, 16), (73, 38), (65, 55), (50, 60), (35, 55), (27, 38)], 16)
     stem = L([(50, 56), (50.5, 75), (50, 95)], 4.4, smooth=True)
     l1 = leaf((49, 93), (26, 60), 13, bend=0.06)
@@ -182,7 +182,7 @@ def tulip():
     m.spot(37, 30, 7, 10, -20)
 
 def sakura():
-    m = Magnet("sakura", "Сакура", "flowers", "glossy", 5, note="Эмаль")
+    m = Magnet("sakura", "Sakura", "flowers", "glossy", 5, note="Enamel")
     ps = []
     for i in range(5):
         a = -90 + i * 72
@@ -203,7 +203,7 @@ def sakura():
     m.spot(36, 30, 9, 5).spot(26, 52, 5, 3)
 
 def sunflower():
-    m = Magnet("sunflower", "Подсолнух", "flowers", "ceramic", 5, note="Керамика")
+    m = Magnet("sunflower", "Sunflower", "flowers", "ceramic", 5, note="Ceramic")
     pet = U([leaf(polar(50, 50, 14, a), polar(50, 50, 46, a), 12) for a in range(0, 360, 360 // 16)])
     pet2 = U([leaf(polar(50, 50, 14, a), polar(50, 50, 40, a), 11) for a in range(11, 371, 360 // 16)])
     center = C(50, 50, 20)
@@ -220,9 +220,9 @@ def sunflower():
     m.layer(U([C(x, y, 0.8) for x, y in pts]), solid("#C08A4E", 0.6))
     m.spot(38, 36, 8, 5).spot(24, 22, 6, 3)
 
-# ---------------------------------------------------------------- Море
+# ---------------------------------------------------------------- Seaside
 def shell():
-    m = Magnet("shell", "Ракушка", "sea", "ceramic", 5, note="Перламутровая керамика")
+    m = Magnet("shell", "Seashell", "sea", "ceramic", 5, note="Pearly ceramic")
     hx, hy = 50, 84
     fan = ring_sector(hx, hy, 0, 38, 200, 340, 64)
     bumps = [C(*polar(hx, hy, 37, a), 6.2) for a in range(203, 340, 14)]
@@ -238,7 +238,7 @@ def shell():
     m.spot(38, 40, 13, 7)
 
 def fish():
-    m = Magnet("fish", "Рыбка", "sea", "glossy", 6, note="Эмаль")
+    m = Magnet("fish", "Little fish", "sea", "glossy", 6, note="Enamel")
     body = S([(24, 50), (34, 36), (54, 30), (74, 37), (87, 50), (74, 63), (54, 70), (34, 64)], 16)
     tail = S([(30, 50), (10, 32), (15, 50), (10, 68)], 12)
     fin = S([(44, 33), (56, 18), (66, 34)], 10)
@@ -255,7 +255,7 @@ def fish():
     m.spot(50, 38, 14, 5, -8)
 
 def starfish():
-    m = Magnet("starfish", "Морская звезда", "sea", "ceramic", 6, note="Керамика")
+    m = Magnet("starfish", "Starfish", "sea", "ceramic", 6, note="Ceramic")
     st = star(50, 52, 47, 21, 5).buffer(-5).buffer(7.5)
     m.outline = st
     m.side(st, "#A5440E")
@@ -275,7 +275,7 @@ def starfish():
     m.spot(40, 32, 7, 4).spot(24, 46, 6, 3)
 
 def sailboat():
-    m = Magnet("sailboat", "Кораблик", "sea", "glossy", 5, note="Эмаль")
+    m = Magnet("sailboat", "Sailboat", "sea", "glossy", 5, note="Enamel")
     hull = rounded(P([(16, 64), (84, 64), (72, 82), (28, 82)]), 2)
     mast = R(48.6, 9, 2.8, 58, 1.4)
     main = rounded(P([(50.5, 13), (50.5, 61), (82, 61)]), 1.2)
@@ -295,9 +295,9 @@ def sailboat():
     m.layer(L([(12, 84.5), (22, 80), (36, 84.5), (50, 80), (64, 84.5), (78, 80), (88, 84.5)], 1.4, smooth=True), solid("#FFFFFF", 0.85))
     m.spot(62, 30, 6, 10, -20).spot(32, 44, 4, 7, -30)
 
-# ---------------------------------------------------------------- Небо
+# ---------------------------------------------------------------- Sky
 def sun():
-    m = Magnet("sun", "Солнышко", "sky", "glossy", 6, note="Эмаль")
+    m = Magnet("sun", "Sunshine", "sky", "glossy", 6, note="Enamel")
     rays = rounded(star(50, 50, 47, 31, 12, -90), 1.8)
     core = C(50, 50, 27)
     m.outline = U(rays, core)
@@ -310,7 +310,7 @@ def sun():
     m.spot(40, 34, 11, 6)
 
 def moon():
-    m = Magnet("moon", "Месяц", "sky", "ceramic", 6, note="Керамика")
+    m = Magnet("moon", "Crescent moon", "sky", "ceramic", 6, note="Ceramic")
     cres = rounded(D(C(46, 52, 38), C(64, 40, 31)), 1.2)
     m.outline = cres
     m.side(cres, "#B08A1E")
@@ -322,7 +322,7 @@ def moon():
     m.spot(26, 34, 6, 10, -10)
 
 def cloud():
-    m = Magnet("cloud", "Облако", "sky", "ceramic", 6, size=1.05, note="Матовая керамика")
+    m = Magnet("cloud", "Cloud", "sky", "ceramic", 6, size=1.05, note="Matte ceramic")
     cl = soft(U(C(28, 58, 14), C(46, 44, 19), C(66, 46, 16), C(80, 58, 11), R(16, 52, 72, 18, 9)), 3)
     m.outline = cl
     m.side(cl, "#9AAAC0")
@@ -334,7 +334,7 @@ def cloud():
     m.spot(40, 34, 12, 5, -8)
 
 def rainbow():
-    m = Magnet("rainbow", "Радуга", "sky", "glossy", 5, size=1.15, note="Эмаль")
+    m = Magnet("rainbow", "Rainbow", "sky", "glossy", 5, size=1.15, note="Enamel")
     cx, cy = 50, 72
     cols = [("#FF6B6B", "#C9353A"), ("#FFA94D", "#C96A12"), ("#FFD43B", "#C29A00"), ("#69DB7C", "#2F8F43"), ("#4DABF7", "#1B6CB0")]
     bands = []
@@ -353,7 +353,7 @@ def rainbow():
     m.spot(30, 34, 9, 4, -45).spot(52, 28, 9, 3, -5)
 
 def metal_star():
-    m = Magnet("star", "Звёздочка", "sky", "metal", 4, size=0.75, note="Полированная сталь")
+    m = Magnet("star", "Star", "sky", "metal", 4, size=0.75, note="Polished steel")
     cx, cy, Rr, rr = 50, 53, 46, 20
     st = rounded(star(cx, cy, Rr, rr, 5), 1.5)
     m.outline = st
@@ -371,9 +371,9 @@ def metal_star():
             m.layer(I(P([(cx, cy), t, v]), st.buffer(0.01)), solid("#%02X%02X%02X" % (g, g, min(255, g + 6))))
     m.spot(36, 34, 7, 3, -35)
 
-# ---------------------------------------------------------------- Дом
+# ---------------------------------------------------------------- Home
 def heart():
-    m = Magnet("heart", "Сердце", "home", "glossy", 7, note="Глазурованная керамика")
+    m = Magnet("heart", "Heart", "home", "glossy", 7, note="Glazed ceramic")
     pts = []
     for k in range(240):
         t = 2 * math.pi * k / 240
@@ -387,7 +387,7 @@ def heart():
     m.spot(32, 28, 12, 7, -35).spot(66, 22, 6, 3, 20)
 
 def house():
-    m = Magnet("house", "Домик", "home", "ceramic", 6, note="Расписная керамика")
+    m = Magnet("house", "Little house", "home", "ceramic", 6, note="Painted ceramic")
     body = R(24, 46, 52, 44, 3)
     roof = rounded(P([(13, 50), (50, 15), (87, 50)]), 2.4)
     chim = R(64, 18, 9, 20, 1.5)
@@ -408,7 +408,7 @@ def house():
     m.spot(36, 30, 8, 4, -40).spot(34, 52, 6, 3)
 
 def cup():
-    m = Magnet("cup", "Чашка кофе", "home", "ceramic", 5, note="Фарфор")
+    m = Magnet("cup", "Cup of coffee", "home", "ceramic", 5, note="Porcelain")
     body = rounded(P([(20, 38), (72, 38), (66, 76), (26, 76)]), 3)
     body = U(body, I(E(46, 74, 21, 6), R(0, 70, 100, 30)), R(30, 74, 32, 9, 3))
     handle = I(D(E(74, 54, 12, 12.5), E(74, 54, 6.2, 7)), R(66, 30, 40, 50))
@@ -428,7 +428,7 @@ def cup():
     m.spot(30, 46, 6, 9, -10)
 
 def cactus():
-    m = Magnet("cactus", "Кактус", "home", "ceramic", 6, note="Керамика")
+    m = Magnet("cactus", "Cactus", "home", "ceramic", 6, note="Ceramic")
     pot = U(rounded(P([(31, 68), (69, 68), (64, 95), (36, 95)]), 2), R(27, 63, 46, 9, 3))
     col = R(41, 20, 18, 50, 9)
     la = U(R(27, 36, 9.5, 22, 4.75), R(27, 49, 18, 9, 4.5))
@@ -449,9 +449,9 @@ def cactus():
     m.layer(I(zig, pot), solid("#FFF2E6", 0.85))
     m.spot(46, 32, 4, 9, -5).spot(36, 66, 7, 2, 0)
 
-# ---------------------------------------------------------------- Сладкое
+# ---------------------------------------------------------------- Sweets
 def donut():
-    m = Magnet("donut", "Пончик", "sweets", "glossy", 7, note="Глазурованная керамика")
+    m = Magnet("donut", "Donut", "sweets", "glossy", 7, note="Glazed ceramic")
     dough = D(C(50, 50, 42), C(50, 50, 12.5))
     gl = []
     for k in range(360):
@@ -475,7 +475,7 @@ def donut():
     m.spot(30, 26, 12, 6, -35).spot(64, 60, 6, 3, -35)
 
 def icecream():
-    m = Magnet("icecream", "Мороженое", "sweets", "glossy", 6, note="Эмаль")
+    m = Magnet("icecream", "Ice cream", "sweets", "glossy", 6, note="Enamel")
     cone = rounded(P([(31, 54), (69, 54), (50, 96)]), 2)
     scoop = S([(26, 54), (23, 42), (30, 29), (44, 21), (59, 22), (71, 31), (77, 44), (75, 55), (67, 60), (60, 57), (54, 64), (47, 57), (39, 61), (31, 59)], 16)
     cherry = C(57, 15, 6.2)
@@ -493,7 +493,7 @@ def icecream():
     m.spot(36, 32, 9, 5, -35).spot(55, 12, 2.4, 1.4)
 
 def lollipop():
-    m = Magnet("lollipop", "Леденец", "sweets", "glossy", 6, note="Карамель")
+    m = Magnet("lollipop", "Lollipop", "sweets", "glossy", 6, note="Hard candy")
     disc = C(50, 40, 32)
     stick = R(47, 66, 6, 30, 3)
     m.outline = U(disc, stick)
@@ -510,7 +510,7 @@ def lollipop():
     m.spot(36, 26, 10, 6, -35)
 
 def macaron():
-    m = Magnet("macaron", "Макарон", "sweets", "ceramic", 6, size=0.95, note="Керамика")
+    m = Magnet("macaron", "Macaron", "sweets", "ceramic", 6, size=0.95, note="Ceramic")
     top = rounded(I(E(50, 48, 38, 21), R(10, 10, 80, 37.5)), 3)
     bot = rounded(I(E(50, 52, 38, 19), R(10, 54.5, 80, 30)), 3)
     fill = R(17, 45, 66, 11, 5.5)
@@ -526,9 +526,9 @@ def macaron():
     m.layer(U(feet), solid("#58B886", 0.55))
     m.spot(36, 33, 12, 4, -8).spot(36, 60, 9, 2.5, -4)
 
-# ---------------------------------------------------------------- Поездки
+# ---------------------------------------------------------------- Travel
 def airplane():
-    m = Magnet("airplane", "Самолётик", "travel", "glossy", 5, note="Эмаль")
+    m = Magnet("airplane", "Airplane", "travel", "glossy", 5, note="Enamel")
     fus = R(44, 8, 12, 84, 6)
     wings = rounded(P([(50, 38), (93, 56), (93, 63), (50, 55), (7, 63), (7, 56)]), 2)
     tail = rounded(P([(50, 78), (69, 88), (69, 93), (50, 89), (31, 93), (31, 88)]), 1.5)
@@ -546,7 +546,7 @@ def airplane():
     m.spot(*polar(50, 50, 0, 0), 5, 18, 35)
 
 def suitcase():
-    m = Magnet("suitcase", "Чемодан", "travel", "ceramic", 6, note="Расписная керамика")
+    m = Magnet("suitcase", "Suitcase", "travel", "ceramic", 6, note="Painted ceramic")
     body = R(14, 32, 72, 54, 8)
     handle = I(D(R(36, 18, 28, 20, 7), R(41.5, 23, 17, 12, 3.5)), R(0, 0, 100, 34))
     m.outline = U(body, handle)
@@ -565,7 +565,7 @@ def suitcase():
     m.spot(26, 42, 9, 4, -15)
 
 def camera():
-    m = Magnet("camera", "Фотоаппарат", "travel", "glossy", 6, note="Металл и эмаль")
+    m = Magnet("camera", "Camera", "travel", "glossy", 6, note="Metal and enamel")
     body = R(12, 34, 76, 50, 8)
     vf = R(22, 25, 18, 13, 3)
     flash = R(62, 27, 16, 10, 2)
@@ -585,7 +585,7 @@ def camera():
     m.spot(26, 40, 10, 3, -6)
 
 def balloon():
-    m = Magnet("balloon", "Воздушный шар", "travel", "glossy", 6, note="Эмаль")
+    m = Magnet("balloon", "Hot-air balloon", "travel", "glossy", 6, note="Enamel")
     env = S([(50, 6), (72, 13), (83, 32), (78, 52), (63, 67), (56, 74), (44, 74), (37, 67), (22, 52), (17, 32), (28, 13)], 16)
     basket = R(42, 83, 16, 12, 2)
     ropes = U(L([(44.5, 73), (45, 84)], 1.3), L([(55.5, 73), (55, 84)], 1.3))

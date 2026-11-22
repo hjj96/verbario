@@ -22,9 +22,9 @@ struct OwnItemDetailView: View {
     private var placesText: String {
         let names = store.fridges(showing: itemID).map(\.name)
         if names.isEmpty {
-            return "Хранится в коллекции"
+            return "Kept in your collection"
         }
-        return "Висит: " + names.joined(separator: ", ")
+        return "On: " + names.joined(separator: ", ")
     }
 
     private var photo: PhotoContent? {
@@ -44,7 +44,7 @@ struct OwnItemDetailView: View {
                 VStack(spacing: 22) {
                     showcase(photo)
                     VStack(spacing: 6) {
-                        SectionLabel(text: "Своё")
+                        SectionLabel(text: "Yours")
                         Text(photo.style.title)
                             .font(.serif(32))
                             .foregroundStyle(Color.ink)
@@ -57,7 +57,7 @@ struct OwnItemDetailView: View {
                                 captionDraft = photo.caption
                                 editsCaption = true
                             } label: {
-                                Label(photo.caption.isEmpty ? "Подписать" : "«\(photo.caption)»", systemImage: "signature")
+                                Label(photo.caption.isEmpty ? "Add caption" : "“\(photo.caption)”", systemImage: "signature")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(Color.ink)
                             }
@@ -90,25 +90,25 @@ struct OwnItemDetailView: View {
                     ShareLink(item: shareURL) {
                         Image(systemName: "square.and.arrow.up")
                     }
-                    .accessibilityLabel("Поделиться")
+                    .accessibilityLabel("Share")
                 }
             }
         }
-        .confirmationDialog("Удалить из коллекции?", isPresented: $confirmsDelete, titleVisibility: .visible) {
-            Button("Удалить", role: .destructive) {
+        .confirmationDialog("Delete from collection?", isPresented: $confirmsDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
                 store.deleteItem(itemID)
                 dismiss()
             }
-            Button("Отмена", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Предмет исчезнет из коллекции и с дверцы. Сразу после удаления его можно вернуть кнопкой «Отменить».")
+            Text("It will disappear from your collection and from every door. Right after deleting, you can bring it back with “Undo”.")
         }
-        .alert("Подпись", isPresented: $editsCaption) {
-            TextField("Например, Лето, 2026", text: $captionDraft)
-            Button("Готово") {
+        .alert("Caption", isPresented: $editsCaption) {
+            TextField("For example, Summer 2026", text: $captionDraft)
+            Button("Done") {
                 store.setCaption(itemID: itemID, caption: captionDraft)
             }
-            Button("Отмена", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         }
         .task(id: photo?.file) { await prepareShare() }
         .onAppear { if !reduceMotion { motion.start() } }
@@ -148,14 +148,14 @@ struct OwnItemDetailView: View {
                         onShowOnDoor(placementID)
                     }
                 } label: {
-                    Label("Показать на дверце", systemImage: "eye")
+                    Label("Show on the door", systemImage: "eye")
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 HStack(spacing: 10) {
-                    ToolButton(title: "Снять", systemImage: "tray.and.arrow.down") {
+                    ToolButton(title: "Take off", systemImage: "tray.and.arrow.down") {
                         store.removeFromDoor(itemID: itemID)
                     }
-                    ToolButton(title: "Удалить", systemImage: "trash", isDestructive: true) {
+                    ToolButton(title: "Delete", systemImage: "trash", isDestructive: true) {
                         confirmsDelete = true
                     }
                 }
@@ -165,10 +165,10 @@ struct OwnItemDetailView: View {
                         onShowOnDoor(placementID)
                     }
                 } label: {
-                    Label("Повесить на дверцу", systemImage: "plus")
+                    Label("Put on the door", systemImage: "plus")
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                ToolButton(title: "Удалить из коллекции", systemImage: "trash", isDestructive: true) {
+                ToolButton(title: "Delete from collection", systemImage: "trash", isDestructive: true) {
                     confirmsDelete = true
                 }
             }
@@ -182,10 +182,10 @@ struct OwnItemDetailView: View {
         let source = FridgeStorage.imageURL(photo.file, variant: .full)
         let name: String
         switch photo.style {
-        case .sticker, .holo: name = "Стикер"
-        case .cutout, .round, .heart: name = "Магнит"
-        case .card: name = "Фото"
-        case .polaroid: name = "Полароид"
+        case .sticker, .holo: name = "Sticker"
+        case .cutout, .round, .heart: name = "Magnet"
+        case .card: name = "Photo"
+        case .polaroid: name = "Polaroid"
         }
         let ext = (photo.file as NSString).pathExtension
         shareURL = await Task.detached(priority: .utility) { () -> URL? in

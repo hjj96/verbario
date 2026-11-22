@@ -124,18 +124,18 @@ struct EditorView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Холодильник \(store.fridge.name). Выбрать другой")
+                .accessibilityLabel("Fridge \(store.fridge.name). Choose another")
             }
             Spacer(minLength: 8)
-            RoundIconButton(systemImage: "arrow.uturn.backward", label: "Отменить") {
+            RoundIconButton(systemImage: "arrow.uturn.backward", label: "Undo") {
                 store.undo()
             }
             .disabled(!store.canUndo)
-            RoundIconButton(systemImage: "arrow.uturn.forward", label: "Повторить") {
+            RoundIconButton(systemImage: "arrow.uturn.forward", label: "Redo") {
                 store.redo()
             }
             .disabled(!store.canRedo)
-            RoundIconButton(systemImage: "slider.horizontal.3", label: "Вид холодильника и настройки") {
+            RoundIconButton(systemImage: "slider.horizontal.3", label: "Fridge look and settings") {
                 sheet = .settings
             }
         }
@@ -189,7 +189,7 @@ struct EditorView: View {
                 WidgetGuideView()
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Понятно") { self.sheet = nil }
+                            Button("Got it") { self.sheet = nil }
                         }
                     }
             }
@@ -220,14 +220,14 @@ struct EditorView: View {
                 pickerItem = nil
             }
             guard let data = try? await item.loadTransferable(type: Data.self) else {
-                store.showToast("Не получилось открыть фото")
+                store.showToast("Couldn’t open the photo")
                 return
             }
             let image = await Task.detached(priority: .userInitiated) {
                 PhotoProcessing.downsample(data, maxPixel: 2048)
             }.value
             guard let image else {
-                store.showToast("Не получилось открыть фото")
+                store.showToast("Couldn’t open the photo")
                 return
             }
             pendingPhoto = PendingPhoto(image: image)
@@ -251,9 +251,9 @@ private struct SaveStatusLabel: View {
 
     private var text: String {
         switch status {
-        case .saved: return "Сохранено"
-        case .saving: return "Сохраняю"
-        case .failed: return "Не удалось сохранить"
+        case .saved: return "Saved"
+        case .saving: return "Saving"
+        case .failed: return "Couldn’t save"
         }
     }
 

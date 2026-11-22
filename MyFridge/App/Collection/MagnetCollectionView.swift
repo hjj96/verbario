@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "Снял с дверцы. Оставил у себя." The whole collection: designed magnets in sets,
+/// "Took it off the door. Kept it." The whole collection: designed magnets in sets,
 /// the person's own photo magnets and notes, and magnetic letters.
 struct MagnetCollectionView: View {
     /// Called with the placement to select after the sheet closes.
@@ -35,7 +35,7 @@ struct MagnetCollectionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                    Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
             }
@@ -60,8 +60,8 @@ struct MagnetCollectionView: View {
                 actions(for: item)
             } message: { item in
                 Text(store.isOnDoor(item.id)
-                     ? "Сейчас висит на дверце."
-                     : "Хранится в коллекции. После удаления его ещё можно вернуть кнопкой «Отменить».")
+                     ? "On the door right now."
+                     : "Kept in your collection. After deleting, you can still bring it back with “Undo”.")
             }
             .overlay(alignment: .bottom) { ToastHost() }
         }
@@ -71,12 +71,12 @@ struct MagnetCollectionView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel(text: "Коллекция")
-            Text("Магниты\nи воспоминания")
+            SectionLabel(text: "Collection")
+            Text("Magnets\nand memories")
                 .font(.serif(34))
                 .foregroundStyle(Color.ink)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("\(library.magnets.count) магнитов в \(library.sets.count) наборах · своих: \(store.photoItems.count)")
+            Text("\(library.magnets.count) magnets in \(library.sets.count) sets · yours: \(store.photoItems.count)")
                 .font(.subheadline)
                 .foregroundStyle(Color.inkSoft)
         }
@@ -89,8 +89,8 @@ struct MagnetCollectionView: View {
         if !photos.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    SectionLabel(text: "Свои")
-                    Text("Мои стикеры и магниты")
+                    SectionLabel(text: "Yours")
+                    Text("My stickers and magnets")
                         .font(.serif(22))
                         .foregroundStyle(Color.ink)
                 }
@@ -100,7 +100,7 @@ struct MagnetCollectionView: View {
                         ForEach(photos) { item in
                             NavigationLink(value: item.id) {
                                 ShelfItem(content: store.content(for: item),
-                                          caption: store.isOnDoor(item.id) ? "на дверце" : "в коллекции")
+                                          caption: store.isOnDoor(item.id) ? "on the door" : "in collection")
                             }
                             .buttonStyle(PressableStyle())
                         }
@@ -114,14 +114,14 @@ struct MagnetCollectionView: View {
     }
 
     private var letters: some View {
-        let word = "ПРИВЕТ".map(String.init)
+        let word = "HELLO".map(String.init)
         return VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
-                SectionLabel(text: "Буквы")
-                Text("Магнитный алфавит")
+                SectionLabel(text: "Letters")
+                Text("Magnetic alphabet")
                     .font(.serif(22))
                     .foregroundStyle(Color.ink)
-                Text("Все буквы и цифры — в лотке под дверцей. Нажми на букву, чтобы повесить.")
+                Text("Every letter and number is in the tray below the door. Tap one to put it up.")
                     .font(.footnote)
                     .foregroundStyle(Color.inkSoft)
             }
@@ -156,8 +156,8 @@ struct MagnetCollectionView: View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    SectionLabel(text: "Записки")
-                    Text("Всё, что было написано")
+                    SectionLabel(text: "Notes")
+                    Text("Everything you’ve written")
                         .font(.serif(22))
                         .foregroundStyle(Color.ink)
                 }
@@ -191,25 +191,25 @@ struct MagnetCollectionView: View {
     @ViewBuilder
     private func actions(for item: FridgeItem) -> some View {
         if store.isOnDoor(item.id) {
-            Button("Показать на дверце") {
+            Button("Show on the door") {
                 if let placementID = store.placementIDs(of: item.id).last {
                     close(selecting: placementID)
                 }
             }
-            Button("Снять с холодильника") {
+            Button("Take off the fridge") {
                 store.removeFromDoor(itemID: item.id)
             }
         } else {
-            Button("Вернуть на дверцу") {
+            Button("Put back on the door") {
                 if let placementID = store.place(itemID: item.id) {
                     close(selecting: placementID)
                 }
             }
         }
-        Button("Удалить из коллекции", role: .destructive) {
+        Button("Delete from collection", role: .destructive) {
             store.deleteItem(item.id)
         }
-        Button("Отмена", role: .cancel) {}
+        Button("Cancel", role: .cancel) {}
     }
 
     private func close(selecting placementID: UUID) {
@@ -342,7 +342,7 @@ struct MagnetDetailView: View {
                         .foregroundStyle(Color.inkSoft)
                     let onDoor = store.count(ofMagnet: art.id)
                     if onDoor > 0 {
-                        Text(onDoor == 1 ? "Уже висит на дверце" : "На дверце: \(onDoor)")
+                        Text(onDoor == 1 ? "Already on the door" : "On the door: \(onDoor)")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color(hex: 0x3FA66B))
                             .padding(.top, 4)
@@ -350,12 +350,12 @@ struct MagnetDetailView: View {
                 }
 
                 Button(action: onPlace) {
-                    Label("Повесить на дверцу", systemImage: "plus")
+                    Label("Put on the door", systemImage: "plus")
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.horizontal, 20)
 
-                Text("Потяни магнит пальцем или наклони телефон, чтобы рассмотреть его со всех сторон.")
+                Text("Drag the magnet or tilt your phone to see it from every side.")
                     .font(.footnote)
                     .foregroundStyle(Color.inkSoft)
                     .multilineTextAlignment(.center)

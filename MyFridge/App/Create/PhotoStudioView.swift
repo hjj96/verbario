@@ -18,9 +18,9 @@ struct PhotoStudioView: View {
 
         var title: String {
             switch self {
-            case .object: return "Объект"
-            case .lasso: return "Обвести"
-            case .whole: return "Целиком"
+            case .object: return "Object"
+            case .lasso: return "Trace"
+            case .whole: return "Whole photo"
             }
         }
     }
@@ -81,11 +81,11 @@ struct PhotoStudioView: View {
             .scrollDisabled(isDrawing)
             .safeAreaInset(edge: .bottom) { bottomBar }
             .background(Color.paper)
-            .navigationTitle("Вырезать из фото")
+            .navigationTitle("Cut out from photo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
             }
         }
@@ -254,11 +254,11 @@ struct PhotoStudioView: View {
         let text: String? = {
             switch mode {
             case .object:
-                if isAnalyzing { return "Ищу предметы на фото…" }
+                if isAnalyzing { return "Looking for objects…" }
                 if session == nil { return nil }
-                return selection.isEmpty ? "Коснись предмета, чтобы выбрать" : "Коснись ещё, чтобы добавить или убрать"
+                return selection.isEmpty ? "Tap an object to select it" : "Tap more to add or remove"
             case .lasso:
-                return lassoPoints.isEmpty || isDrawing ? "Обведи предмет пальцем" : "Не то? Обведи заново"
+                return lassoPoints.isEmpty || isDrawing ? "Trace around an object" : "Not quite? Trace again"
             case .whole:
                 return nil
             }
@@ -281,20 +281,20 @@ struct PhotoStudioView: View {
         VStack(alignment: .leading, spacing: 20) {
             if mode == .object, session != nil {
                 HStack(spacing: 8) {
-                    ChoiceChip(title: "Выбрать всё", isSelected: false) {
+                    ChoiceChip(title: "Select all", isSelected: false) {
                         if let session {
                             selection = Set(session.instances)
                             refreshHighlight()
                         }
                     }
                     if selection.count > 1 {
-                        ChoiceChip(title: separately ? "Каждый отдельно" : "Одним стикером", isSelected: separately) {
+                        ChoiceChip(title: separately ? "Each separately" : "As one sticker", isSelected: separately) {
                             separately.toggle()
                         }
                     }
                 }
             }
-            OptionSection(title: "Сделать") {
+            OptionSection(title: "Make") {
                 HStack(spacing: 8) {
                     ForEach(PhotoStyle.cutoutFinishes) { style in
                         ChoiceChip(title: style.title, isSelected: finish == style) {
@@ -304,7 +304,7 @@ struct PhotoStudioView: View {
                     }
                 }
             }
-            OptionSection(title: "Белая кромка") {
+            OptionSection(title: "White edge") {
                 HStack(spacing: 8) {
                     ForEach(StickerBorder.allCases) { option in
                         ChoiceChip(title: option.title, isSelected: border == option) {
@@ -320,7 +320,7 @@ struct PhotoStudioView: View {
         ZStack {
             DoorPanelView(finish: store.design.finish, cornerRadius: 24)
             if results.isEmpty {
-                Text(mode == .lasso ? "Здесь появится вырезанный предмет" : "Выбери предмет на фото")
+                Text(mode == .lasso ? "Your cut-out will appear here" : "Pick an object in the photo")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Color(hex: 0x3B4650))
             } else {
@@ -343,7 +343,7 @@ struct PhotoStudioView: View {
     }
 
     private var wholeOptions: some View {
-        OptionSection(title: "Вид") {
+        OptionSection(title: "Style") {
             HStack(spacing: 8) {
                 ForEach(PhotoStyle.wholeFinishes) { style in
                     ChoiceChip(title: style.shortTitle, isSelected: wholeStyle == style) {
@@ -353,7 +353,7 @@ struct PhotoStudioView: View {
                 }
             }
             if wholeStyle == .polaroid {
-                TextField("Подпись от руки, например «Лето, 2026»", text: $caption)
+                TextField("Handwritten caption, like “Summer 2026”", text: $caption)
                     .font(NoteFont.caveat.font(size: 24))
                     .padding(14)
                     .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.card))
@@ -372,9 +372,9 @@ struct PhotoStudioView: View {
 
     private var wholeHint: String {
         switch wholeStyle {
-        case .polaroid: return "Квадратный кадр и широкое поле снизу для подписи. Подпись можно поменять потом."
-        case .card: return "Карточку держит отдельный магнит. Его можно заменить и передвинуть по краю."
-        default: return "Фото под толстой глянцевой линзой. Кадр выбран по самому интересному месту снимка."
+        case .polaroid: return "A square frame with a wide bottom margin for a caption. You can change the caption later."
+        case .card: return "A separate magnet holds the card. You can swap it and slide it along the edge."
+        default: return "The photo under a thick glossy dome, framed on the most interesting part of the shot."
         }
     }
 
@@ -387,9 +387,9 @@ struct PhotoStudioView: View {
                     if isSaving {
                         ProgressView().tint(Color.onInk)
                     } else if isCutMode && results.count > 1 {
-                        Label("На дверцу: \(results.count)", systemImage: "plus")
+                        Label("Put on the door: \(results.count)", systemImage: "plus")
                     } else {
-                        Label("На дверцу «\(store.fridge.name)»", systemImage: "plus")
+                        Label("Put on “\(store.fridge.name)”", systemImage: "plus")
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -404,13 +404,13 @@ struct PhotoStudioView: View {
                             .background(Circle().fill(Color.card))
                             .overlay { Circle().strokeBorder(Color.hairline, lineWidth: 1) }
                     }
-                    .accessibilityLabel("Поделиться стикером")
+                    .accessibilityLabel("Share sticker")
                 }
             }
             Button {
                 save(hang: false)
             } label: {
-                Text("Только сохранить в коллекцию")
+                Text("Just save to collection")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.ink)
                     .frame(maxWidth: .infinity)
@@ -436,7 +436,7 @@ struct PhotoStudioView: View {
         isAnalyzing = false
         guard let found else {
             withAnimation(.snappy) { mode = .lasso }
-            errorMessage = "Предметы не нашлись автоматически — обведи нужный пальцем или возьми фото целиком."
+            errorMessage = "No objects found automatically. Trace the one you want, or use the whole photo."
             return
         }
         session = found
@@ -539,7 +539,7 @@ struct PhotoStudioView: View {
         var urls: [URL] = []
         for (index, image) in images.enumerated() {
             guard let data = image.pngData() else { continue }
-            let url = folder.appendingPathComponent(images.count == 1 ? "Стикер.png" : "Стикер \(index + 1).png")
+            let url = folder.appendingPathComponent(images.count == 1 ? "Sticker.png" : "Sticker \(index + 1).png")
             if (try? data.write(to: url, options: [.atomic])) != nil {
                 urls.append(url)
             }
@@ -572,7 +572,7 @@ struct PhotoStudioView: View {
                 dismiss()
             } catch {
                 isSaving = false
-                errorMessage = "Не получилось сохранить. Попробуй ещё раз."
+                errorMessage = "Couldn’t save. Please try again."
             }
         }
     }

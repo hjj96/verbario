@@ -42,8 +42,8 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     preview
-                    OptionSection(title: "Название") {
-                        TextField("Например, Кухня", text: $name)
+                    OptionSection(title: "Name") {
+                        TextField("For example, Kitchen", text: $name)
                             .font(.serif(22))
                             .padding(14)
                             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.card))
@@ -54,7 +54,7 @@ struct SettingsView: View {
                     ModelPicker(design: designBinding)
                     if store.design.model.isRetro {
                         PaperCard {
-                            Toggle("Хромированная ручка", isOn: handleBinding)
+                            Toggle("Chrome handle", isOn: handleBinding)
                         }
                         .tint(Color(hex: 0x2F55D4))
                     }
@@ -70,11 +70,11 @@ struct SettingsView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color.paper)
-            .navigationTitle("Холодильник")
+            .navigationTitle("Fridge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") {
+                    Button("Done") {
                         commitName()
                         commitNameplate()
                         dismiss()
@@ -82,13 +82,13 @@ struct SettingsView: View {
                     .fontWeight(.semibold)
                 }
             }
-            .confirmationDialog("Снять всё с дверцы?", isPresented: $confirmsClear, titleVisibility: .visible) {
-                Button("Снять всё", role: .destructive) {
+            .confirmationDialog("Take everything off the door?", isPresented: $confirmsClear, titleVisibility: .visible) {
+                Button("Take everything off", role: .destructive) {
                     store.clearDoor()
                 }
-                Button("Отмена", role: .cancel) {}
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Дверца станет пустой. Стикеры, фото и записки останутся в коллекции, а действие можно отменить.")
+                Text("The door will be empty. Stickers, photos and notes stay in your collection, and you can undo this.")
             }
             .onAppear {
                 name = store.fridge.name
@@ -119,7 +119,7 @@ struct SettingsView: View {
 
     private var plate: some View {
         OptionSection(title: store.design.model.nameplateTitle) {
-            TextField("Например: Дом, Семья, Дача", text: $nameplate)
+            TextField("For example: Home, Family, Cottage", text: $nameplate)
                 .font(.custom("MarckScript-Regular", size: 22))
                 .padding(14)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.card))
@@ -140,24 +140,24 @@ struct SettingsView: View {
     }
 
     private var feelings: some View {
-        OptionSection(title: "Ощущения") {
+        OptionSection(title: "Feel") {
             PaperCard {
-                Toggle("Вибрация при креплении", isOn: $hapticsEnabled)
+                Toggle("Haptics when attaching", isOn: $hapticsEnabled)
                 Divider()
-                Toggle("Тихий щелчок", isOn: $clickSoundEnabled)
+                Toggle("Soft click", isOn: $clickSoundEnabled)
             }
             .tint(Color(hex: 0x2F55D4))
         }
     }
 
     private var widget: some View {
-        OptionSection(title: "Виджет") {
+        OptionSection(title: "Widget") {
             NavigationLink {
                 WidgetGuideView()
             } label: {
                 PaperCard {
                     HStack {
-                        Label("Как добавить на домашний экран", systemImage: "apps.iphone.badge.plus")
+                        Label("How to add it to your Home Screen", systemImage: "apps.iphone.badge.plus")
                             .foregroundStyle(Color.ink)
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -167,19 +167,19 @@ struct SettingsView: View {
                 }
             }
             .buttonStyle(.plain)
-            Text("Виджет бывает маленьким, средним и большим. Удержи его на домашнем экране и нажми «Изменить виджет», чтобы выбрать, какой холодильник он показывает.")
+            Text("The widget comes in small, medium and large. Touch and hold it on your Home Screen and tap “Edit Widget” to choose which fridge it shows.")
                 .font(.footnote)
                 .foregroundStyle(Color.inkSoft)
         }
     }
 
     private var door: some View {
-        OptionSection(title: "Дверца") {
+        OptionSection(title: "Door") {
             Button {
                 confirmsClear = true
             } label: {
                 PaperCard {
-                    Label("Снять всё с дверцы", systemImage: "tray.and.arrow.down")
+                    Label("Take everything off the door", systemImage: "tray.and.arrow.down")
                         .foregroundStyle(Color(hex: 0xC8372D))
                 }
             }
@@ -190,11 +190,11 @@ struct SettingsView: View {
 
     private var about: some View {
         VStack(alignment: .leading, spacing: 4) {
-            SectionLabel(text: "О приложении")
-            Text("Мой холодильник \(appVersion)")
+            SectionLabel(text: "About")
+            Text("My Fridge \(appVersion)")
                 .font(.footnote)
                 .foregroundStyle(Color.inkSoft)
-            Text("Шрифты записок: Caveat и Marck Script, SIL Open Font License.")
+            Text("Note fonts: Caveat and Marck Script, SIL Open Font License.")
                 .font(.footnote)
                 .foregroundStyle(Color.inkSoft)
         }

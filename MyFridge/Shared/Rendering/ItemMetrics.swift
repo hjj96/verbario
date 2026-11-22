@@ -38,9 +38,9 @@ enum RenderContent {
     var title: String {
         switch self {
         case .photo(let photo, _): return photo.style.title
-        case .note(let note, _): return note.isTask ? "Дело" : "Записка"
+        case .note(let note, _): return note.isTask ? "To-do" : "Note"
         case .magnet(let art): return art.title
-        case .letter(let letter): return "Буква «\(letter.character)»"
+        case .letter(let letter): return "Letter “\(letter.character)”"
         }
     }
 }

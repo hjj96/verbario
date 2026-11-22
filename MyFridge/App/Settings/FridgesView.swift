@@ -17,11 +17,11 @@ struct FridgesView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 6) {
-                        SectionLabel(text: "Холодильники")
-                        Text("Твои дверцы")
+                        SectionLabel(text: "Fridges")
+                        Text("Your doors")
                             .font(.serif(34))
                             .foregroundStyle(Color.ink)
-                        Text("У каждого холодильника свой вид и свои магниты. Коллекция стикеров и фото общая.")
+                        Text("Each fridge has its own look and its own magnets. Your stickers and photos are shared.")
                             .font(.subheadline)
                             .foregroundStyle(Color.inkSoft)
                     }
@@ -36,18 +36,18 @@ struct FridgesView: View {
                                     newName = fridge.name
                                     renaming = fridge
                                 } label: {
-                                    Label("Переименовать", systemImage: "pencil")
+                                    Label("Rename", systemImage: "pencil")
                                 }
                                 Button {
                                     store.duplicateFridge(fridge.id)
                                 } label: {
-                                    Label("Сделать копию", systemImage: "plus.square.on.square")
+                                    Label("Duplicate", systemImage: "plus.square.on.square")
                                 }
                                 if store.state.fridges.count > 1 {
                                     Button(role: .destructive) {
                                         deleting = fridge
                                     } label: {
-                                        Label("Удалить", systemImage: "trash")
+                                        Label("Delete", systemImage: "trash")
                                     }
                                 }
                             }
@@ -61,7 +61,7 @@ struct FridgesView: View {
                                     .frame(width: 64, height: 64)
                                     .background(Circle().fill(Color.card))
                                     .overlay { Circle().strokeBorder(Color.hairline, lineWidth: 1) }
-                                Text("Новый холодильник")
+                                Text("New fridge")
                                     .font(.subheadline.weight(.semibold))
                             }
                             .foregroundStyle(Color.ink)
@@ -80,7 +80,7 @@ struct FridgesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                    Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
             }
@@ -89,32 +89,32 @@ struct FridgesView: View {
                     dismiss()
                 }
             }
-            .alert("Название холодильника", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
-                TextField("Например, Дача", text: $newName)
-                Button("Готово") {
+            .alert("Fridge name", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+                TextField("For example, Cottage", text: $newName)
+                Button("Done") {
                     if let renaming {
                         store.renameFridge(renaming.id, to: newName)
                     }
                     renaming = nil
                 }
-                Button("Отмена", role: .cancel) {
+                Button("Cancel", role: .cancel) {
                     renaming = nil
                 }
             }
-            .confirmationDialog(deleting.map { "Удалить «\($0.name)»?" } ?? "",
+            .confirmationDialog(deleting.map { "Delete “\($0.name)”?" } ?? "",
                                 isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                                 titleVisibility: .visible) {
-                Button("Удалить", role: .destructive) {
+                Button("Delete", role: .destructive) {
                     if let deleting {
                         store.deleteFridge(deleting.id)
                     }
                     deleting = nil
                 }
-                Button("Отмена", role: .cancel) {
+                Button("Cancel", role: .cancel) {
                     deleting = nil
                 }
             } message: {
-                Text("Стикеры, фото и записки останутся в коллекции. Удаление можно отменить.")
+                Text("Stickers, photos and notes stay in your collection. You can undo this.")
             }
             .overlay(alignment: .bottom) { ToastHost() }
         }
@@ -195,7 +195,7 @@ struct NewFridgeView: View {
                     .frame(maxWidth: .infinity)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: format)
 
-                OptionSection(title: "Название") {
+                OptionSection(title: "Name") {
                     TextField(placeholder, text: $name)
                         .font(.serif(22))
                         .padding(14)
@@ -220,7 +220,7 @@ struct NewFridgeView: View {
                 Feedback.attach()
                 onCreated()
             } label: {
-                Label("Создать холодильник", systemImage: "plus")
+                Label("Create fridge", systemImage: "plus")
             }
             .buttonStyle(PrimaryButtonStyle())
             .padding(.horizontal, 20)
@@ -228,7 +228,7 @@ struct NewFridgeView: View {
             .background(Color.paper)
         }
         .background(Color.paper)
-        .navigationTitle("Новый холодильник")
+        .navigationTitle("New fridge")
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -254,7 +254,7 @@ struct ModelPicker: View {
     @Binding var design: DoorDesign
 
     var body: some View {
-        OptionSection(title: "Модель") {
+        OptionSection(title: "Model") {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 12) {
                     ForEach(DoorModel.allCases) { model in
@@ -301,7 +301,7 @@ struct ModelPicker: View {
         sample.model = model
         sample.showsHandle = true
         if sample.nameplate.isEmpty {
-            sample.nameplate = "Кухня"
+            sample.nameplate = "Kitchen"
         }
         return sample
     }
@@ -311,7 +311,7 @@ struct FormatPicker: View {
     @Binding var format: FridgeFormat
 
     var body: some View {
-        OptionSection(title: "Размер") {
+        OptionSection(title: "Size") {
             HStack(spacing: 8) {
                 ForEach(FridgeFormat.allCases) { option in
                     ChoiceChip(title: option.title, isSelected: format == option) {
@@ -320,7 +320,7 @@ struct FormatPicker: View {
                     }
                 }
             }
-            Text("Формат дверцы \(format.widgetHint). Холодильник можно поставить и в виджет другого размера — он аккуратно впишется.")
+            Text("A door \(format.widgetHint). It also fits neatly into a widget of another size.")
                 .font(.footnote)
                 .foregroundStyle(Color.inkSoft)
         }
@@ -333,8 +333,8 @@ struct FinishPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            row(title: "Металл", finishes: DoorFinish.metals)
-            row(title: "Глянцевая эмаль", finishes: DoorFinish.enamels)
+            row(title: "Metal", finishes: DoorFinish.metals)
+            row(title: "Glossy enamel", finishes: DoorFinish.enamels)
         }
     }
 

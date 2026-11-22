@@ -75,7 +75,7 @@ struct DoorCanvas: View {
         }
         .environment(\.noteInteraction, .app({ itemID in store.toggleTask(itemID: itemID) }))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Дверца холодильника")
+        .accessibilityLabel("Fridge door")
     }
 
     // MARK: Items
@@ -263,7 +263,7 @@ struct DoorCanvas: View {
                 ResizeKnob()
                     .position(x: center.x + corner.x, y: center.y + corner.y)
                     .gesture(resizeGesture(stored, doorSize: doorSize))
-                    .accessibilityLabel("Размер и поворот")
+                    .accessibilityLabel("Size and rotation")
             }
         }
     }

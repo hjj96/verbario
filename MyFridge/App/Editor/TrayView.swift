@@ -7,10 +7,10 @@ enum TrayTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .magnets: return "Магниты"
-        case .photos: return "Мои"
-        case .notes: return "Записки"
-        case .letters: return "Буквы"
+        case .magnets: return "Magnets"
+        case .photos: return "Mine"
+        case .notes: return "Notes"
+        case .letters: return "Letters"
         }
     }
 }
@@ -27,7 +27,7 @@ struct TrayView: View {
     let onWord: () -> Void
     let onCollection: () -> Void
 
-    private static let alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ0123456789!?".map(String.init)
+    private static let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?&".map(String.init)
 
     var body: some View {
         VStack(spacing: 12) {
@@ -35,11 +35,11 @@ struct TrayView: View {
             shelf
             HStack(spacing: 10) {
                 Button(action: onAddPhoto) {
-                    Label("Вырезать из фото", systemImage: "scissors")
+                    Label("Cut out from photo", systemImage: "scissors")
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                RoundIconButton(systemImage: "square.and.pencil", label: "Новая записка", size: 52, action: onAddNote)
-                RoundIconButton(systemImage: "square.grid.2x2", label: "Коллекция", size: 52, action: onCollection)
+                RoundIconButton(systemImage: "square.and.pencil", label: "New note", size: 52, action: onAddNote)
+                RoundIconButton(systemImage: "square.grid.2x2", label: "Collection", size: 52, action: onCollection)
             }
             .padding(.horizontal, 18)
         }
@@ -65,7 +65,7 @@ struct TrayView: View {
             }
             Spacer(minLength: 0)
             if tab == .magnets {
-                Button("Все", action: onCollection)
+                Button("All", action: onCollection)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.ink)
             }
@@ -82,17 +82,17 @@ struct TrayView: View {
                         TrayTile(content: .magnet(art), payload: .magnet(art.id)) { place(.magnet(art.id)) }
                     }
                 case .photos:
-                    AddTile(title: "Из фото", systemImage: "scissors", action: onAddPhoto)
+                    AddTile(title: "From photo", systemImage: "scissors", action: onAddPhoto)
                     ForEach(store.photoItems) { item in
                         TrayTile(content: store.content(for: item), payload: .item(item.id)) { place(.item(item.id)) }
                     }
                 case .notes:
-                    AddTile(title: "Записка", systemImage: "square.and.pencil", action: onAddNote)
+                    AddTile(title: "Note", systemImage: "square.and.pencil", action: onAddNote)
                     ForEach(store.noteItems) { item in
                         TrayTile(content: store.content(for: item), payload: .item(item.id)) { place(.item(item.id)) }
                     }
                 case .letters:
-                    AddTile(title: "Слово", systemImage: "textformat", action: onWord)
+                    AddTile(title: "Word", systemImage: "textformat", action: onWord)
                     ForEach(Array(Self.alphabet.enumerated()), id: \.offset) { index, character in
                         let letter = LetterMagnet(character: character, color: LetterColor.rainbow[index % LetterColor.rainbow.count])
                         TrayTile(content: .letter(letter), payload: .letter(letter), box: 46) { place(.letter(letter)) }
@@ -132,7 +132,7 @@ private struct TrayTile: View {
             ItemThumb(content: content, box: box * 1.5)
         }
         .accessibilityLabel(content.title)
-        .accessibilityHint("Нажмите, чтобы повесить на дверцу, или перетащите")
+        .accessibilityHint("Tap to put it on the door, or drag it there")
     }
 }
 

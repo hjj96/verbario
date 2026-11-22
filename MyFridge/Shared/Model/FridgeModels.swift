@@ -48,25 +48,25 @@ enum PhotoStyle: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .cutout: return "Фотомагнит"
-        case .sticker: return "Стикер"
-        case .holo: return "Голо-стикер"
-        case .card: return "Фотокарточка"
-        case .polaroid: return "Полароид"
-        case .round: return "Круглый магнит"
-        case .heart: return "Сердечко"
+        case .cutout: return "Photo magnet"
+        case .sticker: return "Sticker"
+        case .holo: return "Holo sticker"
+        case .card: return "Photo card"
+        case .polaroid: return "Polaroid"
+        case .round: return "Round magnet"
+        case .heart: return "Heart"
         }
     }
 
     var shortTitle: String {
         switch self {
-        case .cutout: return "Магнит"
-        case .sticker: return "Стикер"
-        case .holo: return "Голо"
-        case .card: return "Карточка"
-        case .polaroid: return "Полароид"
-        case .round: return "Круг"
-        case .heart: return "Сердце"
+        case .cutout: return "Magnet"
+        case .sticker: return "Sticker"
+        case .holo: return "Holo"
+        case .card: return "Card"
+        case .polaroid: return "Polaroid"
+        case .round: return "Round"
+        case .heart: return "Heart"
         }
     }
 
@@ -142,12 +142,12 @@ enum PaperColor: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .cream: return "Сливочная"
-        case .butter: return "Жёлтая"
-        case .blush: return "Розовая"
-        case .sky: return "Голубая"
-        case .mint: return "Мятная"
-        case .kraft: return "Крафт"
+        case .cream: return "Cream"
+        case .butter: return "Yellow"
+        case .blush: return "Pink"
+        case .sky: return "Blue"
+        case .mint: return "Mint"
+        case .kraft: return "Kraft"
         }
     }
 }
@@ -159,10 +159,10 @@ enum NoteShape: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .torn: return "Листок"
-        case .sticky: return "Стикер"
-        case .card: return "Карточка"
-        case .ticket: return "Билет"
+        case .torn: return "Torn sheet"
+        case .sticky: return "Sticky note"
+        case .card: return "Card"
+        case .ticket: return "Ticket"
         }
     }
 
@@ -205,9 +205,9 @@ enum NoteFont: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .caveat: return "Лёгкий"
-        case .marck: return "Каллиграфия"
-        case .serif: return "Печатный"
+        case .caveat: return "Casual"
+        case .marck: return "Calligraphy"
+        case .serif: return "Print"
         }
     }
 }
@@ -281,16 +281,16 @@ enum FastenerKind: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .redMagnet: return "Красный магнит"
-        case .blueMagnet: return "Синий магнит"
-        case .greenMagnet: return "Зелёный магнит"
-        case .yellowMagnet: return "Жёлтый магнит"
-        case .whiteMagnet: return "Белый магнит"
-        case .metalDisc: return "Металлический диск"
-        case .clip: return "Зажим"
-        case .star: return "Звёздочка"
-        case .strawberry: return "Клубничка"
-        case .daisy: return "Ромашка"
+        case .redMagnet: return "Red magnet"
+        case .blueMagnet: return "Blue magnet"
+        case .greenMagnet: return "Green magnet"
+        case .yellowMagnet: return "Yellow magnet"
+        case .whiteMagnet: return "White magnet"
+        case .metalDisc: return "Metal disc"
+        case .clip: return "Clip"
+        case .star: return "Star"
+        case .strawberry: return "Strawberry"
+        case .daisy: return "Daisy"
         }
     }
 }
@@ -303,16 +303,16 @@ enum DoorFinish: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .steel: return "Сталь"
-        case .graphite: return "Графит"
-        case .champagne: return "Шампань"
-        case .cream: return "Сливочный"
-        case .mint: return "Мятный"
-        case .sky: return "Небесный"
-        case .cherry: return "Вишнёвый"
-        case .lemon: return "Лимонный"
-        case .powder: return "Пудровый"
-        case .black: return "Чёрный глянец"
+        case .steel: return "Steel"
+        case .graphite: return "Graphite"
+        case .champagne: return "Champagne"
+        case .cream: return "Cream"
+        case .mint: return "Mint"
+        case .sky: return "Sky"
+        case .cherry: return "Cherry"
+        case .lemon: return "Lemon"
+        case .powder: return "Powder"
+        case .black: return "Black gloss"
         }
     }
 
@@ -339,19 +339,19 @@ enum DoorModel: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .modern: return "Современный"
-        case .fifties: return "Пятидесятые"
-        case .riviera: return "Ривьера"
-        case .thaw: return "Оттепель"
+        case .modern: return "Modern"
+        case .fifties: return "Fifties"
+        case .riviera: return "Riviera"
+        case .thaw: return "Thaw"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .modern: return "Плоская дверца без ручки"
-        case .fifties: return "Американская классика: ручка с кнопкой и надпись хромированным почерком"
-        case .riviera: return "Итальянский ретро: массивная ручка и имя внизу дверцы"
-        case .thaw: return "Советские шестидесятые: рычаг с замком и шильдик с крылышками"
+        case .modern: return "A flat door without a handle"
+        case .fifties: return "American classic: a bar handle with a push button and a chrome script name"
+        case .riviera: return "Italian retro: a chunky grip and a name across the bottom"
+        case .thaw: return "Soviet sixties: a lever with a lock and a winged chrome badge"
         }
     }
 
@@ -361,17 +361,17 @@ enum DoorModel: String, Codable, Hashable, CaseIterable, Identifiable {
     /// What the name on the door is called in settings.
     var nameplateTitle: String {
         switch self {
-        case .modern, .fifties: return "Надпись"
-        case .riviera: return "Имя на дверце"
-        case .thaw: return "Шильдик"
+        case .modern, .fifties: return "Chrome script"
+        case .riviera: return "Name on the door"
+        case .thaw: return "Badge"
         }
     }
 
     var nameplateHint: String {
         switch self {
-        case .modern, .fifties: return "Хромированный почерк наверху дверцы. Оставь пустым, чтобы убрать."
-        case .riviera: return "Хромированные строчные буквы внизу дверцы, широко, как у итальянских холодильников."
-        case .thaw: return "Слово на красной эмали в хромированной рамке с крылышками. Лучше коротко: «Дом», «Дача»."
+        case .modern, .fifties: return "Chrome handwriting at the top of the door. Leave it empty to remove it."
+        case .riviera: return "Wide-spaced chrome lowercase letters across the bottom, like on Italian fridges."
+        case .thaw: return "A word on red enamel in a winged chrome frame. Short works best: “Home”, “Cabin”."
         }
     }
 }
@@ -419,17 +419,17 @@ enum FridgeFormat: String, Codable, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .square: return "Маленький"
-        case .wide: return "Широкий"
-        case .tall: return "Большой"
+        case .square: return "Small"
+        case .wide: return "Wide"
+        case .tall: return "Large"
         }
     }
 
     var widgetHint: String {
         switch self {
-        case .square: return "для маленького виджета"
-        case .wide: return "для среднего виджета"
-        case .tall: return "для большого виджета"
+        case .square: return "for the small widget"
+        case .wide: return "for the medium widget"
+        case .tall: return "for the large widget"
         }
     }
 
@@ -465,7 +465,7 @@ struct Fridge: Codable, Identifiable, Hashable {
 extension Fridge {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(name: try container.decodeIfPresent(String.self, forKey: .name) ?? "Холодильник")
+        self.init(name: try container.decodeIfPresent(String.self, forKey: .name) ?? "Fridge")
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         format = (try? container.decodeIfPresent(FridgeFormat.self, forKey: .format)) ?? .tall
         design = (try? container.decodeIfPresent(DoorDesign.self, forKey: .design)) ?? DoorDesign()
@@ -481,11 +481,11 @@ struct FridgePreset: Identifiable, Hashable {
     var id: String { "\(design.model.rawValue)-\(design.finish.rawValue)" }
 
     static let all: [FridgePreset] = [
-        FridgePreset(name: "Кухня", design: DoorDesign(finish: .mint, nameplate: "Кухня", model: .fifties)),
-        FridgePreset(name: "Дача", design: DoorDesign(finish: .cherry, nameplate: "дача", model: .riviera)),
-        FridgePreset(name: "Дом", design: DoorDesign(finish: .cream, nameplate: "Дом", model: .thaw)),
-        FridgePreset(name: "Детская", design: DoorDesign(finish: .sky, model: .fifties)),
-        FridgePreset(name: "Студия", design: DoorDesign(finish: .steel, model: .modern)),
+        FridgePreset(name: "Kitchen", design: DoorDesign(finish: .mint, nameplate: "Kitchen", model: .fifties)),
+        FridgePreset(name: "Cottage", design: DoorDesign(finish: .cherry, nameplate: "cottage", model: .riviera)),
+        FridgePreset(name: "Home", design: DoorDesign(finish: .cream, nameplate: "Home", model: .thaw)),
+        FridgePreset(name: "Playroom", design: DoorDesign(finish: .sky, model: .fifties)),
+        FridgePreset(name: "Studio", design: DoorDesign(finish: .steel, model: .modern)),
     ]
 
     /// A name to suggest for a new fridge of this look.
@@ -526,11 +526,11 @@ struct FridgeState: Codable, Hashable {
         fridges = try container.decodeIfPresent([Fridge].self, forKey: .fridges) ?? []
         currentFridgeID = try container.decodeIfPresent(UUID.self, forKey: .currentFridgeID)
         if fridges.isEmpty, let legacy = try? container.decodeIfPresent(LegacyDoor.self, forKey: .door) {
-            fridges = [Fridge(name: "Кухня", format: .tall, design: legacy.design ?? DoorDesign(),
+            fridges = [Fridge(name: "Kitchen", format: .tall, design: legacy.design ?? DoorDesign(),
                               placements: legacy.placements ?? [])]
         }
         if fridges.isEmpty {
-            fridges = [Fridge(name: "Кухня")]
+            fridges = [Fridge(name: "Kitchen")]
         }
         version = 3
     }
@@ -571,18 +571,19 @@ extension FridgeState {
     /// The first fridge: a note, a few magnets and a word, so it never starts empty.
     /// The person adds their own photos next.
     static var starter: FridgeState {
-        let note = FridgeItem(content: .note(NoteContent(text: "Хорошо быть дома", paper: .cream, shape: .torn, font: .caveat)))
-        var fridge = Fridge(name: "Кухня", format: .tall,
-                            design: DoorDesign(finish: .mint, nameplate: "Кухня", model: .fifties))
+        let note = FridgeItem(content: .note(NoteContent(text: "Home sweet home", paper: .cream, shape: .torn, font: .caveat)))
+        var fridge = Fridge(name: "Kitchen", format: .tall,
+                            design: DoorDesign(finish: .mint, nameplate: "Kitchen", model: .fifties))
         fridge.placements = [
             Placement(source: .magnet("lemon"), x: 0.22, y: 0.31, width: 0.2, rotation: -8),
             Placement(source: .item(note.id), x: 0.43, y: 0.6, width: 0.46, rotation: -4,
                       fastener: Fastener(kind: .greenMagnet, x: 0.5, y: 0.08)),
             Placement(source: .magnet("strawberry"), x: 0.62, y: 0.28, width: 0.16, rotation: 10),
             Placement(source: .magnet("heart"), x: 0.7, y: 0.84, width: 0.16, rotation: -12),
-            Placement(source: .letter(LetterMagnet(character: "Д", color: .red)), x: 0.19, y: 0.85, width: 0.11, rotation: -6),
-            Placement(source: .letter(LetterMagnet(character: "О", color: .yellow)), x: 0.29, y: 0.86, width: 0.11, rotation: 4),
-            Placement(source: .letter(LetterMagnet(character: "М", color: .green)), x: 0.39, y: 0.85, width: 0.11, rotation: -3),
+            Placement(source: .letter(LetterMagnet(character: "H", color: .red)), x: 0.17, y: 0.85, width: 0.11, rotation: -6),
+            Placement(source: .letter(LetterMagnet(character: "O", color: .yellow)), x: 0.27, y: 0.86, width: 0.11, rotation: 4),
+            Placement(source: .letter(LetterMagnet(character: "M", color: .green)), x: 0.37, y: 0.85, width: 0.11, rotation: -3),
+            Placement(source: .letter(LetterMagnet(character: "E", color: .blue)), x: 0.47, y: 0.86, width: 0.11, rotation: 5),
         ]
         return FridgeState(items: [note], fridges: [fridge], currentFridgeID: fridge.id)
     }

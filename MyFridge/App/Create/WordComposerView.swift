@@ -22,7 +22,7 @@ struct WordComposerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     preview
-                    TextField("Например: ДОМ", text: $text)
+                    TextField("For example: HOME", text: $text)
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
@@ -37,10 +37,10 @@ struct WordComposerView: View {
                                 text = String(newValue.prefix(Self.maxLength))
                             }
                         }
-                    OptionSection(title: "Цвет букв") {
+                    OptionSection(title: "Letter color") {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
-                                ChoiceChip(title: "Радуга", isSelected: coloring == .rainbow) {
+                                ChoiceChip(title: "Rainbow", isSelected: coloring == .rainbow) {
                                     coloring = .rainbow
                                 }
                                 ForEach(LetterColor.allCases) { color in
@@ -62,21 +62,21 @@ struct WordComposerView: View {
                             }
                         }
                     }
-                    Text("Каждая буква — отдельный магнитик. Их потом можно двигать по одной.")
+                    Text("Each letter is its own magnet, so you can move them one by one.")
                         .font(.footnote)
                         .foregroundStyle(Color.inkSoft)
                 }
                 .padding(20)
             }
             .background(Color.paper)
-            .navigationTitle("Магнитные буквы")
+            .navigationTitle("Magnetic letters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Прикрепить") {
+                    Button("Pin up") {
                         if let placementID = store.placeWord(text, coloring: coloring) {
                             onPlaced(placementID)
                         }
@@ -97,7 +97,7 @@ struct WordComposerView: View {
     }
 
     private var preview: some View {
-        let shown = letters.isEmpty ? "ДОМ".map(String.init) : letters
+        let shown = letters.isEmpty ? "HOME".map(String.init) : letters
         let letterWidth = min(40, 300 / CGFloat(max(shown.count, 1)))
         return ZStack {
             DoorPanelView(finish: store.design.finish, cornerRadius: 24)

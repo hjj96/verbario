@@ -130,7 +130,7 @@ final class FridgeStore {
         guard let original = state.fridge(id) else { return nil }
         var copy = original
         copy.id = UUID()
-        copy.name = "\(original.name) — копия"
+        copy.name = "\(original.name) copy"
         copy.placements = original.placements.map { placement in
             var moved = placement
             moved.id = UUID()
@@ -152,7 +152,7 @@ final class FridgeStore {
                 state.currentFridgeID = state.fridges.first?.id
             }
         }
-        showToast("«\(fridge.name)» удалён, предметы остались в коллекции", undoable: true)
+        showToast("“\(fridge.name)” deleted. Its things are still in your collection", undoable: true)
     }
 
     func updateDesign(_ change: (inout DoorDesign) -> Void) {
@@ -166,7 +166,7 @@ final class FridgeStore {
     func clearDoor() {
         guard !placements.isEmpty else { return }
         updateCurrent { $0.placements.removeAll() }
-        showToast("Дверца очищена", undoable: true)
+        showToast("Door cleared", undoable: true)
     }
 
     // MARK: Reading
@@ -318,9 +318,9 @@ final class FridgeStore {
             state.fridges[index].placements.append(contentsOf: newPlacements)
         }
         if !hang {
-            showToast(items.count == 1 ? "Сохранено в коллекцию" : "Сохранено в коллекцию: \(items.count)")
+            showToast(items.count == 1 ? "Saved to collection" : "Saved to collection: \(items.count)")
         } else if newPlacements.count < items.count {
-            showToast("Не всё поместилось на дверцу — остальное в коллекции")
+            showToast("Not everything fit on the door. The rest is in your collection")
         }
         return newPlacements.last?.id
     }
@@ -364,7 +364,7 @@ final class FridgeStore {
             }
         }
         if placement == nil {
-            showToast("Дверца заполнена — сохранено в коллекции")
+            showToast("The door is full. Saved to your collection")
         }
         return placement?.id
     }
@@ -401,7 +401,7 @@ final class FridgeStore {
         }
         guard let content = content(for: payload) else { return nil }
         guard !isDoorFull else {
-            showToast("На дверце уже много всего — сними что-нибудь")
+            showToast("The door is full. Take something off first")
             return nil
         }
         let source: PlacementSource
@@ -432,7 +432,7 @@ final class FridgeStore {
         let letters = characters.filter { $0 != " " }
         guard !letters.isEmpty else { return nil }
         guard placements.count + letters.count <= ItemMetrics.maxPlacements else {
-            showToast("Для такого слова на дверце мало места")
+            showToast("Not enough room on the door for that word")
             return nil
         }
         let format = self.format
@@ -475,7 +475,7 @@ final class FridgeStore {
     func duplicate(_ placementID: UUID) -> UUID? {
         guard let original = placement(placementID) else { return nil }
         guard !isDoorFull else {
-            showToast("На дверце уже много всего — сними что-нибудь")
+            showToast("The door is full. Take something off first")
             return nil
         }
         var copy = original
@@ -507,14 +507,14 @@ final class FridgeStore {
         updateCurrent { fridge in
             fridge.placements.removeAll { $0.id == id }
         }
-        showToast(wasItem ? "Снято с дверцы и осталось в коллекции" : "Снято с дверцы", undoable: true)
+        showToast(wasItem ? "Taken off the door. Still in your collection" : "Taken off the door", undoable: true)
     }
 
     func removeFromDoor(itemID: UUID) {
         updateCurrent { fridge in
             fridge.placements.removeAll { $0.source == .item(itemID) }
         }
-        showToast("Снято с дверцы и осталось в коллекции", undoable: true)
+        showToast("Taken off the door. Still in your collection", undoable: true)
     }
 
     /// Removes the item from the collection and from every fridge. Can be undone.
@@ -525,7 +525,7 @@ final class FridgeStore {
                 state.fridges[index].placements.removeAll { $0.source == .item(itemID) }
             }
         }
-        showToast("Удалено из коллекции", undoable: true)
+        showToast("Deleted from collection", undoable: true)
     }
 
     func bringForward(_ id: UUID) {

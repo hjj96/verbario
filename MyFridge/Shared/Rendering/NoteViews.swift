@@ -155,7 +155,7 @@ private struct TaskCheckbox: View {
                 box
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isDone ? "Сделано" : "Не сделано")
+            .accessibilityLabel(isDone ? "Done" : "Not done")
         case .widget:
             Button(intent: ToggleTaskIntent(itemID: itemID)) {
                 box

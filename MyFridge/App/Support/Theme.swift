@@ -221,7 +221,7 @@ struct ItemThumb: View {
 
 // MARK: - Toast
 
-/// Shows the store's toast with an optional "Отменить" button.
+/// Shows the store's toast with an optional "Undo" button.
 struct ToastHost: View {
     @Environment(FridgeStore.self) private var store
 
@@ -234,7 +234,7 @@ struct ToastHost: View {
                         .foregroundStyle(Color.onInk)
                         .lineLimit(2)
                     if toast.undoable {
-                        Button("Отменить") { store.undoFromToast() }
+                        Button("Undo") { store.undoFromToast() }
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(Color(hex: 0x9DB4FF))
                     }

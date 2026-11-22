@@ -6,10 +6,10 @@ enum MagnetMaterial: String, Decodable, Hashable {
 
     var title: String {
         switch self {
-        case .glossy: return "Глянцевая эмаль"
-        case .ceramic: return "Керамика"
-        case .metal: return "Металл"
-        case .matte: return "Матовая керамика"
+        case .glossy: return "Glossy enamel"
+        case .ceramic: return "Ceramic"
+        case .metal: return "Metal"
+        case .matte: return "Matte ceramic"
         }
     }
 }

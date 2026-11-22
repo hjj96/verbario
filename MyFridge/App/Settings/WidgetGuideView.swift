@@ -6,16 +6,16 @@ struct WidgetGuideView: View {
     @Environment(FridgeStore.self) private var store
 
     private let steps: [(title: String, text: String)] = [
-        ("Удерживай экран",
-         "Нажми и подержи палец на свободном месте домашнего экрана, пока иконки не начнут покачиваться."),
-        ("Добавь виджет",
-         "Нажми «Изменить» в левом верхнем углу и выбери «Добавить виджет» (в старых версиях iOS — кнопка «+»)."),
-        ("Найди холодильник",
-         "Введи в поиске «Холодильник» и выбери размер: маленький, средний или большой."),
-        ("Выбери холодильник",
-         "Удержи виджет и нажми «Изменить виджет», чтобы выбрать, какой холодильник он показывает. Можно поставить несколько разных."),
-        ("Возвращайся касанием",
-         "Чтобы что-то поменять, коснись дверцы — откроется редактор. Галочки на делах отмечаются прямо на виджете."),
+        ("Touch and hold",
+         "Touch and hold an empty spot on your Home Screen until the apps jiggle."),
+        ("Add a widget",
+         "Tap “Edit” in the top-left corner and choose “Add Widget” (on older iOS, tap “+”)."),
+        ("Find My Fridge",
+         "Search for “My Fridge” and pick a size: small, medium or large."),
+        ("Choose a fridge",
+         "Touch and hold the widget and tap “Edit Widget” to choose which fridge it shows. You can add several."),
+        ("Tap to come back",
+         "To change something, tap the door to open the editor. To-dos can be ticked right on the widget."),
     ]
 
     var body: some View {
@@ -28,7 +28,7 @@ struct WidgetGuideView: View {
                 }
                 .padding(.top, 8)
 
-                Text("Один раз добавь виджет — дальше дверца сама будет на домашнем экране.")
+                Text("Add the widget once, and your door will live on your Home Screen.")
                     .font(.serif(24))
                     .foregroundStyle(Color.ink)
                     .fixedSize(horizontal: false, vertical: true)
@@ -56,7 +56,7 @@ struct WidgetGuideView: View {
             .padding(20)
         }
         .background(Color.paper)
-        .navigationTitle("Виджет")
+        .navigationTitle("Widget")
         .navigationBarTitleDisplayMode(.inline)
     }
 

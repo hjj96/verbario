@@ -45,7 +45,7 @@ struct FridgeEntry: TimelineEntry {
         var fridge = starter.fridges[0]
         fridge.format = format
         if format == .wide {
-            fridge.design = DoorDesign(finish: .cherry, nameplate: "дача", model: .riviera)
+            fridge.design = DoorDesign(finish: .cherry, nameplate: "cottage", model: .riviera)
             fridge.placements = [
                 Placement(source: .magnet("lemon"), x: 0.14, y: 0.55, width: 0.2, rotation: -8),
                 Placement(source: fridge.placements[1].source, x: 0.42, y: 0.6, width: 0.44, rotation: -3,
@@ -140,8 +140,8 @@ struct FridgeWidget: Widget {
         AppIntentConfiguration(kind: FridgeStorage.widgetKind, intent: SelectFridgeIntent.self, provider: FridgeProvider()) { entry in
             FridgeWidgetView(entry: entry)
         }
-        .configurationDisplayName("Мой холодильник")
-        .description("Твои стикеры, фото, записки и магнитики. Удержи виджет, чтобы выбрать холодильник.")
+        .configurationDisplayName("My Fridge")
+        .description("Your stickers, photos, notes and magnets. Touch and hold to choose a fridge.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge])
         .contentMarginsDisabled()
     }
