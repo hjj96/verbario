@@ -131,34 +131,32 @@ function drawPickups(c) {
 /* ---------- Враги ---------- */
 function drawEnemies(c, z, e0, f0) {
   const t = G.time;
-  const det = RENDER.det || (RENDER.det = []);
-  det.length = 0;
-  for (const e of G.enemies) {
-    if (!e.alive || !onScreen(e, 70)) continue;
-    if (e.boss) { c.setTransform(z, 0, 0, z, e0, f0); drawBoss(c, e, t); continue; }
-    if (e.parent) { c.setTransform(z, 0, 0, z, e0, f0); drawSegment(c, e, t); continue; }
-    const S = SPR.enemies[e.tid];
-    const fi = ((t * 7 + e.anim) | 0) & 1;
-    let k = e.scale;
-    if (e.t < 0.35) k *= 0.45 + 0.55 * ease.outBack(e.t / 0.35);
-    const sz = S.size * k, h = sz / 2, a = e.ang || 0, ca = Math.cos(a) * z, sa = Math.sin(a) * z;
-    c.setTransform(ca, sa, -sa, ca, e.x * z + e0, e.y * z + f0);
-    if (e.elite) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.5 + Math.sin(t * 5) * 0.15; c.drawImage(dotSprite('#ffd36b'), -h * 0.9, -h * 0.9, h * 1.8, h * 1.8); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; }
-    if (e.phased) c.globalAlpha = 0.3 + Math.sin(t * 50) * 0.15;
-    if (e.t < 0.35) c.globalAlpha = Math.min(c.globalAlpha, e.t / 0.2);
-    c.drawImage(S.frames[fi], -h, -h, sz, sz);
-    if (e.flash > 0) { c.globalAlpha = 0.65; c.drawImage(S.flash, -h, -h, sz, sz); }
-    if (e.st.freezeT > 0) { c.globalAlpha = 0.7; c.drawImage(S.ice, -h, -h, sz, sz); }
-    else if (e.st.chillT > 0) { c.globalAlpha = 0.28; c.drawImage(S.ice, -h, -h, sz, sz); }
-    c.globalAlpha = 1;
+  const det = RENDER.det || (RENDER.det = []), vis = RENDER.vis || (RENDER.vis = []);
+  det.length = 0; vis.length = 0;
+  tickEnemySprites();
+  for (const e of G.enemies) if (e.alive && onScreen(e, e.boss ? 170 : 90)) vis.push(e);
+  // дальние (выше на экране) — раньше: машины правильно заслоняют друг друга
+  vis.sort((a, b) => a.y - b.y);
+  c.setTransform(z, 0, 0, z, e0, f0);
+  for (const e of vis) { if (e.boss) drawBossShadow(c, e); else if (!e.parent && e.T.ai !== 'node') drawEnemyShadow(c, e); }
+  let live = 0;
+  for (const e of vis) {
+    if (e.boss) drawBoss3D(c, e, z, e0, f0, t);
+    else if (e.parent) drawSeg3D(c, e, z, e0, f0, t);
+    else if (e.T.ai === 'node') drawNode3D(c, e, z, e0, f0, t);
+    else if (e.elite && live++ < 6) drawElite3D(c, e, z, e0, f0, t);
+    else drawEnemySprite(c, e, z, e0, f0, t);
+    if (e.boss || e.parent) continue;
     if (e.t < 0.4 || e.tid === 'kami' || e.tid === 'charger' || e.shieldT > 0 || e.st.stunT > 0 || e.st.markT > 0 || e.elite || e.tid === 'shielder' || e.tid === 'medic' || (e.tid === 'eater' && e.ate)) det.push(e);
   }
+  c.setTransform(z, 0, 0, z, e0, f0);
+  drawWrecks(c, z, e0, f0);
   c.setTransform(z, 0, 0, z, e0, f0);
   if (!det.length) return;
   const Pl = G.sector.pal;
   c.lineCap = 'round';
   c.strokeStyle = rgba(Pl.enemy, 0.7); c.lineWidth = 1; c.beginPath();
-  for (const e of det) if (e.t < 0.4) { const q = e.t / 0.4, r = e.r * (2.6 - q * 1.4); c.moveTo(e.x + r, e.y); c.arc(e.x, e.y, r, 0, TAU * (0.3 + q * 0.7)); }
+  for (const e of det) if (e.t < 0.4) { const q = e.t / 0.4, r = e.r * (2.6 - q * 1.4), gy = e.y + eGround(e); c.moveTo(e.x + r, gy); c.ellipse(e.x, gy, r, r * 0.5, 0, 0, TAU * (0.3 + q * 0.7)); }
   c.stroke();
   c.strokeStyle = 'rgba(167,123,255,0.4)'; c.lineWidth = 1; c.beginPath();
   for (const e of det) if (e.shieldT > 0) { c.moveTo(e.x + e.r + 4, e.y); c.arc(e.x, e.y, e.r + 4, 0, TAU); }
@@ -172,7 +170,7 @@ function drawEnemies(c, z, e0, f0) {
   c.stroke();
   c.setLineDash([]);
   c.fillStyle = '#ffe66b'; c.beginPath();
-  for (const e of det) if (e.st.stunT > 0) for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3, sx = e.x + Math.cos(a) * e.r * 0.8, sy = e.y - e.r - 4 + Math.sin(a) * 3; c.moveTo(sx + 1.6, sy); c.arc(sx, sy, 1.6, 0, TAU); }
+  for (const e of det) if (e.st.stunT > 0) for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3, sx = e.x + Math.cos(a) * e.r * 0.8, sy = e.y - eTop(e) - 4 + Math.sin(a) * 3; c.moveTo(sx + 1.6, sy); c.arc(sx, sy, 1.6, 0, TAU); }
   c.fill();
   for (const e of det) {
     if (e.tid === 'kami' && e.ai.fuse !== undefined) {
@@ -189,9 +187,11 @@ function drawEnemies(c, z, e0, f0) {
     if (e.tid === 'eater' && e.ate) { const q = Math.min(1, e.ate / 40); glow(c, e.x, e.y, e.r * (0.6 + q * 0.6), '#b38bff', 0.5 + q * 0.5); }
     if (e.st.markT > 0) { c.strokeStyle = 'rgba(255,77,94,0.85)'; c.lineWidth = 1; c.beginPath(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + t * 2; c.moveTo(e.x + Math.cos(a) * (e.r + 3), e.y + Math.sin(a) * (e.r + 3)); c.lineTo(e.x + Math.cos(a) * (e.r + 9), e.y + Math.sin(a) * (e.r + 9)); } c.stroke(); }
     if (e.elite) {
-      const w = e.r * 2.4, q = clamp(e.hp / e.maxHp, 0, 1);
-      c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(e.x - w / 2, e.y - e.r - 12, w, 4);
-      c.fillStyle = '#ffd36b'; c.fillRect(e.x - w / 2, e.y - e.r - 12, w * q, 4);
+      const w = e.r * 2.4, q = clamp(e.hp / e.maxHp, 0, 1), y = e.y - eTop(e) - 10;
+      c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(e.x - w / 2, y, w, 4);
+      c.fillStyle = '#ffd36b'; c.fillRect(e.x - w / 2, y, w * q, 4);
+      if (e.armored) { c.fillStyle = '#9fdcff'; c.fillRect(e.x - w / 2, y + 5, w * clamp((e.hp - e.maxHp * ELITE_ARMOR_AT) / (e.maxHp * (1 - ELITE_ARMOR_AT)), 0, 1), 2); }
+      if (e.affix) { c.font = '700 7px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,211,107,0.95)'; c.fillText(ELITE_AFFIX[e.affix].name.toUpperCase() + ' · ' + e.T.name.toUpperCase(), e.x, y - 2); c.textAlign = 'left'; }
     }
   }
   c.lineCap = 'butt';

@@ -55,7 +55,7 @@ class Mesh {
   beginPrim(lx, ly, lz) {
     const key = this.g + ':' + (this.side || 0), k = this.gk[key] || 0;
     this.gk[key] = k + 1;
-    const pr = { v0: this.V.length, f0: this.F.length, g: this.g, side: this.side, slot: this.slot, k, key, c: this.P(lx, ly, lz) };
+    const pr = { i: this.prims.length, v0: this.V.length, f0: this.F.length, g: this.g, side: this.side, slot: this.slot, k, key, c: this.P(lx, ly, lz) };
     this.prims.push(pr); this.cp = this.prims.length - 1;
     return pr;
   }
@@ -156,6 +156,24 @@ class Mesh {
   }
   // ствол вдоль локальной +y
   barrel(r0, r1, y0, y1, n, tone, sharp) { this.push(); this.rx(-Math.PI / 2); const c = this.cyl(r0, r1, y0, y1, n, tone, sharp); this.pop(); return c; }
+  // стойка от точки a к точке b (лапы, тяги, рога): цилиндр, повёрнутый вдоль отрезка
+  strut(a, b, r0, r1, n, tone, sharp) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz) || 1e-6, uz = dz / L, s = Math.hypot(dx, dy) / L;
+    this.push(); this.t(a[0], a[1], a[2]);
+    if (s > 1e-6) this.mul(m3axis(-dy, dx, 0, Math.acos(clamp(uz, -1, 1)))); else if (uz < 0) this.mul(m3rx(Math.PI));
+    const c = this.cyl(r0, r1, 0, L, n, tone, sharp);
+    this.pop();
+    return c;
+  }
+  // выпуклый многогранник по вершинам и граням (ядро Роя, узлы)
+  poly(verts, faces, tone) {
+    let cx = 0, cy = 0, cz = 0; for (const v of verts) { cx += v[0]; cy += v[1]; cz += v[2]; }
+    const n = verts.length, pr = this.beginPrim(cx / n, cy / n, cz / n);
+    const idx = verts.map(v => this.vx(v[0], v[1], v[2]));
+    const res = faces.map(f => this.face(f.map(i => idx[i]), tone, pr.c));
+    this.endPrim(pr);
+    return res;
+  }
   dec(face, d) { d.g = this.g; d.side = this.side; d.slot = this.slot; if (face) (face.dec || (face.dec = [])).push(d); else this.O.push(d); return d; }
   line(face, x1, y1, z1, x2, y2, z2, col, w, a) { return this.dec(face, { k: 'line', a: this.P(x1, y1, z1), b: this.P(x2, y2, z2), col, w: w || 0.8, al: a === undefined ? 1 : a }); }
   glow(face, x, y, z, r, col, a) { return this.dec(face, { k: 'glow', p: this.P(x, y, z), r, col, al: a === undefined ? 1 : a }); }

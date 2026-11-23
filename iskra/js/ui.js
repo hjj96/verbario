@@ -222,7 +222,7 @@ const UI = {
           return `<div class="crow"><canvas width="104" height="104" data-enemy="${id}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm">${known ? esc(T.name) : '???'}</div><div class="ds">${known ? esc(T.d) : 'Ещё не встречен'}</div></div><div class="ds mono" style="font-size:11px">${known ? 'прочность ' + T.hp + ' · скорость ' + T.spd : ''}</div></div>`;
         }).join('') + Object.keys(BOSSES).map(id => {
           const B = BOSSES[id], known = SAVE.discovered.enemies['boss_' + id];
-          return `<div class="crow"><div style="width:52px;height:52px;display:grid;place-items:center;font-family:var(--f-display);color:${B.color};border:1px solid ${B.color}">Б</div><div><div class="nm" style="color:${known ? B.color : 'inherit'}">${known ? esc(B.name) : '???'}</div><div class="ds">${known ? esc(B.title) + '. ' + esc(B.d) : 'Босс сектора'}</div></div><div class="ds mono" style="font-size:11px">${BOSS_SCHEDULE.find(s => s.id === id) ? 'появляется на ' + fmtTime(BOSS_SCHEDULE.find(s => s.id === id).t) : ''}</div></div>`;
+          return `<div class="crow"><canvas width="104" height="104" data-boss="${id}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm" style="color:${known ? B.color : 'inherit'}">${known ? esc(B.name) : '???'}</div><div class="ds">${known ? esc(B.title) + '. ' + esc(B.d) : 'Босс сектора'}</div></div><div class="ds mono" style="font-size:11px">${BOSS_SCHEDULE.find(s => s.id === id) ? 'появляется на ' + fmtTime(BOSS_SCHEDULE.find(s => s.id === id).t) : ''}</div></div>`;
         }).join('') + '</div>';
       } else {
         body = `<div class="tree">
@@ -622,15 +622,10 @@ const UI = {
       if (!p.cv.isConnected) continue;
       drawRobotPreview(p.cv, p.look, t, { anim: p.anim, highlight: p.highlight, zoom: p.zoom, moving: 0 });
     }
-    for (const cv of this.root.querySelectorAll('canvas[data-enemy]')) {
+    for (const cv of this.root.querySelectorAll('canvas[data-enemy], canvas[data-boss]')) {
       if (cv.dataset.done) continue;
       cv.dataset.done = 1;
-      const S = SPR.enemies[cv.dataset.enemy];
-      if (!S) { buildEnemySprites(SECTORS[0].pal); }
-      const s2 = SPR.enemies[cv.dataset.enemy];
-      const c = cv.getContext('2d');
-      c.clearRect(0, 0, cv.width, cv.height);
-      c.drawImage(s2.frames[0], 0, 0, cv.width, cv.height);
+      if (cv.dataset.enemy) drawEnemyPreview(cv, cv.dataset.enemy); else drawBossPreview(cv, cv.dataset.boss);
     }
   },
 

@@ -380,6 +380,14 @@ const WAVES = [
 ];
 const ENDLESS_POOL = { tank: 6, charger: 3, gunner: 3, blinker: 3, spitter: 3, kami: 4, splitter: 3, shielder: 3, medic: 2, eater: 2, bug: 2 };
 const ELITE_TIMES = [95, 175, 250, 345, 420, 500, 560, 650, 730, 800, 860, 950, 1020, 1080, 1140];
+// свойства элиты: каждое меняет и облик машины, и её поведение
+const ELITE_AFFIX = {
+  armored: { name: 'Бронированный', d: 'Бронеплиты гасят 45% урона, пока их не сбить' },
+  overclock: { name: 'Разогнанный', d: 'Быстрее на 55%, тянет за собой раскалённый след' },
+  brood: { name: 'Матка', d: 'Раз в 5 секунд выпускает выводок' },
+  volatile: { name: 'Нестабильный', d: 'После гибели взрывается — отойдите' },
+};
+const ELITE_ARMOR_AT = 0.55; // броня держится, пока прочность выше этой доли
 const EVENTS = [
   { t: 215, kind: 'ring' }, { t: 395, kind: 'rush' }, { t: 515, kind: 'ring' }, { t: 690, kind: 'rush' },
   { t: 815, kind: 'ring' }, { t: 990, kind: 'rush' }, { t: 1110, kind: 'ring' }, { t: 1160, kind: 'rush' },

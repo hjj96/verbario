@@ -7,7 +7,7 @@ const GEM_CAP = 340;
 const G = {
   state: 'boot', time: 0, rt: 0,
   robot: null, sector: null, threat: 0,
-  enemies: [], bigs: [], projs: [], ebullets: [], areas: [], gems: [], items: [], warns: [],
+  enemies: [], bigs: [], projs: [], ebullets: [], areas: [], gems: [], items: [], warns: [], wrecks: [],
   grid: new Grid(64, 72, 72),
   kills: 0, eid: 0, pendingLevels: 0, pendingChests: [],
   eliteIdx: 0, eventIdx: 0, bossIdx: 0, spawnAcc: 0, propT: 0, nextEliteEndless: 0,
@@ -113,7 +113,7 @@ function startRun(robotId, sectorId, threat) {
   G.robot = robot; G.sector = sector; G.threat = threat || 0;
   G.time = 0; G.rt = 0;
   G.enemies.length = 0; G.bigs.length = 0; G.projs.length = 0; G.ebullets.length = 0; G.areas.length = 0;
-  G.gems.length = 0; G.items.length = 0; G.warns.length = 0;
+  G.gems.length = 0; G.items.length = 0; G.warns.length = 0; G.wrecks.length = 0;
   G.kills = 0; G.eid = 0; G.pendingLevels = 0; G.pendingChests.length = 0;
   G.eliteIdx = 0; G.eventIdx = 0; G.bossIdx = 0; G.spawnAcc = 0; G.propT = 4; G.nextEliteEndless = 0;
   G.banished = new Set(); G.dmgBy = {}; G.scrapRun = 0; G.bossKills = 0; G.bossesAlive = 0; G.evolvedThisRun = [];
@@ -245,8 +245,16 @@ function hitEnemy(e, dmg, o) {
   if (e.shieldT > 0) d *= 0.5;
   if (e.T.armor) d *= 1 - e.T.armor;
   if (e.dmgRes) d *= 1 - e.dmgRes;
+  if (e.armored) d *= 0.55;
   const before = e.hp;
   e.hp -= d;
+  if (e.armored && e.hp < e.maxHp * ELITE_ARMOR_AT && e.hp > 0) {
+    // бронеплиты слетают, обнажённая машина ускоряется
+    e.armored = false; e.spd *= 1.25;
+    eliteWreck(e, true);
+    FX.sparks(e.x, e.y, 18, '#9fdcff', 300, undefined, 0, 0.4); FX.ring(e.x, e.y, 6, e.r * 3, 0.35, '#9fdcff', 3);
+    AUDIO.sfx('clank'); FX.text(e.x, e.y - e.r - 14, 'БРОНЯ СБИТА', '#9fdcff', 11);
+  }
   if (e.flash < -0.14) e.flash = 0.07;
   const real = Math.min(before, d);
   const src = o.src || 'other';
@@ -337,6 +345,14 @@ function killEnemy(e, o) {
   }
   if (e.boss) { bossKilled(e); return; }
   G.kills++;
+  if (e.elite) {
+    eliteWreck(e, false);
+    if (e.affix === 'volatile') {
+      // нестабильная элита: через секунду рвётся — круг предупреждает
+      const x = e.x, y = e.y, dmg = e.dmg * 1.4;
+      warnCircle(x, y, 92, 1.1, w => { FX.explosion(w.x, w.y, 92, '#ff4d2e', true); FX.addShake(8); AUDIO.sfx('boom', { big: true }); if (d2(w.x, w.y, P.x, P.y) < (w.r + P.r * 0.5) ** 2) hurtPlayer(dmg, null); });
+    }
+  }
   const odGain = (e.elite ? 7 : 0.38) * P.stats.odRate;
   if (!P.od.active) P.od.meter = Math.min(100, P.od.meter + odGain);
   const m = G.time / 60;
@@ -864,6 +880,7 @@ function step(dt) {
   updateEnemyBullets(dt);
   updatePickups(dt);
   FX.update(dt);
+  updateWrecks(dt);
   G.tf.update(dt);
   updateCamera(dt);
   checkProgress();
