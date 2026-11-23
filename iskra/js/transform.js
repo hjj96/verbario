@@ -25,16 +25,15 @@ class Transformer {
 }
 
 function robotSnapshot(L, t, vo) {
-  const ext = 54 * L.scale * (vo && vo.view === 'top' ? 1.3 : 1), px = Math.ceil(ext * 2 * 2);
+  const ext = 54 * robotK(L, viewOf(vo)), px = Math.ceil(ext * 2 * 2);
   const cv = makeCanvas(px, px), c = cv.getContext('2d');
-  const oy = vo && vo.view === 'top' ? 0 : 4 * L.scale;
-  c.translate(px / 2, px / 2 + oy * 2); c.scale(2, 2);
+  c.translate(px / 2, px / 2); c.scale(2, 2);
   drawRobot(c, L, t, Object.assign({}, vo || {}, { static: true }));
-  return { cv, ext, res: 2, oy };
+  return { cv, ext, res: 2, oy: 0 };
 }
 // параметры отрисовки субъекта трансформации (проекция, прицел, модули)
 function svo(subj, extra) {
-  const o = { static: true, view: subj.view || 'front', aim: subj.aim || 0, hd: subj.hd || 0, mounts: subj.weapons || null };
+  const o = { static: true, view: subj.view || 'front', aim: subj.aim !== undefined ? subj.aim : Math.PI / 2, hd: subj.hd !== undefined ? subj.hd : Math.PI / 2, mounts: subj.weapons || null };
   if (extra) for (const k in extra) o[k] = extra[k];
   return o;
 }
@@ -46,19 +45,10 @@ function drawSnap(c, snap, img, alpha, comp) {
   c.restore();
 }
 
-/* --- Опорные точки модулей (для выносок и разлёта) --- */
-function partAnchor(L, part, vo) {
-  const ly = robotLayout(L), k = L.scale * (vo && vo.view === 'top' ? TOP_K : 1);
-  let x = 0, y = 0;
-  if (vo && vo.view === 'top') {
-    const A = { head: [3.5, 0], core: [0, 0], arms: [11, ly.tw + 1], legs: [0, 6], back: [-12, 0] }[part] || [0, 0];
-    const a = part === 'legs' ? (vo.hd || 0) : (vo.aim || 0), ca = Math.cos(a), sa = Math.sin(a);
-    x = A[0] * ca - A[1] * sa; y = A[0] * sa + A[1] * ca;
-  } else {
-    const A = { head: [0, ly.headY], core: [0, (ly.tTop + ly.tBot) / 2], arms: [ly.tw + 3, ly.shY + 8], legs: [5, ly.hipY + 9], back: [-(ly.tw + 2), ly.tTop - 6] }[part] || [0, 0];
-    x = A[0]; y = A[1];
-  }
-  return { x: x * k, y: y * k };
+// разворот субъекта к ракурсу показа и обратно: q — доля поворота (0…1)
+function turnTo(subj, target, q) {
+  const a0 = subj.aim !== undefined ? subj.aim : Math.PI / 2, h0 = subj.hd !== undefined ? subj.hd : a0;
+  return { aim: a0 + angDiff(a0, target) * q, hd: h0 + angDiff(h0, target) * q };
 }
 function callout(c, ax, ay, text, q, col) {
   if (q <= 0) return;
@@ -74,17 +64,24 @@ function callout(c, ax, ay, text, q, col) {
   c.restore();
 }
 
-/* --- Трансформация модуля: старый рассыпается штрихами, новый вычерчивается пером --- */
+/* --- Трансформация модуля: робот разворачивается к камере, старый модуль рассыпается, новый вычерчивается пером --- */
 function seqPart(subj, part, rank, branch, opts) {
   opts = opts || {};
+  const turn = !opts.fast && !opts.ambient;
   const S = {
-    dur: opts.fast ? 1.3 : 1.8, blocking: !opts.ambient, subj,
+    dur: opts.fast ? 1.3 : 2.0, blocking: !opts.ambient, subj, kind: 'part',
+    voAt(t) {
+      if (!turn) return svo(subj);
+      const q = ease.inOutCubic(seg(t, 0, this.t0)) * (1 - ease.inOutCubic(seg(t, this.dur - 0.55, this.dur)));
+      return svo(subj, turnTo(subj, SHOW_YAW[part], q));
+    },
     init() {
       this.old = cloneLook(subj.look);
       this.nl = cloneLook(subj.look);
       this.nl.parts[part] = { rank, branch: branch || this.nl.parts[part].branch };
       const T = subj.time ? subj.time() : 0;
-      this.vo = svo(subj);
+      this.t0 = opts.fast ? 0.12 : 0.42;
+      this.vo = this.voAt(this.t0);
       this.oSnap = partSnapshot(this.old, part, T, this.vo);
       this.oTiles = snapTiles(this.oSnap, 7);
       const sc = this.old.scale;
@@ -96,7 +93,6 @@ function seqPart(subj, part, rank, branch, opts) {
       this.code = PARTS[part].code + ' · МК-' + ROMAN[rank] + (rank >= 3 && br ? ' · ' + PARTS[part].branches[br].name.toUpperCase() : '');
       this.anchor = partAnchor(this.nl, part, this.vo);
       this.committed = false; this.clanks = 0;
-      this.t0 = opts.fast ? 0.12 : 0.25;
       if (!opts.silent) AUDIO.sfx('tfStart');
       if (opts.onStart) opts.onStart();
     },
@@ -108,6 +104,7 @@ function seqPart(subj, part, rank, branch, opts) {
           this.sparked = true;
           FX.sparks(subj.x + this.anchor.x, subj.y + this.anchor.y, 16, '#ffd36b', 260, undefined, 0, 0.5);
           FX.shards(subj.x + this.anchor.x, subj.y + this.anchor.y, 10, '#eaf6ff', 160);
+          if (!opts.silent) AUDIO.sfx('swing');
         }
       }
       const dq = seg(t, t0 + 0.12, t0 + 0.8);
@@ -137,24 +134,26 @@ function seqPart(subj, part, rank, branch, opts) {
     dim() { return opts.ambient ? 0 : 0.55 * seg(this.t, 0, 0.2) * (1 - seg(this.t, this.dur - 0.4, this.dur)); },
     speed() { return opts.ambient ? 0 : seg(this.t, 0.05, 0.3) * (1 - seg(this.t, this.t0 + 0.6, this.t0 + 1.1)); },
     drawSubject(c, T) {
-      const t = this.t, t0 = this.t0, vo = this.vo;
+      const t = this.t, t0 = this.t0, vo = this.voAt(t);
       if (t < t0) {
         drawRobot(c, this.old, T, vo);
-        scanLine(c, this.old, t / t0);
+        scanLine(c, this.old, t / t0, vo);
         return;
       }
       const lab = seg(t, t0 + 0.1, t0 + 0.5) * (1 - seg(t, this.dur - 0.35, this.dur));
+      const an = partAnchor(this.committed ? subj.look : this.nl, part, vo);
       if (this.committed) {
-        drawRobot(c, subj.look, T, svo(subj));
+        drawRobot(c, subj.look, T, vo);
         const q = seg(t, this.tc, this.tc + 0.35);
-        if (q < 1) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - q) * 0.9; drawRobot(c, subj.look, T, Object.assign(svo(subj), { only: part })); c.restore(); }
-        callout(c, this.anchor.x, this.anchor.y, this.code, lab);
+        if (q < 1) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - q) * 0.9; drawRobot(c, subj.look, T, Object.assign({}, vo, { only: part })); c.restore(); }
+        callout(c, an.x, an.y, this.code, lab);
         return;
       }
-      const behind = part === 'back' || part === 'legs';
       const dq = seg(t, t0 + 0.12, t0 + 0.8);
+      const fa = 1 - seg(t, t0 + 0.05, t0 + 0.5);
+      // модуль позади корпуса (по глубине) рисуется до корпуса
+      const behind = an.d < partAnchor(this.old, 'core', vo).d;
       const fresh = () => {
-        const fa = 1 - seg(t, t0 + 0.05, t0 + 0.5);
         if (fa > 0) for (const tl of this.oTiles) drawTile(c, this.oSnap, tl, fa);
         if (dq > 0) {
           RS.reveal = Math.max(0.002, dq);
@@ -167,31 +166,34 @@ function seqPart(subj, part, rank, branch, opts) {
       if (behind) fresh();
       drawRobot(c, this.old, T, Object.assign({}, vo, { skip: part }));
       if (!behind) fresh();
-      callout(c, this.anchor.x, this.anchor.y, this.code, lab);
+      callout(c, an.x, an.y, this.code, lab);
     },
   };
   return S;
 }
 
-/* --- Монтаж орудия: рука отделяется, вычерчивается пушкой и встаёт на место --- */
+/* --- Монтаж орудия: робот поворачивается слотом к камере, рука отделяется, вычерчивается пушкой и встаёт на место --- */
 function seqMount(subj, w, opts) {
   opts = opts || {};
   const evoTo = opts.evo || null;
   return {
-    dur: evoTo ? 1.6 : 1.35, blocking: true, subj,
+    dur: evoTo ? 1.75 : 1.5, blocking: true, subj, kind: 'mount',
+    voAt(t) {
+      const q = ease.inOutCubic(seg(t, 0, 0.3)) * (1 - ease.inOutCubic(seg(t, this.dur - 0.4, this.dur)));
+      return svo(subj, turnTo(subj, SLOT_YAW[w.slot] || Math.PI / 2, q));
+    },
     init() {
-      this.vo = svo(subj);
       this.host = slotHost(w.slot);
       this.arm = !!this.host.armSide;
-      const ly = robotLayout(subj.look), sl = slotLocal(w.slot, ly, this.vo.view);
-      let dx = sl.x, dy = sl.y;
-      if (this.vo.view === 'top') { const a = this.vo.aim, ca = Math.cos(a), sa = Math.sin(a); dx = sl.x * ca - sl.y * sa; dy = sl.x * sa + sl.y * ca; }
-      const l = Math.hypot(dx, dy) || 1;
-      this.dir = { x: dx / l, y: dy / l };
-      const K = subj.look.scale * (this.vo.view === 'top' ? TOP_K : 1);
-      this.slotW = { x: dx * K, y: dy * K };
-      this.pivot = this.arm ? partAnchor(subj.look, 'arms', this.vo) : this.slotW;
-      if (this.arm && this.host.armSide < 0) { this.pivot = { x: this.vo.view === 'top' ? this.pivot.x : -this.pivot.x, y: this.pivot.y }; if (this.vo.view === 'top') { const a = this.vo.aim; const ax = 11 * Math.cos(a) + (ly.tw + 1) * Math.sin(a), ay = 11 * Math.sin(a) - (ly.tw + 1) * Math.cos(a); this.pivot = { x: ax * K, y: ay * K }; } }
+      this.vo = this.voAt(0.3);
+      const T = subj.time ? subj.time() : 0;
+      w.hidden = false;
+      const R = robotPoints(subj.look, T, this.vo);
+      const an = R.an[w.slot] || R.pa.core || { x: 0, y: 0 };
+      this.slotW = { x: an.x, y: an.y };
+      this.pivot = this.arm ? (R.pa[this.host.armSide > 0 ? 'jR' : 'jL'] || this.slotW) : this.slotW;
+      const l = Math.hypot(this.slotW.x, this.slotW.y) || 1;
+      this.dir = { x: this.slotW.x / l, y: this.slotW.y / l };
       this.code = (w.evo || evoTo ? 'ЭВО · ' : wcode(baseOf(w)) + ' · ') + ((evoTo ? EVOS[evoTo] : weaponDef(w)).name).toUpperCase();
       this.proxyOld = Object.assign({}, w, { hidden: false });
       this.proxyNew = evoTo ? Object.assign({}, w, { id: evoTo, evo: true, hidden: false, st: {} }) : this.proxyOld;
@@ -200,13 +202,13 @@ function seqMount(subj, w, opts) {
       if (opts.onStart) opts.onStart();
     },
     pose() {
-      const t = this.t, out = ease.outCubic(seg(t, 0.12, 0.38)), back = ease.outBack(seg(t, this.dur - 0.5, this.dur - 0.3));
-      const k = out * (1 - back), d = 26 * subj.look.scale;
-      return { ox: this.dir.x * d * k + (this.vo.view === 'top' ? 0 : -6 * k), oy: this.dir.y * d * k - 10 * k, spin: k * TAU * (this.host.armSide || 1) * 0.75 };
+      const t = this.t, out = ease.outCubic(seg(t, 0.14, 0.42)), back = ease.outBack(seg(t, this.dur - 0.55, this.dur - 0.32));
+      const k = out * (1 - back), d = 24 * subj.look.scale;
+      return { ox: this.dir.x * d * k, oy: this.dir.y * d * k - 12 * subj.look.scale * k, spin: k * TAU * (this.host.armSide || 1) * 0.75 };
     },
     update(dt) {
       const t = this.t;
-      if (!this.done && t >= this.dur - 0.3) {
+      if (!this.done && t >= this.dur - 0.32) {
         this.done = true;
         w.hidden = false;
         const x = subj.x + this.slotW.x, y = subj.y + this.slotW.y;
@@ -224,21 +226,21 @@ function seqMount(subj, w, opts) {
     dim() { return 0.5 * seg(this.t, 0, 0.15) * (1 - seg(this.t, this.dur - 0.25, this.dur)); },
     speed() { return evoTo ? seg(this.t, 0.05, 0.3) * (1 - seg(this.t, 0.9, 1.3)) : 0; },
     drawSubject(c, T) {
-      const t = this.t, vo = this.vo, L = subj.look;
+      const t = this.t, vo = this.voAt(t), L = subj.look;
       if (evoTo) {
         c.save(); c.globalCompositeOperation = 'lighter';
         for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + t * 0.8, len = 60 + 40 * Math.sin(t * 6 + i); c.strokeStyle = rgba(i % 2 ? EVOS[evoTo].color : '#ffd36b', 0.22 * seg(t, 0, 0.3) * (1 - seg(t, this.dur - 0.4, this.dur))); c.lineWidth = 4; c.beginPath(); c.moveTo(Math.cos(a) * 16, Math.sin(a) * 16); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); }
         c.restore();
       }
       const base = Object.assign({}, vo);
-      if (!this.done) { if (this.arm) base.skipArmSide = this.host.armSide; }
+      if (!this.done && this.arm) base.skipArmSide = this.host.armSide;
       drawRobot(c, L, T, base);
       if (this.done) { callout(c, this.slotW.x, this.slotW.y, this.code, 1 - seg(t, this.dur - 0.2, this.dur)); return; }
       const p = this.pose();
-      const half = evoTo ? 0.62 : 0.3;
+      const half = evoTo ? 0.66 : 0.32;
       let proxy, rv;
-      if (evoTo && t < half) { proxy = this.proxyOld; rv = 1 - seg(t, 0.3, half); }
-      else { proxy = this.proxyNew; rv = seg(t, half, this.dur - 0.5); }
+      if (evoTo && t < half) { proxy = this.proxyOld; rv = 1 - seg(t, 0.32, half); }
+      else { proxy = this.proxyNew; rv = seg(t, half, this.dur - 0.55); }
       proxy.reveal = Math.max(0.002, rv);
       c.save();
       c.translate(this.pivot.x + p.ox, this.pivot.y + p.oy); c.rotate(p.spin); c.translate(-this.pivot.x, -this.pivot.y);
@@ -250,17 +252,6 @@ function seqMount(subj, w, opts) {
   };
 }
 
-function hologram(cv) {
-  const h = silhouette(cv, '#46e3ff'), c = h.getContext('2d');
-  c.globalCompositeOperation = 'destination-out';
-  c.fillStyle = 'rgba(0,0,0,0.75)';
-  for (let y = 0; y < h.height; y += 4) c.fillRect(0, y, h.width, 2);
-  const e = silhouette(cv, '#e8fbff'), out = makeCanvas(cv.width, cv.height), o = out.getContext('2d');
-  for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) o.drawImage(e, dx, dy);
-  o.globalCompositeOperation = 'destination-out'; o.drawImage(cv, 0, 0);
-  o.globalCompositeOperation = 'source-over'; o.drawImage(h, 0, 0);
-  return out;
-}
 function drawTile(c, snap, tl, a) {
   c.save();
   c.globalAlpha *= a;
@@ -269,12 +260,12 @@ function drawTile(c, snap, tl, a) {
   c.drawImage(snap.cv, tl.sx, tl.sy, tl.sw, tl.sh, -s / 2, -s / 2, s + 0.05, s + 0.05);
   c.restore();
 }
-function scanLine(c, L, q) {
-  const top = -40 * L.scale, bot = 30 * L.scale, y = lerp(top, bot, q);
+function scanLine(c, L, q, vo) {
+  const k = robotK(L, viewOf(vo)), top = -30 * k, bot = feetY(L, viewOf(vo)) + 2 * k, y = lerp(top, bot, q);
   c.save(); c.globalCompositeOperation = 'lighter';
   const g = c.createLinearGradient(0, y - 6, 0, y + 6);
   g.addColorStop(0, 'rgba(70,227,255,0)'); g.addColorStop(0.5, 'rgba(160,245,255,0.8)'); g.addColorStop(1, 'rgba(70,227,255,0)');
-  c.fillStyle = g; c.fillRect(-34 * L.scale, y - 6, 68 * L.scale, 12);
+  c.fillStyle = g; c.fillRect(-32 * k, y - 6, 64 * k, 12);
   c.restore();
 }
 
@@ -282,16 +273,15 @@ function scanLine(c, L, q) {
 function seqForm(subj, newForm, opts) {
   opts = opts || {};
   return {
-    dur: 3.1, blocking: true, subj,
+    dur: 3.1, blocking: true, subj, kind: 'form',
+    // полный оборот вокруг оси: разгон к вспышке и торможение после
+    voAt(t) {
+      const q = ease.inOutCubic(seg(t, 0.2, 2.7)) * TAU;
+      const a0 = subj.aim !== undefined ? subj.aim : Math.PI / 2, h0 = subj.hd !== undefined ? subj.hd : a0;
+      return svo(subj, { aim: a0 + q, hd: h0 + q });
+    },
     init() {
       this.old = cloneLook(subj.look);
-      this.nl = cloneLook(subj.look); this.nl.form = newForm; refreshLook(this.nl);
-      const T = subj.time ? subj.time() : 0;
-      this.vo = svo(subj);
-      this.oSnap = robotSnapshot(this.old, T, this.vo);
-      this.oWhite = silhouette(this.oSnap.cv, '#ffffff');
-      this.nSnap = robotSnapshot(this.nl, T, this.vo);
-      this.nWhite = silhouette(this.nSnap.cv, '#ffffff');
       this.done = false;
       if (!opts.silent) AUDIO.sfx('formUp');
       if (opts.onStart) opts.onStart();
@@ -344,15 +334,11 @@ function seqForm(subj, newForm, opts) {
         }
         c.restore();
       }
-      if (!this.done) {
-        const jit = t > 0.9 ? rand(-1, 1) * seg(t, 0.9, 1.6) * 1.6 : 0;
-        c.translate(jit, 0);
-        drawRobot(c, this.old, T, this.vo);
-        drawSnap(c, this.oSnap, this.oWhite, ease.inCubic(seg(t, 0.5, 1.6)), 'lighter');
-      } else {
-        drawRobot(c, subj.look, T, svo(subj));
-        drawSnap(c, this.nSnap, this.nWhite, 1 - ease.outCubic(seg(t, 1.6, 2.3)), 'lighter');
-      }
+      const vo = this.voAt(t), L = this.done ? subj.look : this.old;
+      const wa = this.done ? 1 - ease.outCubic(seg(t, 1.6, 2.3)) : ease.inCubic(seg(t, 0.5, 1.6));
+      if (!this.done) c.translate(t > 0.9 ? rand(-1, 1) * seg(t, 0.9, 1.6) * 1.6 : 0, 0);
+      const m = drawRobot(c, L, T, vo);
+      if (wa > 0.01) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha *= wa; drawRobot(c, L, T, Object.assign({}, vo, { flat: '#ffffff', mesh: m })); c.restore(); }
       c.restore();
     },
   };
@@ -389,45 +375,6 @@ function seqOverdrive(subj, opts) {
       c.save(); c.translate(sh, 0);
       drawRobot(c, subj.look, T, svo(subj));
       c.restore();
-    },
-  };
-}
-
-/* --- Эволюция орудия --- */
-function seqEvolve(subj, evoId, opts) {
-  opts = opts || {};
-  const col = EVOS[evoId].color;
-  return {
-    dur: 1.5, blocking: true, subj,
-    init() { AUDIO.sfx('evolve'); this.done = false; if (opts.onStart) opts.onStart(); },
-    update(dt) {
-      const t = this.t;
-      if (t < 0.9 && Math.random() < 0.8) FX.dot(subj.x + rand(-40, 40), subj.y + rand(10, 40), 0, rand(-200, -120), 0.6, rand(3, 6), pick([col, '#ffd36b']), 0.5);
-      if (!this.done && t >= 0.9) {
-        this.done = true;
-        FX.flash('#ffd36b', 0.5);
-        FX.ring(subj.x, subj.y, 10, 300, 0.7, '#ffd36b', 6);
-        FX.ring(subj.x, subj.y, 10, 200, 0.5, col, 4);
-        FX.burst(subj.x, subj.y - 10, 30, col, 300, 0.8, 7);
-        FX.addShake(8);
-        if (opts.onCommit) opts.onCommit();
-      }
-    },
-    finish() { if (!this.done && opts.onCommit) opts.onCommit(); if (opts.onEnd) opts.onEnd(); },
-    zoom() { const t = this.t; return 1 + 0.55 * ease.outCubic(seg(t, 0, 0.3)) * (1 - ease.inOutCubic(seg(t, 1.1, 1.5))); },
-    dim() { return 0.6 * seg(this.t, 0, 0.2) * (1 - seg(this.t, 1.1, 1.5)); },
-    drawSubject(c, T) {
-      const t = this.t;
-      c.save(); c.globalCompositeOperation = 'lighter';
-      const n = 12;
-      for (let i = 0; i < n; i++) {
-        const a = i * TAU / n + t * 0.8, len = 60 + 40 * Math.sin(t * 6 + i);
-        c.strokeStyle = rgba(i % 2 ? col : '#ffd36b', 0.25 * seg(t, 0, 0.3) * (1 - seg(t, 1.1, 1.5)));
-        c.lineWidth = 5;
-        c.beginPath(); c.moveTo(Math.cos(a) * 16, -8 + Math.sin(a) * 16); c.lineTo(Math.cos(a) * len, -8 + Math.sin(a) * len); c.stroke();
-      }
-      c.restore();
-      drawRobot(c, subj.look, T, svo(subj, { fire: 1 }));
     },
   };
 }

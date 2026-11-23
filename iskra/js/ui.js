@@ -252,7 +252,7 @@ const UI = {
           <div class="set-row"><label for="set-sfx">Эффекты</label><input id="set-sfx" type="range" min="0" max="1" step="0.05" value="${S.sfx}" data-set="sfx"></div>
           <div class="set-row"><span>Цифры урона</span><button class="btn small" data-act="toggle" data-k="dmg">${S.dmg ? 'Вкл' : 'Выкл'}</button></div>
           <div class="set-row"><span>Тряска экрана</span><button class="btn small" data-act="toggle" data-k="shake">${S.shake ? 'Вкл' : 'Выкл'}</button></div>
-          <div class="set-row"><span>Проекция</span><span class="seg">${[['top', 'Вид сверху'], ['front', 'Главный вид']].map(v => `<button class="${(S.view || 'top') === v[0] ? 'on' : ''}" data-act="view" data-v="${v[0]}">${v[1]}</button>`).join('')}</span></div>
+          <div class="set-row"><span>Камера</span><span class="seg">${[['front', 'Во весь рост'], ['top', 'Сверху']].map(v => `<button class="${(S.view || 'front') === v[0] ? 'on' : ''}" data-act="view" data-v="${v[0]}">${v[1]}</button>`).join('')}</span></div>
           <div class="set-row"><span>Качество графики (свечение)</span><span class="seg">${[['auto', 'Авто'], ['high', 'Высокое'], ['low', 'Низкое']].map(q => `<button class="${S.quality === q[0] ? 'on' : ''}" data-act="quality" data-q="${q[0]}">${q[1]}</button>`).join('')}</span></div>
           <div class="set-row"><span>Полный экран</span><button class="btn small" data-act="fullscreen">Переключить</button></div>
           <div class="sheet"><div class="in"><div class="eyebrow" style="margin-bottom:8px">Управление</div><div class="keys">
@@ -434,7 +434,7 @@ const UI = {
     this.openModal('branch', html);
     for (const cv of this.root.querySelectorAll('canvas[data-bprev]')) {
       const L = cloneLook(P.look); L.parts[id] = { rank: 3, branch: cv.dataset.bprev };
-      this.previews.push({ cv, look: L, anim: true, highlight: id, zoom: 1.15 });
+      this.previews.push({ cv, look: L, anim: true, highlight: id, zoom: 0.92 });
     }
   },
 

@@ -101,7 +101,7 @@ function newPlayer(robot) {
     shield: { has: false, ready: true, t: 0, cd: 12 },
     revives: 0, phoenixUsed: false, still: 0, siege: false,
     look: null, featherT: 0, haloT: 0, ramT: 0, pulseT: 40, citadelT: 0, regenAcc: 0,
-    aim: 0, hd: 0, view: (SAVE && SAVE.settings.view) || 'top', squash: 0, split: null,
+    aim: Math.PI / 2, hd: Math.PI / 2, back: false, view: (SAVE && SAVE.settings.view) || 'front', squash: 0, split: null,
     time() { return G.time; },
   };
 }
@@ -151,6 +151,7 @@ function addWeapon(id, silent) {
   if (P.stats) computeWeapon(w);
   discover('weapons', id);
   if (!silent && P.look) {
+    w.hidden = true;
     G.tf.push(seqMount(P, w, { onStart() { UI.mountCard(w); } }));
   }
   return w;
@@ -515,10 +516,16 @@ function updatePlayer(dt) {
   }
   const moving = Math.hypot(mv.x, mv.y);
   P.moving = lerp(P.moving, moving > 0.1 ? 1 : 0, 1 - Math.exp(-10 * dt));
-  const tgt = nearestEnemy(P.x, P.y, 560);
-  const want = tgt ? Math.atan2(tgt.y - P.y, tgt.x - P.x) : (moving > 0.1 ? Math.atan2(mv.y, mv.x) : P.aim);
-  P.aim += angDiff(P.aim, want) * Math.min(1, dt * 14);
-  if (moving > 0.1) P.hd += angDiff(P.hd, Math.atan2(mv.y, mv.x)) * Math.min(1, dt * 12);
+  // корпус доворачивается к цели; без цели — по ходу, а в покое — лицом к камере
+  const tgt = nearestEnemy(P.x, P.y, 560), mvA = Math.atan2(mv.y, mv.x);
+  const want = tgt ? Math.atan2(tgt.y - P.y, tgt.x - P.x) : (moving > 0.1 ? mvA : P.still > 1.6 ? Math.PI / 2 : P.aim);
+  P.aim += angDiff(P.aim, want) * Math.min(1, dt * (tgt || moving > 0.1 ? 14 : 3));
+  // ноги идут по ходу движения; если цель за спиной — шагают задом, не выкручивая корпус
+  if (moving > 0.1) {
+    const dd = Math.abs(angDiff(P.aim, mvA));
+    if (P.back ? dd < 1.35 : dd > 1.95) P.back = !P.back;
+    P.hd += angDiff(P.hd, P.back ? mvA + Math.PI : mvA) * Math.min(1, dt * 12);
+  } else if (Math.abs(angDiff(P.hd, P.aim)) > 1.1) P.hd += angDiff(P.hd, P.aim) * Math.min(1, dt * 5);
   if (tgt) P.face = Math.cos(P.aim) >= 0 ? 1 : -1;
   else if (mv.x > 0.15) P.face = 1; else if (mv.x < -0.15) P.face = -1;
   P.squash = Math.max(0, P.squash - dt * 5);
@@ -593,7 +600,7 @@ function tryDash(mv) {
   if (P.dash.charges <= 0 || P.dash.t > 0) return;
   let dx = mv.x, dy = mv.y;
   const l = Math.hypot(dx, dy);
-  if (l < 0.1) { dx = P.face; dy = 0; } else { dx /= l; dy /= l; }
+  if (l < 0.1) { dx = Math.cos(P.aim); dy = Math.sin(P.aim); } else { dx /= l; dy /= l; }
   if (P.dash.charges === P.dash.max) P.dash.cdT = 2.6 * P.stats.dashCd;
   P.dash.charges--;
   if (hasBranch('legs', 'B', 5)) {
@@ -899,7 +906,7 @@ const SAVE_KEY = 'iskra_save_v1';
 let SAVE = null;
 function defaultSave() {
   return { v: 1, scrap: 0, upg: {}, ach: {}, best: {}, threat: {}, branches: {}, stats: {}, discovered: { weapons: {}, evolutions: {}, enemies: {} },
-    settings: { music: 0.55, sfx: 0.75, dmg: true, shake: true, quality: 'auto', view: 'top' }, last: { robot: 'iskra', sector: 'rust', threat: 0 }, seenIntro: false };
+    settings: { music: 0.55, sfx: 0.75, dmg: true, shake: true, quality: 'auto', view: 'front', viewV: 2 }, last: { robot: 'iskra', sector: 'rust', threat: 0 }, seenIntro: false };
 }
 function loadSave() {
   const d = defaultSave();
@@ -908,6 +915,8 @@ function loadSave() {
     for (const k in d) if (s[k] !== undefined) d[k] = (typeof d[k] === 'object' && !Array.isArray(d[k])) ? Object.assign({}, d[k], s[k]) : s[k];
     d.discovered = Object.assign({ weapons: {}, evolutions: {}, enemies: {} }, s.discovered || {});
   }
+  // с появлением поворачивающейся модели основной вид — «во весь рост»
+  if (d.settings.viewV !== 2) { d.settings.view = 'front'; d.settings.viewV = 2; }
   SAVE = d;
 }
 function persist() { store.set(SAVE_KEY, SAVE); }

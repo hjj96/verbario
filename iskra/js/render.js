@@ -233,16 +233,16 @@ function drawEnemyBullets(c) {
 
 /* ---------- Игрок ---------- */
 function playerOpts(extra) {
-  const o = { moving: P.moving, wp: P.wp, face: P.face, fire: P.fire, siege: P.siege, dist: P.dist, view: P.view, aim: P.aim, hd: P.hd, mounts: P.weapons, squash: P.squash };
+  const o = { moving: P.moving, wp: P.wp, back: P.back, fire: P.fire, siege: P.siege, dist: P.dist, view: P.view, aim: P.aim, hd: P.hd, mounts: P.weapons, squash: P.squash };
   if (extra) for (const k in extra) o[k] = extra[k];
   return o;
 }
 function ghostSprite() {
   const L = P.look;
-  const key = PART_ORDER.map(k => L.parts[k].rank + (L.parts[k].branch || '')).join('') + L.form + (L.od > 0.5 ? 'o' : '') + P.view + (P.view === 'top' ? Math.round(P.aim * 4) : '');
+  const key = PART_ORDER.map(k => L.parts[k].rank + (L.parts[k].branch || '')).join('') + L.form + (L.od > 0.5 ? 'o' : '') + P.view + Math.round(P.aim * 3) + ':' + Math.round(P.hd * 3);
   if (RENDER.ghostKey !== key) {
     RENDER.ghostKey = key;
-    const s = robotSnapshot(L, 0, { view: P.view, aim: P.aim, hd: P.hd });
+    const s = robotSnapshot(L, 0, { view: P.view, aim: P.aim, hd: P.hd, mounts: P.weapons });
     RENDER.ghost = { snap: s, cyan: silhouette(s.cv, '#46e3ff'), mag: silhouette(s.cv, OD_COLOR) };
   }
   return RENDER.ghost;
@@ -267,11 +267,13 @@ function drawSplit(c, z, e0, f0) {
     }
   }
   c.restore();
-  for (const { pt, cur, qq } of paths) {
+  const vo = playerOpts({ static: true, moving: 0 }), R = robotPoints(L, G.time, vo);
+  for (const it of paths) { const pt = it.pt; it.an = (pt.only === 'arms' ? R.pa[pt.armSide > 0 ? 'jR' : 'jL'] : R.pa[pt.only]) || { x: 0, y: 0, d: 0 }; }
+  paths.sort((a, b) => a.an.d - b.an.d);
+  for (const { pt, cur, qq, an } of paths) {
     c.setTransform(z, 0, 0, z, cur.x * z + e0, cur.y * z + f0);
-    const sp2 = Math.sin(qq * Math.PI) * pt.spin;
-    c.rotate(sp2);
-    drawRobot(c, L, G.time, playerOpts({ only: pt.only, armSide: pt.armSide, static: true, moving: 0 }));
+    c.translate(an.x, an.y); c.rotate(Math.sin(qq * Math.PI) * pt.spin); c.translate(-an.x, -an.y);
+    drawRobot(c, L, G.time, Object.assign({}, vo, { only: pt.only, armSide: pt.armSide, mesh: R.m }));
   }
 }
 function drawPlayer(c, z, e0, f0) {
@@ -284,29 +286,27 @@ function drawPlayer(c, z, e0, f0) {
     c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
   }
   c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z + f0);
-  const hover = L.parts.legs.branch === 'B' && L.parts.legs.rank >= 3;
-  const top = P.view === 'top';
-  const g = c.createRadialGradient(0, top ? 4 : 25 * sc, 0, 0, top ? 4 : 25 * sc, (top ? 26 : 18) * sc);
-  g.addColorStop(0, 'rgba(0,0,0,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-  c.fillStyle = g; c.beginPath();
-  if (top) c.arc(hover ? 4 : 2, hover ? 8 : 4, 26 * sc, 0, TAU); else c.ellipse(0, 25 * sc, (hover ? 12 : 17) * sc, (hover ? 4 : 5.5) * sc, 0, 0, TAU);
-  c.fill();
+  const ly = robotLayout(L), view = P.view === 'top' ? 'top' : 'front', K = robotK(L, view), fy = feetY(L, view), flat = Math.sin(VIEW_PITCH[view]);
+  // тень на полу: эллипс в проекции камеры, у парящего робота — меньше и бледнее
+  const sr = (ly.tread ? 19 : ly.hover ? 11 : 14) * K, g = c.createRadialGradient(0, fy, 0, 0, fy, sr);
+  g.addColorStop(0, ly.hover ? 'rgba(0,0,0,0.38)' : 'rgba(0,0,0,0.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.beginPath(); c.ellipse(0, fy, sr, sr * flat, 0, 0, TAU); c.fill();
   glow(c, 0, 0, 46 * sc, '#46e3ff', 0.12);
-  if (P.siege) { c.strokeStyle = rgba('#ff8a3d', 0.5 + Math.sin(G.time * 10) * 0.2); c.lineWidth = 1.5; c.setLineDash([4, 4]); c.beginPath(); if (top) c.arc(0, 0, 30 * sc, 0, TAU); else c.ellipse(0, 25 * sc, 24 * sc, 7 * sc, 0, 0, TAU); c.stroke(); c.setLineDash([]); }
+  if (P.siege) { c.strokeStyle = rgba('#ff8a3d', 0.5 + Math.sin(G.time * 10) * 0.2); c.lineWidth = 1.5; c.setLineDash([4, 4]); c.beginPath(); c.ellipse(0, fy, 26 * K, 26 * K * flat, 0, 0, TAU); c.stroke(); c.setLineDash([]); }
   const tf = G.tf.cur;
   if (P.split && !tf) { drawSplit(c, z, e0, f0); c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z + f0); }
   else {
     const blink = P.iframes > 0 && P.hurtFlash > 0 && !P.od.active && (Math.floor(G.rt * 22) % 2 === 0);
     if (blink) c.globalAlpha = 0.45;
     if (tf && tf.drawSubject) tf.drawSubject(c, G.time);
-    else drawRobot(c, L, G.time, playerOpts());
+    else { P._mesh = drawRobot(c, L, G.time, playerOpts()); P._meshT = G.time; P._meshV = P.view; }
     c.globalAlpha = 1;
   }
   if (P.hurtFlash > 0.5) glow(c, 0, -4, 40 * sc, '#ff2a3a', (P.hurtFlash - 0.5) * 0.8);
   if (P.shield.has && P.shield.ready && !tf) {
     c.save(); c.globalCompositeOperation = 'lighter';
     c.strokeStyle = rgba('#ff9a4a', 0.35 + Math.sin(G.time * 4) * 0.12); c.lineWidth = 1.6;
-    c.beginPath(); c.arc(0, top ? 0 : -2, 30 * sc, 0, TAU); c.stroke(); c.restore();
+    c.beginPath(); c.arc(0, -2 * K, 30 * sc, 0, TAU); c.stroke(); c.restore();
   }
   if (hasBranch('back', 'B') && !tf) {
     const r = (P.parts.back.rank >= 5 ? 72 : 48) * P.stats.area;
@@ -314,7 +314,7 @@ function drawPlayer(c, z, e0, f0) {
     c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke(); c.restore();
   }
   if (!tf && !P.split) {
-    const w = 34, q = clamp(P.hp / P.stats.maxHp, 0, 1), y = (top ? 28 : 31) * sc;
+    const w = 34, q = clamp(P.hp / P.stats.maxHp, 0, 1), y = fy + 8 * K;
     c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(-w / 2 - 1, y - 1, w + 2, 5);
     c.fillStyle = q > 0.5 ? '#5dff9b' : q > 0.25 ? '#ffd36b' : '#ff4d5e'; c.fillRect(-w / 2, y, w * q, 3);
   }
@@ -418,7 +418,8 @@ const MENU = { t: 0, tf: new Transformer(), subj: null, idle: 0, robotIdx: 0, re
 function menuInit() {
   const r = ROBOTS[MENU.robotIdx % ROBOTS.length];
   const parts = {}; for (const k of PART_ORDER) parts[k] = { rank: 0, branch: null };
-  MENU.subj = { x: 0, y: 0, look: makeLook(r, parts, 0, 0), time: () => MENU.t };
+  const yaw = MENU.subj ? MENU.subj.aim : Math.PI / 2 - 0.5;
+  MENU.subj = { x: 0, y: 0, look: makeLook(r, parts, 0, 0), time: () => MENU.t, aim: yaw, hd: yaw, view: 'front' };
   MENU.tf.clear(); MENU.idle = 1.4; MENU.resetT = 0;
 }
 function menuUpdate(dt) {
@@ -427,6 +428,9 @@ function menuUpdate(dt) {
   FX.update(dt);
   const S = MENU.subj;
   if (!S) return;
+  // поворотный стол: медленный оборот, на время смены формы — пауза (форма крутит робота сама)
+  const tf = MENU.tf.cur;
+  if (!(tf && tf.kind === 'form')) { S.aim += dt * 0.42; S.hd = S.aim; }
   if (MENU.tf.busy) return;
   if (MENU.resetT > 0) {
     MENU.resetT -= dt;
@@ -490,28 +494,54 @@ function renderMenu() {
   const g = c.createRadialGradient(0, 0, 4, 0, 0, 60);
   g.addColorStop(0, 'rgba(70,227,255,0.18)'); g.addColorStop(1, 'rgba(70,227,255,0)');
   c.fillStyle = g; c.beginPath(); c.arc(0, 0, 60, 0, TAU); c.fill();
-  c.fillStyle = 'rgba(0,0,0,0.45)'; c.beginPath(); c.ellipse(0, 26 * S.look.scale, 16 * S.look.scale, 5 * S.look.scale, 0, 0, TAU); c.fill();
+  const fy = feetY(S.look, 'front'), K = robotK(S.look, 'front'), fl = Math.sin(VIEW_PITCH.front);
+  // поворотная платформа: эллипс на полу и бегущие засечки
+  c.fillStyle = 'rgba(0,0,0,0.5)'; c.beginPath(); c.ellipse(0, fy, 17 * K, 17 * K * fl, 0, 0, TAU); c.fill();
+  c.strokeStyle = 'rgba(70,227,255,0.35)'; c.lineWidth = 1 / sc;
+  c.beginPath(); c.ellipse(0, fy, 24 * K, 24 * K * fl, 0, 0, TAU); c.stroke();
+  c.beginPath();
+  for (let i = 0; i < 24; i++) { const a = i * TAU / 24 - S.aim, r0 = 24 * K, r1 = (i % 6 ? 26 : 28.5) * K; c.moveTo(Math.cos(a) * r0, fy + Math.sin(a) * r0 * fl); c.lineTo(Math.cos(a) * r1, fy + Math.sin(a) * r1 * fl); }
+  c.stroke();
   FX.drawUnder(c);
   const tf = MENU.tf.cur;
   if (tf && tf.drawSubject) tf.drawSubject(c, t);
-  else drawRobot(c, S.look, t, { face: 1 });
+  else drawRobot(c, S.look, t, svo(S, { static: false }));
   FX.drawGlow(c);
   c.restore();
-  // выноски
-  const ly = robotLayout(S.look), ls = S.look.scale * sc;
-  const pts = {
-    head: [0, ly.headY], back: [-(ly.tw + 4), ly.tTop - 4], arms: [ly.tw + 4, ly.shY + 10], core: [0, (ly.tTop + ly.tBot) / 2], legs: [5, ly.hipY + 10],
-  };
-  c.font = '600 11px "JetBrains Mono", monospace'; c.textBaseline = 'middle';
+  // выноски следуют за модулями при повороте
+  const vo = tf && tf.voAt ? tf.voAt(tf.t) : svo(S);
+  const R = robotPoints(S.look, t, vo), ls = sc;
   const side = { head: 1, back: -1, arms: 1, core: -1, legs: 1 };
   const rowY = { head: -0.36, back: -0.18, arms: 0.0, core: 0.14, legs: 0.32 };
+  const pts = {}, cd = R.pa.core ? R.pa.core.d : 0;
   for (const k of PART_ORDER) {
-    const p = pts[k], x = Lc.cx + p[0] * ls, y = Lc.cy + p[1] * ls;
-    const s = side[k], lx = Lc.cx + s * Lc.size * (Lc.wide ? 0.56 : 0.5), lyy = Lc.cy + rowY[k] * Lc.size;
+    let p = R.pa[k] || { x: 0, y: 0, d: 0 };
+    if (k === 'arms' && R.pa.jR && R.pa.jL) p = R.pa.jR.x * side.arms > R.pa.jL.x * side.arms ? R.pa.jR : R.pa.jL;
+    pts[k] = [p.x, p.y, p.d];
+  }
+  c.font = '600 11px "JetBrains Mono", monospace'; c.textBaseline = 'middle';
+  // левые подписи не должны залезать на колонку меню: при нехватке места уходят направо
+  const tb = Lc.wide ? document.querySelector('#scr-title .title-block') : null, leftLim = tb ? tb.getBoundingClientRect().right + 14 : 0;
+  for (const k of PART_ORDER) {
+    const p = pts[k], x = Lc.cx + p[0] * ls, y = Lc.cy + p[1] * ls, hid = p[2] < cd - 3;
     const pr = S.look.parts[k];
-    c.strokeStyle = 'rgba(70,227,255,0.45)'; c.lineWidth = 1;
+    let s = side[k];
+    if (s < 0) {
+      const d0 = pr.rank ? partRankDef(k, pr.rank, pr.branch) : null;
+      const tw = Math.max(c.measureText(PARTS[k].code + ' · МК-' + ROMAN[pr.rank]).width, c.measureText(d0 ? d0.name : 'базовая сборка').width);
+      if (Lc.cx - Lc.size * (Lc.wide ? 0.56 : 0.5) - 6 - tw < leftLim) s = 1;
+    }
+    const d1 = pr.rank ? partRankDef(k, pr.rank, pr.branch) : null;
+    const tw1 = Math.max(c.measureText(PARTS[k].code + ' · МК-' + ROMAN[pr.rank]).width, c.measureText(d1 ? d1.name : 'базовая сборка').width);
+    let lx = Lc.cx + s * Lc.size * (Lc.wide ? 0.56 : 0.5);
+    if (Lc.wide || w >= 520) { if (s > 0) lx = Math.min(lx, w - 14 - tw1); else lx = Math.max(lx, 14 + tw1); }
+    const lyy = Lc.cy + rowY[k] * Lc.size;
+    c.strokeStyle = hid ? 'rgba(70,227,255,0.22)' : 'rgba(70,227,255,0.45)'; c.lineWidth = 1;
+    if (hid) c.setLineDash([3, 3]);
     c.beginPath(); c.moveTo(x, y); c.lineTo(lx - s * 30, lyy); c.lineTo(lx, lyy); c.stroke();
-    c.fillStyle = '#46e3ff'; c.beginPath(); c.arc(x, y, 2.2, 0, TAU); c.fill();
+    c.setLineDash([]);
+    c.beginPath(); c.arc(x, y, 2.2, 0, TAU);
+    if (hid) { c.strokeStyle = '#46e3ff'; c.stroke(); } else { c.fillStyle = '#46e3ff'; c.fill(); }
     const def = pr.rank ? partRankDef(k, pr.rank, pr.branch) : null;
     const label = PARTS[k].code + ' · МК-' + ROMAN[pr.rank];
     const sub = def ? def.name : 'базовая сборка';

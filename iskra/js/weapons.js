@@ -21,7 +21,7 @@ function leech(v) {
   const h = Math.min(v, P.leechBudget);
   P.leechBudget -= h; P.hp = Math.min(P.stats.maxHp, P.hp + h);
 }
-function aimAt(e) { return e ? Math.atan2(e.y - P.y, e.x - P.x) : (P.face > 0 ? 0 : Math.PI); }
+function aimAt(e) { return e ? Math.atan2(e.y - P.y, e.x - P.x) : P.aim; }
 function lineEnemies(x, y, ang, len, width, fn) {
   const dx = Math.cos(ang), dy = Math.sin(ang);
   for (const e of G.enemies) {
