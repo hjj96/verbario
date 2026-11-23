@@ -24,12 +24,19 @@ class Transformer {
   lift() { return this.cur && this.cur.lift ? this.cur.lift() : 0; }
 }
 
-function robotSnapshot(L, t) {
-  const ext = 50 * L.scale, px = Math.ceil(ext * 2 * 2);
+function robotSnapshot(L, t, vo) {
+  const ext = 54 * L.scale * (vo && vo.view === 'top' ? 1.3 : 1), px = Math.ceil(ext * 2 * 2);
   const cv = makeCanvas(px, px), c = cv.getContext('2d');
-  c.translate(px / 2, px / 2 + 4 * 2 * L.scale); c.scale(2, 2);
-  drawRobot(c, L, t, { static: true });
-  return { cv, ext, res: 2, oy: 4 * L.scale };
+  const oy = vo && vo.view === 'top' ? 0 : 4 * L.scale;
+  c.translate(px / 2, px / 2 + oy * 2); c.scale(2, 2);
+  drawRobot(c, L, t, Object.assign({}, vo || {}, { static: true }));
+  return { cv, ext, res: 2, oy };
+}
+// параметры отрисовки субъекта трансформации (проекция, прицел, модули)
+function svo(subj, extra) {
+  const o = { static: true, view: subj.view || 'front', aim: subj.aim || 0, hd: subj.hd || 0, mounts: subj.weapons || null };
+  if (extra) for (const k in extra) o[k] = extra[k];
+  return o;
 }
 function drawSnap(c, snap, img, alpha, comp) {
   c.save();
@@ -39,33 +46,56 @@ function drawSnap(c, snap, img, alpha, comp) {
   c.restore();
 }
 
-/* --- Трансформация модуля --- */
+/* --- Опорные точки модулей (для выносок и разлёта) --- */
+function partAnchor(L, part, vo) {
+  const ly = robotLayout(L), k = L.scale * (vo && vo.view === 'top' ? TOP_K : 1);
+  let x = 0, y = 0;
+  if (vo && vo.view === 'top') {
+    const A = { head: [3.5, 0], core: [0, 0], arms: [11, ly.tw + 1], legs: [0, 6], back: [-12, 0] }[part] || [0, 0];
+    const a = part === 'legs' ? (vo.hd || 0) : (vo.aim || 0), ca = Math.cos(a), sa = Math.sin(a);
+    x = A[0] * ca - A[1] * sa; y = A[0] * sa + A[1] * ca;
+  } else {
+    const A = { head: [0, ly.headY], core: [0, (ly.tTop + ly.tBot) / 2], arms: [ly.tw + 3, ly.shY + 8], legs: [5, ly.hipY + 9], back: [-(ly.tw + 2), ly.tTop - 6] }[part] || [0, 0];
+    x = A[0]; y = A[1];
+  }
+  return { x: x * k, y: y * k };
+}
+function callout(c, ax, ay, text, q, col) {
+  if (q <= 0) return;
+  const T = c.getTransform(), s = (VIEW.dpr || 1) / Math.max(0.05, Math.hypot(T.a, T.b)) * 1.6;
+  const bx = ax + 34 * s, by = ay - 34 * s, ex = bx + 74 * s;
+  c.save();
+  c.globalAlpha *= clamp(q, 0, 1);
+  c.strokeStyle = col || '#7fd8ff'; c.lineWidth = 0.7 * s;
+  c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.lineTo(lerp(bx, ex, ease.outCubic(q)), by); c.stroke();
+  c.beginPath(); c.arc(ax, ay, 1.6 * s, 0, TAU); c.fillStyle = col || '#7fd8ff'; c.fill();
+  c.font = '700 ' + (6.5 * s).toFixed(2) + 'px "JetBrains Mono", monospace'; c.fillStyle = '#eaf6ff'; c.textBaseline = 'bottom';
+  c.fillText(text.slice(0, Math.ceil(text.length * clamp(q * 1.4, 0, 1))), bx + 2 * s, by - 1.5 * s);
+  c.restore();
+}
+
+/* --- Трансформация модуля: старый рассыпается штрихами, новый вычерчивается пером --- */
 function seqPart(subj, part, rank, branch, opts) {
   opts = opts || {};
   const S = {
-    dur: opts.fast ? 1.25 : 1.75, blocking: !opts.ambient, subj,
+    dur: opts.fast ? 1.3 : 1.8, blocking: !opts.ambient, subj,
     init() {
       this.old = cloneLook(subj.look);
       this.nl = cloneLook(subj.look);
       this.nl.parts[part] = { rank, branch: branch || this.nl.parts[part].branch };
       const T = subj.time ? subj.time() : 0;
-      this.oSnap = partSnapshot(this.old, part, T);
-      this.nSnap = partSnapshot(this.nl, part, T);
+      this.vo = svo(subj);
+      this.oSnap = partSnapshot(this.old, part, T, this.vo);
       this.oTiles = snapTiles(this.oSnap, 7);
-      this.nTiles = snapTiles(this.nSnap, 7);
-      this.holo = hologram(this.nSnap.cv);
       const sc = this.old.scale;
       for (const tl of this.oTiles) {
         const a = Math.atan2(tl.hy + 2, tl.hx) + rand(-0.6, 0.6), s = rand(70, 170) * sc;
         tl.vx = Math.cos(a) * s; tl.vy = Math.sin(a) * s - 30; tl.vr = rand(-9, 9);
       }
-      for (const tl of this.nTiles) {
-        const a = rand(0, TAU), d = rand(45, 95) * sc;
-        tl.sx0 = tl.hx + Math.cos(a) * d; tl.sy0 = tl.hy + Math.sin(a) * d;
-        tl.rot0 = rand(-3, 3); tl.d = rand(0, 0.28); tl.done = false;
-        tl.x = tl.sx0; tl.y = tl.sy0;
-      }
-      this.committed = false;
+      const br = this.nl.parts[part].branch;
+      this.code = PARTS[part].code + ' · МК-' + ROMAN[rank] + (rank >= 3 && br ? ' · ' + PARTS[part].branches[br].name.toUpperCase() : '');
+      this.anchor = partAnchor(this.nl, part, this.vo);
+      this.committed = false; this.clanks = 0;
       this.t0 = opts.fast ? 0.12 : 0.25;
       if (!opts.silent) AUDIO.sfx('tfStart');
       if (opts.onStart) opts.onStart();
@@ -76,29 +106,23 @@ function seqPart(subj, part, rank, branch, opts) {
         for (const tl of this.oTiles) { tl.x += tl.vx * dt; tl.y += tl.vy * dt; tl.vx *= Math.exp(-2.2 * dt); tl.vy *= Math.exp(-2.2 * dt); tl.rot += tl.vr * dt; }
         if (!this.sparked) {
           this.sparked = true;
-          FX.sparks(subj.x, subj.y - 6, 18, '#ffd36b', 260, undefined, 0, 0.5);
-          FX.burst(subj.x, subj.y - 6, 8, '#46e3ff', 120, 0.5, 6);
+          FX.sparks(subj.x + this.anchor.x, subj.y + this.anchor.y, 16, '#ffd36b', 260, undefined, 0, 0.5);
+          FX.shards(subj.x + this.anchor.x, subj.y + this.anchor.y, 10, '#eaf6ff', 160);
         }
       }
-      const a0 = t0 + 0.45;
-      for (const tl of this.nTiles) {
-        const q = seg(t, a0 + tl.d, a0 + tl.d + 0.38);
-        const e = ease.outBack(q);
-        tl.x = lerp(tl.sx0, tl.hx, e); tl.y = lerp(tl.sy0, tl.hy, e); tl.rot = lerp(tl.rot0, 0, ease.outCubic(q));
-        if (q >= 1 && !tl.done) {
-          tl.done = true;
-          if (Math.random() < 0.35) FX.sparks(subj.x + tl.hx, subj.y + tl.hy, 3, '#bff6ff', 140, undefined, 0, 0.25);
-          if (!opts.silent) AUDIO.sfx('clank');
-        }
-      }
-      const tc = a0 + 0.7;
+      const dq = seg(t, t0 + 0.12, t0 + 0.8);
+      if (!opts.silent && dq > 0 && dq < 1 && this.clanks < Math.floor(dq * 4)) { this.clanks++; AUDIO.sfx('clank'); }
+      const tc = t0 + 0.9;
       if (!this.committed && t >= tc) {
         this.committed = true;
         subj.look.parts[part] = { rank: this.nl.parts[part].rank, branch: this.nl.parts[part].branch };
         refreshLook(subj.look);
-        FX.ring(subj.x, subj.y, 10, 120, 0.5, '#46e3ff', 4);
-        FX.ring(subj.x, subj.y, 5, 70, 0.35, '#ffffff', 2);
-        FX.burst(subj.x, subj.y - 6, 16, PARTS[part].color, 200, 0.6, 7);
+        const ax = subj.x + this.anchor.x, ay = subj.y + this.anchor.y;
+        FX.ring(ax, ay, 6, 90, 0.45, '#46e3ff', 3);
+        FX.ring(subj.x, subj.y, 10, 130, 0.55, '#eaf6ff', 2);
+        FX.burst(ax, ay, 16, PARTS[part].color, 200, 0.6, 7);
+        FX.light(subj.x, subj.y, 160, '#46e3ff', 0.5);
+        if (!opts.ambient) FX.impact = 2;
         if (!opts.silent) AUDIO.sfx('tfBoom');
         if (opts.onCommit) opts.onCommit();
       }
@@ -111,34 +135,121 @@ function seqPart(subj, part, rank, branch, opts) {
       return 1 + 1.05 * ease.outCubic(seg(t, 0, this.t0 + 0.05)) * (1 - ease.inOutCubic(seg(t, this.dur - 0.45, this.dur)));
     },
     dim() { return opts.ambient ? 0 : 0.55 * seg(this.t, 0, 0.2) * (1 - seg(this.t, this.dur - 0.4, this.dur)); },
+    speed() { return opts.ambient ? 0 : seg(this.t, 0.05, 0.3) * (1 - seg(this.t, this.t0 + 0.6, this.t0 + 1.1)); },
     drawSubject(c, T) {
-      const t = this.t, t0 = this.t0;
+      const t = this.t, t0 = this.t0, vo = this.vo;
       if (t < t0) {
-        drawRobot(c, this.old, T, { static: true });
+        drawRobot(c, this.old, T, vo);
         scanLine(c, this.old, t / t0);
         return;
       }
+      const lab = seg(t, t0 + 0.1, t0 + 0.5) * (1 - seg(t, this.dur - 0.35, this.dur));
       if (this.committed) {
-        drawRobot(c, subj.look, T, { static: true });
+        drawRobot(c, subj.look, T, svo(subj));
         const q = seg(t, this.tc, this.tc + 0.35);
-        if (q < 1) { const w = silhouette(this.nSnap.cv, '#ffffff'); drawSnap(c, this.nSnap, w, (1 - q) * 0.9, 'lighter'); }
+        if (q < 1) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - q) * 0.9; drawRobot(c, subj.look, T, Object.assign(svo(subj), { only: part })); c.restore(); }
+        callout(c, this.anchor.x, this.anchor.y, this.code, lab);
         return;
       }
       const behind = part === 'back' || part === 'legs';
-      const tilesDraw = () => {
-        const fa = 1 - seg(t, t0 + 0.1, t0 + 0.55);
+      const dq = seg(t, t0 + 0.12, t0 + 0.8);
+      const fresh = () => {
+        const fa = 1 - seg(t, t0 + 0.05, t0 + 0.5);
         if (fa > 0) for (const tl of this.oTiles) drawTile(c, this.oSnap, tl, fa);
-        const hf = seg(t, t0 + 0.12, t0 + 0.3) * (0.75 + Math.sin(t * 40) * 0.2);
-        if (hf > 0) drawSnap(c, this.nSnap, this.holo, hf, 'lighter');
-        for (const tl of this.nTiles) { const q = seg(t, t0 + 0.45 + tl.d, t0 + 0.45 + tl.d + 0.12); if (q > 0) drawTile(c, this.nSnap, tl, q); }
+        if (dq > 0) {
+          RS.reveal = Math.max(0.002, dq);
+          c.save(); c.globalCompositeOperation = 'lighter';
+          drawRobot(c, this.nl, T, Object.assign({}, vo, { only: part }));
+          c.restore();
+          RS.reveal = 1;
+        }
       };
-      if (behind) tilesDraw();
-      drawRobot(c, this.old, T, { static: true, skip: part });
-      if (!behind) tilesDraw();
+      if (behind) fresh();
+      drawRobot(c, this.old, T, Object.assign({}, vo, { skip: part }));
+      if (!behind) fresh();
+      callout(c, this.anchor.x, this.anchor.y, this.code, lab);
     },
   };
   return S;
 }
+
+/* --- Монтаж орудия: рука отделяется, вычерчивается пушкой и встаёт на место --- */
+function seqMount(subj, w, opts) {
+  opts = opts || {};
+  const evoTo = opts.evo || null;
+  return {
+    dur: evoTo ? 1.6 : 1.35, blocking: true, subj,
+    init() {
+      this.vo = svo(subj);
+      this.host = slotHost(w.slot);
+      this.arm = !!this.host.armSide;
+      const ly = robotLayout(subj.look), sl = slotLocal(w.slot, ly, this.vo.view);
+      let dx = sl.x, dy = sl.y;
+      if (this.vo.view === 'top') { const a = this.vo.aim, ca = Math.cos(a), sa = Math.sin(a); dx = sl.x * ca - sl.y * sa; dy = sl.x * sa + sl.y * ca; }
+      const l = Math.hypot(dx, dy) || 1;
+      this.dir = { x: dx / l, y: dy / l };
+      const K = subj.look.scale * (this.vo.view === 'top' ? TOP_K : 1);
+      this.slotW = { x: dx * K, y: dy * K };
+      this.pivot = this.arm ? partAnchor(subj.look, 'arms', this.vo) : this.slotW;
+      if (this.arm && this.host.armSide < 0) { this.pivot = { x: this.vo.view === 'top' ? this.pivot.x : -this.pivot.x, y: this.pivot.y }; if (this.vo.view === 'top') { const a = this.vo.aim; const ax = 11 * Math.cos(a) + (ly.tw + 1) * Math.sin(a), ay = 11 * Math.sin(a) - (ly.tw + 1) * Math.cos(a); this.pivot = { x: ax * K, y: ay * K }; } }
+      this.code = (w.evo || evoTo ? 'ЭВО · ' : wcode(baseOf(w)) + ' · ') + ((evoTo ? EVOS[evoTo] : weaponDef(w)).name).toUpperCase();
+      this.proxyOld = Object.assign({}, w, { hidden: false });
+      this.proxyNew = evoTo ? Object.assign({}, w, { id: evoTo, evo: true, hidden: false, st: {} }) : this.proxyOld;
+      w.hidden = true; this.done = false;
+      AUDIO.sfx(evoTo ? 'evolve' : 'tfStart');
+      if (opts.onStart) opts.onStart();
+    },
+    pose() {
+      const t = this.t, out = ease.outCubic(seg(t, 0.12, 0.38)), back = ease.outBack(seg(t, this.dur - 0.5, this.dur - 0.3));
+      const k = out * (1 - back), d = 26 * subj.look.scale;
+      return { ox: this.dir.x * d * k + (this.vo.view === 'top' ? 0 : -6 * k), oy: this.dir.y * d * k - 10 * k, spin: k * TAU * (this.host.armSide || 1) * 0.75 };
+    },
+    update(dt) {
+      const t = this.t;
+      if (!this.done && t >= this.dur - 0.3) {
+        this.done = true;
+        w.hidden = false;
+        const x = subj.x + this.slotW.x, y = subj.y + this.slotW.y;
+        FX.ring(x, y, 4, 60, 0.35, evoTo ? '#ffd36b' : '#46e3ff', 3);
+        FX.sparks(x, y, 14, '#eaf6ff', 260, undefined, 0, 0.4);
+        FX.light(x, y, 120, evoTo ? '#ffd36b' : '#46e3ff', 0.6);
+        FX.addShake(evoTo ? 8 : 4);
+        if (evoTo) { FX.flash('#ffd36b', 0.45); FX.impact = 2; FX.ring(subj.x, subj.y, 10, 260, 0.7, '#ffd36b', 5); }
+        AUDIO.sfx('clank'); AUDIO.sfx(evoTo ? 'tfBoom' : 'pick');
+        if (opts.onCommit) opts.onCommit();
+      }
+    },
+    finish() { w.hidden = false; if (!this.done && opts.onCommit) opts.onCommit(); if (opts.onEnd) opts.onEnd(); },
+    zoom() { const t = this.t; return 1 + 0.85 * ease.outCubic(seg(t, 0, 0.2)) * (1 - ease.inOutCubic(seg(t, this.dur - 0.25, this.dur))); },
+    dim() { return 0.5 * seg(this.t, 0, 0.15) * (1 - seg(this.t, this.dur - 0.25, this.dur)); },
+    speed() { return evoTo ? seg(this.t, 0.05, 0.3) * (1 - seg(this.t, 0.9, 1.3)) : 0; },
+    drawSubject(c, T) {
+      const t = this.t, vo = this.vo, L = subj.look;
+      if (evoTo) {
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + t * 0.8, len = 60 + 40 * Math.sin(t * 6 + i); c.strokeStyle = rgba(i % 2 ? EVOS[evoTo].color : '#ffd36b', 0.22 * seg(t, 0, 0.3) * (1 - seg(t, this.dur - 0.4, this.dur))); c.lineWidth = 4; c.beginPath(); c.moveTo(Math.cos(a) * 16, Math.sin(a) * 16); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); }
+        c.restore();
+      }
+      const base = Object.assign({}, vo);
+      if (!this.done) { if (this.arm) base.skipArmSide = this.host.armSide; }
+      drawRobot(c, L, T, base);
+      if (this.done) { callout(c, this.slotW.x, this.slotW.y, this.code, 1 - seg(t, this.dur - 0.2, this.dur)); return; }
+      const p = this.pose();
+      const half = evoTo ? 0.62 : 0.3;
+      let proxy, rv;
+      if (evoTo && t < half) { proxy = this.proxyOld; rv = 1 - seg(t, 0.3, half); }
+      else { proxy = this.proxyNew; rv = seg(t, half, this.dur - 0.5); }
+      proxy.reveal = Math.max(0.002, rv);
+      c.save();
+      c.translate(this.pivot.x + p.ox, this.pivot.y + p.oy); c.rotate(p.spin); c.translate(-this.pivot.x, -this.pivot.y);
+      if (this.arm) drawRobot(c, L, T, Object.assign({}, vo, { only: 'arms', armSide: this.host.armSide, mounts: [proxy] }));
+      else drawRobot(c, L, T, Object.assign({}, vo, { only: this.host.only, mounts: [proxy], onlyMounts: true }));
+      c.restore();
+      callout(c, this.pivot.x + p.ox, this.pivot.y + p.oy, this.code, seg(t, 0.25, 0.55));
+    },
+  };
+}
+
 function hologram(cv) {
   const h = silhouette(cv, '#46e3ff'), c = h.getContext('2d');
   c.globalCompositeOperation = 'destination-out';
@@ -176,9 +287,10 @@ function seqForm(subj, newForm, opts) {
       this.old = cloneLook(subj.look);
       this.nl = cloneLook(subj.look); this.nl.form = newForm; refreshLook(this.nl);
       const T = subj.time ? subj.time() : 0;
-      this.oSnap = robotSnapshot(this.old, T);
+      this.vo = svo(subj);
+      this.oSnap = robotSnapshot(this.old, T, this.vo);
       this.oWhite = silhouette(this.oSnap.cv, '#ffffff');
-      this.nSnap = robotSnapshot(this.nl, T);
+      this.nSnap = robotSnapshot(this.nl, T, this.vo);
       this.nWhite = silhouette(this.nSnap.cv, '#ffffff');
       this.done = false;
       if (!opts.silent) AUDIO.sfx('formUp');
@@ -200,6 +312,8 @@ function seqForm(subj, newForm, opts) {
         this.done = true;
         subj.look.form = newForm; refreshLook(subj.look);
         FX.flash('#ffffff', 1);
+        FX.impact = 3;
+        FX.light(subj.x, subj.y, 420, '#ffd36b', 0.9);
         FX.addShake(14);
         FX.ring(subj.x, subj.y, 20, 420, 0.9, '#ffffff', 8);
         FX.ring(subj.x, subj.y, 10, 300, 0.7, '#ffd36b', 5);
@@ -214,6 +328,7 @@ function seqForm(subj, newForm, opts) {
     zoom() { const t = this.t; return 1 + 1.15 * ease.outCubic(seg(t, 0, 0.5)) * (1 - ease.inOutCubic(seg(t, 2.45, 3.1))); },
     dim() { return 0.8 * seg(this.t, 0, 0.4) * (1 - seg(this.t, 2.4, 3.0)); },
     lift() { const t = this.t; return 12 * ease.outCubic(seg(t, 0.1, 0.9)) * (1 - ease.inOutCubic(seg(t, 1.9, 2.8))); },
+    speed() { const t = this.t; return seg(t, 0.2, 0.6) * (1 - seg(t, 1.7, 2.4)) + (t > 1.55 && t < 1.75 ? 1 : 0); },
     drawSubject(c, T) {
       const t = this.t;
       c.save(); c.translate(0, -this.lift());
@@ -232,10 +347,10 @@ function seqForm(subj, newForm, opts) {
       if (!this.done) {
         const jit = t > 0.9 ? rand(-1, 1) * seg(t, 0.9, 1.6) * 1.6 : 0;
         c.translate(jit, 0);
-        drawRobot(c, this.old, T, { static: true });
+        drawRobot(c, this.old, T, this.vo);
         drawSnap(c, this.oSnap, this.oWhite, ease.inCubic(seg(t, 0.5, 1.6)), 'lighter');
       } else {
-        drawRobot(c, subj.look, T, { static: true });
+        drawRobot(c, subj.look, T, svo(subj));
         drawSnap(c, this.nSnap, this.nWhite, 1 - ease.outCubic(seg(t, 1.6, 2.3)), 'lighter');
       }
       c.restore();
@@ -272,7 +387,7 @@ function seqOverdrive(subj, opts) {
     drawSubject(c, T) {
       const sh = this.t < 0.55 ? rand(-1, 1) * 1.2 : 0;
       c.save(); c.translate(sh, 0);
-      drawRobot(c, subj.look, T, { static: true });
+      drawRobot(c, subj.look, T, svo(subj));
       c.restore();
     },
   };
@@ -312,7 +427,7 @@ function seqEvolve(subj, evoId, opts) {
         c.beginPath(); c.moveTo(Math.cos(a) * 16, -8 + Math.sin(a) * 16); c.lineTo(Math.cos(a) * len, -8 + Math.sin(a) * len); c.stroke();
       }
       c.restore();
-      drawRobot(c, subj.look, T, { static: true, fire: 1 });
+      drawRobot(c, subj.look, T, svo(subj, { fire: 1 }));
     },
   };
 }

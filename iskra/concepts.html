@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Концепты стиля «Искры»</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Студийная доска: нейтральный графит, чтобы цвета концептов не спорили с фоном; золото — отметка выбора */
+:root {
+  --bg: #0e1013; --panel: #15181d; --panel2: #1b1f26; --line: #272c35; --ink: #eef1f5; --sub: #9aa3b1; --dim: #6b7482;
+  --pick: #ffd36b; --cyan: #46e3ff;
+  --f-display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --f-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+main { max-width: 1240px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 48px; }
+.eyebrow { font: 700 11px/1 var(--f-mono); letter-spacing: .22em; text-transform: uppercase; color: var(--sub); }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(28px, 4.6vw, 52px); line-height: 1.05; margin: 10px 0 14px; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--f-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 28px); margin: 0 0 6px; text-wrap: balance; }
+.lead { color: var(--sub); max-width: 70ch; margin: 0; font-size: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.concept { background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; position: relative; }
+.concept.pick { border-color: var(--pick); box-shadow: 0 0 0 1px var(--pick), 0 20px 60px rgba(255, 211, 107, .08); }
+.concept canvas, .demo canvas { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 10; background: #000; }
+.concept .meta { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.concept .top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.code { font: 700 12px var(--f-mono); color: var(--dim); letter-spacing: .1em; }
+.name { font-family: var(--f-display); font-weight: 700; font-size: 20px; }
+.chip { margin-left: auto; font: 700 10.5px var(--f-mono); letter-spacing: .16em; text-transform: uppercase; padding: 5px 8px; border: 1px solid var(--line); color: var(--sub); }
+.pick .chip { color: #1b1404; background: var(--pick); border-color: var(--pick); }
+.pitch { margin: 0; color: var(--ink); }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatches span { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--f-mono); color: var(--sub); }
+.swatches i { width: 18px; height: 18px; border: 1px solid rgba(255, 255, 255, .15); display: inline-block; }
+.pros { display: grid; grid-template-columns: 82px 1fr; gap: 4px 12px; font-size: 13.5px; color: var(--sub); }
+.pros b { font: 700 10.5px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); padding-top: 3px; }
+.pros span { min-width: 0; }
+.verdict { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; background: var(--panel); border: 1px solid var(--pick); padding: 24px; }
+.verdict ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.verdict li::marker { color: var(--pick); font-family: var(--f-mono); }
+.borrow { display: flex; flex-direction: column; gap: 10px; }
+.borrow div { border-left: 2px solid var(--line); padding-left: 12px; color: var(--sub); font-size: 14px; }
+.borrow div strong { color: var(--ink); font-weight: 600; display: block; }
+.demos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.demo { background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+.demo .cap { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 4px; }
+.demo .cap b { font-family: var(--f-display); font-size: 16px; font-weight: 700; }
+.demo .cap span { color: var(--sub); font-size: 13.5px; }
+.sechead { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 860px) { .grid2, .demos, .verdict { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .concept, .demo { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Протокол «Искра» · арт-дирекшн · ревизия 2</div>
+    <h1>Четыре стиля для одной игры</h1>
+    <p class="lead">Одна и та же сцена — робот в центре, Рой со всех сторон, каждые пять секунд трансформация — нарисована в четырёх направлениях. В левом нижнем углу каждой сцены тот же робот в главном виде. Сравнивайте, как читается толпа, как бьют эффекты и насколько стиль помогает главной фантазии: робот перестраивает себя прямо в бою.</p>
+  </header>
+
+  <section class="grid2" id="concepts"></section>
+
+  <section class="verdict">
+    <div>
+      <div class="eyebrow" style="color:var(--pick)">Решение арт-директора</div>
+      <h2>Берём К-1 «Неоновый чертёж»</h2>
+      <ol>
+        <li><b>Своё лицо.</b> Поле боя — живой технический чертёж: сетка, размерные линии, выноски. Такого нет ни у одного выживача, а интерфейс игры уже говорит на языке чертежа.</li>
+        <li><b>Толпа читается.</b> Робот холодный (белый и голубой), Рой горячий (красный, оранжевый, пурпурный). Даже в каше из четырёхсот врагов взгляд сразу находит героя.</li>
+        <li><b>Трансформация — это перечерчивание.</b> Модуль рассыпается на линии, новый вычерчивается пером, проставляется размер и штамп ОТК. Стиль сам рассказывает механику.</li>
+        <li><b>Свечение бесплатно.</b> Векторные линии на тёмном фоне + блум дают яркие эффекты и при этом легче всего рисуются на телефоне.</li>
+      </ol>
+    </div>
+    <div class="borrow">
+      <div class="eyebrow">Что забираем из других концептов</div>
+      <div><strong>Из К-2 — язык аниме-анимации</strong>Импакт-кадры (инверсия на 2 кадра), линии скорости, «смазанные» дуги ударов, позы трансформации.</div>
+      <div><strong>Из К-4 — живой свет</strong>Выстрелы, взрывы и реактор подсвечивают сетку пола: мир откликается на каждое действие.</div>
+      <div><strong>Проекции</strong>Два вида на выбор в настройках: «главный» (робот стоит, как персонаж) и «сверху» (ноги идут по ходу движения, корпус с руками доворачивается к цели).</div>
+    </div>
+  </section>
+
+  <section class="sechead">
+    <div class="eyebrow">Анимации в выбранном стиле</div>
+    <h2>Робот — это и есть арсенал</h2>
+    <p class="lead">Оружие физически собирается из корпуса: рука отделяется и перестраивается в пушку, кисть улетает пилой и возвращается, рывок — это перелёт робота по частям.</p>
+  </section>
+  <section class="demos" id="demos"></section>
+
+  <section class="sechead">
+    <div class="eyebrow">Проекции</div>
+    <h2>Главный вид и вид сверху</h2>
+    <p class="lead">Названия как в чертёжной документации. В виде сверху нижняя часть идёт по направлению движения, а корпус с оружием доворачивается к ближайшей цели.</p>
+  </section>
+  <section class="demos" id="views"></section>
+</main>
+<script>
+'use strict';
+const TAU = Math.PI * 2;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const easeOut = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+const easeBack = t => { t = clamp(t, 0, 1); const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const W = 640, H = 400;
+const KB = Math.min(2, window.devicePixelRatio || 1);
+// толщина линии в экранных пикселях почти не зависит от масштаба объекта — как на чертеже
+function LW(c, w) { const T = c.getTransform(); const s = Math.hypot(T.a, T.b) / KB; return w / Math.max(0.6, Math.pow(s, 0.88)); }
+function mk(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; }
+function rr(c, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function poly(c, p) { c.beginPath(); c.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) c.lineTo(p[i], p[i + 1]); c.closePath(); }
+function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function rgba(h, a) { const c = hexToRgb(h); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+const GL = {};
+function glowSpr(col) {
+  if (GL[col]) return GL[col];
+  const g = mk(64, 64), x = g.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, rgba(col, 1)); gr.addColorStop(0.25, rgba(col, 0.5)); gr.addColorStop(0.6, rgba(col, 0.13)); gr.addColorStop(1, rgba(col, 0));
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64); GL[col] = g; return g;
+}
+function glow(c, x, y, r, col, a) { const pa = c.globalAlpha, pc = c.globalCompositeOperation; c.globalAlpha = pa * a; c.globalCompositeOperation = 'lighter'; c.drawImage(glowSpr(col), x - r, y - r, r * 2, r * 2); c.globalAlpha = pa; c.globalCompositeOperation = pc; }
+
+/* ---- Блум: уменьшение кадра, «порог» умножением на себя, размытие цепочкой ---- */
+function makeBloom(cv) { return { a: mk(cv.width / 2, cv.height / 2), b: mk(cv.width / 4, cv.height / 4), c: mk(cv.width / 8, cv.height / 8), d: mk(cv.width / 16, cv.height / 16) }; }
+function bloom(cv, B, k) {
+  const a = B.a.getContext('2d'), b = B.b.getContext('2d'), c = B.c.getContext('2d'), d = B.d.getContext('2d');
+  a.globalCompositeOperation = 'copy'; a.drawImage(cv, 0, 0, B.a.width, B.a.height);
+  b.globalCompositeOperation = 'copy'; b.drawImage(B.a, 0, 0, B.b.width, B.b.height);
+  b.globalCompositeOperation = 'multiply'; b.drawImage(B.b, 0, 0);
+  c.globalCompositeOperation = 'copy'; c.drawImage(B.b, 0, 0, B.c.width, B.c.height);
+  d.globalCompositeOperation = 'copy'; d.drawImage(B.c, 0, 0, B.d.width, B.d.height);
+  const m = cv.getContext('2d');
+  m.save(); m.setTransform(1, 0, 0, 1, 0, 0); m.globalCompositeOperation = 'lighter'; m.globalAlpha = k;
+  m.drawImage(B.b, 0, 0, cv.width, cv.height); m.drawImage(B.c, 0, 0, cv.width, cv.height); m.drawImage(B.d, 0, 0, cv.width, cv.height);
+  m.restore();
+}
+
+/* ---- Сцена-симуляция (одна и та же для всех стилей) ---- */
+function scene() { return { t: 0, r: { x: 320, y: 214, px: 320, py: 214, aim: 0, hd: 0, fire: 0, side: 1, tfq: 0 }, en: [], bu: [], bo: [], li: [], spawnT: 0, fireT: 0, tfT: 2.5, tf: 0, imp: 0 }; }
+function step(S, dt) {
+  S.t += dt;
+  const r = S.r;
+  r.px = r.x; r.py = r.y;
+  r.x = 320 + Math.sin(S.t * 0.55) * 64; r.y = 214 + Math.sin(S.t * 1.1) * 24;
+  const vx = r.x - r.px, vy = r.y - r.py;
+  if (vx * vx + vy * vy > 1e-5) r.hd = Math.atan2(vy, vx);
+  S.spawnT -= dt;
+  while (S.spawnT <= 0) {
+    S.spawnT += 0.1;
+    const s = (Math.random() * 4) | 0;
+    const x = s === 0 ? -20 : s === 1 ? W + 20 : rnd(0, W), y = s === 2 ? -20 : s === 3 ? H + 20 : (s < 2 ? rnd(0, H) : 0);
+    const k = Math.random(), type = k < 0.55 ? 'bug' : k < 0.75 ? 'kami' : k < 0.9 ? 'tank' : 'gun';
+    S.en.push({ x, y: s === 2 ? -20 : s === 3 ? H + 20 : y, type, a: 0, hp: type === 'tank' ? 5 : 1, r: type === 'tank' ? 13 : type === 'gun' ? 10 : 7, t: 0, fl: 0 });
+  }
+  for (const e of S.en) {
+    e.t += dt;
+    const dx = r.x - e.x, dy = r.y - e.y, d = Math.hypot(dx, dy) || 1;
+    const sp = e.type === 'tank' ? 26 : e.type === 'kami' ? 70 : e.type === 'gun' ? 30 : 48;
+    const stop = e.type === 'gun' ? 150 : 26;
+    if (d > stop) { e.x += dx / d * sp * dt; e.y += dy / d * sp * dt; }
+    const ta = Math.atan2(dy, dx); let df = ta - e.a; df = Math.atan2(Math.sin(df), Math.cos(df)); e.a += df * Math.min(1, dt * 8);
+    e.fl = Math.max(0, e.fl - dt * 7);
+  }
+  let tgt = null, bd = 1e9;
+  for (const e of S.en) { const d = (e.x - r.x) ** 2 + (e.y - r.y) ** 2; if (d < bd) { bd = d; tgt = e; } }
+  if (tgt) { const ta = Math.atan2(tgt.y - r.y, tgt.x - r.x); let df = ta - r.aim; df = Math.atan2(Math.sin(df), Math.cos(df)); r.aim += df * Math.min(1, dt * 12); }
+  S.fireT -= dt; r.fire = Math.max(0, r.fire - dt * 9);
+  if (S.fireT <= 0 && tgt) {
+    S.fireT = 0.085; r.fire = 1; r.side = -r.side;
+    const ox = Math.cos(r.aim) * 22 - Math.sin(r.aim) * 12 * r.side, oy = Math.sin(r.aim) * 22 + Math.cos(r.aim) * 12 * r.side;
+    S.bu.push({ x: r.x + ox, y: r.y + oy, vx: Math.cos(r.aim) * 540, vy: Math.sin(r.aim) * 540, life: 1 });
+    S.li.push({ x: r.x + ox, y: r.y + oy, r: 40, t: 0, d: 0.12, col: 'cyan' });
+  }
+  for (const b of S.bu) {
+    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    for (const e of S.en) {
+      if (e.dead) continue;
+      if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 < (e.r + 3) ** 2) {
+        e.hp--; e.fl = 1; b.life = 0;
+        if (e.hp <= 0) kill(S, e);
+        break;
+      }
+    }
+  }
+  S.tfT -= dt;
+  if (S.tfT <= 0) {
+    S.tfT = 5; S.tf = 1; S.imp = 2;
+    for (const e of S.en) if ((e.x - r.x) ** 2 + (e.y - r.y) ** 2 < 150 * 150) kill(S, e);
+    S.li.push({ x: r.x, y: r.y, r: 220, t: 0, d: 0.6, col: 'white' });
+  }
+  S.tf = Math.max(0, S.tf - dt * 0.8);
+  S.en = S.en.filter(e => !e.dead && e.x > -60 && e.x < W + 60 && e.y > -60 && e.y < H + 60);
+  S.bu = S.bu.filter(b => b.life > 0 && b.x > -20 && b.x < W + 20 && b.y > -20 && b.y < H + 20);
+  for (const b of S.bo) b.t += dt;
+  S.bo = S.bo.filter(b => b.t < 0.7);
+  for (const l of S.li) l.t += dt;
+  S.li = S.li.filter(l => l.t < l.d);
+}
+function kill(S, e) {
+  if (e.dead) return;
+  e.dead = true;
+  const sh = [];
+  for (let i = 0; i < 7; i++) { const a = rnd(0, TAU), s = rnd(60, 190); sh.push({ a: rnd(0, TAU), vx: Math.cos(a) * s, vy: Math.sin(a) * s, va: rnd(-12, 12), l: rnd(3, 8) }); }
+  S.bo.push({ x: e.x, y: e.y, t: 0, type: e.type, r: e.r, sh });
+  S.li.push({ x: e.x, y: e.y, r: 60, t: 0, d: 0.3, col: 'warm' });
+}
+
+/* ---- Геометрия: одна форма, «краска» задаётся стилем ---- */
+function geoTop(c, r, t, P, only, sc) {
+  const step = Math.sin(t * 11) * 3.5, s0 = sc || 1;
+  c.save(); c.translate(r.x, r.y); c.scale(s0, s0);
+  if (!only || only === 'legs') { c.save(); c.rotate(r.hd); for (const s of [-1, 1]) { rr(c, -6 + step * s, s * 8 - 3.2, 12, 6.4, 2.6); P('panel'); } c.restore(); }
+  c.rotate(r.aim);
+  if (!only || only === 'back') { rr(c, -18, -8, 9, 16, 2.5); P('dark'); for (const s of [-1, 1]) { c.beginPath(); c.arc(-14, s * 5, 2.4, 0, TAU); P('accent'); } }
+  for (const s of [-1, 1]) {
+    if (only && only !== (s < 0 ? 'armL' : 'armR')) continue;
+    const rec = r.side === s ? r.fire * 3 : 0;
+    rr(c, -3 - rec, s * 12 - 3.5, 17, 7, 2.5); P('panel');
+    rr(c, 12 - rec, s * 12 - 2.3, 10, 4.6, 1.2); P('barrel');
+    if (rec > 1.6) { poly(c, [24 - rec, s * 12, 30, s * 12 - 3.5, 36, s * 12, 30, s * 12 + 3.5]); P('muzzle'); }
+  }
+  if (!only || only === 'torso') { poly(c, [9, 0, 4, -10, -8, -10, -11, 0, -8, 10, 4, 10]); P('panel'); c.beginPath(); c.arc(-2.5, 0, 4, 0, TAU); P('core'); }
+  if (!only || only === 'head') { c.beginPath(); c.arc(5, 0, 6, 0, TAU); P('head'); c.beginPath(); c.arc(5, 0, 6, -0.9, 0.9); P('visor'); }
+  c.restore();
+}
+function geoFront(c, x, y, s, t, P, opt) {
+  opt = opt || {};
+  c.save(); c.translate(x, y); c.scale(s, s);
+  const bob = Math.sin(t * 2.2) * 0.8;
+  if (!opt.skip || opt.skip !== 'legs') for (const k of [-1, 1]) { rr(c, k * 5.5 - 2.5, 8, 5, 15, 2); P('panel'); rr(c, k * 6 - 4.5, 22, 9, 4, 1.5); P('dark'); }
+  c.translate(0, bob);
+  rr(c, -9, -17, 18, 8, 2); P('dark');
+  poly(c, [-11, -12, 11, -12, 9, 8, -9, 8]); P('panel');
+  c.beginPath(); c.arc(0, -3, 3.5, 0, TAU); P('core');
+  for (const k of [-1, 1]) {
+    rr(c, k * 13 - 2.5, -11, 5, 11, 2); P('panel');
+    if (opt.skip === 'armR' && k > 0) continue;
+    rr(c, k * 13.5 - 3, -1, 6, 12, 2); P('barrel');
+  }
+  rr(c, -6.5, -25, 13, 11, 3.5); P('head');
+  rr(c, -4.5, -21, 9, 3, 1.5); P('visorf');
+  c.restore();
+}
+function geoEnemy(c, e, t, P) {
+  c.save(); c.translate(e.x, e.y); c.rotate(e.a);
+  const r = e.r;
+  if (e.type === 'bug') {
+    c.beginPath();
+    for (let i = -1; i <= 1; i++) for (const s of [-1, 1]) { const ph = Math.sin(t * 16 + i * 2 + s) * 2; c.moveTo(i * r * 0.4, 0); c.lineTo(i * r * 0.45 + ph, s * r * 1.15); }
+    P('eleg');
+    poly(c, [r * 1.25, 0, -r * 0.8, -r * 0.78, -r * 0.35, 0, -r * 0.8, r * 0.78]); P('ebody');
+    c.beginPath(); c.arc(r * 0.35, 0, r * 0.24, 0, TAU); P('ecore');
+  } else if (e.type === 'kami') {
+    c.beginPath(); for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; c.moveTo(Math.cos(a) * r * 1.35 + r * 0.45, Math.sin(a) * r * 1.35); c.arc(Math.cos(a) * r * 1.35, Math.sin(a) * r * 1.35, r * 0.45, 0, TAU); } P('eleg');
+    poly(c, [r, 0, 0, -r * 0.8, -r, 0, 0, r * 0.8]); P('ebody');
+    c.beginPath(); c.arc(0, 0, r * 0.3, 0, TAU); P('ecore');
+  } else if (e.type === 'tank') {
+    const h = []; for (let i = 0; i < 6; i++) { const a = i * TAU / 6; h.push(Math.cos(a) * r, Math.sin(a) * r); }
+    poly(c, h); P('ebody');
+    const h2 = []; for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + TAU / 12; h2.push(Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55); }
+    poly(c, h2); P('eline');
+    rr(c, r * 0.55, -r * 0.3, r * 0.35, r * 0.6, 1); P('ecore');
+  } else {
+    c.beginPath(); for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + Math.PI; c.moveTo(0, 0); c.lineTo(Math.cos(a) * r * 1.4, Math.sin(a) * r * 1.4); } P('eleg');
+    c.beginPath(); c.arc(0, 0, r * 0.85, 0, TAU); P('ebody');
+    rr(c, r * 0.4, -r * 0.18, r * 1.1, r * 0.36, 1); P('eline');
+    c.beginPath(); c.arc(0, 0, r * 0.28, 0, TAU); P('ecore');
+  }
+  c.restore();
+}
+
+/* ---- Стили ---- */
+let ECOL = '#ff3355';
+const STYLES = [
+  {
+    code: 'К-1', id: 'bp', name: 'Неоновый чертёж', pick: true,
+    pitch: 'Поле боя — живой технический чертёж. Робот вычерчен белой линией по тёмной кальке, Рой — раскалённые красные контуры. Всё, что светится, бьёт блумом.',
+    pal: [['#050c1c', 'калька'], ['#143a6b', 'сетка'], ['#eaf6ff', 'контур'], ['#46e3ff', 'энергия'], ['#ff3355', 'Рой']],
+    good: 'Уникально для жанра; холодный герой и горячий Рой читаются в любой толпе; трансформация буквально «перечерчивается».',
+    risk: 'Без блума выглядит тонко и «схемно» — нужен свет и толстые сердечники линий.',
+    bg(c, S) {
+      c.fillStyle = '#050c1c'; c.fillRect(0, 0, W, H);
+      c.lineWidth = LW(c, 1); c.strokeStyle = '#0b2142'; c.beginPath();
+      for (let x = 0; x <= W; x += 20) { c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, H); }
+      for (let y = 0; y <= H; y += 20) { c.moveTo(0, y + 0.5); c.lineTo(W, y + 0.5); }
+      c.stroke();
+      c.strokeStyle = '#163d6e'; c.beginPath();
+      for (let x = 0; x <= W; x += 100) { c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, H); }
+      for (let y = 0; y <= H; y += 100) { c.moveTo(0, y + 0.5); c.lineTo(W, y + 0.5); }
+      c.stroke();
+      c.strokeStyle = '#2c6aa8'; c.beginPath();
+      for (let x = 0; x <= W; x += 100) for (let y = 0; y <= H; y += 100) { c.moveTo(x - 4, y + 0.5); c.lineTo(x + 5, y + 0.5); c.moveTo(x + 0.5, y - 4); c.lineTo(x + 0.5, y + 5); }
+      c.stroke();
+      c.setLineDash([4, 5]); c.strokeStyle = '#1f5b96';
+      for (const k of [0, 1, 2]) { c.beginPath(); c.arc(112, 96, 20 + k * 16, 0, TAU); c.stroke(); }
+      c.beginPath(); c.arc(S.r.x, S.r.y, 118, 0, TAU); c.strokeStyle = 'rgba(70,227,255,0.16)'; c.stroke();
+      c.setLineDash([]);
+      poly(c, [500, 300, 560, 290, 590, 330, 550, 360, 505, 345]); c.strokeStyle = '#1f5b96'; c.stroke();
+      c.save(); poly(c, [500, 300, 560, 290, 590, 330, 550, 360, 505, 345]); c.clip(); c.beginPath(); for (let i = 480; i < 620; i += 7) { c.moveTo(i, 280); c.lineTo(i - 60, 370); } c.strokeStyle = 'rgba(31,91,150,0.5)'; c.stroke(); c.restore();
+      c.font = '500 9px "JetBrains Mono", monospace'; c.fillStyle = '#2f6aa3';
+      c.fillText('R 52', 140, 72); c.fillText('УЧ. 12-Б', 506, 380); c.fillText('X 1280 · Y −640', 404, 96); c.fillText('±0.00', 24, 384);
+      c.strokeStyle = '#2f6aa3'; c.beginPath(); c.moveTo(500, 286); c.lineTo(590, 286); c.moveTo(500, 282); c.lineTo(500, 290); c.moveTo(590, 282); c.lineTo(590, 290); c.stroke();
+      for (const l of S.li) { const q = 1 - l.t / l.d; glow(c, l.x, l.y, l.r, l.col === 'warm' ? '#ff5a2a' : l.col === 'white' ? '#9fe9ff' : '#46e3ff', 0.25 * q); }
+      const sy = ((S.t * 90) % (H + 160)) - 80; const g = c.createLinearGradient(0, sy - 40, 0, sy + 40);
+      g.addColorStop(0, 'rgba(70,227,255,0)'); g.addColorStop(0.5, 'rgba(70,227,255,0.05)'); g.addColorStop(1, 'rgba(70,227,255,0)'); c.fillStyle = g; c.fillRect(0, sy - 40, W, 80);
+    },
+    paint(c, role) {
+      if (role === 'panel' || role === 'head') { c.fillStyle = 'rgba(9,22,44,0.94)'; c.fill(); c.lineWidth = LW(c, 1.5); c.strokeStyle = '#eaf6ff'; c.stroke(); }
+      else if (role === 'dark') { c.fillStyle = 'rgba(6,14,30,0.96)'; c.fill(); c.lineWidth = LW(c, 1.2); c.strokeStyle = '#7fd8ff'; c.stroke(); }
+      else if (role === 'barrel') { c.fillStyle = '#0b1a33'; c.fill(); c.lineWidth = LW(c, 1.5); c.strokeStyle = '#46e3ff'; c.stroke(); }
+      else if (role === 'accent') { c.fillStyle = '#46e3ff'; c.fill(); }
+      else if (role === 'core') { c.fillStyle = '#dffbff'; c.fill(); c.lineWidth = LW(c, 1.2); c.strokeStyle = '#46e3ff'; c.stroke(); }
+      else if (role === 'visor') { c.lineWidth = LW(c, 2.2); c.strokeStyle = '#46e3ff'; c.stroke(); }
+      else if (role === 'visorf') { c.fillStyle = '#46e3ff'; c.fill(); }
+      else if (role === 'muzzle') { c.fillStyle = '#ffffff'; c.fill(); }
+      else if (role === 'ebody') { c.fillStyle = rgba(ECOL, 0.14); c.fill(); c.lineWidth = LW(c, 1.6); c.strokeStyle = ECOL; c.stroke(); }
+      else if (role === 'eline' || role === 'eleg') { c.lineWidth = LW(c, 1.1); c.strokeStyle = ECOL; c.stroke(); }
+      else if (role === 'ecore') { c.fillStyle = '#ffffff'; c.fill(); }
+    },
+    ecol: { bug: '#ff3355', kami: '#ff2a6a', tank: '#ff8a2a', gun: '#ff3fa4' },
+    bullet(c, b) { c.strokeStyle = '#46e3ff'; c.lineWidth = LW(c, 3); c.beginPath(); c.moveTo(b.x - b.vx * 0.018, b.y - b.vy * 0.018); c.lineTo(b.x, b.y); c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = LW(c, 1.2); c.stroke(); },
+    boom(c, b, col) {
+      const q = b.t / 0.7;
+      c.strokeStyle = rgba(col, 1 - q); c.lineWidth = LW(c, 1.5);
+      c.beginPath(); c.arc(b.x, b.y, b.r + q * 26, 0, TAU); c.stroke();
+      c.beginPath();
+      for (const s of b.sh) { const x = b.x + s.vx * b.t, y = b.y + s.vy * b.t, a = s.a + s.va * b.t; c.moveTo(x - Math.cos(a) * s.l, y - Math.sin(a) * s.l); c.lineTo(x + Math.cos(a) * s.l, y + Math.sin(a) * s.l); }
+      c.stroke();
+      if (q < 0.25) glow(c, b.x, b.y, 22, '#ffffff', 1 - q * 4);
+    },
+    fx(c, S) {
+      const r = S.r, q = S.tf;
+      if (q <= 0) return;
+      c.save(); c.strokeStyle = rgba('#46e3ff', q); c.lineWidth = LW(c, 1); c.setLineDash([3, 3]);
+      c.beginPath(); c.arc(r.x, r.y, 30 + (1 - q) * 60, 0, TAU); c.stroke(); c.setLineDash([]);
+      c.beginPath(); c.moveTo(r.x + 18, r.y - 18); c.lineTo(r.x + 70, r.y - 60); c.lineTo(r.x + 150, r.y - 60); c.stroke();
+      c.font = '700 10px "JetBrains Mono", monospace'; c.fillStyle = rgba('#eaf6ff', q); c.fillText('ШС · МК-III · ДЮЗЫ', r.x + 74, r.y - 66);
+      c.restore();
+      glow(c, r.x, r.y, 90 * q, '#46e3ff', 0.5 * q);
+    },
+    post(c, S, cv, B) { bloom(cv, B, 0.85); },
+    portraitBg: '#071430',
+  },
+  {
+    code: 'К-2', id: 'an', name: 'Аниме-меха',
+    pitch: 'Сел-шейдинг с жирным контуром, белый корпус с синими и красными панелями, импакт-кадры и линии скорости — как трансформация в мультфильме про боевых роботов.',
+    pal: [['#2a3346', 'земля'], ['#f4f6fb', 'броня'], ['#2c63ff', 'синий'], ['#ff3b3b', 'красный'], ['#ffd23f', 'визор']],
+    good: 'Самый «мультяшный» драйв; трансформации как в аниме; эффекты-звёзды очень сочные.',
+    risk: 'В толпе из сотен контуров становится шумно; легко скатиться в подражание чужим вселенным.',
+    bg(c, S) {
+      c.fillStyle = '#2a3346'; c.fillRect(0, 0, W, H);
+      c.fillStyle = '#303b51';
+      for (let i = 0; i < 7; i++) { poly(c, [i * 110 - 40, 0, i * 110 + 30, 0, i * 110 - 60, H, i * 110 - 130, H]); c.fill(); }
+      c.fillStyle = '#242c3d'; rr(c, 60, 300, 120, 60, 8); c.fill(); rr(c, 470, 40, 110, 50, 8); c.fill();
+      c.fillStyle = '#1d2433';
+      for (const e of S.en) { c.beginPath(); c.ellipse(e.x + 4, e.y + 6, e.r, e.r * 0.6, 0, 0, TAU); c.fill(); }
+      c.beginPath(); c.ellipse(S.r.x + 5, S.r.y + 8, 22, 14, 0, 0, TAU); c.fill();
+    },
+    paint(c, role) {
+      const two = (a, b) => { const g = c.createLinearGradient(0, -14, 0, 14); g.addColorStop(0, a); g.addColorStop(0.52, a); g.addColorStop(0.52, b); g.addColorStop(1, b); return g; };
+      c.lineJoin = 'round';
+      if (role === 'panel' || role === 'head') { c.fillStyle = two('#ffffff', '#c3cde3'); c.fill(); c.lineWidth = LW(c, 2.6); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'dark') { c.fillStyle = two('#4d7dff', '#2448c4'); c.fill(); c.lineWidth = LW(c, 2.6); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'barrel') { c.fillStyle = two('#ff5a5a', '#c41f2f'); c.fill(); c.lineWidth = LW(c, 2.4); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'accent' || role === 'core') { c.fillStyle = '#ffd23f'; c.fill(); c.lineWidth = LW(c, 2); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'visor') { c.lineWidth = LW(c, 4.5); c.strokeStyle = '#0b0b12'; c.stroke(); c.lineWidth = LW(c, 2.2); c.strokeStyle = '#ffd23f'; c.stroke(); }
+      else if (role === 'visorf') { c.fillStyle = '#ffd23f'; c.fill(); c.lineWidth = LW(c, 1.5); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'muzzle') { c.fillStyle = '#fff6b0'; c.fill(); c.lineWidth = LW(c, 2); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'ebody') { c.fillStyle = two(ECOL, '#3a1a5c'); c.fill(); c.lineWidth = LW(c, 2.6); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'eline') { c.lineWidth = LW(c, 2); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'eleg') { c.lineWidth = LW(c, 2.6); c.strokeStyle = '#0b0b12'; c.stroke(); }
+      else if (role === 'ecore') { c.fillStyle = '#ff2d55'; c.fill(); c.lineWidth = LW(c, 1.5); c.strokeStyle = '#0b0b12'; c.stroke(); }
+    },
+    ecol: { bug: '#7d43b8', kami: '#b8437d', tank: '#5b3aa0', gun: '#8f4fd0' },
+    bullet(c, b) { c.save(); c.translate(b.x, b.y); c.rotate(Math.atan2(b.vy, b.vx)); rr(c, -9, -2.8, 14, 5.6, 2.8); c.fillStyle = '#fff6b0'; c.fill(); c.lineWidth = LW(c, 2); c.strokeStyle = '#0b0b12'; c.stroke(); c.restore(); },
+    boom(c, b) {
+      const q = b.t / 0.7, R = b.r + 6 + q * 18;
+      if (q < 0.55) {
+        c.beginPath(); for (let i = 0; i < 16; i++) { const a = i * TAU / 16, rr2 = i % 2 ? R * 0.5 : R; c.lineTo(b.x + Math.cos(a) * rr2, b.y + Math.sin(a) * rr2); } c.closePath();
+        c.fillStyle = q < 0.2 ? '#ffffff' : '#ffd23f'; c.fill(); c.lineWidth = LW(c, 2.4); c.strokeStyle = '#0b0b12'; c.stroke();
+      }
+      c.fillStyle = rgba('#ff8a2a', 1 - q);
+      for (let i = 0; i < 10; i++) { const a = i * TAU / 10, d = R + q * 20; c.beginPath(); c.arc(b.x + Math.cos(a) * d, b.y + Math.sin(a) * d, 3 * (1 - q), 0, TAU); c.fill(); }
+    },
+    fx(c, S) {
+      const q = S.tf;
+      if (q <= 0) return;
+      c.save(); c.translate(S.r.x, S.r.y);
+      c.fillStyle = rgba('#ffffff', 0.85 * q);
+      for (let i = 0; i < 40; i++) { const a = i * TAU / 40 + (i * 7.3 % 1), r1 = 150 + (i * 37 % 60), r2 = 420; c.beginPath(); c.moveTo(Math.cos(a - 0.008) * r1, Math.sin(a - 0.008) * r1); c.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); c.lineTo(Math.cos(a + 0.008) * r1, Math.sin(a + 0.008) * r1); c.fill(); }
+      c.restore();
+      if (q > 0.6) { c.save(); c.font = '900 34px "Unbounded", sans-serif'; c.lineWidth = LW(c, 6); c.strokeStyle = '#0b0b12'; c.fillStyle = '#ffd23f'; c.translate(S.r.x - 120, S.r.y - 70); c.rotate(-0.12); c.strokeText('ТРАНСФОРМ!', 0, 0); c.fillText('ТРАНСФОРМ!', 0, 0); c.restore(); }
+    },
+    post(c, S, cv) { if (S.imp > 0) { S.imp--; c.save(); c.globalCompositeOperation = 'difference'; c.fillStyle = '#fff'; c.fillRect(0, 0, W, H); c.restore(); } },
+    portraitBg: '#2a3346',
+  },
+  {
+    code: 'К-3', id: 'po', name: 'Конструктивизм',
+    pitch: 'Плакат 1920-х на кремовой бумаге: красные клинья, чёрная геометрия, растр. Каждый кадр — агитплакат о битве машины с Роем.',
+    pal: [['#efe5cf', 'бумага'], ['#151515', 'тушь'], ['#d62828', 'краска'], ['#8a1c1c', 'тень'], ['#c9bc9c', 'растр']],
+    good: 'Самые запоминающиеся скриншоты; созвучно русскому названию и штампам ОТК.',
+    risk: 'Светлый фон утомляет в длинном забеге и гасит свечение эффектов; тяжело читать сотни фигур.',
+    bg(c, S) {
+      c.fillStyle = '#efe5cf'; c.fillRect(0, 0, W, H);
+      c.fillStyle = '#e4d6b8'; c.beginPath(); c.arc(520, 90, 150, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(214,40,40,0.9)'; poly(c, [0, 330, 420, 40, 460, 80, 40, 400]); c.fill();
+      c.strokeStyle = '#151515'; c.lineWidth = LW(c, 2); c.beginPath(); c.moveTo(0, 60); c.lineTo(640, 380); c.stroke();
+      c.lineWidth = LW(c, 1); c.beginPath(); c.moveTo(0, 80); c.lineTo(640, 400); c.stroke();
+      c.fillStyle = 'rgba(21,21,21,0.18)';
+      for (let y = 220; y < 400; y += 9) for (let x = 470; x < 640; x += 9) { const rr2 = 1 + ((x + y) % 27) / 9; c.beginPath(); c.arc(x, y, rr2, 0, TAU); c.fill(); }
+    },
+    paint(c, role) {
+      if (role === 'panel' || role === 'head') { c.fillStyle = '#151515'; c.fill(); }
+      else if (role === 'dark' || role === 'barrel') { c.fillStyle = '#d62828'; c.fill(); c.lineWidth = LW(c, 1.5); c.strokeStyle = '#151515'; c.stroke(); }
+      else if (role === 'accent' || role === 'core') { c.fillStyle = '#efe5cf'; c.fill(); }
+      else if (role === 'visor') { c.lineWidth = LW(c, 3); c.strokeStyle = '#efe5cf'; c.stroke(); }
+      else if (role === 'visorf') { c.fillStyle = '#efe5cf'; c.fill(); }
+      else if (role === 'muzzle') { c.fillStyle = '#d62828'; c.fill(); }
+      else if (role === 'ebody') { c.fillStyle = ECOL; c.fill(); c.lineWidth = LW(c, 1.5); c.strokeStyle = '#151515'; c.stroke(); }
+      else if (role === 'eline' || role === 'eleg') { c.lineWidth = LW(c, 1.6); c.strokeStyle = '#151515'; c.stroke(); }
+      else if (role === 'ecore') { c.fillStyle = '#151515'; c.fill(); }
+    },
+    ecol: { bug: '#d62828', kami: '#b31d1d', tank: '#8a1c1c', gun: '#d62828' },
+    bullet(c, b) { c.save(); c.translate(b.x, b.y); c.rotate(Math.atan2(b.vy, b.vx)); c.fillStyle = '#151515'; c.fillRect(-8, -1.6, 12, 3.2); c.restore(); },
+    boom(c, b) {
+      const q = b.t / 0.7;
+      c.fillStyle = rgba('#d62828', 1 - q); c.beginPath(); c.arc(b.x, b.y, b.r + q * 10, 0, TAU); c.fill();
+      c.fillStyle = rgba('#151515', 1 - q);
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + b.r, r1 = b.r + 4, r2 = b.r + 16 + q * 20; c.beginPath(); c.moveTo(b.x + Math.cos(a - 0.12) * r1, b.y + Math.sin(a - 0.12) * r1); c.lineTo(b.x + Math.cos(a) * r2, b.y + Math.sin(a) * r2); c.lineTo(b.x + Math.cos(a + 0.12) * r1, b.y + Math.sin(a + 0.12) * r1); c.fill(); }
+    },
+    fx(c, S) {
+      const q = S.tf;
+      if (q <= 0) return;
+      c.save(); c.globalAlpha = q;
+      c.fillStyle = '#d62828'; poly(c, [S.r.x, S.r.y, W + 40, S.r.y - 160, W + 40, S.r.y - 40]); c.fill();
+      c.translate(40, 70); c.rotate(-0.14); c.font = '900 30px "Unbounded", sans-serif'; c.fillStyle = '#151515'; c.fillText('ПЕРЕСБОРКА!', 0, 0);
+      c.restore();
+    },
+    post(c, S, cv) {
+      c.save(); c.globalAlpha = 0.06; c.fillStyle = '#7a6a48';
+      for (let i = 0; i < 260; i++) c.fillRect((i * 97.3) % W, (i * 61.7 + S.t * 3) % H, 2, 2);
+      c.restore();
+    },
+    portraitBg: '#efe5cf',
+  },
+  {
+    code: 'К-4', id: 'no', name: 'Индустриальный нуар',
+    pitch: 'Тёмный завод, стальные плиты, натриевые лампы. Видно только то, что освещено: фара робота, вспышки выстрелов и пламя взрывов.',
+    pal: [['#15171b', 'сталь'], ['#5a616c', 'оружейный металл'], ['#ffb84d', 'фара'], ['#ff6a1f', 'пламя'], ['#ffb000', 'глаза Роя']],
+    good: 'Атмосферно и «дорого»; свет делает каждый выстрел событием.',
+    risk: 'Темнота прячет угрозы — в выживаче это злит; тяжёлое освещение дорого на телефоне.',
+    bg(c, S) {
+      c.fillStyle = '#15171b'; c.fillRect(0, 0, W, H);
+      c.strokeStyle = '#0c0d10'; c.lineWidth = LW(c, 2);
+      for (let x = 0; x <= W; x += 80) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); }
+      for (let y = 0; y <= H; y += 80) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+      c.fillStyle = '#23262c';
+      for (let x = 0; x <= W; x += 80) for (let y = 0; y <= H; y += 80) for (const [dx, dy] of [[6, 6], [74, 6], [6, 74], [74, 74]]) { c.beginPath(); c.arc(x + dx, y + dy, 1.6, 0, TAU); c.fill(); }
+      c.save(); rr(c, 0, 350, W, 16, 0); c.clip(); c.fillStyle = '#c9a227'; for (let x = -20; x < W; x += 24) { poly(c, [x, 366, x + 12, 366, x + 28, 350, x + 16, 350]); c.fill(); } c.restore();
+      c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(140, 120, 50, 26, 0.3, 0, TAU); c.fill();
+    },
+    paint(c, role) {
+      if (role === 'panel' || role === 'head') { const g = c.createLinearGradient(-12, -12, 12, 12); g.addColorStop(0, '#8b929d'); g.addColorStop(0.5, '#575e69'); g.addColorStop(1, '#2a2e35'); c.fillStyle = g; c.fill(); c.lineWidth = LW(c, 1.4); c.strokeStyle = '#0d0f12'; c.stroke(); }
+      else if (role === 'dark') { c.fillStyle = '#2a2e35'; c.fill(); c.lineWidth = LW(c, 1.4); c.strokeStyle = '#0d0f12'; c.stroke(); }
+      else if (role === 'barrel') { c.fillStyle = '#3a3f47'; c.fill(); c.lineWidth = LW(c, 1.4); c.strokeStyle = '#0d0f12'; c.stroke(); }
+      else if (role === 'accent' || role === 'core') { c.fillStyle = '#ffb84d'; c.fill(); }
+      else if (role === 'visor') { c.lineWidth = LW(c, 2); c.strokeStyle = '#ffb84d'; c.stroke(); }
+      else if (role === 'visorf') { c.fillStyle = '#ffb84d'; c.fill(); }
+      else if (role === 'muzzle') { c.fillStyle = '#fff1c2'; c.fill(); }
+      else if (role === 'ebody') { c.fillStyle = '#2b2f35'; c.fill(); c.lineWidth = LW(c, 1.3); c.strokeStyle = '#0c0d10'; c.stroke(); }
+      else if (role === 'eline' || role === 'eleg') { c.lineWidth = LW(c, 1.4); c.strokeStyle = '#1a1c20'; c.stroke(); }
+      else if (role === 'ecore') { c.fillStyle = '#1a1c20'; c.fill(); }
+    },
+    ecol: { bug: '#2b2f35', kami: '#2b2f35', tank: '#2b2f35', gun: '#2b2f35' },
+    bullet(c, b) { c.strokeStyle = '#ffcf7a'; c.lineWidth = LW(c, 2); c.beginPath(); c.moveTo(b.x - b.vx * 0.03, b.y - b.vy * 0.03); c.lineTo(b.x, b.y); c.stroke(); },
+    boom(c, b) {
+      const q = b.t / 0.7;
+      c.fillStyle = rgba('#2a2a2a', 0.5 * (1 - q)); c.beginPath(); c.arc(b.x, b.y - q * 10, b.r + q * 20, 0, TAU); c.fill();
+      if (q < 0.4) { const g = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r + 14); g.addColorStop(0, 'rgba(255,240,200,1)'); g.addColorStop(0.4, 'rgba(255,140,40,0.9)'); g.addColorStop(1, 'rgba(255,80,20,0)'); c.fillStyle = g; c.beginPath(); c.arc(b.x, b.y, b.r + 14, 0, TAU); c.fill(); }
+    },
+    fx(c, S) {},
+    post(c, S, cv) {
+      const L = this.dark || (this.dark = mk(cv.width, cv.height));
+      const x = L.getContext('2d'), k = cv.width / W;
+      x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, L.width, L.height);
+      x.fillStyle = 'rgba(2,2,4,0.86)'; x.fillRect(0, 0, L.width, L.height);
+      x.setTransform(k, 0, 0, k, 0, 0); x.globalCompositeOperation = 'destination-out';
+      const hole = (px, py, r, a) => { const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, TAU); x.fill(); };
+      const r = S.r;
+      hole(r.x, r.y, 70, 0.9);
+      x.save(); x.translate(r.x, r.y); x.rotate(r.aim);
+      const g = x.createRadialGradient(0, 0, 10, 0, 0, 260); g.addColorStop(0, 'rgba(0,0,0,0.95)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, 260, -0.42, 0.42); x.closePath(); x.fill(); x.restore();
+      for (const l of S.li) hole(l.x, l.y, l.r * (l.col === 'white' ? 1 : 1.4), 0.9 * (1 - l.t / l.d));
+      hole(560, 70, 90, 0.7); hole(80, 330, 80, 0.6);
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(L, 0, 0); c.restore();
+      for (const e of S.en) { glow(c, e.x + Math.cos(e.a) * e.r * 0.4, e.y + Math.sin(e.a) * e.r * 0.4, 6, '#ffb000', 0.9); }
+      for (const b of S.bu) this.bullet(c, b);
+      glow(c, 560, 70, 40, '#ffb84d', 0.35); glow(c, 80, 330, 36, '#ffb84d', 0.3);
+      c.save(); c.globalAlpha = 0.07; c.fillStyle = '#ffffff'; for (let i = 0; i < 300; i++) c.fillRect(Math.random() * W, Math.random() * H, 1, 1); c.restore();
+    },
+    portraitBg: '#15171b',
+  },
+];
+
+function renderScene(cv, S, St, B) {
+  const c = cv.getContext('2d'), k = cv.width / W;
+  c.setTransform(k, 0, 0, k, 0, 0);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  St.bg(c, S);
+  const P = role => St.paint(c, role);
+  for (const e of S.en) { ECOL = St.ecol[e.type]; const sc = e.t < 0.25 ? 0.6 + e.t * 1.6 : 1; c.save(); c.translate(e.x, e.y); c.scale(sc, sc); c.translate(-e.x, -e.y); geoEnemy(c, e, S.t, P); c.restore(); if (e.fl > 0 && St.id !== 'no') glow(c, e.x, e.y, e.r * 1.6, '#ffffff', e.fl * 0.6); }
+  for (const b of S.bo) St.boom(c, b, St.ecol[b.type]);
+  geoTop(c, S.r, S.t, P, null, 1.55);
+  if (St.id === 'bp') { glow(c, S.r.x, S.r.y, 60, '#46e3ff', 0.22); }
+  if (St.id !== 'no') for (const b of S.bu) St.bullet(c, b);
+  St.fx(c, S);
+  St.post(c, S, cv, B);
+  // вставка: главный вид
+  c.setTransform(k, 0, 0, k, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  c.fillStyle = St.portraitBg; c.fillRect(12, 268, 100, 120);
+  c.strokeStyle = St.id === 'po' ? '#151515' : 'rgba(255,255,255,0.35)'; c.lineWidth = LW(c, 1); c.strokeRect(12.5, 268.5, 100, 120);
+  geoFront(c, 62, 336, 2.05, S.t, P);
+  if (St.id === 'bp') glow(c, 62, 330, 30, '#46e3ff', 0.2);
+  c.font = '700 8px "JetBrains Mono", monospace'; c.fillStyle = St.id === 'po' ? '#151515' : 'rgba(255,255,255,0.6)'; c.fillText('ГЛАВНЫЙ ВИД', 18, 382);
+}
+
+/* ---- Демо-анимации (К-1) ---- */
+const BP = STYLES[0];
+function bpBg(c, w, h, t) {
+  c.fillStyle = '#050c1c'; c.fillRect(0, 0, w, h);
+  c.lineWidth = LW(c, 1); c.strokeStyle = '#0b2142'; c.beginPath();
+  for (let x = 0; x <= w; x += 20) { c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, h); }
+  for (let y = 0; y <= h; y += 20) { c.moveTo(0, y + 0.5); c.lineTo(w, y + 0.5); }
+  c.stroke();
+  c.strokeStyle = '#163d6e'; c.beginPath();
+  for (let x = 0; x <= w; x += 100) { c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, h); }
+  for (let y = 0; y <= h; y += 100) { c.moveTo(0, y + 0.5); c.lineTo(w, y + 0.5); }
+  c.stroke();
+}
+const PBP = c => role => BP.paint(c, role);
+function label(c, x, y, txt, col) { c.font = '700 10px "JetBrains Mono", monospace'; c.fillStyle = col || '#eaf6ff'; c.fillText(txt, x, y); }
+const DEMOS = [
+  {
+    title: 'Рывок-рассыпание', cap: 'Робот разлетается на модули, каждый летит своей дугой и собирается в точке назначения. Неуязвимость на время перелёта.',
+    draw(c, t, cv, B) {
+      bpBg(c, W, H, t);
+      const T = 1.6, cyc = Math.floor(t / T), q = (t % T) / T;
+      const A = { x: 150, y: 210 }, Bp = { x: 490, y: 210 };
+      const from = cyc % 2 ? Bp : A, to = cyc % 2 ? A : Bp;
+      const parts = [['legs', 0, 0, 0], ['back', -13, 0, 1], ['armL', 6, -12, 2], ['armR', 6, 12, 3], ['torso', -1, 0, 4], ['head', 5, 0, 5]];
+      const dq = seg(q, 0.25, 0.55), dir = to.x > from.x ? 0 : Math.PI;
+      for (const [name, ax, ay, i] of parts) {
+        const d0 = i * 0.035, qq = easeOut(seg(q, 0.25 + d0, 0.5 + d0));
+        const off = (i % 2 ? 1 : -1) * (30 + i * 9);
+        const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2 + off;
+        const bx = (1 - qq) ** 2 * from.x + 2 * (1 - qq) * qq * mx + qq * qq * to.x;
+        const by = (1 - qq) ** 2 * from.y + 2 * (1 - qq) * qq * my + qq * qq * to.y;
+        if (qq > 0 && qq < 1) {
+          c.strokeStyle = rgba('#46e3ff', 0.55); c.lineWidth = LW(c, 2); c.beginPath();
+          for (let k = 0; k <= 10; k++) { const u = Math.max(0, qq - k * 0.03); const x = (1 - u) ** 2 * from.x + 2 * (1 - u) * u * mx + u * u * to.x, y = (1 - u) ** 2 * from.y + 2 * (1 - u) * u * my + u * u * to.y; k ? c.lineTo(x, y) : c.moveTo(x, y); }
+          c.stroke();
+        }
+        const spin = Math.sin(qq * Math.PI) * (i % 2 ? 1.2 : -1.2);
+        c.save(); c.translate(bx, by); c.rotate(spin); c.translate(-bx, -by);
+        geoTop(c, { x: bx, y: by, hd: dir, aim: dir, fire: 0, side: 1 }, qq > 0 && qq < 1 ? 0 : t, PBP(c), name, 2);
+        c.restore();
+      }
+      if (q > 0.55 && q < 0.75) { const k = seg(q, 0.55, 0.75); c.strokeStyle = rgba('#eaf6ff', 1 - k); c.lineWidth = LW(c, 2); c.beginPath(); c.arc(to.x, to.y, 20 + k * 60, 0, TAU); c.stroke(); glow(c, to.x, to.y, 70, '#46e3ff', 0.7 * (1 - k)); }
+      if (dq > 0 && dq < 1) { c.strokeStyle = 'rgba(234,246,255,0.18)'; c.lineWidth = LW(c, 1); for (let i = 0; i < 18; i++) { const y = 60 + i * 16, x0 = ((i * 97 + t * 900) % 700) - 60; c.beginPath(); c.moveTo(x0, y); c.lineTo(x0 + 60, y); c.stroke(); } }
+      label(c, 18, 26, 'РЫВОК · 0,25 С · НЕУЯЗВИМОСТЬ', '#7fd8ff');
+      bloom(cv, B, 0.6);
+    },
+  },
+  {
+    title: 'Рука → оружие', cap: 'При получении орудия рука отщёлкивается, перечерчивается в пушку и встаёт на место. Дальше модуль стреляет и даёт отдачу.',
+    draw(c, t, cv, B) {
+      bpBg(c, W, H, t);
+      const T = 3.4, q = (t % T) / T, P = PBP(c);
+      const cx = 250, cy = 220, s = 5.2;
+      geoFront(c, cx, cy, s, t, P, { skip: 'armR' });
+      const fly = easeOut(seg(q, 0.08, 0.22)), back = easeBack(seg(q, 0.45, 0.56));
+      const hx = cx + 13.5 * s, hy = cy + 5 * s;
+      let ox = hx + fly * 90 * (1 - back), oy = hy - fly * 50 * (1 - back);
+      const rot = fly * Math.PI * 1.5 * (1 - back);
+      const draw = seg(q, 0.22, 0.44);
+      c.save(); c.translate(ox, oy); c.rotate(rot); c.scale(s, s);
+      if (q < 0.22) { rr(c, -3, -6, 6, 12, 2); P('barrel'); }
+      else {
+        c.setLineDash(draw < 1 ? [draw * 90, 90] : []);
+        rr(c, -4.5, -6, 9, 12, 2); if (draw >= 1) { P('panel'); } else { c.lineWidth = LW(c, 1.6); c.strokeStyle = '#46e3ff'; c.stroke(); }
+        rr(c, -2.2, 6, 4.4, 14, 1.2); if (draw >= 1) { P('barrel'); } else { c.lineWidth = LW(c, 1.6); c.strokeStyle = '#46e3ff'; c.stroke(); }
+        c.beginPath(); c.arc(0, 0, 2.2, 0, TAU); if (draw >= 1) P('core'); else { c.lineWidth = LW(c, 1.6); c.strokeStyle = '#46e3ff'; c.stroke(); }
+        c.setLineDash([]);
+      }
+      c.restore();
+      if (q > 0.22 && q < 0.46) { c.strokeStyle = '#2f6aa3'; c.lineWidth = LW(c, 1); c.beginPath(); c.moveTo(ox + 30, oy - 30); c.lineTo(ox + 70, oy - 70); c.lineTo(ox + 230, oy - 70); c.stroke(); label(c, ox + 74, oy - 76, 'ОР-01 · ИМПУЛЬСНЫЙ БЛАСТЕР'); }
+      if (q > 0.55 && q < 0.6) glow(c, hx, hy, 60, '#eaf6ff', 1);
+      if (q > 0.62) {
+        const k = ((q - 0.62) * T * 3.2) % 1, mx = hx + 2, my = hy + 22 * s / 5.2 * 3;
+        const bx = mx + k * 380;
+        c.strokeStyle = '#46e3ff'; c.lineWidth = LW(c, 6); c.beginPath(); c.moveTo(bx - 40, my); c.lineTo(bx, my); c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = LW(c, 2); c.stroke();
+        if (k < 0.15) { glow(c, mx, my, 40, '#ffffff', 1 - k * 6); }
+      }
+      label(c, 18, 26, 'МОНТАЖ ОРУДИЯ · ПРАВЫЙ МАНИПУЛЯТОР', '#7fd8ff');
+      bloom(cv, B, 0.6);
+    },
+  },
+  {
+    title: 'Импакт-кадр', cap: 'Удар по боссу, смена формы и эволюция получают кадр-инверсию, линии скорости и разлёт осколков контура — приём из аниме.',
+    draw(c, t, cv, B) {
+      bpBg(c, W, H, t);
+      const T = 2.6, q = (t % T) / T, P = PBP(c);
+      const bx = 470, by = 200;
+      const shake = q > 0.4 && q < 0.5 ? (Math.random() - 0.5) * 10 : 0;
+      ECOL = '#ff3355';
+      c.save(); c.translate(shake, 0);
+      const hex = []; for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + t * 0.4; hex.push(bx + Math.cos(a) * 70, by + Math.sin(a) * 70); }
+      poly(c, hex); P('ebody');
+      const hex2 = []; for (let i = 0; i < 6; i++) { const a = i * TAU / 6 - t * 0.6; hex2.push(bx + Math.cos(a) * 40, by + Math.sin(a) * 40); }
+      poly(c, hex2); P('eline');
+      c.beginPath(); c.arc(bx, by, 14, 0, TAU); P('ecore'); glow(c, bx, by, 50, '#ff3355', 0.6);
+      c.restore();
+      geoTop(c, { x: 140, y: 210, hd: 0, aim: 0, fire: q > 0.36 && q < 0.42 ? 1 : 0, side: 1 }, t, P, null, 2.2);
+      if (q > 0.36 && q < 0.5) { const k = seg(q, 0.36, 0.5); c.strokeStyle = rgba('#eaf6ff', 1 - k); c.lineWidth = LW(c, 1) * 14 * (1 - k) + 2; c.beginPath(); c.moveTo(195, 236); c.lineTo(bx, by); c.stroke(); }
+      if (q > 0.4 && q < 0.75) {
+        const k = seg(q, 0.4, 0.75);
+        c.strokeStyle = rgba('#ff8a8a', 1 - k); c.lineWidth = LW(c, 2); c.beginPath();
+        for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + 0.3, d = 70 + k * 140; c.moveTo(bx + Math.cos(a) * d, by + Math.sin(a) * d); c.lineTo(bx + Math.cos(a + 0.2) * (d + 14), by + Math.sin(a + 0.2) * (d + 14)); }
+        c.stroke();
+        c.fillStyle = rgba('#ffffff', 0.5 * (1 - k));
+        for (let i = 0; i < 46; i++) { const a = i * TAU / 46, r1 = 230 + (i * 31 % 50); c.beginPath(); c.moveTo(bx + Math.cos(a - 0.01) * r1, by + Math.sin(a - 0.01) * r1); c.lineTo(bx + Math.cos(a) * 800, by + Math.sin(a) * 800); c.lineTo(bx + Math.cos(a + 0.01) * r1, by + Math.sin(a + 0.01) * r1); c.fill(); }
+      }
+      label(c, 18, 26, 'РЕЛЬСОТРОН → «ЯДРО РОЯ»', '#7fd8ff');
+      bloom(cv, B, 0.85);
+      if (q > 0.4 && q < 0.43) { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'difference'; c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); c.restore(); }
+    },
+  },
+  {
+    title: 'Сборка по чертежу', cap: 'Трансформация модуля: старые ноги рассыпаются на штрихи, новые вычерчиваются пером с размерами, затем получают штамп ОТК.',
+    draw(c, t, cv, B) {
+      bpBg(c, W, H, t);
+      const T = 3.6, q = (t % T) / T, P = PBP(c);
+      const cx = 300, cy = 190, s = 5;
+      geoFront(c, cx, cy, s, t, P, { skip: 'legs' });
+      const out = seg(q, 0.05, 0.3), drawq = seg(q, 0.28, 0.6), fill = q > 0.62;
+      if (out < 1) {
+        c.strokeStyle = rgba('#eaf6ff', 1 - out); c.lineWidth = LW(c, 1.4); c.beginPath();
+        for (let i = 0; i < 14; i++) { const a = i * 2.4, d = out * 120, x = cx + ((i % 2) ? 28 : -28) + Math.cos(a) * d, y = cy + 80 + Math.sin(a) * d * 0.6; c.moveTo(x - 8, y); c.lineTo(x + 8, y + 4); }
+        c.stroke();
+      }
+      c.save(); c.translate(cx, cy); c.scale(s, s);
+      for (const k of [-1, 1]) {
+        c.setLineDash(drawq < 1 ? [drawq * 60, 60] : []);
+        poly(c, [k * 4 - 3, 8, k * 4 + 3, 8, k * 5 + 3.5, 18, k * 5 - 3.5, 18]);
+        if (fill) P('panel'); else { c.lineWidth = LW(c, 1.6); c.strokeStyle = '#46e3ff'; c.stroke(); }
+        poly(c, [k * 5 - 3, 18, k * 5 + 3, 18, k * 5 + 4.2, 21.5, k * 5 - 4.2, 21.5]);
+        if (fill) P('dark'); else c.stroke();
+        c.setLineDash([]);
+      }
+      c.restore();
+      if (fill) for (const k of [-1, 1]) { const fx = cx + k * 5 * s, fy = cy + 21.5 * s; const g = c.createLinearGradient(0, fy, 0, fy + 40); g.addColorStop(0, '#ffffff'); g.addColorStop(0.3, rgba('#46e3ff', 0.9)); g.addColorStop(1, rgba('#46e3ff', 0)); c.fillStyle = g; c.beginPath(); c.moveTo(fx - 14, fy); c.quadraticCurveTo(fx, fy + 50 + Math.sin(t * 30) * 6, fx + 14, fy); c.fill(); }
+      if (q > 0.28) {
+        c.strokeStyle = '#2f6aa3'; c.lineWidth = LW(c, 1); c.beginPath();
+        c.moveTo(cx - 45, cy + 40); c.lineTo(cx - 45, cy + 108); c.moveTo(cx - 50, cy + 40); c.lineTo(cx - 40, cy + 40); c.moveTo(cx - 50, cy + 108); c.lineTo(cx - 40, cy + 108);
+        c.moveTo(cx + 30, cy + 70); c.lineTo(cx + 110, cy + 30); c.lineTo(cx + 260, cy + 30); c.stroke();
+        label(c, cx - 92, cy + 78, 'H 68', '#7fd8ff'); label(c, cx + 114, cy + 24, 'ШС · МК-III · ДЮЗЫ');
+      }
+      if (q > 0.66) {
+        const k = seg(q, 0.66, 0.72), sc = 2 - k;
+        c.save(); c.translate(cx + 190, cy + 80); c.rotate(-0.2); c.scale(sc, sc); c.globalAlpha = Math.min(1, k * 2);
+        c.strokeStyle = '#ff4d5e'; c.lineWidth = LW(c, 3); c.strokeRect(-46, -20, 92, 40);
+        c.font = '900 18px "Unbounded", sans-serif'; c.fillStyle = '#ff4d5e'; c.textAlign = 'center'; c.fillText('ОТК', 0, 4); c.font = '700 8px "JetBrains Mono", monospace'; c.fillText('ПРИНЯТО', 0, 15);
+        c.restore();
+      }
+      label(c, 18, 26, 'ТРАНСФОРМАЦИЯ МОДУЛЯ · ШАССИ', '#7fd8ff');
+      bloom(cv, B, 0.6);
+    },
+  },
+];
+const VIEWS = [
+  {
+    title: 'Главный вид', cap: 'Робот стоит как персонаж: виден силуэт, голова, руки-орудия. Привычно для жанра, лучше для портретов в меню.',
+    draw(c, t, cv, B) {
+      bpBg(c, W, H, t);
+      const P = PBP(c);
+      geoFront(c, 320, 200, 6, t, P);
+      glow(c, 320, 180, 120, '#46e3ff', 0.18);
+      c.strokeStyle = '#2f6aa3'; c.lineWidth = LW(c, 1); c.beginPath();
+      const L = [[320, 60, 430, 40, 'СН · СЕНСОРЫ'], [400, 170, 500, 140, 'МН · МАНИПУЛЯТОРЫ'], [320, 182, 180, 150, 'ЯД · ЯДРО'], [300, 320, 160, 350, 'ШС · ШАССИ'], [310, 100, 170, 70, 'ГН · ГЕНЕРАТОР']];
+      for (const l of L) { c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); }
+      c.stroke();
+      for (const l of L) { c.textAlign = l[2] > l[0] ? 'left' : 'right'; label(c, l[2] + (l[2] > l[0] ? 6 : -6), l[3] + 4, l[4]); }
+      c.textAlign = 'left';
+      bloom(cv, B, 0.6);
+    },
+  },
+  {
+    title: 'Вид сверху', cap: 'Ноги шагают по направлению движения, корпус с руками доворачивается к цели. Лучше видно, куда бьёт каждое орудие.',
+    draw(c, t, cv, B) {
+      bpBg(c, W, H, t);
+      const P = PBP(c);
+      const hd = t * 0.6, aim = Math.sin(t * 0.9) * 1.1 + 0.2;
+      geoTop(c, { x: 320, y: 200, hd, aim, fire: (t * 3) % 1 < 0.2 ? 1 : 0, side: 1 }, t, P, null, 5);
+      glow(c, 320, 200, 130, '#46e3ff', 0.16);
+      c.strokeStyle = 'rgba(70,227,255,0.4)'; c.setLineDash([4, 6]); c.lineWidth = LW(c, 1);
+      c.beginPath(); c.moveTo(320, 200); c.lineTo(320 + Math.cos(hd) * 170, 200 + Math.sin(hd) * 170); c.stroke();
+      c.strokeStyle = 'rgba(255,211,107,0.55)'; c.beginPath(); c.moveTo(320, 200); c.lineTo(320 + Math.cos(aim) * 200, 200 + Math.sin(aim) * 200); c.stroke(); c.setLineDash([]);
+      label(c, 320 + Math.cos(hd) * 176, 200 + Math.sin(hd) * 176, 'ХОД', '#7fd8ff'); label(c, 320 + Math.cos(aim) * 206, 200 + Math.sin(aim) * 206, 'ЦЕЛЬ', '#ffd36b');
+      bloom(cv, B, 0.6);
+    },
+  },
+];
+
+/* ---- Сборка страницы и цикл ---- */
+const items = [];
+function addCanvas(host, html) {
+  const el = document.createElement(host.dataset.kind || 'article');
+  el.innerHTML = html;
+  host.appendChild(el);
+  const cv = el.querySelector('canvas');
+  const k = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = W * k; cv.height = H * k;
+  return { el, cv };
+}
+const conc = document.getElementById('concepts');
+for (const St of STYLES) {
+  const sw = St.pal.map(p => `<span><i style="background:${p[0]}"></i>${p[1]}</span>`).join('');
+  const { el, cv } = addCanvas(conc, `<canvas aria-label="Концепт ${St.name}"></canvas><div class="meta"><div class="top"><span class="code">${St.code}</span><span class="name">${St.name}</span><span class="chip">${St.pick ? 'Выбран' : 'Вариант'}</span></div><p class="pitch">${St.pitch}</p><div class="swatches">${sw}</div><div class="pros"><b>Плюсы</b><span>${St.good}</span><b>Риск</b><span>${St.risk}</span></div></div>`);
+  el.className = 'concept' + (St.pick ? ' pick' : '');
+  const S = scene();
+  for (let i = 0; i < 90; i++) step(S, 1 / 30);
+  items.push({ cv, B: makeBloom(cv), tick(dt) { step(S, dt); renderScene(cv, S, St, this.B); }, vis: true });
+}
+function addDemo(hostId, D) {
+  const host = document.getElementById(hostId);
+  const box = document.createElement('div'); box.className = 'demo';
+  box.innerHTML = `<canvas aria-label="${D.title}"></canvas><div class="cap"><b>${D.title}</b><span>${D.cap}</span></div>`;
+  host.appendChild(box);
+  const cv = box.querySelector('canvas'), k = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = W * k; cv.height = H * k;
+  let t = 0;
+  items.push({ cv, B: makeBloom(cv), tick(dt) { t += dt; const c = cv.getContext('2d'); c.setTransform(k, 0, 0, k, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; D.draw(c, t, cv, this.B); }, vis: true });
+}
+for (const D of DEMOS) addDemo('demos', D);
+for (const D of VIEWS) addDemo('views', D);
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver(es => { for (const e of es) { const it = items.find(i => i.cv === e.target); if (it) it.vis = e.isIntersecting; } }, { rootMargin: '100px' });
+  for (const it of items) io.observe(it.cv);
+}
+const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let last = performance.now();
+for (const it of items) it.tick(1 / 30);
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!still) for (const it of items) if (it.vis) it.tick(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

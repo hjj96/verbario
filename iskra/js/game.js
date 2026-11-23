@@ -101,6 +101,7 @@ function newPlayer(robot) {
     shield: { has: false, ready: true, t: 0, cd: 12 },
     revives: 0, phoenixUsed: false, still: 0, siege: false,
     look: null, featherT: 0, haloT: 0, ramT: 0, pulseT: 40, citadelT: 0, regenAcc: 0,
+    aim: 0, hd: 0, view: (SAVE && SAVE.settings.view) || 'top', squash: 0, split: null,
     time() { return G.time; },
   };
 }
@@ -128,9 +129,9 @@ function startRun(robotId, sectorId, threat) {
   P.dash.charges = P.stats.dashCharges;
   let wid = robot.weapon;
   if (!wid) wid = pick(WEAPON_ORDER);
-  addWeapon(wid);
   P.form = formFor(totalRanks());
   P.look = makeLook(robot, P.parts, P.form, 0);
+  addWeapon(wid);
   G.cam.x = 0; G.cam.y = 0; G.cam.zoom = 1;
   buildEnemySprites(sector.pal);
   buildBackground(sector);
@@ -143,11 +144,15 @@ function startRun(robotId, sectorId, threat) {
   UI.onRunStart();
 }
 
-function addWeapon(id) {
-  const w = { id, lvl: 1, evo: false, t: 0.3, st: {}, p: null };
+function addWeapon(id, silent) {
+  const w = { id, lvl: 1, evo: false, t: 0.3, st: {}, p: null, anim: { fire: 0, swing: 0, out: 0 } };
+  w.slot = assignSlot(id);
   P.weapons.push(w);
   if (P.stats) computeWeapon(w);
   discover('weapons', id);
+  if (!silent && P.look) {
+    G.tf.push(seqMount(P, w, { onStart() { UI.mountCard(w); } }));
+  }
   return w;
 }
 function totalRanks() { let s = 0; for (const k of PART_ORDER) s += P.parts[k].rank; return s; }
@@ -491,7 +496,7 @@ function updatePlayer(dt) {
     P.dash.t -= dt;
     const ds = 640;
     P.x += P.dash.dx * ds * dt; P.y += P.dash.dy * ds * dt;
-    if (Math.random() < 0.9) FX.ghosts.push({ x: P.x, y: P.y, life: 0.25, max: 0.25, face: P.face });
+    if (!P.split && Math.random() < 0.9) FX.ghosts.push({ x: P.x, y: P.y, life: 0.25, max: 0.25, face: P.face });
     if (hasBranch('legs', 'B') && !hasBranch('legs', 'B', 5)) {
       P.dash.trailT -= dt;
       if (P.dash.trailT <= 0) { P.dash.trailT = 0.03; spawnArea('fire', P.x, P.y + 12, { r: 20, life: 2.2, dmg: (P.parts.legs.rank >= 4 ? 9 : 5) * S.might, tick: 0.25, burn: 4 * S.burn, src: 'legs' }); }
@@ -510,7 +515,14 @@ function updatePlayer(dt) {
   }
   const moving = Math.hypot(mv.x, mv.y);
   P.moving = lerp(P.moving, moving > 0.1 ? 1 : 0, 1 - Math.exp(-10 * dt));
-  if (mv.x > 0.15) P.face = 1; else if (mv.x < -0.15) P.face = -1;
+  const tgt = nearestEnemy(P.x, P.y, 560);
+  const want = tgt ? Math.atan2(tgt.y - P.y, tgt.x - P.x) : (moving > 0.1 ? Math.atan2(mv.y, mv.x) : P.aim);
+  P.aim += angDiff(P.aim, want) * Math.min(1, dt * 14);
+  if (moving > 0.1) P.hd += angDiff(P.hd, Math.atan2(mv.y, mv.x)) * Math.min(1, dt * 12);
+  if (tgt) P.face = Math.cos(P.aim) >= 0 ? 1 : -1;
+  else if (mv.x > 0.15) P.face = 1; else if (mv.x < -0.15) P.face = -1;
+  P.squash = Math.max(0, P.squash - dt * 5);
+  if (P.split) { P.split.t += dt; if (P.split.t >= P.split.dur + 0.04) splitArrive(); }
   P.wp += dt * (6 + S.speed / 30) * moving;
   P.dist += Math.hypot(P.vx, P.vy) * dt;
   if (moving < 0.1) P.still += dt; else P.still = 0;
@@ -590,16 +602,37 @@ function tryDash(mv) {
     const ox = P.x, oy = P.y;
     blinkBoom(ox, oy);
     P.x += dx * dist; P.y += dy * dist;
+    startSplit(ox, oy, P.x, P.y, 0.14);
     blinkBoom(P.x, P.y);
     P.iframes = Math.max(P.iframes, 0.35);
     for (let i = 0; i < 6; i++) FX.ghosts.push({ x: lerp(ox, P.x, i / 6), y: lerp(oy, P.y, i / 6), life: 0.3, max: 0.3, face: P.face });
     AUDIO.sfx('blink');
     return;
   }
-  P.dash.t = 0.17; P.dash.dx = dx; P.dash.dy = dy; P.dash.hit = new Set();
-  P.iframes = Math.max(P.iframes, 0.3);
+  P.dash.t = 0.22; P.dash.dx = dx; P.dash.dy = dy; P.dash.hit = new Set();
+  P.iframes = Math.max(P.iframes, 0.34);
+  startSplit(P.x, P.y, P.x + dx * 640 * 0.22, P.y + dy * 640 * 0.22, 0.22);
   AUDIO.sfx('dash');
   FX.ring(P.x, P.y, 6, 40, 0.25, '#bff6ff', 2);
+}
+// робот разлетается на модули, каждый летит своей дугой и собирается в точке назначения
+const SPLIT_PARTS = [
+  { only: 'legs', d: 0.0 }, { only: 'back', d: 0.05 }, { only: 'core', d: 0.02 },
+  { only: 'arms', armSide: -1, d: 0.07 }, { only: 'arms', armSide: 1, d: 0.04 }, { only: 'head', d: 0.09 },
+];
+function startSplit(fx, fy, tx, ty, dur) {
+  const dx = tx - fx, dy = ty - fy, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+  P.split = { t: 0, dur, fx, fy, tx, ty, parts: SPLIT_PARTS.map((p, i) => Object.assign({}, p, { bend: (i % 2 ? 1 : -1) * rand(28, 64), nx, ny, spin: rand(-2.4, 2.4) })) };
+  FX.speedDir = Math.atan2(dy, dx); FX.speedT = dur + 0.1;
+  FX.shards(fx, fy, 6, '#bff6ff', 140);
+}
+function splitArrive() {
+  const s = P.split;
+  P.split = null;
+  FX.ring(P.x, P.y, 4, 64, 0.3, '#eaf6ff', 2.5);
+  FX.sparks(P.x, P.y, 12, '#bff6ff', 240, undefined, 0, 0.35);
+  FX.light(P.x, P.y, 110, '#46e3ff', 0.5);
+  AUDIO.sfx('clank');
 }
 function blinkBoom(x, y) {
   const S = P.stats;
@@ -760,7 +793,8 @@ function applyChestRewards(res) {
 function evolveWeapon(wid, evo) {
   const w = P.weapons.find(x => x.id === wid);
   if (!w) return;
-  G.tf.push(seqEvolve(P, evo, {
+  G.tf.push(seqMount(P, w, {
+    evo,
     onStart() { UI.evolveCard(wid, evo); },
     onCommit() {
       w.id = evo; w.evo = true; w.lvl = 8; w.st = {}; w.t = 0.2;
@@ -865,7 +899,7 @@ const SAVE_KEY = 'iskra_save_v1';
 let SAVE = null;
 function defaultSave() {
   return { v: 1, scrap: 0, upg: {}, ach: {}, best: {}, threat: {}, branches: {}, stats: {}, discovered: { weapons: {}, evolutions: {}, enemies: {} },
-    settings: { music: 0.55, sfx: 0.75, dmg: true, shake: true, quality: 'auto' }, last: { robot: 'iskra', sector: 'rust', threat: 0 }, seenIntro: false };
+    settings: { music: 0.55, sfx: 0.75, dmg: true, shake: true, quality: 'auto', view: 'top' }, last: { robot: 'iskra', sector: 'rust', threat: 0 }, seenIntro: false };
 }
 function loadSave() {
   const d = defaultSave();

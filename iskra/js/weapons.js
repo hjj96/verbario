@@ -8,8 +8,14 @@ function cdReady(w, dt, spd) { w.t -= dt * spd; return w.t <= 0; }
 function updateWeapons(dt) {
   P.gooOn = false; P.novaOn = false; P.zeroBonus = false; P.leechBudget = Math.min((P.leechBudget || 0) + dt * 4, 4);
   const spd = P.od.active ? 2 : 1;
-  for (const w of P.weapons) { const b = WB[w.id]; if (b) b(w, dt, spd); }
+  for (const w of P.weapons) {
+    const b = WB[w.id]; if (b) b(w, dt, spd);
+    const A = w.anim || (w.anim = { fire: 0, swing: 0, out: 0 });
+    A.fire = Math.max(0, A.fire - dt * 7); A.swing = Math.max(0, A.swing - dt * 3.2);
+    A.out = (w.st.outN || 0) > 0 || w.id === 'bladestorm' ? 1 : 0;
+  }
 }
+function fired(w, k) { if (w.anim) w.anim.fire = Math.max(w.anim.fire, k === undefined ? 1 : k); }
 function leech(v) {
   if (P.leechBudget <= 0 || P.hp >= P.stats.maxHp) return;
   const h = Math.min(v, P.leechBudget);
@@ -49,8 +55,9 @@ WB.blaster = (w, dt, spd) => {
 };
 function fireBolt(w, tgt) {
   const p = w.p;
-  const ang = (tgt && tgt.alive ? Math.atan2(tgt.y - P.y, tgt.x - P.x) : aimAt(null)) + rand(-0.04, 0.04);
-  const sx = P.x + Math.cos(ang) * 14, sy = P.y - 4 + Math.sin(ang) * 14;
+  const m = muzzleWorld(w), sx = m.x, sy = m.y;
+  const ang = (tgt && tgt.alive ? Math.atan2(tgt.y - sy, tgt.x - sx) : aimAt(null)) + rand(-0.04, 0.04);
+  fired(w);
   spawnProj('bolt', sx, sy, Math.cos(ang) * p.speed, Math.sin(ang) * p.speed, { dmg: p.dmg, pierce: p.pierce, r: p.size, life: p.life, src: w.id, col: WEAPONS.blaster.color, kb: 40 });
   P.fire = 1;
   AUDIO.sfx('shoot', { f: 920 });
@@ -60,10 +67,11 @@ WB.annihilator = (w, dt, spd) => {
   if (!cdReady(w, dt, spd)) return;
   const p = w.p, tgt = nearestEnemy(P.x, P.y, 640);
   if (!tgt) { w.t = 0.15; return; }
-  const base = aimAt(tgt), n = p.amount;
+  const m = muzzleWorld(w), base = Math.atan2(tgt.y - m.y, tgt.x - m.x), n = p.amount;
+  fired(w);
   for (let i = 0; i < n; i++) {
     const a = base + (i - (n - 1) / 2) * 0.17;
-    spawnProj('orb', P.x + Math.cos(a) * 14, P.y - 4 + Math.sin(a) * 14, Math.cos(a) * p.speed, Math.sin(a) * p.speed,
+    spawnProj('orb', m.x, m.y, Math.cos(a) * p.speed, Math.sin(a) * p.speed,
       { dmg: p.dmg, pierce: 999, r: p.size * Math.sqrt(p.area), life: p.life, src: w.id, col: EVOS.annihilator.color, blast: p.blast * p.area, kb: 60 });
   }
   w.t = p.cd; P.fire = 1; AUDIO.sfx('laser');
@@ -84,7 +92,7 @@ function swing(w, ang) {
   const p = w.p, range = p.range * p.area, half = p.arc / 2;
   FX.slash(P.x, P.y - 4, ang, p.arc, range, 0.24, WEAPONS.blade.color);
   AUDIO.sfx('swing');
-  P.fire = 1;
+  P.fire = 1; if (w.anim) { w.anim.swing = 1; w.anim.fire = 0.6; }
   eachEnemyIn(P.x, P.y, range, e => {
     if (Math.abs(angDiff(ang, Math.atan2(e.y - P.y, e.x - P.x))) <= half + 0.2) hitEnemy(e, p.dmg, { src: w.id, kb: p.kb, burn: p.burn || 0 });
   });
@@ -196,8 +204,9 @@ WB.arc = (w, dt, spd) => {
   if (!cdReady(w, dt, spd)) return;
   const p = w.p, firsts = nearestK(P.x, P.y, p.amount, p.reach);
   if (!firsts.length) { w.t = 0.15; return; }
-  for (const f of firsts) chainZap(P.x, P.y - 8, f, p.chains, p.range, p.dmg, w.id, p.stun, WEAPONS.arc.color);
-  w.t = p.cd; P.fire = 1; AUDIO.sfx('zap');
+  const m = muzzleWorld(w);
+  for (const f of firsts) chainZap(m.x, m.y, f, p.chains, p.range, p.dmg, w.id, p.stun, WEAPONS.arc.color);
+  w.t = p.cd; P.fire = 1; fired(w); AUDIO.sfx('zap');
 };
 WB.stormdome = (w, dt, spd) => {
   const p = w.p, st = w.st;
@@ -219,7 +228,8 @@ WB.stormdome = (w, dt, spd) => {
   if (!t) { w.t = 0.2; return; }
   FX.lightning(t.x + rand(-40, 40), t.y - 360, t.x, t.y, '#e2d4ff', 2, 0.18, 22);
   chainZap(t.x, t.y, t, p.chains, p.range, p.dmg, w.id, p.stun, '#e2d4ff');
-  w.t = p.cd; AUDIO.sfx('zap');
+  FX.light(t.x, t.y, 80, '#c9a6ff', 0.5);
+  w.t = p.cd; fired(w, 0.7); AUDIO.sfx('zap');
 };
 
 /* ---------- Ракеты ---------- */
@@ -227,9 +237,11 @@ WB.missiles = (w, dt, spd) => {
   if (!cdReady(w, dt, spd)) return;
   const p = w.p, tg = nearestK(P.x, P.y, 8, 520);
   if (!tg.length) { w.t = 0.2; return; }
+  const m = muzzleWorld(w);
+  fired(w);
   for (let i = 0; i < p.amount; i++) {
-    const a = -Math.PI / 2 + rand(-1.3, 1.3);
-    spawnProj('missile', P.x + rand(-6, 6), P.y - 16, Math.cos(a) * 150, Math.sin(a) * 150,
+    const a = P.aim + rand(-1.1, 1.1);
+    spawnProj('missile', m.x + rand(-3, 3), m.y + rand(-3, 3), Math.cos(a) * 150, Math.sin(a) * 150,
       { dmg: p.dmg, pierce: 1, r: 5, life: p.life, src: w.id, target: tg[i % tg.length], speed: p.speed, turn: p.turn, blast: p.blast * p.area, col: '#ff9a3d' });
   }
   w.t = p.cd; AUDIO.sfx('missile');
@@ -240,18 +252,21 @@ WB.carpet = (w, dt, spd) => {
   for (const e of G.enemies) if (targetable(e) && onScreen(e, 20)) list.push(e);
   if (!list.length) { w.t = 0.2; return; }
   shuffle(list);
+  const m = muzzleWorld(w);
+  fired(w);
   for (let i = 0; i < p.amount; i++) {
-    const a = -Math.PI / 2 + rand(-1.5, 1.5);
-    spawnProj('missile', P.x + rand(-8, 8), P.y - 16, Math.cos(a) * 180, Math.sin(a) * 180,
+    const a = P.aim + rand(-1.6, 1.6);
+    spawnProj('missile', m.x + rand(-4, 4), m.y + rand(-4, 4), Math.cos(a) * 180, Math.sin(a) * 180,
       { dmg: p.dmg, pierce: 1, r: 5, life: p.life, src: w.id, target: list[i % list.length], speed: p.speed, turn: p.turn, blast: p.blast * p.area, col: '#ffb35c', fire: p.fire, delay: i * 0.03 });
   }
   w.t = p.cd; AUDIO.sfx('missile');
 };
 
 /* ---------- Огнемёт ---------- */
-function emitFlame(w, ang, dmg, burn, cone, range, area) {
+function emitFlame(w, ang, dmg, burn, cone, range, area, ox, oy) {
   const a = ang + rand(-cone / 2, cone / 2), s = 300 * range * rand(0.85, 1.15);
-  spawnProj('flame', P.x + Math.cos(ang) * 12, P.y - 4 + Math.sin(ang) * 12, Math.cos(a) * s, Math.sin(a) * s,
+  const sx = ox !== undefined ? ox : P.x + Math.cos(ang) * 12, sy = oy !== undefined ? oy : P.y - 4 + Math.sin(ang) * 12;
+  spawnProj('flame', sx, sy, Math.cos(a) * s, Math.sin(a) * s,
     { dmg, pierce: 999, r: 6 * area, grow: 28 * area, life: 0.42 * range, src: w.id, burn });
 }
 WB.flamer = (w, dt, spd) => {
@@ -261,8 +276,10 @@ WB.flamer = (w, dt, spd) => {
     st.acc = (st.acc || 0) + p.rate * dt * spd;
     st.aimT = (st.aimT || 0) - dt;
     if (st.aimT <= 0) { st.aimT = 0.15; const t = nearestEnemy(P.x, P.y, 300); st.ang = aimAt(t); }
-    while (st.acc >= 1) { st.acc -= 1; for (let k = 0; k < p.amount; k++) emitFlame(w, st.ang + (k ? Math.PI : 0), p.dmg, p.burn, p.cone, p.range, p.area); }
-    P.fire = 0.6;
+    const m = muzzleWorld(w);
+    while (st.acc >= 1) { st.acc -= 1; for (let k = 0; k < p.amount; k++) { if (k) emitFlame(w, st.ang + Math.PI, p.dmg, p.burn, p.cone, p.range, p.area); else emitFlame(w, st.ang, p.dmg, p.burn, p.cone, p.range, p.area, m.x, m.y); } }
+    P.fire = 0.6; fired(w, 0.55);
+    if (Math.random() < 0.3) FX.light(m.x + Math.cos(st.ang) * 30, m.y + Math.sin(st.ang) * 30, 70, '#ff7a2e', 0.25);
     AUDIO.sfx('flame');
     return;
   }
@@ -293,7 +310,7 @@ WB.mines = (w, dt, spd) => {
     spawnArea('mine', P.x + rand(-12, 12) - P.vx * 0.06, P.y + 12 + rand(-6, 6), { r: p.trig, life: p.life, dmg: p.dmg, blast: p.blast * p.area, arm: p.arm, src: w.id, stun: p.stun, w, col: WEAPONS.mines.color });
     st.n++;
   }
-  AUDIO.sfx('mine'); w.t = p.cd;
+  fired(w, 0.7); AUDIO.sfx('mine'); w.t = p.cd;
 };
 WB.cluster = (w, dt, spd) => {
   const p = w.p, st = w.st;
@@ -315,7 +332,8 @@ WB.gravity = (w, dt, spd) => {
     const tgt = densestPoint(400, 8) || nearestEnemy(P.x, P.y, 400);
     if (!tgt) break;
     any = true;
-    spawnProj('grav', P.x, P.y - 10, 0, 0, { noHit: true, sx: P.x, sy: P.y - 10, tx: tgt.x + rand(-24, 24), ty: tgt.y + rand(-24, 24), life: 0.42, src: w.id,
+    const m = muzzleWorld(w); fired(w);
+    spawnProj('grav', m.x, m.y, 0, 0, { noHit: true, sx: m.x, sy: m.y, tx: tgt.x + rand(-24, 24), ty: tgt.y + rand(-24, 24), life: 0.42, src: w.id,
       well: { r: p.radius * p.area, life: p.dur, dmg: p.dmg, tick: p.tick, pull: p.pull, collapse: (p.collapse || 0) * P.stats.might } });
   }
   w.t = any ? p.cd : 0.3;
@@ -386,11 +404,13 @@ function cryoUpdate(w, dt, spd, isZero) {
       if (b.tgt) { used.add(b.tgt); const ta = aimAt(b.tgt); b.ang += angDiff(b.ang, ta) * Math.min(1, dt * 14); }
     }
     st.tick = (st.tick || 0) - dt * spd;
+    const m = muzzleWorld(w); st.mx = m.x; st.my = m.y;
+    fired(w, 0.35);
     if (st.tick <= 0) {
       st.tick = 0.1;
       for (const b of st.beams) {
         if (!b.tgt) continue;
-        lineEnemies(P.x, P.y - 4, b.ang, p.range, p.width, e => { hitEnemy(e, p.dmg, { src: w.id, chill: p.slow, frost: p.frost, freeze: p.freeze, nocrit: true }); });
+        lineEnemies(m.x, m.y, b.ang, p.range, p.width, e => { hitEnemy(e, p.dmg, { src: w.id, chill: p.slow, frost: p.frost, freeze: p.freeze, nocrit: true }); });
         if (Math.random() < 0.6) FX.sparks(P.x + Math.cos(b.ang) * p.range * rand(0.2, 1), P.y - 4 + Math.sin(b.ang) * p.range * rand(0.2, 1), 1, '#d8f7ff', 80);
       }
       AUDIO.sfx('beam');
@@ -411,8 +431,9 @@ function drawCryo(c, w) {
   c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
   for (const b of st.beams) {
     if (!b.tgt) continue;
-    const x1 = P.x + Math.cos(b.ang) * 12, y1 = P.y - 4 + Math.sin(b.ang) * 12;
-    const x2 = P.x + Math.cos(b.ang) * p.range, y2 = P.y - 4 + Math.sin(b.ang) * p.range;
+    const ox = st.mx !== undefined ? st.mx : P.x, oy = st.my !== undefined ? st.my : P.y;
+    const x1 = ox, y1 = oy;
+    const x2 = ox + Math.cos(b.ang) * p.range, y2 = oy + Math.sin(b.ang) * p.range;
     const g = c.createLinearGradient(x1, y1, x2, y2);
     g.addColorStop(0, rgba('#8fe8ff', 0.85)); g.addColorStop(0.8, rgba('#8fe8ff', 0.5)); g.addColorStop(1, rgba('#8fe8ff', 0));
     c.strokeStyle = g; c.lineWidth = p.width * (1.1 + Math.sin(G.time * 40) * 0.15);
@@ -426,7 +447,9 @@ WD.cryo = drawCryo; WD.zero = drawCryo;
 
 /* ---------- Рельсотрон ---------- */
 function railShot(w, ang, dmg, width, length, kb, stun) {
-  const x = P.x + Math.cos(ang) * 12, y = P.y - 4 + Math.sin(ang) * 12;
+  const m = muzzleWorld(w), x = m.x, y = m.y;
+  fired(w);
+  FX.light(x, y, 140, '#9fd8ff', 0.6);
   lineEnemies(x, y, ang, length, width, e => { hitEnemy(e, dmg, { src: w.id, kb, kx: Math.cos(ang), ky: Math.sin(ang), stun: stun || 0 }); FX.sparks(e.x, e.y, 3, '#eaf6ff', 220, ang, 0.6, 0.25); });
   FX.beam(x, y, x + Math.cos(ang) * length, y + Math.sin(ang) * length, width, 0.32, '#9fd8ff');
   FX.dot(x, y, 0, 0, 0.2, 26, '#ffffff', 0);
@@ -452,9 +475,10 @@ WB.rail = (w, dt, spd) => {
 WD.rail = (c, w) => {
   const st = w.st;
   if (!(st.charge > 0) || !st.angs) return;
+  const m = muzzleWorld(w);
   c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#eaf6ff', 0.45 + Math.sin(G.time * 60) * 0.2); c.lineWidth = 1;
-  for (const a of st.angs) { c.beginPath(); c.moveTo(P.x, P.y - 4); c.lineTo(P.x + Math.cos(a) * 900, P.y - 4 + Math.sin(a) * 900); c.stroke(); }
-  glow(c, P.x, P.y - 4, 16, '#eaf6ff', 0.6);
+  for (const a of st.angs) { c.beginPath(); c.moveTo(m.x, m.y); c.lineTo(m.x + Math.cos(a) * 900, m.y + Math.sin(a) * 900); c.stroke(); }
+  glow(c, m.x, m.y, 16, '#eaf6ff', 0.6);
   c.restore();
 };
 WB.lance = (w, dt, spd) => {
@@ -478,11 +502,14 @@ WB.saw = (w, dt, spd) => {
   if (!cdReady(w, dt, spd)) return;
   const p = w.p, tg = nearestK(P.x, P.y, p.amount, 420);
   if (!tg.length) { w.t = 0.2; return; }
+  const m = muzzleWorld(w);
   for (let i = 0; i < p.amount; i++) {
-    const t = tg[i % tg.length], a = aimAt(t);
-    spawnProj('saw', P.x, P.y - 4, Math.cos(a) * p.speed, Math.sin(a) * p.speed,
-      { dmg: p.dmg, pierce: 999, r: p.size * p.area, life: 5, src: w.id, target: t, bounces: p.bounces, speed: p.speed, corrode: p.corrode || 0, kb: 50, rot: 0 });
+    const t = tg[i % tg.length], a = Math.atan2(t.y - m.y, t.x - m.x);
+    spawnProj('saw', m.x, m.y, Math.cos(a) * p.speed, Math.sin(a) * p.speed,
+      { dmg: p.dmg, pierce: 999, r: p.size * p.area, life: 5, src: w.id, target: t, bounces: p.bounces, speed: p.speed, corrode: p.corrode || 0, kb: 50, rot: 0, w });
+    w.st.outN = (w.st.outN || 0) + 1;
   }
+  fired(w, 0.8);
   w.t = p.cd; AUDIO.sfx('saw');
 };
 WB.sawmill = (w, dt, spd) => {
@@ -490,8 +517,10 @@ WB.sawmill = (w, dt, spd) => {
   const p = w.p;
   for (let i = 0; i < p.amount; i++) {
     const a = i * TAU / p.amount + rand(-0.3, 0.3);
-    spawnProj('bigsaw', P.x, P.y - 4, Math.cos(a) * p.speed, Math.sin(a) * p.speed,
-      { dmg: p.dmg, r: p.size * p.area, life: p.dur, src: w.id, icd: p.icd, icdKey: 'sm', kb: 60, rot: 0, pierce: 1 });
+    const m = muzzleWorld(w);
+    spawnProj('bigsaw', m.x, m.y, Math.cos(a) * p.speed, Math.sin(a) * p.speed,
+      { dmg: p.dmg, r: p.size * p.area, life: p.dur, src: w.id, icd: p.icd, icdKey: 'sm', kb: 60, rot: 0, pierce: 1, w });
+    w.st.outN = (w.st.outN || 0) + 1;
   }
   w.t = p.cd; AUDIO.sfx('saw');
 };
@@ -536,7 +565,10 @@ WB.shock = (w, dt, spd) => {
 function emitShockRing(src, R, dmg, kb, stun, col) {
   spawnArea('ring', P.x, P.y, { r: 0, maxR: R, life: 0.36, dmg, kb, stun: stun || 0, src, hits: new Set(), col });
   AUDIO.sfx('thump');
-  P.fire = 1;
+  P.fire = 1; P.squash = 1;
+  for (const w of P.weapons) if (baseOf(w) === 'shock') fired(w);
+  FX.light(P.x, P.y, R, col, 0.35);
+  FX.shards(P.x, P.y + 6, 8, col, 220);
 }
 WB.seismic = (w, dt, spd) => {
   const p = w.p, st = w.st;
@@ -610,17 +642,17 @@ const PK = {
       const ns = Math.min(p.speed, sp + 520 * dt);
       p.vx = Math.cos(a) * ns; p.vy = Math.sin(a) * ns;
       p.trail = (p.trail || 0) - dt;
-      if (p.trail <= 0) { p.trail = 0.035; FX.add({ k: 3, x: p.x, y: p.y, vx: 0, vy: 0, life: 0.35, max: 0.35, size: 2.5, col: 'rgba(180,180,190,0.6)', drag: 1, grow: 9 }); FX.dot(p.x, p.y, 0, 0, 0.1, 5, '#ffb35c', 0); }
+      if (p.trail <= 0) { p.trail = 0.03; FX.dot(p.x, p.y, 0, 0, 0.22, 3.5, '#ff9a3d', 0); }
     },
     hit(p, e) { missileBoom(p); },
     expire(p) { missileBoom(p); },
     draw(c, p) {
       const a = Math.atan2(p.vy, p.vx);
       c.save(); c.translate(p.x, p.y); c.rotate(a);
-      c.fillStyle = '#dfe6ee'; c.fillRect(-6, -2, 9, 4);
-      c.fillStyle = p.col; c.beginPath(); c.moveTo(3, -2); c.lineTo(7, 0); c.lineTo(3, 2); c.fill();
+      c.beginPath(); c.moveTo(7, 0); c.lineTo(-5, -2.6); c.lineTo(-3, 0); c.lineTo(-5, 2.6); c.closePath();
+      c.fillStyle = 'rgba(10,20,40,0.9)'; c.fill(); c.strokeStyle = p.col; c.lineWidth = 1.2; c.stroke();
       c.restore();
-      c.drawImage(dotSprite('#ffb35c'), p.x - Math.cos(a) * 7 - 5, p.y - Math.sin(a) * 7 - 5, 10, 10);
+      c.drawImage(dotSprite('#ffb35c'), p.x - Math.cos(a) * 6 - 5, p.y - Math.sin(a) * 6 - 5, 10, 10);
     },
   },
   flame: {
@@ -636,7 +668,8 @@ const PK = {
     update(p, dt) {
       p.rot += dt * 22;
       if (p.returning) {
-        const dx = P.x - p.x, dy = P.y - p.y, d = Math.hypot(dx, dy) || 1;
+        const hm = p.w ? muzzleWorld(p.w) : P;
+        const dx = hm.x - p.x, dy = hm.y - p.y, d = Math.hypot(dx, dy) || 1;
         p.vx = dx / d * p.speed * 1.3; p.vy = dy / d * p.speed * 1.3;
         if (d < 18) p.dead = true;
         return;
@@ -735,8 +768,11 @@ function updateProjectiles(dt) {
     if (K.update) K.update(p, dt);
     p.x += p.vx * dt; p.y += p.vy * dt;
     p.life -= dt;
-    if (p.dead) { removeAt(arr, i); continue; }
-    if (p.life <= 0) { if (K.expire) K.expire(p); removeAt(arr, i); continue; }
+    if (p.dead || p.life <= 0) {
+      if (!p.dead && K.expire) K.expire(p);
+      if (p.w && (p.kind === 'saw' || p.kind === 'bigsaw')) sawHome(p);
+      removeAt(arr, i); continue;
+    }
     if (!p.noHit && !(p.delay > 0)) {
       eachEnemyIn(p.x, p.y, p.r, e => {
         if (p.dead) return true;
@@ -748,8 +784,13 @@ function updateProjectiles(dt) {
         if (--p.pierce <= 0) { p.dead = true; if (K.expire && p.kind !== 'missile') K.expire(p); return true; }
       });
     }
-    if (p.dead) removeAt(arr, i);
+    if (p.dead) { if (p.w && (p.kind === 'saw' || p.kind === 'bigsaw')) sawHome(p); removeAt(arr, i); }
   }
+}
+function sawHome(p) {
+  const w = p.w; p.w = null;
+  w.st.outN = Math.max(0, (w.st.outN || 1) - 1);
+  if (p.returning || p.kind === 'bigsaw') { const m = muzzleWorld(w); FX.sparks(m.x, m.y, 5, '#ffcf8a', 160); if (p.returning) AUDIO.sfx('clank'); }
 }
 
 /* ===== Зоны ===== */

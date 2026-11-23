@@ -2,9 +2,9 @@
 /* ===== Визуальные эффекты: частицы, молнии, лучи, кольца, цифры урона ===== */
 
 const FX = {
-  parts: [], texts: [], arcs: [], beams: [], rings: [], slashes: [], ghosts: [],
-  max: 1800, quality: 1, shake: 0, flashA: 0, flashCol: '#ffffff', dmgNumbers: true,
-  clear() { this.parts.length = 0; this.texts.length = 0; this.arcs.length = 0; this.beams.length = 0; this.rings.length = 0; this.slashes.length = 0; this.ghosts.length = 0; this.shake = 0; this.flashA = 0; },
+  parts: [], texts: [], arcs: [], beams: [], rings: [], slashes: [], ghosts: [], lights: [],
+  max: 1800, quality: 1, shake: 0, flashA: 0, flashCol: '#ffffff', dmgNumbers: true, impact: 0, speedT: 0, speedDir: 0,
+  clear() { this.parts.length = 0; this.texts.length = 0; this.arcs.length = 0; this.beams.length = 0; this.rings.length = 0; this.slashes.length = 0; this.ghosts.length = 0; this.lights.length = 0; this.shake = 0; this.flashA = 0; this.impact = 0; this.speedT = 0; },
 
   add(p) {
     if (this.parts.length >= this.max * this.quality) return null;
@@ -29,12 +29,18 @@ const FX = {
       this.add({ k: 1, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: (life || 0.35) * rand(0.6, 1.2), max: life || 0.35, size: rand(0.8, 1.6), col, drag: 4 });
     }
   },
-  debris(x, y, n, col, spd) {
+  debris(x, y, n, col, spd) { this.shards(x, y, n, col, spd); },
+  // осколки контура: светящиеся отрезки с вращением
+  shards(x, y, n, col, spd) {
     n = Math.ceil(n * this.quality);
     for (let i = 0; i < n; i++) {
-      const a = Math.random() * TAU, s = (spd || 120) * rand(0.3, 1);
-      this.add({ k: 2, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.4, 0.9), max: 0.9, size: rand(1.5, 3.5), col, drag: 5, rot: rand(0, TAU), vr: rand(-12, 12) });
+      const a = Math.random() * TAU, s = (spd || 140) * rand(0.35, 1);
+      this.add({ k: 4, x: x + rand(-3, 3), y: y + rand(-3, 3), vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.35, 0.75), max: 0.75, size: rand(2, 5.5), col, drag: 3.2, rot: rand(0, TAU), vr: rand(-14, 14) });
     }
+  },
+  light(x, y, r, col, a, life) {
+    if (this.lights.length > 48) return;
+    this.lights.push({ x, y, r, col, a, life: life || 0.3, max: life || 0.3 });
   },
   smoke(x, y, n, col, size) {
     n = Math.ceil(n * this.quality);
@@ -44,12 +50,13 @@ const FX = {
     }
   },
   explosion(x, y, r, col, big) {
-    this.dot(x, y, 0, 0, 0.22, r * 2.2, col, 0);
-    this.dot(x, y, 0, 0, 0.12, r * 1.3, '#ffffff', 0);
-    this.ring(x, y, r * 0.3, r * 1.15, 0.28, col, 3);
-    this.sparks(x, y, big ? 22 : 10, col, r * 7, undefined, 0, 0.4);
-    this.burst(x, y, big ? 14 : 6, '#ffd36b', r * 3, 0.35, 5);
-    this.smoke(x, y, big ? 6 : 3, '#15171c', r * 0.4);
+    this.dot(x, y, 0, 0, 0.2, r * 2, col, 0);
+    this.dot(x, y, 0, 0, 0.1, r * 1.2, '#ffffff', 0);
+    this.ring(x, y, r * 0.3, r * 1.15, 0.3, col, 2.4);
+    if (big) this.ring(x, y, r * 0.2, r * 1.6, 0.45, '#ffffff', 1.4);
+    this.shards(x, y, big ? 16 : 7, col, r * 6);
+    this.sparks(x, y, big ? 16 : 7, '#ffffff', r * 7, undefined, 0, 0.32);
+    this.light(x, y, r * 3.2, col, big ? 0.7 : 0.45, big ? 0.45 : 0.3);
   },
   ring(x, y, r0, r1, life, col, w) { this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 2 }); },
   beam(x1, y1, x2, y2, w, life, col) { this.beams.push({ x1, y1, x2, y2, w, life, max: life, col }); },
@@ -90,7 +97,8 @@ const FX = {
       if (p.vr) p.rot += p.vr * dt;
     }
     const tick = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) removeAt(arr, i); } };
-    tick(this.arcs); tick(this.beams); tick(this.rings); tick(this.slashes); tick(this.ghosts);
+    tick(this.arcs); tick(this.beams); tick(this.rings); tick(this.slashes); tick(this.ghosts); tick(this.lights);
+    if (this.speedT > 0) this.speedT -= dt;
     const T = this.texts;
     for (let i = T.length - 1; i >= 0; i--) { const t = T[i]; t.life -= dt; t.y += t.vy * dt; t.vy *= Math.exp(-3 * dt); if (t.life <= 0) removeAt(T, i); }
     this.shake *= Math.exp(-9 * dt);
@@ -98,14 +106,21 @@ const FX = {
     this.flashA = Math.max(0, this.flashA - dt * 2.2);
   },
 
-  // нормальное наложение: обломки и дым
+  // свет на полу: вспышки подсвечивают сетку
+  drawLights(c) {
+    if (!this.lights.length) return;
+    c.globalCompositeOperation = 'lighter';
+    for (const l of this.lights) {
+      const q = l.life / l.max;
+      c.globalAlpha = l.a * q;
+      c.drawImage(glowSprite(l.col), l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
+    }
+    c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  },
+  // нормальное наложение: дым
   drawUnder(c) {
     for (const p of this.parts) {
-      if (p.k === 2) {
-        const a = clamp(p.life / p.max * 1.5, 0, 1);
-        c.globalAlpha = a; c.fillStyle = p.col;
-        c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.7); c.restore();
-      } else if (p.k === 3) {
+      if (p.k === 3) {
         const a = clamp(p.life / p.max, 0, 1) * 0.5;
         c.globalAlpha = a; c.fillStyle = p.col;
         c.beginPath(); c.arc(p.x, p.y, p.size, 0, TAU); c.fill();
@@ -142,6 +157,23 @@ const FX = {
       c.globalAlpha = (arr.q + 1) / 4; c.strokeStyle = arr.col;
       c.beginPath();
       for (const p of arr) { c.moveTo(p.x, p.y); c.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035); }
+      c.stroke();
+    }
+    // осколки контура
+    for (const arr of B.values()) arr.length = 0;
+    for (const p of this.parts) {
+      if (p.k !== 4) continue;
+      const q = Math.min(3, (clamp(p.life / p.max, 0, 1) * 4) | 0), key = 's' + p.col + q;
+      let arr = B.get(key);
+      if (!arr) { arr = []; arr.col = p.col; arr.q = q; B.set(key, arr); }
+      arr.push(p);
+    }
+    c.lineWidth = 1.4;
+    for (const [key, arr] of B) {
+      if (!arr.length || key[0] !== 's') continue;
+      c.globalAlpha = (arr.q + 1) / 4; c.strokeStyle = arr.col;
+      c.beginPath();
+      for (const p of arr) { const dx = Math.cos(p.rot) * p.size, dy = Math.sin(p.rot) * p.size; c.moveTo(p.x - dx, p.y - dy); c.lineTo(p.x + dx, p.y + dy); }
       c.stroke();
     }
     for (const r of this.rings) {

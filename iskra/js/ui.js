@@ -252,7 +252,8 @@ const UI = {
           <div class="set-row"><label for="set-sfx">Эффекты</label><input id="set-sfx" type="range" min="0" max="1" step="0.05" value="${S.sfx}" data-set="sfx"></div>
           <div class="set-row"><span>Цифры урона</span><button class="btn small" data-act="toggle" data-k="dmg">${S.dmg ? 'Вкл' : 'Выкл'}</button></div>
           <div class="set-row"><span>Тряска экрана</span><button class="btn small" data-act="toggle" data-k="shake">${S.shake ? 'Вкл' : 'Выкл'}</button></div>
-          <div class="set-row"><span>Качество графики</span><span class="seg">${[['auto', 'Авто'], ['high', 'Высокое'], ['low', 'Низкое']].map(q => `<button class="${S.quality === q[0] ? 'on' : ''}" data-act="quality" data-q="${q[0]}">${q[1]}</button>`).join('')}</span></div>
+          <div class="set-row"><span>Проекция</span><span class="seg">${[['top', 'Вид сверху'], ['front', 'Главный вид']].map(v => `<button class="${(S.view || 'top') === v[0] ? 'on' : ''}" data-act="view" data-v="${v[0]}">${v[1]}</button>`).join('')}</span></div>
+          <div class="set-row"><span>Качество графики (свечение)</span><span class="seg">${[['auto', 'Авто'], ['high', 'Высокое'], ['low', 'Низкое']].map(q => `<button class="${S.quality === q[0] ? 'on' : ''}" data-act="quality" data-q="${q[0]}">${q[1]}</button>`).join('')}</span></div>
           <div class="set-row"><span>Полный экран</span><button class="btn small" data-act="fullscreen">Переключить</button></div>
           <div class="sheet"><div class="in"><div class="eyebrow" style="margin-bottom:8px">Управление</div><div class="keys">
             <kbd>WASD / стрелки</kbd><span>движение (или зажмите мышь / ведите пальцем)</span>
@@ -297,6 +298,7 @@ const UI = {
     tab(b) { this.codexTab = b.dataset.id; this.open('codex'); },
     toggle(b) { const k = b.dataset.k; SAVE.settings[k] = !SAVE.settings[k]; FX.dmgNumbers = SAVE.settings.dmg; persist(); this.reopenSettings(); },
     quality(b) { SAVE.settings.quality = b.dataset.q; RENDER.autoLow = false; persist(); resize(); this.reopenSettings(); },
+    view(b) { SAVE.settings.view = b.dataset.v; if (P) { P.view = b.dataset.v; RENDER.ghostKey = ''; } persist(); this.reopenSettings(); },
     fullscreen() {
       const d = document;
       try {
@@ -644,6 +646,12 @@ const UI = {
     b.innerHTML = `<div class="sheet"><div class="in"><span class="code">${PARTS[part].code} · ${esc(PARTS[part].name.toUpperCase())} МК-${ROMAN[rank]}${esc(br.toUpperCase())}</span><span class="nm">${esc(def.name)}</span><span class="ds">${esc(def.d)}</span><span class="stamp">ОТК<small>ПРИНЯТО</small></span></div></div>`;
     b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
     setTimeout(() => AUDIO.sfx('stamp'), 600);
+  },
+  mountCard(w) {
+    const b = $('#tfcard'), d = weaponDef(w);
+    b.innerHTML = `<div class="sheet"><div class="in"><span class="code">МОНТАЖ · ${wcode(baseOf(w))} → ${esc(SLOT_NAME[w.slot].toUpperCase())}</span><span class="nm">${esc(d.name)}</span><span class="ds">${esc(d.desc)}</span><span class="stamp">ОТК<small>ПРИНЯТО</small></span></div></div>`;
+    b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+    setTimeout(() => AUDIO.sfx('stamp'), 900);
   },
   formCard(f) {
     const b = $('#formcard');

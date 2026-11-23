@@ -5,14 +5,16 @@ const ROBOT_BASE_SCALE = 1.12;
 const OD_COLOR = '#ff4f9a';
 
 function robotPalette(base, form, od) {
-  let m = base.m;
-  if (form >= 2) m = shade(m, 0.06);
-  if (form >= 4) m = mixHex(m, '#f3f5ff', 0.6);
   const a = od > 0.5 ? mixHex(base.a, OD_COLOR, 0.65) : base.a;
+  const tint = base.m;
+  const line = form >= 4 ? '#fff4d6' : mixHex('#eaf6ff', tint, form >= 2 ? 0.08 : 0.16);
   return {
-    m, ml: shade(m, 0.42), md: base.md || shade(m, -0.48), mdd: shade(base.md || shade(m, -0.48), -0.45),
-    a, ag: shade(a, 0.45), ad: shade(a, -0.45), e: od > 0.5 ? '#ffffff' : base.e,
-    t: '#ffd36b', o: '#080b14', rub: '#1a1e27',
+    // стекло корпуса (заливки) и контуры (линии чертежа)
+    g: rgba(mixHex('#0b1b36', tint, 0.12), 0.95), gl: rgba(mixHex('#15305a', tint, 0.16), 0.96), gd: rgba(mixHex('#061226', tint, 0.08), 0.97), gdd: 'rgba(3,8,18,0.98)',
+    ln: line, ls: mixHex(line, a, 0.6),
+    m: mixHex('#16305a', tint, 0.2), ml: line, md: mixHex('#2a4c7a', tint, 0.2), mdd: '#071022',
+    a, ag: shade(a, 0.45), ad: shade(a, -0.35), e: od > 0.5 ? '#ffffff' : base.e,
+    t: '#ffd36b', o: line, rub: '#0a1222',
   };
 }
 
@@ -54,17 +56,27 @@ function pathPoly(c, p) {
   for (let i = 2; i < p.length; i += 2) c.lineTo(p[i], p[i + 1]);
   c.closePath();
 }
-function fillMetal(c, pal, x0, y0, x1, y1, tone, noStroke) {
-  const g = c.createLinearGradient(x0, y0, x1, y1);
-  if (tone === 'd') { g.addColorStop(0, pal.m); g.addColorStop(0.5, pal.md); g.addColorStop(1, pal.mdd); }
-  else if (tone === 'l') { g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, pal.ml); g.addColorStop(1, pal.m); }
-  else if (tone === 'a') { g.addColorStop(0, pal.ag); g.addColorStop(0.5, pal.a); g.addColorStop(1, pal.ad); }
-  else if (tone === 'r') { g.addColorStop(0, '#2b313d'); g.addColorStop(1, '#0f1218'); }
-  else { g.addColorStop(0, pal.ml); g.addColorStop(0.5, pal.m); g.addColorStop(1, pal.md); }
-  c.fillStyle = g; c.fill();
-  if (!noStroke) { c.lineWidth = 1.05; c.strokeStyle = pal.o; c.lineJoin = 'round'; c.stroke(); }
+// состояние отрисовки: k — множитель толщины линий (≈1.4 css px на экране), reveal — «вычерчивание» пером
+const RS = { k: 1, lw: 1.05, reveal: 1, dashL: 140 };
+function strokeLine(c, col, w) {
+  c.lineWidth = (w || 1.05) * RS.k; c.strokeStyle = col; c.lineJoin = 'round';
+  if (RS.reveal < 1) { c.setLineDash([RS.reveal * RS.dashL, RS.dashL]); c.stroke(); c.setLineDash([]); }
+  else c.stroke();
 }
-function fillFlat(c, col, stroke) { c.fillStyle = col; c.fill(); if (stroke) { c.lineWidth = 1; c.strokeStyle = stroke; c.stroke(); } }
+function fillMetal(c, pal, x0, y0, x1, y1, tone, noStroke) {
+  const fa = RS.reveal >= 1 ? 1 : clamp((RS.reveal - 0.65) / 0.35, 0, 1);
+  if (fa > 0) {
+    if (fa < 1) c.globalAlpha *= fa;
+    c.fillStyle = tone === 'l' ? pal.gl : tone === 'd' ? pal.gd : tone === 'r' ? pal.gdd : tone === 'a' ? pal.ad : pal.g;
+    c.fill();
+    if (fa < 1) c.globalAlpha /= fa;
+  }
+  if (!noStroke) strokeLine(c, tone === 'a' ? pal.ag : (tone === 'd' || tone === 'r') ? pal.ls : pal.ln, tone === 'd' || tone === 'r' ? 0.9 : 1.05);
+}
+function fillFlat(c, col, stroke) {
+  if (RS.reveal >= 1) { c.fillStyle = col; c.fill(); }
+  if (stroke) strokeLine(c, stroke, 0.9);
+}
 
 const _glowCache = {};
 function glowSprite(col) {
@@ -93,10 +105,10 @@ function limb(c, pal, x1, y1, x2, y2, w, tone) {
   fillMetal(c, pal, -w / 2, 0, w / 2, 0, tone || 'm');
   c.restore();
 }
-function rivet(c, x, y, pal) { c.beginPath(); c.arc(x, y, 0.75, 0, TAU); c.fillStyle = pal.ml; c.fill(); }
+function rivet(c, x, y, pal) { c.beginPath(); c.arc(x, y, 0.55, 0, TAU); c.fillStyle = pal.a; c.fill(); }
 function lightLine(c, x1, y1, x2, y2, col, w, a) {
   c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha *= (a === undefined ? 1 : a);
-  c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round';
+  c.strokeStyle = col; c.lineWidth = w * RS.k; c.lineCap = 'round';
   c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); c.restore();
 }
 
@@ -117,7 +129,9 @@ function robotLayout(L) {
 // o: only, skip, od, moving, wp (фаза шага), face, fire, siege, static, dist, hurt
 function drawRobot(c, L, t, o) {
   o = o || {};
+  if (o.view === 'top') return drawRobotTop(c, L, t, o);
   const ly = robotLayout(L);
+  setLineScale(c, L.scale);
   const mv = o.moving || 0;
   let bob = 0;
   if (!o.static) bob = ly.hover ? -4 + Math.sin(t * 3.2) * 1.6 : -Math.abs(Math.sin(o.wp || 0)) * 1.3 * mv;
@@ -125,16 +139,23 @@ function drawRobot(c, L, t, o) {
   c.scale(L.scale, L.scale);
   if (!o.static && mv > 0) c.rotate((o.face || 1) * 0.045 * mv);
   c.translate(0, bob);
-  const part = (name, fn, layer) => { if (o.only && o.only !== name) return; if (o.skip === name || (o.skip2 && o.skip2 === name)) return; fn(c, L, ly, t, o, layer); };
-  if (!o.only) drawAura(c, L, ly, t, o);
+  const part = (name, fn, layer) => { if (o.onlyMounts) return; if (o.only && o.only !== name) return; if (o.skip === name || (o.skip2 && o.skip2 === name)) return; fn(c, L, ly, t, o, layer); };
+  if (!o.only && !o.onlyMounts) drawAura(c, L, ly, t, o);
   part('back', drawBack, 0);
   part('legs', drawLegs, 0);
   part('core', drawCore, 0);
   part('arms', drawArms, 0);
   part('core', drawCore, 1);
   part('head', drawHead, 0);
-  if (!o.only) drawFormTrim(c, L, ly, t, o);
+  if (!o.only && !o.onlyMounts) drawFormTrim(c, L, ly, t, o);
+  if (o.mounts) drawMountsFront(c, L, ly, t, o);
   c.restore();
+}
+// толщина линий постоянна на экране: k = (желаемые css px) / (css px на единицу робота)
+function setLineScale(c, sc) {
+  const T = c.getTransform();
+  const px = Math.hypot(T.a, T.b) * sc / (typeof VIEW !== 'undefined' && VIEW.dpr ? VIEW.dpr : 1);
+  RS.k = clamp(1.45 / Math.max(0.2, px), 0.18, 1.5);
 }
 
 function drawAura(c, L, ly, t, o) {
@@ -148,7 +169,7 @@ function drawAura(c, L, ly, t, o) {
     for (let i = 0; i < 8; i++) {
       const a = t * 0.6 + i * TAU / 8;
       c.strokeStyle = hsl(((t * 60 + i * 45) % 360) | 0, 100, 70, 0.16);
-      c.lineWidth = 3;
+      c.lineWidth = 3 * RS.k;
       c.beginPath(); c.moveTo(Math.cos(a) * 14, -2 + Math.sin(a) * 14); c.lineTo(Math.cos(a) * 40, -2 + Math.sin(a) * 40); c.stroke();
     }
     c.restore();
@@ -169,7 +190,7 @@ function drawBack(c, L, ly, t, o) {
   if (r === 0) {
     c.beginPath(); c.arc(0, y0 - 2, 2.6, 0, TAU); fillFlat(c, pal.mdd, pal.o);
     const s = t * 9;
-    c.strokeStyle = pal.ml; c.lineWidth = 0.8;
+    c.strokeStyle = pal.ml; c.lineWidth = 0.8 * RS.k;
     c.beginPath(); c.moveTo(Math.cos(s) * 2, y0 - 2 + Math.sin(s) * 2); c.lineTo(-Math.cos(s) * 2, y0 - 2 - Math.sin(s) * 2); c.stroke();
   }
   if (r >= 1 && r < 3) {
@@ -225,9 +246,9 @@ function drawWings(c, L, ly, t, o, r) {
       }
       // каркас
       c.lineCap = 'round';
-      c.strokeStyle = pal.o; c.lineWidth = 3.2;
+      c.strokeStyle = pal.o; c.lineWidth = 3.2 * RS.k;
       c.beginPath(); c.moveTo(rx, ry); c.lineTo(tipX, tipY); c.stroke();
-      c.strokeStyle = pal.ml; c.lineWidth = 1.8;
+      c.strokeStyle = pal.ml; c.lineWidth = 1.8 * RS.k;
       c.beginPath(); c.moveTo(rx, ry); c.lineTo(tipX, tipY); c.stroke();
       glow(c, tipX, tipY, 6, col, 0.8);
     }
@@ -238,12 +259,12 @@ function drawHaloGen(c, L, ly, t, o, r) {
   const col = '#9dffcf';
   c.save(); c.globalCompositeOperation = 'lighter';
   const pulse = 0.8 + Math.sin(t * 3) * 0.2;
-  c.strokeStyle = rgba(col, 0.85 * pulse); c.lineWidth = 2.2;
+  c.strokeStyle = rgba(col, 0.85 * pulse); c.lineWidth = 2.2 * RS.k;
   c.beginPath(); c.arc(0, cy, 19 + od * 3, 0, TAU); c.stroke();
-  c.strokeStyle = rgba('#ffffff', 0.5 * pulse); c.lineWidth = 0.8; c.stroke();
+  c.strokeStyle = rgba('#ffffff', 0.5 * pulse); c.lineWidth = 0.8 * RS.k; c.stroke();
   if (r >= 4) {
     c.save(); c.translate(0, cy); c.rotate(t * 0.9);
-    c.strokeStyle = rgba(col, 0.6); c.lineWidth = 1.6;
+    c.strokeStyle = rgba(col, 0.6); c.lineWidth = 1.6 * RS.k;
     c.beginPath(); c.ellipse(0, 0, 25, 8, 0, 0, TAU); c.stroke();
     c.rotate(-t * 1.8 + 1.2);
     c.beginPath(); c.ellipse(0, 0, 23, 6, 0, 0, TAU); c.stroke();
@@ -254,7 +275,7 @@ function drawHaloGen(c, L, ly, t, o, r) {
   // катушки
   for (const s of [-1, 1]) {
     pathRR(c, s * 9 - 2, T - 9, 4, 10, 1.5); fillMetal(c, pal, 0, T - 9, 0, T + 1, 'd');
-    for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(s * 9 - 2.2, T - 7 + k * 3); c.lineTo(s * 9 + 2.2, T - 6 + k * 3); c.strokeStyle = col; c.lineWidth = 0.9; c.stroke(); }
+    for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(s * 9 - 2.2, T - 7 + k * 3); c.lineTo(s * 9 + 2.2, T - 6 + k * 3); c.strokeStyle = col; c.lineWidth = 0.9 * RS.k; c.stroke(); }
   }
   if (r >= 5) {
     for (let i = 0; i < 3; i++) {
@@ -281,7 +302,7 @@ function drawLegs(c, L, ly, t, o) {
     const lift = Math.max(0, Math.sin(ph)) * 3 * mv, sw = Math.cos(ph) * 1.3 * mv;
     const hx = s * 5.2, kx = s * 5.8 + sw * 0.5, ky = H + 7.5 - lift * 0.5, fx = s * 6.2 + sw, fy = H + 14.5 - lift;
     const w1 = [4.4, 5.4, 5.8][r], w2 = [3.8, 4.8, 5.2][r];
-    if (r >= 2) { c.strokeStyle = pal.ml; c.lineWidth = 1; c.beginPath(); c.moveTo(hx + s * 3, H + 1); c.lineTo(fx + s * 2.8, fy - 3); c.stroke(); }
+    if (r >= 2) { c.strokeStyle = pal.ml; c.lineWidth = 1 * RS.k; c.beginPath(); c.moveTo(hx + s * 3, H + 1); c.lineTo(fx + s * 2.8, fy - 3); c.stroke(); }
     limb(c, pal, hx, H, kx, ky, w1, 'm');
     limb(c, pal, kx, ky, fx, fy - 1, w2, 'd');
     if (r >= 2) { pathPoly(c, [hx - 3.3, H - 0.5, hx + 3.3, H - 0.5, kx + 2.4, ky - 2.5, kx - 2.4, ky - 2.5]); fillMetal(c, pal, hx, H, kx, ky, 'l'); }
@@ -300,7 +321,7 @@ function drawTreads(c, L, ly, t, o, r) {
   pathRR(c, -w, H, w * 2, 15, 7); fillMetal(c, pal, 0, H, 0, H + 15, 'r');
   // траки
   const off = ((o.dist || 0) * 0.35) % 4;
-  c.strokeStyle = '#3a4150'; c.lineWidth = 1.2;
+  c.strokeStyle = '#3a4150'; c.lineWidth = 1.2 * RS.k;
   c.beginPath();
   for (let x = -w + 5 + off; x < w - 4; x += 4) { c.moveTo(x, H + 0.8); c.lineTo(x, H + 2.6); c.moveTo(x, H + 12.4); c.lineTo(x, H + 14.2); }
   c.stroke();
@@ -308,7 +329,7 @@ function drawTreads(c, L, ly, t, o, r) {
     c.beginPath(); c.arc(x, H + 7.5, 4.4, 0, TAU); fillMetal(c, pal, x - 4, H + 3, x + 4, H + 12, 'm');
     c.beginPath(); c.arc(x, H + 7.5, 1.6, 0, TAU); c.fillStyle = pal.a; c.fill();
     const a = (o.dist || 0) * 0.08;
-    c.strokeStyle = pal.md; c.lineWidth = 0.8;
+    c.strokeStyle = pal.md; c.lineWidth = 0.8 * RS.k;
     c.beginPath(); c.moveTo(x + Math.cos(a) * 3.5, H + 7.5 + Math.sin(a) * 3.5); c.lineTo(x - Math.cos(a) * 3.5, H + 7.5 - Math.sin(a) * 3.5); c.stroke();
   }
   if (r >= 4) {
@@ -323,7 +344,7 @@ function drawTreads(c, L, ly, t, o, r) {
     c.fillStyle = '#ffd23f';
     for (let x = -w - 6; x < w + 6; x += 5) { pathPoly(c, [x, H + 18, x + 2.5, H + 18, x + 7.5, H + 8, x + 5, H + 8]); c.fill(); }
     c.restore();
-    pathPoly(c, [-w - 3, H + 9, w + 3, H + 9, w - 1, H + 17.5, -w + 1, H + 17.5]); c.strokeStyle = pal.o; c.lineWidth = 1.1; c.stroke();
+    pathPoly(c, [-w - 3, H + 9, w + 3, H + 9, w - 1, H + 17.5, -w + 1, H + 17.5]); c.strokeStyle = pal.o; c.lineWidth = 1.1 * RS.k; c.stroke();
     for (const x of [-w + 2, 0, w - 2]) { pathPoly(c, [x - 2, H + 17, x + 2, H + 17, x, H + 21]); fillFlat(c, pal.ml, pal.o); }
   }
 }
@@ -341,7 +362,7 @@ function drawJets(c, L, ly, t, o, r) {
       for (let k = 0; k < 2; k++) {
         const pr = (t * 1.6 + k * 0.5) % 1;
         c.save(); c.globalCompositeOperation = 'lighter';
-        c.strokeStyle = rgba(flameCol, (1 - pr) * 0.9); c.lineWidth = 1.2;
+        c.strokeStyle = rgba(flameCol, (1 - pr) * 0.9); c.lineWidth = 1.2 * RS.k;
         c.beginPath(); c.ellipse(kx, ky + 14 + pr * 6 + fl, 4 + pr * 3, 1.3 + pr, 0, 0, TAU); c.stroke(); c.restore();
       }
       glow(c, kx, ky + 15 + fl, 8, flameCol, 0.8);
@@ -368,7 +389,7 @@ function drawJets(c, L, ly, t, o, r) {
   }
   if (r >= 5) {
     c.save(); c.globalCompositeOperation = 'lighter';
-    c.strokeStyle = rgba(flameCol, 0.35 + Math.sin(t * 4) * 0.15); c.lineWidth = 1.4;
+    c.strokeStyle = rgba(flameCol, 0.35 + Math.sin(t * 4) * 0.15); c.lineWidth = 1.4 * RS.k;
     c.beginPath(); c.ellipse(0, H + 22, 15, 3.5, 0, 0, TAU); c.stroke(); c.restore();
   }
 }
@@ -382,7 +403,7 @@ function drawCore(c, L, ly, t, o, layer) {
         const x = s * (tw + 0.5), y = T + 4;
         c.beginPath(); c.ellipse(x, y, 7 + (r - 3), 5.5 + (r - 3) * 0.6, s * 0.25, Math.PI, TAU); c.closePath();
         fillMetal(c, pal, x, y - 6, x, y + 1, 'l');
-        c.beginPath(); c.moveTo(x - 6, y); c.lineTo(x + 6, y); c.strokeStyle = r >= 5 ? pal.t : pal.a; c.lineWidth = 1.1; c.stroke();
+        c.beginPath(); c.moveTo(x - 6, y); c.lineTo(x + 6, y); c.strokeStyle = r >= 5 ? pal.t : pal.a; c.lineWidth = 1.1 * RS.k; c.stroke();
         if (r >= 4) for (let k = -1; k <= 1; k++) {
           const sx = x + k * 3.2 + s * 1, sy = y - 4.5 - (1 - Math.abs(k)) * 1.2;
           pathPoly(c, [sx - 1.3, sy + 1, sx + 1.3, sy + 1, sx + s * 0.6, sy - 3.8]); fillFlat(c, pal.ml, pal.o);
@@ -410,13 +431,13 @@ function drawCore(c, L, ly, t, o, layer) {
       const hy = (T + B) / 2 + 0.5;
       pathPoly(c, [0, hy - 5.5, 4.8, hy - 2.7, 4.8, hy + 2.7, 0, hy + 5.5, -4.8, hy + 2.7, -4.8, hy - 2.7]);
       fillMetal(c, pal, 0, hy - 5, 0, hy + 5, 'd');
-      c.strokeStyle = pal.t; c.lineWidth = 1.1; c.stroke();
+      c.strokeStyle = pal.t; c.lineWidth = 1.1 * RS.k; c.stroke();
       rx = 0; ry = hy; rr = 2.6; rc = pal.t;
     }
   } else if (r >= 3 && br === 'B') {
     pathPoly(c, [-tw - 1, T, tw + 1, T, tw * 0.62, B, -tw * 0.62, B]);
     fillMetal(c, pal, -tw, T, tw, B, 'm');
-    c.strokeStyle = pal.md; c.lineWidth = 1;
+    c.strokeStyle = pal.md; c.lineWidth = 1 * RS.k;
     for (let k = 0; k < 3; k++) for (const s of [-1, 1]) {
       c.beginPath(); c.moveTo(s * 5, T + 10 + k * 2.6); c.lineTo(s * (tw * 0.72 - k * 1.2), T + 8.5 + k * 2.8); c.stroke();
     }
@@ -438,7 +459,7 @@ function drawCore(c, L, ly, t, o, layer) {
     if (r >= 2) {
       for (const s of [-1, 1]) for (let k = 0; k < 3; k++) {
         c.beginPath(); c.moveTo(s * (tw * 0.66), B - 6 + k * 1.6); c.lineTo(s * (tw * 0.86), B - 6.3 + k * 1.6);
-        c.strokeStyle = pal.o; c.lineWidth = 0.8; c.stroke();
+        c.strokeStyle = pal.o; c.lineWidth = 0.8 * RS.k; c.stroke();
       }
     }
   }
@@ -467,6 +488,8 @@ function drawCore(c, L, ly, t, o, layer) {
 function drawArms(c, L, ly, t, o) {
   const p = L.parts.arms, r = p.rank, br = p.branch, pal = L.pal, mv = o.moving || 0, wp = o.wp || 0;
   for (const s of [-1, 1]) {
+    if (o.armSide && o.armSide !== s) continue;
+    if (o.skipArmSide === s) continue;
     const sx = s * (ly.tw + 0.6), sy = ly.shY;
     const swing = Math.sin(wp + (s > 0 ? Math.PI : 0)) * 0.22 * mv;
     const recoil = (o.fire || 0) * 1.6;
@@ -508,7 +531,7 @@ function armHeavy(c, L, t, o, r) {
     c.beginPath(); c.ellipse(x, 6 + len, w / 2, w * 0.2, 0, 0, TAU); fillFlat(c, pal.mdd, pal.o);
     c.beginPath(); c.ellipse(x, 6 + len, w * 0.3, w * 0.12, 0, 0, TAU); c.fillStyle = pal.ag; c.fill();
     glow(c, x, 6 + len, w * 1.1, pal.a, glowA);
-    for (let k = 0; k < 2; k++) { c.beginPath(); c.moveTo(x - w / 2 + 1, 9 + k * 2.2); c.lineTo(x + w / 2 - 1, 9 + k * 2.2); c.strokeStyle = pal.md; c.lineWidth = 0.8; c.stroke(); }
+    for (let k = 0; k < 2; k++) { c.beginPath(); c.moveTo(x - w / 2 + 1, 9 + k * 2.2); c.lineTo(x + w / 2 - 1, 9 + k * 2.2); c.strokeStyle = pal.md; c.lineWidth = 0.8 * RS.k; c.stroke(); }
   };
   if (r === 3) barrel(0, 9.5, 16);
   else if (r === 4) { barrel(-2.8, 6.2, 17); barrel(3.4, 6.2, 18.5); pathRR(c, -6.2, 13, 12.8, 2.6, 1); fillMetal(c, pal, 0, 13, 0, 15.6, 'd'); }
@@ -519,7 +542,7 @@ function armHeavy(c, L, t, o, r) {
       pathRR(c, -6.7, yy, 13.4, 1.8, 0.8); fillFlat(c, pal.a);
       glow(c, 0, yy + 0.9, 7, pal.a, 0.35 * glowA);
     }
-    c.strokeStyle = pal.md; c.lineWidth = 1.6; c.beginPath(); c.moveTo(-3, 0); c.lineTo(-6.5, 12); c.stroke();
+    c.strokeStyle = pal.md; c.lineWidth = 1.6 * RS.k; c.beginPath(); c.moveTo(-3, 0); c.lineTo(-6.5, 12); c.stroke();
   }
 }
 function armGatling(c, L, t, o, r) {
@@ -533,7 +556,7 @@ function armGatling(c, L, t, o, r) {
     items.sort((a, b) => a.z - b.z);
     for (const it of items) {
       pathRR(c, x + it.x - 0.9, 12, 1.8, len, 0.8);
-      c.fillStyle = it.z > 0 ? pal.ml : pal.md; c.fill(); c.strokeStyle = pal.o; c.lineWidth = 0.6; c.stroke();
+      c.fillStyle = it.z > 0 ? pal.ml : pal.md; c.fill(); c.strokeStyle = pal.o; c.lineWidth = 0.6 * RS.k; c.stroke();
       if (r >= 5) { pathRR(c, x + it.x - 0.9, 12 + len - 3, 1.8, 3, 0.8); c.fillStyle = rgba('#ff7a35', 0.85); c.fill(); }
     }
     pathRR(c, x - 3.2, 12 + len - 1, 6.4, 1.6, 0.6); fillMetal(c, pal, 0, 0, 0, 1, 'd');
@@ -542,7 +565,7 @@ function armGatling(c, L, t, o, r) {
   if (r === 3) gun(0, 3, 12, pal.a);
   else if (r === 4) {
     gun(-2.6, 3, 12, pal.a); gun(3.2, 3, 13, pal.a);
-    c.strokeStyle = '#d9b24a'; c.lineWidth = 1.4; c.setLineDash([1, 1]);
+    c.strokeStyle = '#d9b24a'; c.lineWidth = 1.4 * RS.k; c.setLineDash([1, 1]);
     c.beginPath(); c.moveTo(-3, 2); c.quadraticCurveTo(-9, 8, -3, 12); c.stroke(); c.setLineDash([]);
   } else gun(0.5, 4, 15, '#ff7a35');
 }
@@ -562,19 +585,19 @@ function drawHead(c, L, ly, t, o) {
       glow(c, ex, ey, 4, col, 0.9);
       c.beginPath(); c.arc(ex, ey, 1.25, 0, TAU); c.fillStyle = '#ffffff'; c.fill();
     }
-    c.strokeStyle = pal.md; c.lineWidth = 0.8;
+    c.strokeStyle = pal.md; c.lineWidth = 0.8 * RS.k;
     for (let k = -1; k <= 1; k++) { c.beginPath(); c.moveTo(k * 1.6, hy + 3); c.lineTo(k * 1.6, hy + 5); c.stroke(); }
     if (r >= 4) {
       for (const s of [-1, 1]) { pathPoly(c, [s * 3, hy - 6.5, s * 5.2, hy - 6.5, s * 9.5, hy - 14]); fillMetal(c, pal, 0, hy - 14, 0, hy - 6, 'l'); }
       c.save(); c.translate(f * 13, hy - 3); c.rotate(t * 2);
-      c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba(col, 0.7); c.lineWidth = 0.8;
+      c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba(col, 0.7); c.lineWidth = 0.8 * RS.k;
       c.beginPath(); c.arc(0, 0, 3.4, 0, TAU); c.stroke();
       for (let k = 0; k < 4; k++) { c.rotate(TAU / 4); c.beginPath(); c.moveTo(4.4, 0); c.lineTo(6, 0); c.stroke(); }
       c.restore();
     }
     if (r >= 5) {
       c.save(); c.globalCompositeOperation = 'lighter';
-      c.strokeStyle = rgba(col, 0.6); c.lineWidth = 1;
+      c.strokeStyle = rgba(col, 0.6); c.lineWidth = 1 * RS.k;
       c.beginPath(); c.arc(0, hy - 1, 11.5, Math.PI * 1.1, Math.PI * 1.9); c.stroke();
       for (let k = 0; k < 7; k++) {
         const a = Math.PI * 1.12 + ((k / 7 + t * 0.15) % 1) * Math.PI * 0.76;
@@ -612,7 +635,7 @@ function drawHead(c, L, ly, t, o) {
     }
     // тарелка радара
     const dish = (x, y, sz, sp) => {
-      c.strokeStyle = pal.md; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, y + 4); c.lineTo(x, y); c.stroke();
+      c.strokeStyle = pal.md; c.lineWidth = 1.2 * RS.k; c.beginPath(); c.moveTo(x, y + 4); c.lineTo(x, y); c.stroke();
       const w = sz * (0.25 + Math.abs(Math.cos(t * sp)) * 0.75);
       c.beginPath(); c.ellipse(x, y, w, sz * 0.38, 0, 0, TAU); fillMetal(c, pal, x - w, y, x + w, y, Math.cos(t * sp) > 0 ? 'l' : 'd');
       c.beginPath(); c.arc(x, y, 0.9, 0, TAU); c.fillStyle = col; c.fill();
@@ -620,7 +643,7 @@ function drawHead(c, L, ly, t, o) {
     dish(0, hy - 10, 6, 2);
     if (r >= 4) {
       dish(-7.5, hy - 7, 3.6, 2.8);
-      c.strokeStyle = pal.ml; c.lineWidth = 0.8; c.beginPath(); c.moveTo(6, hy - 4); c.lineTo(7.5, hy - 14); c.stroke();
+      c.strokeStyle = pal.ml; c.lineWidth = 0.8 * RS.k; c.beginPath(); c.moveTo(6, hy - 4); c.lineTo(7.5, hy - 14); c.stroke();
       if (Math.sin(t * 6) > 0) glow(c, 7.5, hy - 14, 3.5, col, 1);
     }
     return;
@@ -634,7 +657,7 @@ function drawHead(c, L, ly, t, o) {
   glow(c, f * 0.9, hy - 0.5, 7, eye, 0.7);
   if (r >= 1) for (const s of [-1, 1]) { c.beginPath(); c.arc(s * 6.6, hy, 1.4, 0, TAU); fillFlat(c, pal.md, pal.o); }
   if (r >= 2) {
-    c.strokeStyle = pal.ml; c.lineWidth = 0.9; c.beginPath(); c.moveTo(4, hy - 5); c.lineTo(6, hy - 12); c.stroke();
+    c.strokeStyle = pal.ml; c.lineWidth = 0.9 * RS.k; c.beginPath(); c.moveTo(4, hy - 5); c.lineTo(6, hy - 12); c.stroke();
     glow(c, 6, hy - 12, 3.5, pal.a, Math.sin(t * 5) > 0 ? 1 : 0.35);
     c.beginPath(); c.arc(6, hy - 12, 0.9, 0, TAU); c.fillStyle = '#fff'; c.fill();
     for (const s of [-1, 1]) { pathRR(c, s * 7.6 - 1.2, hy - 3, 2.4, 5, 0.8); fillMetal(c, pal, 0, hy - 3, 0, hy + 2, 'd'); }
@@ -652,7 +675,7 @@ function drawFormTrim(c, L, ly, t, o) {
     lightLine(c, -tw + 1, T + 0.6, tw - 1, T + 0.6, pal.ag, 0.7, pulse);
   }
   if (f >= 3) {
-    c.save(); c.strokeStyle = pal.t; c.lineWidth = 0.9; c.globalAlpha *= 0.9;
+    c.save(); c.strokeStyle = pal.t; c.lineWidth = 0.9 * RS.k; c.globalAlpha *= 0.9;
     c.beginPath(); c.moveTo(-tw * 0.8, B - 0.3); c.lineTo(tw * 0.8, B - 0.3); c.stroke(); c.restore();
     glow(c, 0, B, 6, pal.t, 0.25);
   }
@@ -667,15 +690,17 @@ function drawFormTrim(c, L, ly, t, o) {
 
 /* ===== Снимки модулей для анимации трансформации ===== */
 const SNAP_RES = 3;
-function partSnapshot(L, part, t) {
-  const ext = 46 * L.scale;
+function partSnapshot(L, part, t, vo) {
+  const ext = 50 * L.scale * (vo && vo.view === 'top' ? 1.3 : 1);
   const px = Math.ceil(ext * 2 * SNAP_RES);
   const cv = makeCanvas(px, px);
   const c = cv.getContext('2d');
-  c.translate(px / 2, px / 2 + 4 * SNAP_RES * L.scale);
+  const oy = vo && vo.view === 'top' ? 0 : 4 * L.scale;
+  c.translate(px / 2, px / 2 + oy * SNAP_RES);
   c.scale(SNAP_RES, SNAP_RES);
-  drawRobot(c, L, t, { only: part, static: true });
-  return { cv, ext, res: SNAP_RES, oy: 4 * L.scale };
+  const o = Object.assign({}, vo || {}, { only: part, static: true });
+  drawRobot(c, L, t, o);
+  return { cv, ext, res: SNAP_RES, oy };
 }
 function snapTiles(snap, n) {
   const w = snap.cv.width, ts = w / n;
