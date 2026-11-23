@@ -24,8 +24,7 @@ function slotHost(slot) {
 // опорные точки модели игрока на текущем шаге симуляции (одна сборка модели на шаг)
 function playerPoints() {
   if (P._pts && P._ptsT === G.time && P._ptsV === P.view && P._ptsL === P.look) return P._pts;
-  const mesh = P._mesh && P._meshT === G.time && P._meshV === P.view ? P._mesh : null;
-  P._pts = robotPoints(P.look, G.time, playerOpts(), mesh);
+  P._pts = robotPoints(P.look, G.time, playerOpts(), playerMesh());
   P._ptsT = G.time; P._ptsV = P.view; P._ptsL = P.look;
   return P._pts;
 }

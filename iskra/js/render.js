@@ -233,9 +233,33 @@ function drawEnemyBullets(c) {
 
 /* ---------- Игрок ---------- */
 function playerOpts(extra) {
-  const o = { moving: P.moving, wp: P.wp, back: P.back, fire: P.fire, siege: P.siege, dist: P.dist, view: P.view, aim: P.aim, hd: P.hd, mounts: P.weapons, squash: P.squash };
+  const o = {
+    moving: P.moving, wp: P.wp, back: P.back, fire: P.fire, siege: P.siege, dist: P.dist, view: P.view, aim: P.aim, hd: P.hd, mounts: P.weapons, squash: P.squash,
+    mvDir: P.back ? P.hd + Math.PI : P.hd, kick: P.kick || 0, hurt: P.hurtFlash * P.hurtFlash, hitA: P.hitA, headYaw: P.hy || 0,
+  };
   if (extra) for (const k in extra) o[k] = extra[k];
   return o;
+}
+// модель игрока на этот кадр: одна сборка на тень, корпус и дульные срезы; в овердрайве бронеплиты раскрыты
+function playerMesh() {
+  if (P._mesh && P._meshT === G.time && P._meshV === P.view && P._meshL === P.look && P._meshOd === P.od.active) return P._mesh;
+  const m = buildRobot(P.look, robotPose(P.look, G.time, playerOpts()));
+  if (P.od.active) explodeAnim(odOpen(G.time))(m);
+  P._mesh = m; P._meshT = G.time; P._meshV = P.view; P._meshL = P.look; P._meshOd = P.od.active;
+  return m;
+}
+// тень настоящей формы робота на полу (рисуется вместе с полом, под врагами)
+function drawPlayerShadow(c, z, e0, f0) {
+  if (G.tf.cur || P.split || !P.look) return;
+  const view = P.view === 'top' ? 'top' : 'front', k = robotK(P.look, view);
+  c.setTransform(z * k, 0, 0, z * k, P.x * z + e0, P.y * z + f0);
+  // светлое пятно реактора на полу — на нём читается тень
+  const fy = ZC * Math.cos(VIEW_PITCH[view]), fl = Math.sin(VIEW_PITCH[view]), lc = P.od.active ? '255,79,154' : '70,227,255';
+  const g = c.createRadialGradient(0, fy, 0, 0, fy, 46);
+  g.addColorStop(0, 'rgba(' + lc + ',0.13)'); g.addColorStop(1, 'rgba(' + lc + ',0)');
+  c.fillStyle = g; c.beginPath(); c.ellipse(0, fy, 46, 46 * fl, 0, 0, TAU); c.fill();
+  renderShadow(c, playerMesh(), view, {}, 0.42);
+  c.setTransform(z, 0, 0, z, e0, f0);
 }
 function ghostSprite() {
   const L = P.look;
@@ -267,14 +291,20 @@ function drawSplit(c, z, e0, f0) {
     }
   }
   c.restore();
-  const vo = playerOpts({ static: true, moving: 0 }), R = robotPoints(L, G.time, vo);
-  for (const it of paths) { const pt = it.pt; it.an = (pt.only === 'arms' ? R.pa[pt.armSide > 0 ? 'jR' : 'jL'] : R.pa[pt.only]) || { x: 0, y: 0, d: 0 }; }
-  paths.sort((a, b) => a.an.d - b.an.d);
-  for (const { pt, cur, qq, an } of paths) {
-    c.setTransform(z, 0, 0, z, cur.x * z + e0, cur.y * z + f0);
-    c.translate(an.x, an.y); c.rotate(Math.sin(qq * Math.PI) * pt.spin); c.translate(-an.x, -an.y);
-    drawRobot(c, L, G.time, Object.assign({}, vo, { only: pt.only, armSide: pt.armSide, mesh: R.m }));
+  // одна модель: каждый узел летит своей дугой и кувыркается в 3D вокруг своего шарнира, глубина — общая
+  const vo = playerOpts({ static: true, moving: 0 }), view = P.view === 'top' ? 'top' : 'front';
+  const k = robotK(L, view), spn = Math.sin(VIEW_PITCH[view]);
+  const m = buildRobot(L, robotPose(L, G.time, vo)), GM = {};
+  for (const { pt, cur, qq } of paths) {
+    const key = pt.only === 'arms' ? 'arms' + pt.armSide : pt.only;
+    const an = (pt.only === 'arms' ? m.pa[pt.armSide > 0 ? 'jR' : 'jL'] : m.pa[pt.only]) || [0, 0, ZC];
+    const hop = Math.sin(qq * Math.PI);
+    GM[key] = animMat(an, (cur.x - P.x) / k, -(cur.y - P.y) / (k * spn), hop * 7, pt.ax[0], pt.ax[1], pt.ax[2], hop * pt.spin * 1.4, 1);
   }
+  const gk = x => (x.g === 'arms' ? 'arms' + x.side : x.g);
+  m.animate(pr => (GM[gk(pr)] ? { m: GM[gk(pr)] } : null), d => GM[gk(d)] || null);
+  c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z + f0);
+  drawRobot(c, L, G.time, Object.assign({}, vo, { mesh: m }));
 }
 function drawPlayer(c, z, e0, f0) {
   const L = P.look, sc = L.scale;
@@ -299,7 +329,7 @@ function drawPlayer(c, z, e0, f0) {
     const blink = P.iframes > 0 && P.hurtFlash > 0 && !P.od.active && (Math.floor(G.rt * 22) % 2 === 0);
     if (blink) c.globalAlpha = 0.45;
     if (tf && tf.drawSubject) tf.drawSubject(c, G.time);
-    else { P._mesh = drawRobot(c, L, G.time, playerOpts()); P._meshT = G.time; P._meshV = P.view; }
+    else drawRobot(c, L, G.time, Object.assign(playerOpts(), { mesh: playerMesh() }));
     c.globalAlpha = 1;
   }
   if (P.hurtFlash > 0.5) glow(c, 0, -4, 40 * sc, '#ff2a3a', (P.hurtFlash - 0.5) * 0.8);
@@ -359,6 +389,7 @@ function renderGame() {
   for (const a of G.areas) if (a.kind !== 'ring' && a.kind !== 'strike') AK[a.kind].draw(c, a);
   drawWarns(c);
   drawPickups(c);
+  drawPlayerShadow(c, z, e0, f0);
   FX.drawUnder(c);
   drawEnemies(c, z, e0, f0);
   const dim = G.tf.dim();

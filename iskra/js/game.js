@@ -102,6 +102,7 @@ function newPlayer(robot) {
     revives: 0, phoenixUsed: false, still: 0, siege: false,
     look: null, featherT: 0, haloT: 0, ramT: 0, pulseT: 40, citadelT: 0, regenAcc: 0,
     aim: Math.PI / 2, hd: Math.PI / 2, back: false, view: (SAVE && SAVE.settings.view) || 'front', squash: 0, split: null,
+    kick: 0, hitA: undefined, hy: 0, stepS: 1,
     time() { return G.time; },
   };
 }
@@ -376,6 +377,7 @@ function hurtPlayer(dmg, src) {
   if (hasBranch('core', 'A', 4) && Math.random() < 0.12) { P.iframes = 0.3; FX.text(P.x, P.y - 30, 'ПОГЛОЩЕНО', '#ffb43d', 12); FX.ring(P.x, P.y, 8, 40, 0.25, '#ffb43d', 2); return; }
   const d = Math.max(1, dmg * G.sector.dmg * (1 + G.threat * 0.08) - S.armor);
   P.hp -= d; P.iframes = 0.42; P.hurtFlash = 1; G.lastHurtT = G.time; G.dmgTaken = (G.dmgTaken || 0) + d;
+  P.hitA = src && src.x !== undefined ? Math.atan2(P.y - src.y, P.x - src.x) : undefined;
   FX.addShake(4); FX.flash('#ff2a3a', 0.18);
   FX.text(P.x, P.y - 30, '−' + Math.round(d), '#ff4d5e', 13);
   AUDIO.sfx('hurt');
@@ -529,8 +531,28 @@ function updatePlayer(dt) {
   if (tgt) P.face = Math.cos(P.aim) >= 0 ? 1 : -1;
   else if (mv.x > 0.15) P.face = 1; else if (mv.x < -0.15) P.face = -1;
   P.squash = Math.max(0, P.squash - dt * 5);
+  P.kick = Math.max(0, P.kick - dt * 6);
+  // голова опережает корпус: смотрит прямо на цель; в бою — короткие доглядывания, без целей — осматривается
+  const hyT = tgt ? clamp(angDiff(P.aim, Math.atan2(tgt.y - P.y, tgt.x - P.x)) * 1.6, -0.9, 0.9) + Math.sin(G.time * 1.7) * 0.12
+    : moving > 0.1 ? 0 : Math.sin(G.time * 0.55) * 0.55 + Math.sin(G.time * 1.9) * 0.12;
+  P.hy += (hyT - P.hy) * Math.min(1, dt * 9);
   if (P.split) { P.split.t += dt; if (P.split.t >= P.split.dur + 0.04) splitArrive(); }
   P.wp += dt * (6 + S.speed / 30) * moving;
+  // шаги: каждая постановка стопы отмечается на чертеже пола
+  const lg = P.parts.legs, walker = !(lg.rank >= 3);
+  if (moving > 0.1 && Math.sign(Math.cos(P.wp)) !== P.stepS) {
+    P.stepS = Math.sign(Math.cos(P.wp)) || 1;
+    if (walker && P.look && !P.split) {
+      const view = P.view === 'top' ? 'top' : 'front', k = robotK(P.look, view), side = P.stepS, sp = Math.sin(VIEW_PITCH[view]);
+      const fx = P.x - Math.sin(P.hd) * side * 5.2 * k, fy = P.y + feetY(P.look, view) + Math.cos(P.hd) * side * 5.2 * k * sp;
+      FX.ring(fx, fy, 1.5, 9 * k, 0.32, '#46e3ff', 1);
+      FX.dot(fx, fy, rand(-20, 20), rand(-14, 4), 0.3, 1.6, '#bff6ff', 0.4);
+    }
+  } else if (moving > 0.1 && lg.rank >= 3 && lg.branch === 'A' && Math.random() < dt * 14) {
+    // гусеницы поднимают крошку
+    const view = P.view === 'top' ? 'top' : 'front', k = robotK(P.look, view);
+    FX.dot(P.x - Math.cos(P.hd) * 14 * k + rand(-6, 6), P.y + feetY(P.look, view) - Math.sin(P.hd) * 5 * k, -Math.cos(P.hd) * 40 + rand(-15, 15), rand(-25, -5), 0.35, 1.8, '#6f86a6', 0.5);
+  }
   P.dist += Math.hypot(P.vx, P.vy) * dt;
   if (moving < 0.1) P.still += dt; else P.still = 0;
   P.siege = hasBranch('arms', 'A', 5) && P.still > 0.7;
@@ -629,13 +651,14 @@ const SPLIT_PARTS = [
 ];
 function startSplit(fx, fy, tx, ty, dur) {
   const dx = tx - fx, dy = ty - fy, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
-  P.split = { t: 0, dur, fx, fy, tx, ty, parts: SPLIT_PARTS.map((p, i) => Object.assign({}, p, { bend: (i % 2 ? 1 : -1) * rand(28, 64), nx, ny, spin: rand(-2.4, 2.4) })) };
+  P.split = { t: 0, dur, fx, fy, tx, ty, parts: SPLIT_PARTS.map((p, i) => Object.assign({}, p, { bend: (i % 2 ? 1 : -1) * rand(28, 64), nx, ny, spin: rand(-2.4, 2.4), ax: [rand(-1, 1), rand(-1, 1), rand(-0.4, 0.4)] })) };
   FX.speedDir = Math.atan2(dy, dx); FX.speedT = dur + 0.1;
   FX.shards(fx, fy, 6, '#bff6ff', 140);
 }
 function splitArrive() {
   const s = P.split;
   P.split = null;
+  P.squash = 0.75;
   FX.ring(P.x, P.y, 4, 64, 0.3, '#eaf6ff', 2.5);
   FX.sparks(P.x, P.y, 12, '#bff6ff', 240, undefined, 0, 0.35);
   FX.light(P.x, P.y, 110, '#46e3ff', 0.5);

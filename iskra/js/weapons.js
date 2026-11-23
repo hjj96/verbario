@@ -15,7 +15,13 @@ function updateWeapons(dt) {
     A.out = (w.st.outN || 0) > 0 || w.id === 'bladestorm' ? 1 : 0;
   }
 }
-function fired(w, k) { if (w.anim) w.anim.fire = Math.max(w.anim.fire, k === undefined ? 1 : k); }
+// отдача корпуса по типу орудия: рельса бьёт сильнее всего
+const KICK = { rail: 1, missiles: 0.45, gravity: 0.5, shock: 0.35, saw: 0.3, mines: 0.25, cryo: 0.2, arc: 0.18, blaster: 0.12, flamer: 0.04 };
+function fired(w, k) {
+  const q = k === undefined ? 1 : k;
+  if (w.anim) w.anim.fire = Math.max(w.anim.fire, q);
+  if (P) P.kick = Math.max(P.kick || 0, (KICK[baseOf(w)] || 0) * q);
+}
 function leech(v) {
   if (P.leechBudget <= 0 || P.hp >= P.stats.maxHp) return;
   const h = Math.min(v, P.leechBudget);

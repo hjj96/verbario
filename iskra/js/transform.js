@@ -64,53 +64,164 @@ function callout(c, ax, ay, text, q, col) {
   c.restore();
 }
 
-/* --- Трансформация модуля: робот разворачивается к камере, старый модуль рассыпается, новый вычерчивается пером --- */
+// экранная точка модели относительно центра робота (единицы мира)
+function projPt(L, view, pitch, p) {
+  const k = robotK(L, view), sp = Math.sin(pitch), cp = Math.cos(pitch);
+  return { x: p[0] * k, y: (-p[1] * sp - (p[2] - ZC) * cp) * k };
+}
+
+/* ===== Механика деталей: сборка, разборка, взрыв-схема ===== */
+function primCounts(m, sel) { const n = {}; for (const pr of m.prims) if (sel(pr)) n[pr.key] = (n[pr.key] || 0) + 1; return n; }
+// вертикальная ось корпуса (между грудью и спиной) — от неё разлетаются детали
+function bodyAxis(m) { const a = m.pa.core, b = m.pa.back; return a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : [0, 0]; }
+// откуда деталь прилетает и куда улетает: руки — от плечевого шарнира, голова — вверх, шасси — вниз, генератор — назад
+function primOrigin(m, pr) {
+  const A = bodyAxis(m);
+  if (pr.g === 'arms') return m.pa[pr.side > 0 ? 'jR' : 'jL'] || [A[0], A[1], 28];
+  if (pr.slot) return [A[0], A[1], pr.c[2] - 2];
+  if (pr.g === 'head') return [A[0], A[1], 29];
+  if (pr.g === 'legs') return [A[0], A[1], 19];
+  if (pr.g === 'back') return m.pa.core || [A[0], A[1], pr.c[2]];
+  return [A[0], A[1], pr.c[2]];
+}
+function primDir(m, pr, h1, h2) {
+  const og = primOrigin(m, pr);
+  let dx = pr.c[0] - og[0], dy = pr.c[1] - og[1], dz = pr.c[2] - og[2];
+  if (Math.hypot(dx, dy, dz) < 1.2) { dx = h1 - 0.5; dy = h2 - 0.5; dz = 0.5; }
+  const l = Math.hypot(dx, dy, dz);
+  return [dx / l, dy / l, dz / l];
+}
+// сборка: детали по очереди прилетают, кувыркаясь, проскакивают место и защёлкиваются (outBack)
+function asmPrim(m, pr, N, t, o) {
+  const p = (t - (N > 1 ? pr.k / (N - 1) * o.span : 0)) / o.fly;
+  if (p <= 0) return PRIM_HIDE;
+  if (p >= 1) return null;
+  const sd = o.seed || 1, h1 = hsh(pr.k + 1, sd), h2 = hsh(pr.k + 7, sd + 3), h3 = hsh(pr.k + 13, sd + 5);
+  const u = primDir(m, pr, h1, h2), D = o.dist * (0.7 + h3 * 0.6), r = 1 - ease.outBack(p);
+  const spin = (1 - ease.outCubic(p)) * (2.2 + h1 * 2.6) * (h2 < 0.5 ? -1 : 1);
+  return { m: animMat(pr.c, u[0] * D * r, u[1] * D * r, (u[2] * D + 6) * r, h2 - 0.5, h3 - 0.5, h1 + 0.2, spin, 0.7 + 0.3 * Math.min(1, ease.outCubic(p))), al: Math.min(1, p * 2.5), nodec: true };
+}
+// разборка: внешние детали отлетают первыми, кувыркаются, падают и гаснут
+function disPrim(m, pr, N, t, o) {
+  const p = (t - (N > 1 ? (1 - pr.k / (N - 1)) * o.span : 0)) / o.fly;
+  if (p <= 0) return null;
+  if (p >= 1) return PRIM_HIDE;
+  const sd = (o.seed || 1) + 11, h1 = hsh(pr.k + 1, sd), h2 = hsh(pr.k + 7, sd + 3), h3 = hsh(pr.k + 13, sd + 5);
+  const u = primDir(m, pr, h1, h2), D = o.dist * (0.8 + h3 * 0.8), e = ease.outCubic(p);
+  const spin = p * (3 + h1 * 4) * (h2 < 0.5 ? -1 : 1);
+  return { m: animMat(pr.c, u[0] * D * e, u[1] * D * e, u[2] * D * e + 9 * e - 30 * p * p, h2 - 0.5, h1 - 0.5, h3 + 0.1, spin, 1 - 0.3 * p), al: 1 - ease.inQuad(p), nodec: true };
+}
+function asmAnim(sel, t, o) {
+  return m => { const cnt = primCounts(m, sel); m.animate(pr => (sel(pr) ? asmPrim(m, pr, cnt[pr.key], t, o) : null), d => (sel(d) && t < o.span + o.fly ? PRIM_HIDE : null)); };
+}
+function disAnim(sel, t, o) {
+  return m => { const cnt = primCounts(m, sel); m.animate(pr => (sel(pr) ? disPrim(m, pr, cnt[pr.key], t, o) : null), d => (sel(d) && t > 0 ? PRIM_HIDE : null)); };
+}
+// расписание защёлкиваний (для искр и щелчков): момент первого касания места — p≈0,4 у outBack
+function lockPlan(m, sel, t0, o) {
+  const cnt = primCounts(m, sel), out = [];
+  for (const pr of m.prims) if (sel(pr)) { const N = cnt[pr.key]; out.push({ t: t0 + (N > 1 ? pr.k / (N - 1) * o.span : 0) + o.fly * 0.4, p: pr.c }); }
+  return out.sort((a, b) => a.t - b.t);
+}
+function fireLocks(S, subj, L, view, pitch, t0, t1, col) {
+  if (!S.locks) return;
+  let n = 0;
+  for (const lk of S.locks) {
+    if (lk.t <= t0 || lk.t > t1) continue;
+    const q = projPt(L, view, pitch, lk.p);
+    FX.sparks(subj.x + q.x, subj.y + q.y, 3, col || '#bff6ff', 140, undefined, 0, 0.25);
+    if (n++ < 1 && !S.silent) AUDIO.sfx('clank');
+  }
+}
+// взрыв-схема: все детали расходятся от оси корпуса (дальние — дальше), out собирает линии сборки
+function explodeAnim(E, out) {
+  return m => {
+    if (E <= 0.002) return;
+    const A = bodyAxis(m), cz = ZC + (m.lift || 0);
+    const off = c => { const dx = c[0] - A[0], dy = c[1] - A[1], dz = (c[2] - cz) * 0.9, l = Math.hypot(dx, dy, dz) || 1, D = E * (4 + l * 0.6); return [dx / l * D, dy / l * D, dz / l * D]; };
+    m.animate(pr => {
+      const v = off(pr.c), h = hsh(pr.k + 3, pr.v0 % 89);
+      if (out) out.push([pr.c, [pr.c[0] + v[0], pr.c[1] + v[1], pr.c[2] + v[2]], pr.g]);
+      return { m: animMat(pr.c, v[0], v[1], v[2], h - 0.5, 0.5 - h, 1, E * 0.3 * (h - 0.5), 1) };
+    }, d => { const ref = d.c || d.p || d.a; if (!ref) return null; const v = off(ref); return m3t(v[0], v[1], v[2]); });
+  };
+}
+// линии сборки и номера позиций спецификации поверх взрыв-схемы
+function drawExplode(c, L, view, pitch, lines, a) {
+  if (!lines || !lines.length || a <= 0.01) return;
+  const T = c.getTransform(), px = (VIEW.dpr || 1) / Math.max(0.02, Math.hypot(T.a, T.b));
+  c.save(); c.globalCompositeOperation = 'lighter';
+  c.strokeStyle = rgba('#46e3ff', 0.42 * a); c.lineWidth = px; c.setLineDash([3 * px, 3 * px]);
+  c.beginPath();
+  const grp = {};
+  for (const [p0, p1, g] of lines) {
+    const q0 = projPt(L, view, pitch, p0), q1 = projPt(L, view, pitch, p1);
+    if (Math.hypot(q1.x - q0.x, q1.y - q0.y) > 3) { c.moveTo(q0.x, q0.y); c.lineTo(q1.x, q1.y); }
+    const G = grp[g] || (grp[g] = { x: 0, y: 0, n: 0 }); G.x += q1.x; G.y += q1.y; G.n++;
+  }
+  c.stroke(); c.setLineDash([]);
+  c.font = '700 ' + (8 * px).toFixed(2) + 'px "JetBrains Mono", monospace'; c.textBaseline = 'middle';
+  PART_ORDER.forEach((k, i) => {
+    const G = grp[k]; if (!G) return;
+    const x = G.x / G.n, y = G.y / G.n, r = 6.5 * px, lx = x + (x >= 0 ? 16 : -16) * px, ly = y - 12 * px;
+    c.strokeStyle = rgba('#7fd8ff', 0.8 * a); c.lineWidth = 0.9 * px;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(lx, ly); c.stroke();
+    c.beginPath(); c.arc(lx, ly, r, 0, TAU); c.stroke();
+    c.fillStyle = rgba('#eaf6ff', a); c.textAlign = 'center'; c.fillText(String(i + 1), lx, ly + 0.5 * px);
+    c.textAlign = x >= 0 ? 'left' : 'right'; c.fillStyle = rgba('#9fdcff', 0.85 * a);
+    c.fillText(PARTS[k].code, lx + (x >= 0 ? 1 : -1) * (r + 3 * px), ly + 0.5 * px);
+  });
+  c.restore();
+}
+
+/* --- Трансформация модуля: робот разворачивается к камере, старый модуль разлетается на детали, новый собирается по одной --- */
 function seqPart(subj, part, rank, branch, opts) {
   opts = opts || {};
   const turn = !opts.fast && !opts.ambient;
+  const sel = pr => pr.g === part;
   const S = {
-    dur: opts.fast ? 1.3 : 2.0, blocking: !opts.ambient, subj, kind: 'part',
+    dur: opts.fast ? 1.35 : 2.1, blocking: !opts.ambient, subj, kind: 'part', silent: !!opts.silent,
     voAt(t) {
       if (!turn) return svo(subj);
       const q = ease.inOutCubic(seg(t, 0, this.t0)) * (1 - ease.inOutCubic(seg(t, this.dur - 0.55, this.dur)));
-      return svo(subj, turnTo(subj, SHOW_YAW[part], q));
+      const o = svo(subj, turnTo(subj, SHOW_YAW[part], q));
+      if (o.view !== 'top') o.pitch = VIEW_PITCH.front - 0.1 * q;
+      return o;
     },
     init() {
       this.old = cloneLook(subj.look);
       this.nl = cloneLook(subj.look);
       this.nl.parts[part] = { rank, branch: branch || this.nl.parts[part].branch };
-      const T = subj.time ? subj.time() : 0;
-      this.t0 = opts.fast ? 0.12 : 0.42;
+      const T = subj.time ? subj.time() : 0, fast = !!opts.fast;
+      this.t0 = fast ? 0.1 : 0.42;
+      this.dis = { t0: this.t0, span: fast ? 0.12 : 0.22, fly: fast ? 0.4 : 0.55, dist: 22, seed: rank * 7 + 1 };
+      this.asm = { t0: this.t0 + (fast ? 0.12 : 0.18), span: fast ? 0.45 : 0.55, fly: fast ? 0.3 : 0.34, dist: 20, seed: rank * 5 + 3 };
+      this.tc = this.asm.t0 + this.asm.span + this.asm.fly + 0.03;
       this.vo = this.voAt(this.t0);
-      this.oSnap = partSnapshot(this.old, part, T, this.vo);
-      this.oTiles = snapTiles(this.oSnap, 7);
-      const sc = this.old.scale;
-      for (const tl of this.oTiles) {
-        const a = Math.atan2(tl.hy + 2, tl.hx) + rand(-0.6, 0.6), s = rand(70, 170) * sc;
-        tl.vx = Math.cos(a) * s; tl.vy = Math.sin(a) * s - 30; tl.vr = rand(-9, 9);
-      }
+      const view = viewOf(this.vo), pitch = meshPitch(view, this.vo);
+      const mn = buildRobot(this.nl, robotPose(this.nl, T, this.vo));
+      this.locks = lockPlan(mn, sel, this.asm.t0, this.asm);
+      const R = robotPoints(this.nl, T, this.vo, mn);
+      this.anchor = R.pa[part] || { x: 0, y: 0, d: 0 };
+      this.behind = this.anchor.d < (R.pa.core ? R.pa.core.d : 0);
+      this.view = view; this.pitch = pitch;
       const br = this.nl.parts[part].branch;
       this.code = PARTS[part].code + ' · МК-' + ROMAN[rank] + (rank >= 3 && br ? ' · ' + PARTS[part].branches[br].name.toUpperCase() : '');
-      this.anchor = partAnchor(this.nl, part, this.vo);
-      this.committed = false; this.clanks = 0;
+      this.committed = false; this.prevT = 0;
       if (!opts.silent) AUDIO.sfx('tfStart');
       if (opts.onStart) opts.onStart();
     },
     update(dt) {
       const t = this.t, t0 = this.t0;
-      if (t > t0) {
-        for (const tl of this.oTiles) { tl.x += tl.vx * dt; tl.y += tl.vy * dt; tl.vx *= Math.exp(-2.2 * dt); tl.vy *= Math.exp(-2.2 * dt); tl.rot += tl.vr * dt; }
-        if (!this.sparked) {
-          this.sparked = true;
-          FX.sparks(subj.x + this.anchor.x, subj.y + this.anchor.y, 16, '#ffd36b', 260, undefined, 0, 0.5);
-          FX.shards(subj.x + this.anchor.x, subj.y + this.anchor.y, 10, '#eaf6ff', 160);
-          if (!opts.silent) AUDIO.sfx('swing');
-        }
+      if (t > t0 && !this.sparked) {
+        this.sparked = true;
+        FX.sparks(subj.x + this.anchor.x, subj.y + this.anchor.y, 14, '#ffd36b', 260, undefined, 0, 0.5);
+        FX.shards(subj.x + this.anchor.x, subj.y + this.anchor.y, 8, '#eaf6ff', 160);
+        if (!opts.silent) AUDIO.sfx('swing');
       }
-      const dq = seg(t, t0 + 0.12, t0 + 0.8);
-      if (!opts.silent && dq > 0 && dq < 1 && this.clanks < Math.floor(dq * 4)) { this.clanks++; AUDIO.sfx('clank'); }
-      const tc = t0 + 0.9;
-      if (!this.committed && t >= tc) {
+      fireLocks(this, subj, this.nl, this.view, this.pitch, this.prevT, t);
+      this.prevT = t;
+      if (!this.committed && t >= this.tc) {
         this.committed = true;
         subj.look.parts[part] = { rank: this.nl.parts[part].rank, branch: this.nl.parts[part].branch };
         refreshLook(subj.look);
@@ -123,7 +234,6 @@ function seqPart(subj, part, rank, branch, opts) {
         if (!opts.silent) AUDIO.sfx('tfBoom');
         if (opts.onCommit) opts.onCommit();
       }
-      this.tc = tc;
     },
     finish() { if (!this.committed) { subj.look.parts[part] = this.nl.parts[part]; refreshLook(subj.look); if (opts.onCommit) opts.onCommit(); } if (opts.onEnd) opts.onEnd(); },
     zoom() {
@@ -141,7 +251,7 @@ function seqPart(subj, part, rank, branch, opts) {
         return;
       }
       const lab = seg(t, t0 + 0.1, t0 + 0.5) * (1 - seg(t, this.dur - 0.35, this.dur));
-      const an = partAnchor(this.committed ? subj.look : this.nl, part, vo);
+      const an = opts.fast ? partAnchor(this.committed ? subj.look : this.nl, part, vo) : this.anchor;
       if (this.committed) {
         drawRobot(c, subj.look, T, vo);
         const q = seg(t, this.tc, this.tc + 0.35);
@@ -149,65 +259,67 @@ function seqPart(subj, part, rank, branch, opts) {
         callout(c, an.x, an.y, this.code, lab);
         return;
       }
-      const dq = seg(t, t0 + 0.12, t0 + 0.8);
-      const fa = 1 - seg(t, t0 + 0.05, t0 + 0.5);
-      // модуль позади корпуса (по глубине) рисуется до корпуса
-      const behind = an.d < partAnchor(this.old, 'core', vo).d;
-      const fresh = () => {
-        if (fa > 0) for (const tl of this.oTiles) drawTile(c, this.oSnap, tl, fa);
-        if (dq > 0) {
-          RS.reveal = Math.max(0.002, dq);
-          c.save(); c.globalCompositeOperation = 'lighter';
-          drawRobot(c, this.nl, T, Object.assign({}, vo, { only: part }));
-          c.restore();
-          RS.reveal = 1;
-        }
-      };
-      if (behind) fresh();
-      drawRobot(c, this.old, T, Object.assign({}, vo, { skip: part }));
-      if (!behind) fresh();
+      // старый модуль разлетается (позади корпуса — до него), новый собирается прямо на роботе
+      const td = t - this.dis.t0, dis = () => { if (td < this.dis.span + this.dis.fly) drawRobot(c, this.old, T, Object.assign({}, vo, { only: part, anim: disAnim(sel, td, this.dis) })); };
+      if (this.behind) dis();
+      drawRobot(c, this.nl, T, Object.assign({}, vo, { anim: asmAnim(sel, t - this.asm.t0, this.asm) }));
+      if (!this.behind) dis();
       callout(c, an.x, an.y, this.code, lab);
     },
   };
   return S;
 }
 
-/* --- Монтаж орудия: робот поворачивается слотом к камере, рука отделяется, вычерчивается пушкой и встаёт на место --- */
+/* --- Монтаж орудия: робот поворачивается слотом к камере, рука отлетает, кувыркаясь, модуль собирается по деталям, рука встаёт на место --- */
 function seqMount(subj, w, opts) {
   opts = opts || {};
-  const evoTo = opts.evo || null;
+  const evoTo = opts.evo || null, slot = w.slot;
+  const selM = pr => pr.slot === slot;
   return {
-    dur: evoTo ? 1.75 : 1.5, blocking: true, subj, kind: 'mount',
+    dur: evoTo ? 1.8 : 1.55, blocking: true, subj, kind: 'mount',
     voAt(t) {
       const q = ease.inOutCubic(seg(t, 0, 0.3)) * (1 - ease.inOutCubic(seg(t, this.dur - 0.4, this.dur)));
-      return svo(subj, turnTo(subj, SLOT_YAW[w.slot] || Math.PI / 2, q));
+      const o = svo(subj, turnTo(subj, SLOT_YAW[slot] || Math.PI / 2, q));
+      if (o.view !== 'top') o.pitch = VIEW_PITCH.front - 0.08 * q;
+      return o;
     },
     init() {
-      this.host = slotHost(w.slot);
+      this.host = slotHost(slot);
       this.arm = !!this.host.armSide;
       this.vo = this.voAt(0.3);
       const T = subj.time ? subj.time() : 0;
       w.hidden = false;
-      const R = robotPoints(subj.look, T, this.vo);
-      const an = R.an[w.slot] || R.pa.core || { x: 0, y: 0 };
+      const m = buildRobot(subj.look, robotPose(subj.look, T, this.vo));
+      const R = robotPoints(subj.look, T, this.vo, m);
+      const an = R.an[slot] || R.pa.core || { x: 0, y: 0 };
       this.slotW = { x: an.x, y: an.y };
-      this.pivot = this.arm ? (R.pa[this.host.armSide > 0 ? 'jR' : 'jL'] || this.slotW) : this.slotW;
-      const l = Math.hypot(this.slotW.x, this.slotW.y) || 1;
-      this.dir = { x: this.slotW.x / l, y: this.slotW.y / l };
+      this.slot3 = m.anchors[slot] ? m.anchors[slot].p : [0, 0, ZC];
+      this.view = R.view; this.pitch = meshPitch(R.view, this.vo);
+      if (this.arm) {
+        // рука отлетает наружу и вверх, кувыркаясь вокруг горизонтальной оси
+        const j = m.pa[this.host.armSide > 0 ? 'jR' : 'jL'] || [0, 0, 30], A = bodyAxis(m);
+        let ox = j[0] - A[0], oy = j[1] - A[1]; const l = Math.hypot(ox, oy) || 1; ox /= l; oy /= l;
+        this.joint = j; this.out = [ox * 15, oy * 15, 9]; this.tumble = [oy, -ox, 0.25];
+      }
+      this.asm = { t0: evoTo ? 0.66 : 0.3, span: 0.45, fly: 0.3, dist: 16, seed: 9 };
+      this.dis = { t0: 0.28, span: 0.15, fly: 0.4, dist: 18, seed: 4 };
+      this.locks = lockPlan(m, selM, this.asm.t0, this.asm);
       this.code = (w.evo || evoTo ? 'ЭВО · ' : wcode(baseOf(w)) + ' · ') + ((evoTo ? EVOS[evoTo] : weaponDef(w)).name).toUpperCase();
       this.proxyOld = Object.assign({}, w, { hidden: false });
       this.proxyNew = evoTo ? Object.assign({}, w, { id: evoTo, evo: true, hidden: false, st: {} }) : this.proxyOld;
-      w.hidden = true; this.done = false;
+      w.hidden = true; this.done = false; this.prevT = 0;
       AUDIO.sfx(evoTo ? 'evolve' : 'tfStart');
       if (opts.onStart) opts.onStart();
     },
-    pose() {
-      const t = this.t, out = ease.outCubic(seg(t, 0.14, 0.42)), back = ease.outBack(seg(t, this.dur - 0.55, this.dur - 0.32));
-      const k = out * (1 - back), d = 24 * subj.look.scale;
-      return { ox: this.dir.x * d * k, oy: this.dir.y * d * k - 12 * subj.look.scale * k, spin: k * TAU * (this.host.armSide || 1) * 0.75 };
-    },
+    // доля «рука отделена»: 0 — на месте, 1 — в полёте
+    armK() { const t = this.t; return ease.outCubic(seg(t, 0.14, 0.42)) * (1 - ease.outBack(seg(t, this.dur - 0.55, this.dur - 0.32))); },
+    armMat(k) { const o = this.out; return animMat(this.joint, o[0] * k, o[1] * k, o[2] * k, this.tumble[0], this.tumble[1], this.tumble[2], k * TAU * 0.8 * (this.host.armSide || 1), 1); },
     update(dt) {
       const t = this.t;
+      if (this.arm) fireLocks(this, subj, subj.look, this.view, this.pitch, this.prevT, t, '#eaf6ff');
+      else fireLocks(this, subj, subj.look, this.view, this.pitch, this.prevT, t);
+      if (this.arm && this.locks) for (const lk of this.locks) if (lk.t > this.prevT && lk.t <= t) { /* искры выше — в точках без учёта полёта руки */ }
+      this.prevT = t;
       if (!this.done && t >= this.dur - 0.32) {
         this.done = true;
         w.hidden = false;
@@ -232,34 +344,36 @@ function seqMount(subj, w, opts) {
         for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + t * 0.8, len = 60 + 40 * Math.sin(t * 6 + i); c.strokeStyle = rgba(i % 2 ? EVOS[evoTo].color : '#ffd36b', 0.22 * seg(t, 0, 0.3) * (1 - seg(t, this.dur - 0.4, this.dur))); c.lineWidth = 4; c.beginPath(); c.moveTo(Math.cos(a) * 16, Math.sin(a) * 16); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); }
         c.restore();
       }
-      const base = Object.assign({}, vo);
-      if (!this.done && this.arm) base.skipArmSide = this.host.armSide;
-      drawRobot(c, L, T, base);
-      if (this.done) { callout(c, this.slotW.x, this.slotW.y, this.code, 1 - seg(t, this.dur - 0.2, this.dur)); return; }
-      const p = this.pose();
-      const half = evoTo ? 0.66 : 0.32;
-      let proxy, rv;
-      if (evoTo && t < half) { proxy = this.proxyOld; rv = 1 - seg(t, 0.32, half); }
-      else { proxy = this.proxyNew; rv = seg(t, half, this.dur - 0.55); }
-      proxy.reveal = Math.max(0.002, rv);
-      c.save();
-      c.translate(this.pivot.x + p.ox, this.pivot.y + p.oy); c.rotate(p.spin); c.translate(-this.pivot.x, -this.pivot.y);
-      if (this.arm) drawRobot(c, L, T, Object.assign({}, vo, { only: 'arms', armSide: this.host.armSide, mounts: [proxy] }));
-      else drawRobot(c, L, T, Object.assign({}, vo, { only: this.host.only, mounts: [proxy], onlyMounts: true }));
-      c.restore();
-      callout(c, this.pivot.x + p.ox, this.pivot.y + p.oy, this.code, seg(t, 0.25, 0.55));
+      if (this.done) { drawRobot(c, L, T, vo); callout(c, this.slotW.x, this.slotW.y, this.code, 1 - seg(t, this.dur - 0.2, this.dur)); return; }
+      const oldPhase = evoTo && t < this.asm.t0;
+      const proxy = oldPhase ? this.proxyOld : this.proxyNew;
+      const mounts = (subj.weapons || []).map(x => (x === w ? proxy : x));
+      const k = this.arm ? this.armK() : 0, AM = this.arm && k > 0.001 ? this.armMat(k) : null, side = this.host.armSide;
+      const ta = t - this.asm.t0, td = t - this.dis.t0;
+      const anim = m => {
+        const cnt = primCounts(m, selM);
+        m.animate(pr => {
+          let A = null;
+          if (pr.slot === slot) {
+            A = oldPhase ? (td > 0 ? disPrim(m, pr, cnt[pr.key], td, this.dis) : null) : asmPrim(m, pr, cnt[pr.key], ta, this.asm);
+            if (A === PRIM_HIDE) return A;
+          }
+          if (AM && pr.g === 'arms' && pr.side === side) return A ? Object.assign({}, A, { m: A.m ? m3mul(AM, A.m) : AM }) : { m: AM };
+          return A;
+        }, d => {
+          if (d.slot === slot && (oldPhase ? td > 0 : ta < this.asm.span + this.asm.fly)) return PRIM_HIDE;
+          if (AM && d.g === 'arms' && d.side === side) return AM;
+          return null;
+        });
+      };
+      drawRobot(c, L, T, Object.assign({}, vo, { mounts, anim }));
+      // выноска следует за модулем
+      const p3 = AM ? m3ap(AM, this.slot3) : this.slot3, q = projPt(L, this.view, meshPitch(this.view, vo), p3);
+      callout(c, q.x, q.y, this.code, seg(t, 0.25, 0.55));
     },
   };
 }
 
-function drawTile(c, snap, tl, a) {
-  c.save();
-  c.globalAlpha *= a;
-  c.translate(tl.x, tl.y); c.rotate(tl.rot);
-  const s = tl.size;
-  c.drawImage(snap.cv, tl.sx, tl.sy, tl.sw, tl.sh, -s / 2, -s / 2, s + 0.05, s + 0.05);
-  c.restore();
-}
 function scanLine(c, L, q, vo) {
   const k = robotK(L, viewOf(vo)), top = -30 * k, bot = feetY(L, viewOf(vo)) + 2 * k, y = lerp(top, bot, q);
   c.save(); c.globalCompositeOperation = 'lighter';
@@ -274,11 +388,19 @@ function seqForm(subj, newForm, opts) {
   opts = opts || {};
   return {
     dur: 3.1, blocking: true, subj, kind: 'form',
-    // полный оборот вокруг оси: разгон к вспышке и торможение после
+    // полный оборот вокруг оси (разгон к вспышке, торможение после) и камера снизу — «геройский» ракурс
     voAt(t) {
       const q = ease.inOutCubic(seg(t, 0.2, 2.7)) * TAU;
       const a0 = subj.aim !== undefined ? subj.aim : Math.PI / 2, h0 = subj.hd !== undefined ? subj.hd : a0;
-      return svo(subj, { aim: a0 + q, hd: h0 + q });
+      const o = svo(subj, { aim: a0 + q, hd: h0 + q });
+      const hero = ease.outCubic(seg(t, 0.1, 0.8)) * (1 - ease.inOutCubic(seg(t, 2.3, 3.0)));
+      o.pitch = lerp(VIEW_PITCH[o.view === 'top' ? 'top' : 'front'], o.view === 'top' ? 0.8 : 0.24, hero);
+      return o;
+    },
+    // раскрытие взрыв-схемы: старая форма расходится и схлопывается во вспышку, новая — защёлкивается с отскоком
+    explodeAt(t) {
+      if (t < 1.6) return 1.05 * ease.outCubic(seg(t, 0.25, 1.15)) * (1 - ease.inCubic(seg(t, 1.3, 1.6)));
+      return 0.55 * (1 - ease.outBack(seg(t, 1.62, 2.45)));
     },
     init() {
       this.old = cloneLook(subj.look);
@@ -315,7 +437,7 @@ function seqForm(subj, newForm, opts) {
       }
     },
     finish() { if (!this.done) { subj.look.form = newForm; refreshLook(subj.look); if (opts.onCommit) opts.onCommit(); } if (opts.onEnd) opts.onEnd(); },
-    zoom() { const t = this.t; return 1 + 1.15 * ease.outCubic(seg(t, 0, 0.5)) * (1 - ease.inOutCubic(seg(t, 2.45, 3.1))); },
+    zoom() { const t = this.t; return 1 + 0.75 * ease.outCubic(seg(t, 0, 0.5)) * (1 - ease.inOutCubic(seg(t, 2.45, 3.1))); },
     dim() { return 0.8 * seg(this.t, 0, 0.4) * (1 - seg(this.t, 2.4, 3.0)); },
     lift() { const t = this.t; return 12 * ease.outCubic(seg(t, 0.1, 0.9)) * (1 - ease.inOutCubic(seg(t, 1.9, 2.8))); },
     speed() { const t = this.t; return seg(t, 0.2, 0.6) * (1 - seg(t, 1.7, 2.4)) + (t > 1.55 && t < 1.75 ? 1 : 0); },
@@ -334,10 +456,12 @@ function seqForm(subj, newForm, opts) {
         }
         c.restore();
       }
-      const vo = this.voAt(t), L = this.done ? subj.look : this.old;
-      const wa = this.done ? 1 - ease.outCubic(seg(t, 1.6, 2.3)) : ease.inCubic(seg(t, 0.5, 1.6));
-      if (!this.done) c.translate(t > 0.9 ? rand(-1, 1) * seg(t, 0.9, 1.6) * 1.6 : 0, 0);
-      const m = drawRobot(c, L, T, vo);
+      const vo = this.voAt(t), L = this.done ? subj.look : this.old, view = viewOf(vo);
+      const wa = this.done ? 1 - ease.outCubic(seg(t, 1.6, 2.3)) : ease.inCubic(seg(t, 0.7, 1.6));
+      if (!this.done) c.translate(t > 1.1 ? rand(-1, 1) * seg(t, 1.1, 1.6) * 1.6 : 0, 0);
+      const E = this.explodeAt(t), lines = E > 0.05 ? [] : null;
+      const m = drawRobot(c, L, T, Object.assign({}, vo, { anim: explodeAnim(E, lines) }));
+      if (lines) drawExplode(c, L, view, vo.pitch, lines, clamp(E * 1.4, 0, 1) * (1 - wa * 0.7));
       if (wa > 0.01) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha *= wa; drawRobot(c, L, T, Object.assign({}, vo, { flat: '#ffffff', mesh: m })); c.restore(); }
       c.restore();
     },
@@ -345,6 +469,8 @@ function seqForm(subj, newForm, opts) {
 }
 
 /* --- Овердрайв --- */
+// насколько разошлись бронеплиты в овердрайве (пульсирует)
+function odOpen(t) { return 0.11 + 0.025 * Math.sin(t * 9); }
 function seqOverdrive(subj, opts) {
   opts = opts || {};
   return {
@@ -370,10 +496,12 @@ function seqOverdrive(subj, opts) {
     finish() { subj.look.od = 1; refreshLook(subj.look); if (!this.done && opts.onCommit) opts.onCommit(); if (opts.onEnd) opts.onEnd(); },
     zoom() { const t = this.t; return 1 + 0.4 * ease.outCubic(seg(t, 0, 0.3)) * (1 - seg(t, 0.6, 0.85)); },
     dim() { return 0.35 * (1 - seg(this.t, 0.55, 0.85)); },
+    // бронеплиты расходятся, открывая раскалённое нутро; в овердрайве робот так и остаётся «раскрытым»
     drawSubject(c, T) {
-      const sh = this.t < 0.55 ? rand(-1, 1) * 1.2 : 0;
+      const t = this.t, sh = t < 0.55 ? rand(-1, 1) * 1.2 : 0;
+      const E = t < 0.55 ? 0.05 * seg(t, 0.1, 0.55) : odOpen(T) + 0.22 * (1 - ease.outBack(seg(t, 0.55, 0.85)));
       c.save(); c.translate(sh, 0);
-      drawRobot(c, subj.look, T, svo(subj));
+      drawRobot(c, subj.look, T, Object.assign(svo(subj), { anim: explodeAnim(E) }));
       c.restore();
     },
   };

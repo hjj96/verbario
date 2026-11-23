@@ -129,6 +129,8 @@ function robotPose(L, t, o) {
     t: t || 0, static: st, mv: st ? 0 : (o.moving || 0), wp: (o.wp || 0) * bk, dist: (o.dist || 0) * bk,
     yawU, yawL: o.hd !== undefined ? o.hd : yawU,
     mounts: o.mounts || null, armed: o.armed !== false, siege: !!o.siege, squash: o.squash || 0,
+    mvDir: o.mvDir, kick: st ? 0 : o.kick || 0, hurt: st ? 0 : o.hurt || 0, hitA: o.hitA, headYaw: o.headYaw || 0,
+    breath: st ? 0 : (1 - (o.moving || 0)) * Math.sin((t || 0) * 2.3) * 0.35,
   };
 }
 
@@ -137,7 +139,8 @@ function robotPose(L, t, o) {
 function drawRobot(c, L, t, o) {
   o = o || {};
   const view = viewOf(o);
-  const m = o.mesh || buildRobot(L, robotPose(L, t, o));
+  let m = o.mesh;
+  if (!m) { m = buildRobot(L, robotPose(L, t, o)); if (o.anim) o.anim(m); }
   const k = robotK(L, view);
   c.save();
   c.scale(k, k);
@@ -151,7 +154,7 @@ function drawRobot(c, L, t, o) {
 function robotPoints(L, t, o, mesh) {
   o = o || {};
   const view = viewOf(o), m = mesh || buildRobot(L, robotPose(L, t, o));
-  const k = robotK(L, view), f = VIEW_PITCH[view], sp = Math.sin(f), cp = Math.cos(f);
+  const k = robotK(L, view), f = meshPitch(view, o), sp = Math.sin(f), cp = Math.cos(f);
   const pr = p => ({ x: p[0] * k, y: (-p[1] * sp - (p[2] - ZC) * cp) * k, d: -p[1] * cp + p[2] * sp });
   const out = { pa: {}, an: {}, k, m, view };
   for (const n in m.pa) out.pa[n] = pr(m.pa[n]);
@@ -187,32 +190,6 @@ function drawAura(c, L, t, o) {
   }
 }
 
-/* ===== Снимки модулей для анимации трансформации ===== */
-const SNAP_RES = 3;
-function partSnapshot(L, part, t, vo) {
-  const ext = 50 * robotK(L, viewOf(vo));
-  const px = Math.ceil(ext * 2 * SNAP_RES);
-  const cv = makeCanvas(px, px);
-  const c = cv.getContext('2d');
-  c.translate(px / 2, px / 2);
-  c.scale(SNAP_RES, SNAP_RES);
-  drawRobot(c, L, t, Object.assign({}, vo || {}, { only: part, static: true }));
-  return { cv, ext, res: SNAP_RES, oy: 0 };
-}
-function snapTiles(snap, n) {
-  const w = snap.cv.width, ts = w / n;
-  const data = snap.cv.getContext('2d').getImageData(0, 0, w, w).data;
-  const tiles = [];
-  for (let gy = 0; gy < n; gy++) for (let gx = 0; gx < n; gx++) {
-    let filled = 0;
-    const x0 = Math.floor(gx * ts), y0 = Math.floor(gy * ts), x1 = Math.floor((gx + 1) * ts), y1 = Math.floor((gy + 1) * ts);
-    for (let y = y0; y < y1 && filled < 3; y += 2) for (let x = x0; x < x1; x += 2) { if (data[(y * w + x) * 4 + 3] > 40) { filled++; if (filled >= 3) break; } }
-    if (filled < 3) continue;
-    const hx = (gx + 0.5) * ts / snap.res - snap.ext, hy = (gy + 0.5) * ts / snap.res - snap.ext - snap.oy;
-    tiles.push({ sx: x0, sy: y0, sw: x1 - x0, sh: y1 - y0, hx, hy, size: ts / snap.res, x: hx, y: hy, rot: 0, vx: 0, vy: 0, vr: 0, d: 0 });
-  }
-  return tiles;
-}
 function silhouette(cv, col) {
   const s = makeCanvas(cv.width, cv.height);
   const c = s.getContext('2d');
