@@ -5,11 +5,12 @@
 
 const BLD = {
   cell: 600, ch: 0.36,
-  types: { rust: ['container', 'silo', 'wall', 'chimney', 'container'], neon: ['tower', 'billboard', 'kiosk', 'antenna', 'tower'], hive: ['spire', 'pod', 'arch', 'spire'] },
-  col: { rust: '#c9a46a', neon: '#8f7bff', hive: '#d0486a' },
-  acc: { rust: '#ffb43d', neon: '#ff3fa4', hive: '#c6ff3d' },
+  types: { rust: ['container', 'silo', 'wall', 'chimney', 'container'], neon: ['tower', 'billboard', 'kiosk', 'antenna', 'tower'], hive: ['spire', 'pod', 'arch', 'spire'],
+    cryo: ['tank', 'dome', 'pipes', 'icewall', 'tank'], orbit: ['crate', 'reactor', 'dish', 'console', 'crate'] },
+  col: { rust: '#c9a46a', neon: '#8f7bff', hive: '#d0486a', cryo: '#7fd0ff', orbit: '#8a96ff' },
+  acc: { rust: '#ffb43d', neon: '#ff3fa4', hive: '#c6ff3d', cryo: '#e8fbff', orbit: '#ffd36b' },
 };
-const BLD_CACHE = new Map(), BLD_LIST = [], BLD_ROT = { container: 1, wall: 1 };
+const BLD_CACHE = new Map(), BLD_LIST = [], BLD_ROT = { container: 1, wall: 1, pipes: 1, icewall: 1, crate: 1 };
 function resetStructures() { BLD_CACHE.clear(); BLD_LIST.length = 0; }
 
 // формы препятствий: { x, y, hw, hd } — прямоугольник по осям, { x, y, R } — круг
@@ -25,6 +26,14 @@ const BLD_T = {
   spire: { make: (b, h) => { b.R = 24 + h(1) * 6; b.H = 50 + h(2) * 30; return [{ R: b.R }]; } },
   pod: { make: (b, h) => { b.R = 26 + h(1) * 6; b.H = 38; return [{ R: b.R }]; } },
   arch: { make: (b, h) => { b.L = 32 + h(1) * 8; b.H = 48; return [{ dx: -b.L, R: 7 }, { dx: b.L, R: 7 }]; } },
+  tank: { make: (b, h) => { b.R = 22 + h(1) * 6; b.H = 40 + h(2) * 16; return [{ R: b.R }]; } },
+  dome: { make: (b, h) => { b.R = 28 + h(1) * 6; b.H = 30; return [{ R: b.R }]; } },
+  pipes: { make: (b, h) => { b.L = 46 + h(1) * 12; b.H = 30; return [{ hw: b.L, hd: 9 }]; } },
+  icewall: { make: (b, h) => { b.L = 46 + h(1) * 14; b.H = 40; return [{ hw: b.L, hd: 11 }]; } },
+  crate: { make: (b, h) => { b.L = 30 + h(1) * 8; b.stack = h(2) < 0.5; b.H = b.stack ? 42 : 22; return [{ hw: b.L, hd: 16 }]; } },
+  reactor: { make: (b, h) => { b.R = 16 + h(1) * 4; b.H = 70 + h(2) * 20; return [{ R: b.R + 4 }]; } },
+  dish: { make: (b, h) => { b.H = 44 + h(1) * 10; return [{ R: 11 }]; } },
+  console: { make: (b, h) => { b.H = 22; return [{ hw: 22, hd: 13 }]; } },
 };
 
 // опасность в ячейке её сетки (та же формула, что в hazardsAround)
@@ -232,6 +241,81 @@ const BLD_M = {
     const g = m.glow(null, 0, 0, H + 2, 4, acc, 0.9); g.auto = true; b.blink = g;
   },
 };
+// --- Криобаза ---
+Object.assign(BLD_M, {
+  // обледенелый бак: цилиндр с поясами, купол, сосульки по кромке и иней-полосы
+  tank(m, b, col, acc) {
+    const R = b.R, H = b.H;
+    m.cyl(R, R, 0, H, 12, 'm');
+    for (const z of [H * 0.3, H * 0.65]) m.cyl(R + 1, R + 1, z, z + 2, 12, 'd');
+    m.cyl(R + 0.5, R * 0.35, H, H + R * 0.45, 12, 'l');
+    for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + 0.2, L = 5 + hash2(b.key, i, 5) * 7; m.push(); m.t(Math.cos(a) * (R + 0.6), Math.sin(a) * (R + 0.6), H); m.rx(Math.PI); m.cyl(1.4, 0.05, 0, L, 4, 'a', true); m.pop(); }
+    m.line(null, -R * 0.6, -R - 0.3, H * 0.48, R * 0.6, -R - 0.3, H * 0.48, acc, 1.2, 0.8);
+  },
+  // радарный купол: ступенчатая полусфера на кольце, рядом мачта с тарелкой и огнём
+  dome(m, b, col, acc) {
+    const R = b.R;
+    m.cyl(R + 2, R + 2, 0, 5, 12, 'd');
+    const steps = [[R, R * 0.92, 5, 13], [R * 0.92, R * 0.7, 13, 22], [R * 0.7, R * 0.35, 22, 28], [R * 0.35, 0.5, 28, 31]];
+    steps.forEach(([r0, r1, z0, z1], i) => m.cyl(r0, r1, z0, z1, 12, i % 2 ? 'l' : 'm'));
+    m.strut([R * 0.8, R * 0.2, 5], [R * 0.95, R * 0.25, 46], 0.9, 0.7, 4, 'd');
+    m.push(); m.t(R * 0.95, R * 0.25, 46); m.rx(-0.9); m.cyl(7, 1.2, 0, 3, 8, 'l'); m.pop();
+    const g = m.glow(null, R * 0.95, R * 0.25, 48, 3, acc, 1); g.auto = true; b.blink = g;
+  },
+  // трубная эстакада: две рамы-опоры и три трубы с хомутами
+  pipes(m, b, col, acc) {
+    const L = b.L;
+    for (const x of [-L * 0.7, L * 0.7]) { m.box(x - 2, -7, 0, x + 2, -5, 26, 'd'); m.box(x - 2, 5, 0, x + 2, 7, 26, 'd'); m.box(x - 3, -8, 24, x + 3, 8, 27, 'm'); }
+    const P3 = [[-3.5, 18], [3.5, 18], [0, 23]];
+    for (const [y, z] of P3) { m.push(); m.t(0, y, z); m.ry(Math.PI / 2); m.cyl(2.6, 2.6, -L, L, 8, 'l'); m.pop(); }
+    for (const x of [-L * 0.35, 0, L * 0.35]) for (const [y, z] of P3) { m.push(); m.t(x, y, z); m.ry(Math.PI / 2); m.cyl(3, 3, -1, 1, 8, 'a'); m.pop(); }
+  },
+  // ледяная гряда: рваный гребень и кристаллы
+  icewall(m, b, col, acc) {
+    const L = b.L, top = [[-L, 0], [L, 0], [L * 0.9, 22], [L * 0.6, 36], [L * 0.35, 18], [L * 0.1, 40], [-L * 0.2, 24], [-L * 0.45, 34], [-L * 0.8, 16]];
+    m.prism(top, -9, 9, 'y', 'l');
+    for (let i = 0; i < 4; i++) { const x = -L * 0.7 + i * L * 0.45, hgt = 14 + hash2(b.key, i, 7) * 14; m.push(); m.t(x, -10, 0); m.rx(-0.3); m.cyl(3.2, 0.1, 0, hgt, 5, 'm', true); m.pop(); }
+  },
+  // --- Орбитальная станция ---
+  // грузовой блок: короб с маркировкой станции, иногда второй ярусом
+  crate(m, b, col, acc) {
+    const L = b.L, lay = (z0, l, tone) => {
+      const f = m.box(-l, -16, z0, l, 16, z0 + 20, tone);
+      for (const sx of [-1, 1]) m.line(f[2], sx * l * 0.5, -16, z0 + 2, sx * l * 0.5, -16, z0 + 18, col, 1, 0.7);
+      for (let k = 0; k < 4; k++) m.line(f[2], -l + 3 + k * 5, -16, z0 + 3, -l + 7 + k * 5, -16, z0 + 8, acc, 1.6, 0.9);
+      m.line(f[5], -l + 2, 0, z0 + 20, l - 2, 0, z0 + 20, col, 0.8, 0.6);
+    };
+    lay(0, L, 'm');
+    if (b.stack) { m.push(); m.rz(0.08); lay(20, L * 0.7, 'l'); m.pop(); }
+  },
+  // реакторная колонна: ствол с тремя светящимися кольцами, оголовок и огонь
+  reactor(m, b, col, acc) {
+    const R = b.R, H = b.H;
+    m.cyl(R + 4, R + 3, 0, 6, 10, 'd');
+    m.cyl(R, R * 0.9, 6, H, 10, 'm');
+    for (let k = 0; k < 3; k++) { const z = 16 + k * (H - 26) / 3; m.cyl(R + 0.8, R + 0.8, z, z + 2.2, 10, 'a'); }
+    m.cyl(R * 1.15, R * 0.6, H, H + 8, 10, 'l');
+    const g = m.glow(null, 0, 0, H + 10, 5, acc, 1); g.auto = true; b.blink = g;
+  },
+  // антенна-тарелка на мачте: ферма, чаша, облучатель
+  dish(m, b, col, acc) {
+    const H = b.H;
+    m.cyl(5, 6, 0, 4, 6, 'd'); m.cyl(2, 1.6, 4, H, 6, 'm');
+    m.push(); m.t(0, 0, H); m.rx(-0.75);
+    m.cyl(3, 16, 0, 5, 12, 'l'); m.cyl(16, 16, 5, 5.8, 12, 'a');
+    m.strut([0, 0, 0], [0, 0, 16], 0.5, 0.5, 4, 'd');
+    const g = m.glow(null, 0, 0, 17, 3, acc, 1); g.auto = true; b.blink = g;
+    m.pop();
+  },
+  // пульт: наклонная столешница с клавишными полосами, экран на заднем ребре
+  console(m, b, col, acc) {
+    m.prism([[-13, 0], [13, 0], [13, 24], [-13, 14]], -22, 22, 'x', 'm');
+    m.line(null, -18, -7, 16.6, 18, -7, 16.6, col, 1.2, 0.8);
+    m.line(null, -18, 0, 19.3, 6, 0, 19.3, acc, 1.4, 0.9);
+    const f = m.box(-20, 10, 24, 20, 13, 37, 'd');
+    m.line(f[2], -17, 10, 33, 17, 10, 33, col, 1.3, 0.85); m.line(f[2], -17, 10, 29, 6, 10, 29, acc, 1.3, 0.9);
+  },
+});
 function buildStructure(m, b, view) {
   const sid = G.sector.id, col = BLD.col[sid], acc = BLD.acc[sid];
   b.blink = null;

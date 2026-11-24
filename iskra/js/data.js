@@ -376,10 +376,11 @@ const VARIANTS = {
   acid: { name: 'Кислотный', col: '#7dff3a', d: 'Погибая, оставляет лужу кислоты — она жжёт робота.' },
   shield: { name: 'Щитовой', col: '#ffd23f', d: 'Под энергощитом: сначала пробейте щит, потом корпус.' },
   blink: { name: 'Фазовый', col: '#b56bff', d: 'Прыгает сквозь пространство и за два-три скачка оказывается рядом.' },
-  volatile: { name: 'Взрывной', col: '#ff8a1f', d: 'Через полсекунды после гибели взрывается — задевает и робота, и своих.' },
+  volatile: { name: 'Взрывной', col: '#fff1c8', d: 'Через полсекунды после гибели взрывается — задевает и робота, и своих.' },
 };
 const VAR_TYPES = ['bug', 'tank', 'mini', 'charger', 'gunner', 'splitter', 'spitter'];
-const VAR_W = { rust: { volatile: 3, shield: 3, ice: 1.5, acid: 1, blink: 1 }, neon: { blink: 3, ice: 3, shield: 1.5, volatile: 1, acid: 1 }, hive: { acid: 3, volatile: 2.5, blink: 1.5, shield: 1, ice: 1 } };
+const VAR_W = { rust: { volatile: 3, shield: 3, ice: 1.5, acid: 1, blink: 1 }, neon: { blink: 3, ice: 3, shield: 1.5, volatile: 1, acid: 1 }, hive: { acid: 3, volatile: 2.5, blink: 1.5, shield: 1, ice: 1 },
+  cryo: { ice: 3.5, shield: 2.5, volatile: 1.5, blink: 1, acid: 0.5 }, orbit: { blink: 3, volatile: 2.5, shield: 2, ice: 1, acid: 1 } };
 const ENEMIES = {
   bug: { name: 'Клещ', r: 9, hp: 6, spd: 72, dmg: 6, xp: 1, ai: 'chase', acc: '#ffd23f', d: 'Базовая единица Роя. Берёт числом.' },
   tank: { name: 'Броневик', r: 15, hp: 40, spd: 44, dmg: 11, xp: 4, ai: 'chase', armor: 0.3, kbRes: 0.6, acc: '#ff8a3d', d: 'Толстый панцирь гасит 30% урона.' },
@@ -418,7 +419,7 @@ const BOSS_PHASE_TXT = {
   core: ['Лазеры!', 'Уничтожьте щитовые узлы'],
 };
 // у каждого сектора своя тройка боссов; финал — всегда Ядро
-const BOSS_LINEUP = { rust: ['hammer', 'hive', 'serpent'], neon: ['reaper', 'serpent', 'arachna'], hive: ['arachna', 'reaper', 'hive'] };
+const BOSS_LINEUP = { rust: ['hammer', 'hive', 'serpent'], neon: ['reaper', 'serpent', 'arachna'], hive: ['arachna', 'reaper', 'hive'], cryo: ['serpent', 'arachna', 'hammer'], orbit: ['reaper', 'hive', 'serpent'] };
 function bossSchedule(sid) {
   const L = BOSS_LINEUP[sid] || BOSS_LINEUP.rust;
   return [{ t: 300, id: L[0] }, { t: 600, id: L[1] }, { t: 900, id: L[2] }, { t: 1200, id: 'core', final: true }];
@@ -514,6 +515,16 @@ const SECTORS = [
     pal: { ground: '#10040a', ground2: '#170610', grid: '#2a0a18', gridMajor: '#47122b', cross: '#b0304a', note: '#9a2a44', deco: '#5e1a33', deco2: '#a8273f', a: '#ff3d5a',
       enemy: '#ff7a2a', enemyD: '#2a0c04', enemyL: '#ffc08a', eye: '#ffe14d', fog: '#060104' },
     unlock: { ach: 'neon3', text: 'Уничтожьте «Змея» в Неоновом мегаполисе' } },
+  { id: 'cryo', name: 'Криобаза', code: 'С-4', hp: 2.2, spd: 1.04, rate: 1.2, dmg: 1.3, scrap: 2,
+    desc: 'Заброшенная полярная станция: лёд, торосы и холодные реакторы. Рой замёрз — но не весь.',
+    pal: { ground: '#04101a', ground2: '#06182a', grid: '#0b2a40', gridMajor: '#14466a', cross: '#4fb6e8', note: '#3f8fbd', deco: '#1a5a80', deco2: '#3aa0d0', a: '#8fe8ff',
+      enemy: '#ff2e4d', enemyD: '#2a0610', enemyL: '#ffa0b0', eye: '#8fe8ff', fog: '#020810' },
+    unlock: { ach: 'survive5', text: 'Продержитесь 5 минут' } },
+  { id: 'orbit', name: 'Орбитальная станция', code: 'С-5', hp: 3, spd: 1.14, rate: 1.35, dmg: 1.5, scrap: 2.8,
+    desc: 'Станция на орбите: палубы, шлюзы и пустота за бортом. Рой пришёл с кометой.',
+    pal: { ground: '#05060c', ground2: '#0a0c16', grid: '#161a2c', gridMajor: '#262e4c', cross: '#8a96ff', note: '#5f6ad0', deco: '#2a3060', deco2: '#6a74e0', a: '#ffd36b',
+      enemy: '#ff3d7a', enemyD: '#2a0614', enemyL: '#ffa0c0', eye: '#7dffcf', fog: '#020208' },
+    unlock: { ach: 'boss1', text: 'Уничтожьте «Молота»' } },
 ];
 
 /* ---------- Мастерская (постоянные улучшения) ---------- */

@@ -10,6 +10,10 @@ const HAZ = {
     d: 'Пары пилонов включают луч на 2 секунды. Луч режет машины Роя пополам, игрока ранит. Рывок проходит насквозь.' },
   hive: { id: 'geyser', name: 'Кислотные гейзеры', col: '#c6ff3d', per: 6.2, t0: 3.6, t1: 4.5, cell: 720, ch: 0.45, r: 56,
     d: 'Жерла выбрасывают столб кислоты, пузыри — за секунду до извержения. Кислота плавит всё вокруг, и Рой тоже.' },
+  cryo: { id: 'vent', name: 'Криовыбросы', col: '#9ff0ff', per: 6.6, t0: 4.0, t1: 4.8, cell: 740, ch: 0.45, r: 72,
+    d: 'Решётки сброса раз в несколько секунд выбрасывают облако жидкого азота: Рой вмерзает намертво, робота ранит и замедляет. Белые кольца и туман — сигнал.' },
+  orbit: { id: 'lock', name: 'Шлюзы', col: '#ffd36b', per: 7.2, t0: 4.6, t1: 5.4, cell: 820, ch: 0.42, r: 150, hole: 30,
+    d: 'Люки шлюзов раскрываются почти на две секунды: разгерметизация тянет всё к проёму, а машины в самом проёме выбрасывает за борт. Мигающие полосы — сигнал.' },
 };
 const HZ_CACHE = new Map(), HZ_LIST = [];
 function hazDef() { return G.sector ? HAZ[G.sector.id] || null : null; }
@@ -78,6 +82,30 @@ function updateHazards(dt) {
         if (segD2(e.x, e.y, h.ax, h.ay, h.bx, h.by) < (w + e.r * 0.8) ** 2 && icdOk(e, 'hz', 0.3)) { envHit(e, 1, 'hazard'); if (near) FX.sparks(e.x, e.y, 4, H.col, 200, undefined, 0, 0.25); }
       });
       if (segD2(P.x, P.y, h.ax, h.ay, h.bx, h.by) < (w + P.r * 0.5) ** 2) hurtPlayer(10 + m * 0.6, null);
+    } else if (h.kind === 'vent') {
+      // криовыброс: туман нарастает, затем облако азота вмораживает Рой и ранит, замедляет робота
+      if (h.ph === 1 && near && Math.random() < dt * 22) FX.dot(h.x + rand(-H.r, H.r) * 0.5, h.y + rand(-H.r, H.r) * 0.35, rand(-10, 10), rand(-40, -15), 0.7, rand(2, 3.5), '#dff8ff', 0.5);
+      if (first) {
+        eachEnemyIn(h.x, h.y, H.r, e => { if (!e.boss) applyChill(e, 0.6, 100, 2.4, true); envHit(e, 0.25, 'hazard'); });
+        if (d2(h.x, h.y, P.x, P.y) < (H.r + P.r * 0.3) ** 2) { hurtPlayer(8 + m * 0.5, null); if (!hasBranch('legs', 'C')) P.slowT = Math.max(P.slowT || 0, 2); }
+        if (near) { FX.ering(h.x, h.y, 8, H.r * 1.5, 0.45, '#dff8ff', 1.6, true); FX.shards(h.x, h.y, 14, '#bff0ff', 260); FX.light(h.x, h.y, H.r * 2, '#9ff0ff', 0.35, 0.35); AUDIO.sfx('thermo'); FX.addShake(2); }
+      }
+      if (h.ph === 2 && near && Math.random() < dt * 30) FX.dot(h.x + rand(-22, 22), h.y + rand(-8, 8), rand(-30, 30), rand(-210, -110), 0.7, rand(2, 4), '#dff8ff', 0.3);
+    } else if (h.kind === 'lock') {
+      // шлюз: разгерметизация тянет всё к проёму; машины в проёме — за борт, робота в проёме ранит
+      if (first && near) { AUDIO.sfx('dash'); FX.ering(h.x, h.y, H.r, H.hole, 0.4, '#ffd36b', 1.4, true); }
+      if (h.ph !== 2) continue;
+      const open = clamp((h.u - H.t1) / 0.25, 0, 1) * clamp((H.per - h.u) / 0.2, 0, 1);
+      eachEnemyIn(h.x, h.y, H.r, e => {
+        if (e.boss) return;
+        const dx = h.x - e.x, dy = h.y - e.y, d = Math.hypot(dx, dy) || 1;
+        if (d < H.hole) { if (icdOk(e, 'hz', 0.3)) { envHit(e, 1, 'hazard'); if (near && !e.alive) FX.sparks(h.x, h.y, 3, '#ffd36b', 140); } return; }
+        const pull = (40 + 300 * (1 - d / H.r)) * open * dt; e.x += dx / d * Math.min(pull, d); e.y += dy / d * Math.min(pull, d);
+      });
+      { const dx = h.x - P.x, dy = h.y - P.y, d = Math.hypot(dx, dy) || 1;
+        if (d < H.r && !(P.dash.t > 0)) { const pull = (25 + 150 * (1 - d / H.r)) * open * dt; P.x += dx / d * Math.min(pull, d); P.y += dy / d * Math.min(pull, d); }
+        if (d < H.hole) hurtPlayer(12 + m * 0.7, null); }
+      if (near && Math.random() < dt * 50 * open) { const a = rand(0, TAU), rr = H.r * rand(0.6, 1); FX.sparks(h.x + Math.cos(a) * rr, h.y + Math.sin(a) * rr, 1, '#fff2c0', rr * 3, a + Math.PI, 0.05, 0.3); }
     } else {
       if (h.ph === 1 && near && Math.random() < dt * 24) FX.dot(h.x + rand(-18, 18), h.y + rand(-10, 10), rand(-8, 8), rand(-50, -20), 0.5, rand(1.5, 3), H.col, 0.6);
       if (first && near) { AUDIO.sfx('thermo'); FX.ring(h.x, h.y, 14, H.r * 1.5, 0.4, H.col, 3); FX.addShake(2); }
@@ -226,6 +254,24 @@ function pylonMesh(h, H, s) {
   const on = h.ph === 2, g = m.glow(null, 0, 0, 47, on ? 6 : 3, H.col, on ? 1 : h.ph === 1 ? (Math.sin(G.time * 30) > 0 ? 0.9 : 0.2) : 0.5); g.auto = true;
   return m;
 }
+// решётка криовыброса: шестигранный ворот и три патрубка с вентилями
+function ventMesh(h, H, view) {
+  const m = new Mesh(), R = H.r * 0.42; m.zc = 0;
+  m.push(); m.sc(1, floorFit(view), 1); m.rz(h.ang);
+  m.cyl(R + 3, R + 2, 0, 4, 6, 'd'); m.cyl(R + 3.4, R + 3.4, 2.2, 3.2, 6, 'a');
+  for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5, x = Math.cos(a) * (R + 6), y = Math.sin(a) * (R + 6); m.push(); m.t(x, y, 0); m.cyl(2.4, 2.4, 0, 9, 6, 'm'); m.cyl(3.2, 3.2, 9, 10.5, 6, 'l'); m.pop(); }
+  m.pop();
+  return m;
+}
+// маяк шлюза: стойка с мигающим огнём — горит, пока люк открыт или вот-вот откроется
+function beaconMesh(h, H) {
+  const m = new Mesh(); m.zc = 0;
+  m.cyl(3, 3.4, 0, 3, 6, 'd'); m.cyl(1.6, 1.4, 3, 22, 6, 'm');
+  const on = h.ph === 1 ? Math.sin(G.time * 20) > 0 : h.ph === 2;
+  m.cyl(2.4, 2.4, 22, 26, 6, on ? 'a' : 'l');
+  const g = m.glow(null, 0, 0, 24, on ? 7 : 3, on ? '#ff4d5e' : H.col, on ? 1 : 0.5); g.auto = true;
+  return m;
+}
 // гейзер: кольцо камней по кромке жерла
 function geyserMesh(h, H, view) {
   const m = new Mesh(); m.zc = 0;
@@ -274,9 +320,13 @@ function worldDrawables(vis) {
         const x = s < 0 ? h.ax : h.bx, y = s < 0 ? h.ay : h.by;
         if (Math.abs(x - G.cam.x) < VIEW.hw + 60 && Math.abs(y - G.cam.y) < VIEW.hh + 90) vis.push({ dz: (c, z, e0, f0) => drawMeshAt(c, pylonMesh(h, H, s), hazPal(H.col), x, y, z, e0, f0, view), y });
       }
+    } else if (h.kind === 'lock') {
+      const S = H.hole * 1.25 + 9;
+      for (const [sx, sy] of [[-1, -1], [1, 1]]) { const x = h.x + sx * S, y = h.y + sy * S; if (onScreen({ x, y }, 60)) vis.push({ dz: (c, z, e0, f0) => drawMeshAt(c, beaconMesh(h, H), hazPal('#8a96ff'), x, y, z, e0, f0, view), y }); }
     } else if (onScreen(h, 110)) {
       vis.push({ dz: (c, z, e0, f0) => {
         if (h.kind === 'press') { for (const m of pressMeshes(h, H, view)) drawMeshAt(c, m, hazPal('#c9a46a'), h.x, h.y, z, e0, f0, view); }
+        else if (h.kind === 'vent') drawMeshAt(c, ventMesh(h, H, view), hazPal('#7fd0ff'), h.x, h.y, z, e0, f0, view);
         else drawMeshAt(c, geyserMesh(h, H, view), hazPal('#8fb83a'), h.x, h.y, z, e0, f0, view);
       }, y: h.y + (h.kind === 'press' ? 30 : 0) });
     }
@@ -316,6 +366,39 @@ function drawWorldGround(c) {
       else { c.strokeStyle = rgba(H.col, 0.3); c.lineWidth = H.w; c.stroke(); }
       c.fillStyle = rgba(H.col, 0.25);
       for (const [x, y] of [[h.ax, h.ay], [h.bx, h.by]]) { c.beginPath(); c.arc(x, y, 12, 0, TAU); c.fill(); }
+    } else if (h.kind === 'vent') {
+      // решётка сброса: шестигранник с прутьями, круг зоны; предупреждение — белые кольца сходятся, выброс — заливка
+      const R = H.r, hr = R * 0.42;
+      c.save();
+      c.beginPath(); for (let i = 0; i <= 6; i++) { const a = h.ang + i * TAU / 6, px = h.x + Math.cos(a) * hr, py = h.y + Math.sin(a) * hr; i ? c.lineTo(px, py) : c.moveTo(px, py); }
+      c.fillStyle = 'rgba(2,8,14,0.75)'; c.fill(); c.strokeStyle = rgba(H.col, 0.6); c.lineWidth = 1.4; c.stroke();
+      c.clip(); c.strokeStyle = rgba(H.col, 0.35); c.lineWidth = 1.2; c.beginPath();
+      for (let k = -hr; k <= hr; k += 6) { c.moveTo(h.x + k, h.y - hr); c.lineTo(h.x + k, h.y + hr); }
+      c.stroke(); c.restore();
+      if (h.ph === 0) { c.strokeStyle = rgba(H.col, 0.28); c.lineWidth = 1; c.setLineDash([4, 6]); c.beginPath(); c.arc(h.x, h.y, R, 0, TAU); c.stroke(); c.setLineDash([]); }
+      else if (h.ph === 1) {
+        const q = (h.u - H.t0) / (H.t1 - H.t0);
+        c.strokeStyle = rgba('#ffffff', Math.sin(t * 22) > 0 ? 0.85 : 0.35); c.lineWidth = 1.6; c.beginPath(); c.arc(h.x, h.y, R, 0, TAU); c.stroke();
+        c.strokeStyle = rgba(H.col, 0.7); c.lineWidth = 1.2; c.beginPath(); c.arc(h.x, h.y, R * (1 - q * 0.6), 0, TAU); c.stroke();
+        c.fillStyle = rgba('#dff8ff', 0.06 + 0.1 * q); c.beginPath(); c.arc(h.x, h.y, R, 0, TAU); c.fill();
+      } else { const q = 1 - (h.u - H.t1) / (H.per - H.t1); c.fillStyle = rgba('#dff8ff', 0.28 * q); c.beginPath(); c.arc(h.x, h.y, R, 0, TAU); c.fill(); c.strokeStyle = rgba('#ffffff', 0.7 * q); c.lineWidth = 1.2; c.stroke(); }
+    } else if (h.kind === 'lock') {
+      // люк шлюза: рама с полосами опасности, створки разъезжаются, в проёме — космос; круг тяги
+      const S = H.hole * 1.25, open = h.ph === 2 ? clamp((h.u - H.t1) / 0.25, 0, 1) * clamp((H.per - h.u) / 0.2, 0, 1) : 0;
+      c.save(); c.beginPath(); c.rect(h.x - S - 9, h.y - S - 9, (S + 9) * 2, (S + 9) * 2); c.rect(h.x - S, h.y - S, S * 2, S * 2); c.clip('evenodd');
+      c.fillStyle = 'rgba(6,6,10,0.85)'; c.fillRect(h.x - S - 9, h.y - S - 9, (S + 9) * 2, (S + 9) * 2);
+      const blink = h.ph === 1 && Math.sin(t * 20) > 0;
+      c.strokeStyle = rgba(blink ? '#ff4d5e' : H.col, blink ? 0.9 : 0.5); c.lineWidth = 4; c.beginPath();
+      for (let k = -S * 3; k <= S * 3; k += 10) { c.moveTo(h.x - S - 9 + k, h.y - S - 9); c.lineTo(h.x - S - 9 + k + (S + 9) * 2, h.y + S + 9); }
+      c.stroke(); c.restore();
+      c.fillStyle = '#000000'; c.fillRect(h.x - S, h.y - S, S * 2, S * 2);
+      if (open > 0) { c.fillStyle = '#ffffff'; for (let i = 0; i < 14; i++) { const sx = h.x - S + hash2(h.key, i, 1) * S * 2, sy = h.y - S + hash2(h.key, i, 2) * S * 2; c.globalAlpha = open * (0.3 + hash2(h.key, i, 3) * 0.7); c.fillRect(sx, sy, 1, 1); } c.globalAlpha = 1; }
+      const w = S * (1 - open);
+      c.fillStyle = '#121624'; c.strokeStyle = rgba(H.col, 0.7); c.lineWidth = 1;
+      c.fillRect(h.x - S, h.y - S, w, S * 2); c.strokeRect(h.x - S, h.y - S, w, S * 2);
+      c.fillRect(h.x + S - w, h.y - S, w, S * 2); c.strokeRect(h.x + S - w, h.y - S, w, S * 2);
+      c.strokeStyle = rgba(H.col, 0.6); c.lineWidth = 1.4; c.strokeRect(h.x - S, h.y - S, S * 2, S * 2);
+      if (h.ph >= 1) { c.strokeStyle = rgba(H.col, h.ph === 2 ? 0.4 : 0.22); c.lineWidth = 1; c.setLineDash([6, 8]); c.lineDashOffset = t * (h.ph === 2 ? 40 : 10); c.beginPath(); c.arc(h.x, h.y, H.r, 0, TAU); c.stroke(); c.setLineDash([]); }
     } else {
       const g = c.createRadialGradient(h.x, h.y, 2, h.x, h.y, H.r);
       g.addColorStop(0, rgba(H.col, h.ph === 2 ? 0.55 : h.ph === 1 ? 0.32 : 0.16)); g.addColorStop(0.45, rgba('#0b1a04', 0.75)); g.addColorStop(1, rgba('#050a02', 0.2));
@@ -358,6 +441,15 @@ function drawWorldGlow(c) {
       c.strokeStyle = rgba(H.col, 0.75 * fl); c.lineWidth = 6; c.beginPath(); c.moveTo(h.ax, h.ay - hz); c.lineTo(h.bx, h.by - hz); c.stroke();
       c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 1.8; c.stroke();
       c.strokeStyle = rgba(H.col, 0.55 * fl); c.lineWidth = 3; c.beginPath(); c.moveTo(h.ax, h.ay); c.lineTo(h.bx, h.by); c.stroke();
+    } else if (h.kind === 'vent' && h.ph === 2) {
+      if (!onScreen(h, 160)) continue;
+      const k = Math.min(1, (h.u - H.t1) / 0.12) * Math.min(1, (H.per - h.u) / 0.4), top = 150 * cp + 30;
+      const g = c.createLinearGradient(0, h.y, 0, h.y - top);
+      g.addColorStop(0, rgba('#dff8ff', 0.5 * k)); g.addColorStop(0.6, rgba('#9ff0ff', 0.18 * k)); g.addColorStop(1, rgba('#9ff0ff', 0));
+      c.fillStyle = g; c.beginPath(); c.moveTo(h.x - 26, h.y); c.lineTo(h.x - 44 + Math.sin(t * 7) * 5, h.y - top); c.lineTo(h.x + 44 + Math.sin(t * 6) * 5, h.y - top); c.lineTo(h.x + 26, h.y); c.closePath(); c.fill();
+      c.strokeStyle = rgba('#ffffff', 0.5 * k); c.lineWidth = 1; c.beginPath();
+      for (let i = 0; i < 5; i++) { const x = h.x - 20 + i * 10 + Math.sin(t * 9 + i) * 3; c.moveTo(x, h.y - 4); c.lineTo(x * 1 + Math.sin(i) * 8, h.y - top * (0.5 + 0.1 * i)); }
+      c.stroke();
     } else if (h.kind === 'geyser' && h.ph === 2) {
       if (!onScreen(h, 160)) continue;
       const k = Math.min(1, (h.u - H.t1) / 0.15) * Math.min(1, (H.per - h.u) / 0.3), top = 170 * cp + 40;

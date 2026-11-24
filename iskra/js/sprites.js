@@ -153,7 +153,7 @@ function buildBackground(S) {
     D.push({ r: 45, s: [L(eggs, '#ffb43d', 1, null, 0.75)] });
   }
   // на полу остаются только круглые мотивы: остальное (кучи, рельсы, дома, дороги, прожилки) — шум
-  const keep = { rust: [0, 3], neon: [2, 3], hive: [0, 2] }[S.id] || null;
+  const keep = { rust: [0, 3], neon: [2, 3], hive: [0, 2], cryo: [0, 3], orbit: [2, 3] }[S.id] || null;
   SPR.decoV = keep ? keep.map(i => D[i]).filter(Boolean) : D;
   SPR.deco = [];
 }
