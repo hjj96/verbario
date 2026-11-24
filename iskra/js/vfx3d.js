@@ -365,26 +365,27 @@ function drawHilt3D(c, x, y, rot, h0, col) {
 }
 function saberTrail(tr, x, y, rot) { tr.unshift({ x, y: y - SABER_Z * vfxCp(), r: rot, t: G.time }); if (tr.length > 3) tr.length = 3; return tr; }
 
-/* ---------- Импульс бластера: неоновая капсула — насыщенная оболочка, белое ядро по оси, тонкий затухающий след ----------
-   края чёткие (линии с круглыми концами); свечение даёт общий проход bloom */
+/* ---------- Импульс бластера: плазменная комета — круглая голова с белым ядром и острый затухающий хвост ----------
+   края чёткие, прозрачность оболочки спадает к концу хвоста; свечение даёт общий проход bloom */
 const _boltGr = {};
-// градиент следа в локальных координатах импульса: от хвоста капсулы (-L) до конца следа (-1,9·L)
-function boltGrad(c, cs, L) {
-  const key = cs + L;
+// градиент оболочки в локальных координатах импульса: от носа (w) до кончика хвоста (-L)
+function boltGrad(c, cs, w, L) {
+  const key = cs + w.toFixed(1) + '|' + L;
   let g = _boltGr[key];
-  if (!g) { g = c.createLinearGradient(-L, 0, -L * 1.9, 0); g.addColorStop(0, rgba(cs, 0.6)); g.addColorStop(1, rgba(cs, 0)); _boltGr[key] = g; }
+  if (!g) { g = c.createLinearGradient(w, 0, -L, 0); g.addColorStop(0, rgba(cs, 0.95)); g.addColorStop(0.3, rgba(cs, 0.8)); g.addColorStop(1, rgba(cs, 0)); _boltGr[key] = g; }
   return g;
 }
 function drawBolt3D(c, p) {
   const col = p.col || '#46e3ff', cs = sheathCol(col), a = Math.atan2(p.vy, p.vx);
-  const L = Math.round(6 + p.r * 2.6), w = 0.5 + p.r * 0.4, g = Math.min(1, p.t / 0.07);
+  const w = 0.6 + p.r * 0.5, L = Math.round(10 + p.r * 3.4), g = Math.min(1, p.t / 0.07);
   c.save(); c.translate(p.x, p.y); c.rotate(a);
-  // вылет из ствола: капсула дорастает за 0,07 с, чтобы не торчать назад из пушки
+  // вылет из ствола: хвост дорастает за 0,07 с, чтобы не торчать назад из пушки
   if (g < 1) c.scale(0.3 + 0.7 * g, 1);
-  c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-  c.strokeStyle = boltGrad(c, cs, L); c.lineWidth = 1; c.beginPath(); c.moveTo(-L, 0); c.lineTo(-L * 1.9, 0); c.stroke();
-  c.strokeStyle = rgba(cs, 0.92); c.lineWidth = w * 2; c.beginPath(); c.moveTo(-w * 0.2, 0); c.lineTo(-L + w, 0); c.stroke();
-  c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = w * 0.85; c.beginPath(); c.moveTo(-w * 0.4, 0); c.lineTo(-L + w * 1.3, 0); c.stroke();
+  c.globalCompositeOperation = 'lighter';
+  c.fillStyle = boltGrad(c, cs, w, L);
+  c.beginPath(); c.arc(0, 0, w, -Math.PI / 2, Math.PI / 2); c.lineTo(-L, 0); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.95)';
+  c.beginPath(); c.arc(0, 0, w * 0.45, -Math.PI / 2, Math.PI / 2); c.lineTo(-L * 0.55, 0); c.closePath(); c.fill();
   c.restore();
 }
 // попадание импульса: короткая звезда в цвет выстрела и брызги искр назад, к стрелку
