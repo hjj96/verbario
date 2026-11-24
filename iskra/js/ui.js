@@ -639,6 +639,8 @@ const UI = {
       <div class="alertchip" id="h-alert" hidden><span>ТРЕВОГА РОЯ</span><b id="h-alertlv">II</b><span class="pips" id="h-alertpips"></span></div>
       <div class="buffchip" id="h-buff" hidden><span>ЭНЕРГОСЕТЬ</span><b>+25%</b><span id="h-bufft">30</span></div>
       <div class="bossbar" id="h-boss" hidden><span class="nm" id="h-bossname"></span><div class="bar"><i id="h-bossbar"></i><em style="left:33.3%"></em><em style="left:66.6%"></em></div></div>
+      <div class="objs" id="h-objs"></div>
+      <div class="hpwrap" id="h-hpwrap"><div class="hplbl"><span>ПРОЧНОСТЬ</span><span id="h-hptxt">100</span></div><div class="hpbar"><i id="h-hp"></i></div></div>
       <div class="bottom"><div class="odwrap" id="h-odwrap"><div class="odlbl"><span>ОВЕРДРАЙВ <span class="kbd-only">[E]</span></span><span id="h-odpct">0%</span></div><div class="odbar"><i id="h-od"></i></div><div class="dashpips" id="h-dash"></div></div></div>
       <div class="touchbtns" id="touchbtns" hidden>
         <button class="tbtn" id="t-dash" aria-label="Рывок">РЫВОК</button>
@@ -646,7 +648,7 @@ const UI = {
       </div>
       <div class="hint" id="h-hint"></div>`;
     const H = this.hud;
-    for (const id of ['h-xp', 'h-lvl', 'h-kills', 'h-scrap', 'h-time', 'h-boss', 'h-bossname', 'h-bossbar', 'h-alert', 'h-alertlv', 'h-alertpips', 'h-buff', 'h-bufft', 'h-od', 'h-odpct', 'h-odwrap', 'h-dash', 'h-weap', 'h-parts', 'h-hint', 't-od', 't-odring', 't-dash']) H[id] = document.getElementById(id);
+    for (const id of ['h-xp', 'h-lvl', 'h-kills', 'h-scrap', 'h-time', 'h-boss', 'h-bossname', 'h-bossbar', 'h-alert', 'h-alertlv', 'h-alertpips', 'h-buff', 'h-bufft', 'h-od', 'h-odpct', 'h-odwrap', 'h-dash', 'h-weap', 'h-parts', 'h-hint', 't-od', 't-odring', 't-dash', 'h-objs', 'h-hp', 'h-hptxt', 'h-hpwrap']) H[id] = document.getElementById(id);
     hud.addEventListener('click', e => { const b = e.target.closest('[data-hud]'); if (b && b.dataset.hud === 'pause') this.pause(); });
     const hold = (el, name) => {
       el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); AUDIO.init(); INPUT.press(name); el.classList.add('down'); });
@@ -655,6 +657,7 @@ const UI = {
     hold(H['t-dash'], 'dash'); hold(H['t-od'], 'od');
   },
   onRunStart() {
+    this.hpSig = ''; this.objT = 0;
     this.closeModal(); this.screen = null;
     $('#hud').hidden = false;
     this.sig = ''; this.lastSec = -1;
@@ -707,13 +710,31 @@ const UI = {
       let ws = '';
       for (let i = 0; i < MAX_WEAPONS; i++) {
         const w = P.weapons[i];
-        ws += w ? `<div class="slot ${w.evo ? 'evo' : ''} ${evos.includes(w.id) ? 'ready' : ''}" title="${esc(weaponDef(w).name)}"><img src="${SPR.icons[w.id]}" alt=""><span class="lv">${w.evo ? '★' : w.lvl}</span></div>` : '<div class="slot"></div>';
+        ws += w ? `<div class="slot wslot ${w.evo ? 'evo' : ''} ${evos.includes(w.id) ? 'ready' : ''}" title="${esc(weaponDef(w).name)}"><img src="${SPR.icons[w.id]}" alt=""><i class="cd"></i><span class="lv">${w.evo ? '★' : w.lvl}</span></div>` : '<div class="slot"></div>';
       }
       H['h-weap'].innerHTML = ws;
       H['h-parts'].innerHTML = PART_ORDER.map(k => { const pr = P.parts[k]; return `<div class="slot part" title="${esc(PARTS[k].name)}"><img src="${SPR.icons['part_' + k]}" alt="" style="opacity:${pr.rank ? 1 : 0.35}">${pr.branch ? `<span class="br" style="color:${PARTS[k].branches[pr.branch].color}">${pr.branch}</span>` : ''}<span class="lv">${pr.rank ? ROMAN[pr.rank] : ''}</span></div>`; }).join('');
       let dp = ''; for (let i = 0; i < P.dash.max; i++) dp += `<i class="${i < P.dash.charges ? 'on' : ''}"></i>`;
       H['h-dash'].innerHTML = dp;
     }
+    // прочность: полоса темнеет от бирюзовой к красной
+    const hq = clamp(P.hp / P.stats.maxHp, 0, 1);
+    H['h-hp'].style.transform = 'scaleX(' + hq.toFixed(3) + ')';
+    H['h-hpwrap'].dataset.lv = hq < 0.3 ? 'low' : hq < 0.6 ? 'mid' : 'ok';
+    const hpi = Math.ceil(P.hp);
+    if (this.hpSig !== hpi + '/' + P.stats.maxHp) { this.hpSig = hpi + '/' + P.stats.maxHp; H['h-hptxt'].textContent = hpi + ' / ' + Math.round(P.stats.maxHp); }
+    // перезарядка орудий: секторная тень на иконке убывает по часовой
+    const cds = H['h-weap'].children;
+    for (let i = 0; i < P.weapons.length && i < cds.length; i++) {
+      const w = P.weapons[i], el = cds[i];
+      if (w.t > (w._hl || 0) + 0.02) w._cm = w.t;
+      w._hl = w.t;
+      const f = w._cm > 0.25 ? clamp(w.t / w._cm, 0, 1) : 0;
+      if (Math.abs((el._f || 0) - f) > 0.01) { el._f = f; el.style.setProperty('--cd', f.toFixed(3)); }
+    }
+    // цели: гнёзда, ретранслятор, ближайший босс — расстояние и стрелка направления (5 раз в секунду)
+    this.objT = (this.objT || 0) - dt;
+    if (this.objT <= 0) { this.objT = 0.2; H['h-objs'].innerHTML = objectivesHTML(); }
     if (this.hintT > 0) { this.hintT -= dt; if (this.hintT <= 0) H['h-hint'].style.opacity = 0; }
     if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) this.nextToast(); }
   },
@@ -774,3 +795,17 @@ const UI = {
     AUDIO.sfx('reveal');
   },
 };
+
+// список целей в HUD: стрелка показывает направление от робота, рядом — расстояние или время
+function objectivesHTML() {
+  const out = [];
+  const arrow = (x, y) => { const a = Math.atan2((y - P.y) * RENDER.k, x - P.x) * 180 / Math.PI; return `<i class="ar" style="transform:rotate(${a.toFixed(0)}deg)">➤</i>`; };
+  const dist = (x, y) => Math.round(Math.hypot(x - P.x, y - P.y) / 10) + ' м';
+  for (const e of G.enemies) if (e.alive && e.tid === 'nest') out.push({ d: d2(e.x, e.y, P.x, P.y), h: `<div class="obj nest${e.ai.mature ? ' mat' : ''}">${arrow(e.x, e.y)}<b>${e.ai.mature ? 'Гнездо · зрелое' : 'Гнездо Роя'}</b><span>${dist(e.x, e.y)}</span></div>` });
+  out.sort((a, b) => a.d - b.d);
+  const R = G.relay;
+  if (R && (R.st === 'idle' || R.st === 'cap')) out.unshift({ h: `<div class="obj relay">${arrow(R.x, R.y)}<b>Ретранслятор</b><span>${R.st === 'cap' ? Math.round(R.prog * 100) + '%' : Math.max(0, Math.ceil(RELAY.life - R.t)) + ' с'}</span></div>` });
+  const SCH = G.schedule || BOSS_SCHEDULE, nb = SCH[G.bossIdx];
+  if (nb && !G.bossesAlive && nb.t - G.time < 60 && nb.t - G.time > 0) out.unshift({ h: `<div class="obj boss"><i class="ar">⚠</i><b>${esc(BOSSES[nb.id].name)}</b><span>через ${Math.ceil(nb.t - G.time)} с</span></div>` });
+  return out.slice(0, 4).map(o => o.h).join('');
+}
