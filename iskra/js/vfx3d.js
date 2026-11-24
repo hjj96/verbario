@@ -183,32 +183,110 @@ function drawDroneOrbit(c, cx, cy, a, R, dir, col, sz, halo, ph) {
 }
 
 /* ---------- Ракета: корпус, обтекатель, полоса, сопло и стабилизаторы крест-накрест ---------- */
+// ракета: длинный шестигранный корпус тёмной стали, гранёный нос, цветной пояс и стабилизаторы, сопло;
+// модель вдоль оси x, 32 курса — поворот плавный
+const MSL_TAIL = 7.2;
 function missileMesh(m, f, n) {
   const yaw = f / n * TAU;
   m.push(); m.rz(-yaw); m.ry(Math.PI / 2);
-  m.cyl(1.45, 1.45, -5.2, 2.6, 8, 'l');
-  m.cyl(1.45, 0.12, 2.6, 6.8, 8, 'l');
-  m.cyl(1.55, 1.55, 0.5, 1.8, 8, 'a');
-  m.cyl(1.0, 1.35, -6.3, -5.2, 8, 'd');
+  m.cyl(1.3, 1.3, -6.2, 3.6, 6, 'm');
+  m.cyl(1.3, 0.05, 3.6, 8.6, 6, 'l', true);
+  m.cyl(1.42, 1.42, 0.8, 2.1, 6, 'a');
+  m.cyl(0.95, 1.25, -MSL_TAIL, -6.2, 6, 'd');
   m.pop();
   m.push(); m.rz(-yaw);
-  for (let k = 0; k < 4; k++) { m.push(); m.rx(k * Math.PI / 2 + Math.PI / 4); m.plate([[-5.2, 1.2], [-2.9, 1.2], [-5.7, 3.7], [-6.4, 3.7]], 'z', 0, 'a'); m.pop(); }
+  for (let k = 0; k < 4; k++) { m.push(); m.rx(k * Math.PI / 2 + Math.PI / 4); m.plate([[-6.2, 1.25], [-3.4, 1.25], [-6.3, 4.6], [-7.3, 4.6]], 'z', 0, 'a'); m.pop(); }
   m.pop();
 }
+// инверсионный след по траектории: у сопла — горячий и белый, дальше — тонкая остывающая синевато-серая линия
+function missileTrail(c, tr, w) {
+  if (!tr || tr.length < 2) return;
+  c.save(); c.lineCap = 'round';
+  const n = tr.length - 1;
+  for (let i = 0; i < n; i++) {
+    const q = 1 - i / n, A = tr[i], B = tr[i + 1];
+    if (Math.abs(A.x - B.x) + Math.abs(A.y - B.y) > 60) break;
+    c.strokeStyle = i < 3 ? rgba('#fff0c8', 0.85 * q) : rgba('#a8b8d4', 0.42 * q);
+    c.lineWidth = (0.45 + 1.25 * q) * w;
+    c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(B.x, B.y); c.stroke();
+  }
+  c.restore();
+}
 function drawMissile3D(c, p, col, k) {
-  k *= 1.7;
-  const S = vfxSprites('missile' + col, 16, (m, f) => missileMesh(m, f, 16), vpal(col));
+  if (p.delay > 0) return;
+  k *= 1.45;
+  const S = vfxSprites('missile2' + col, 32, (m, f) => missileMesh(m, f, 32), steelPal(col));
   const sp = vfxSp(), cp = vfxCp(), a = Math.atan2(p.vy, p.vx), h = (p.h || 0) * cp;
   const ca = Math.cos(a), sa = Math.sin(a) * sp, x = p.x, y = p.y - h;
-  if (p.h > 4) vfxShadow(c, p.x, p.y, 5 * k, 0.3);
-  // выхлоп: белое ядро → жёлтый → оранжевый, мерцает
-  const tx = x - ca * 6.3 * k, ty = y - sa * 6.3 * k, L = (9 + Math.random() * 5) * k;
-  c.save(); c.globalCompositeOperation = 'lighter';
-  c.drawImage(dotSprite('#ffb35c'), tx - 6 * k, ty - 6 * k, 12 * k, 12 * k);
-  c.translate(tx, ty); c.rotate(Math.atan2(sa, ca) + Math.PI / 2);
-  c.drawImage(flameSprite('#ff7a2e'), -1.8 * k, -L * 0.15, 3.6 * k, L * 1.15);
-  c.restore();
-  vfxDraw(c, S, yawFrame(a, 16), x, y, k);
+  if (p.h > 4) vfxShadow(c, p.x, p.y, 4 * k, 0.32);
+  missileTrail(c, p.tr, k * 0.8);
+  // выхлоп: узкий язык пламени с белым ядром, длина дрожит; до зажигания — нет
+  if (!(p.ign > 0)) {
+    const tx = x - ca * MSL_TAIL * k, ty = y - sa * MSL_TAIL * k, fl = 0.7 + 0.3 * Math.sin(G.time * 70 + p.x * 0.3);
+    const L = (6 + 5 * fl) * k, W = 1.05 * k;
+    c.save(); c.globalCompositeOperation = 'lighter';
+    c.translate(tx, ty); c.rotate(Math.atan2(sa, ca) + Math.PI);
+    c.fillStyle = rgba(sheathCol(col), 0.9); c.beginPath(); c.moveTo(0, -W); c.lineTo(L, 0); c.lineTo(0, W); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,248,225,0.95)'; c.beginPath(); c.moveTo(0, -W * 0.5); c.lineTo(L * 0.42, 0); c.lineTo(0, W * 0.5); c.closePath(); c.fill();
+    c.restore();
+  }
+  vfxDraw(c, S, yawFrame(a, 32), x, y, k);
+}
+/* ---------- Гранёный огненный шар: неровная икосфера с плоской заливкой граней (низкополигональный взрыв) ---------- */
+const FBALL_R = 16;
+let _lump = null;
+// подразбитый икосаэдр, каждая вершина на своём радиусе — «клуб», а не кристалл
+function lumpMesh() {
+  if (_lump) return _lump;
+  const v = ICO.v.map(p => p.slice()), f = [], mid = {};
+  const mp = (a, b) => {
+    const k = a < b ? a + '_' + b : b + '_' + a;
+    if (mid[k] === undefined) { const p = v[a], q = v[b], x = p[0] + q[0], y = p[1] + q[1], z = p[2] + q[2], l = Math.hypot(x, y, z); v.push([x / l, y / l, z / l]); mid[k] = v.length - 1; }
+    return mid[k];
+  };
+  for (const [a, b, c] of ICO.f) { const ab = mp(a, b), bc = mp(b, c), ca = mp(c, a); f.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
+  const R = v.map((p, i) => FBALL_R * (0.8 + 0.3 * (((Math.sin(i * 12.9898 + 4.1) * 43758.5453) % 1 + 1) % 1)));
+  // грани делятся на два тона; весь клуб — одним примитивом с центром в начале координат (нормали наружу)
+  return (_lump = { v: v.map((p, i) => [p[0] * R[i], p[1] * R[i], p[2] * R[i] * 0.92]), fl: f.filter((_, i) => i % 5 !== 2), fm: f.filter((_, i) => i % 5 === 2) });
+}
+// огонь: освещённые грани светло-жёлтые, теневые — красно-оранжевые; остывший шар — тот же силуэт в тёмно-красном
+function firePal(col, cool) {
+  const key = (cool ? 'E' : 'F') + col;
+  let p = _vpal[key];
+  if (p) return p;
+  const C = hexToRgb, hot = mixHex(cool ? '#e8642c' : '#ffe9a8', col, 0.12), lo = mixHex(cool ? '#8a2810' : '#e0501e', col, 0.15);
+  p = {
+    T: { l: [C(lo), C(hot), 1], m: [C(shade(lo, cool ? -0.12 : -0.25)), C(mixHex(lo, hot, 0.62)), 1], d: [C('#2a0c06'), C(lo), 1], r: [C('#2a0c06'), C(lo), 1], a: [C(lo), C(hot), 1] },
+    ln: rgba(hot, cool ? 0.22 : 0.32), ls: rgba(lo, 0.4), ag: rgba(hot, 0.3), a: col, ad: lo, e: '#ffffff', t: '#ffd36b', o: '#ffffff',
+  };
+  p.FS = fillSteps(p.T);
+  return (_vpal[key] = p);
+}
+const FBALL_N = 8;
+// кадры — разные повороты одного клуба; часть граней на тон темнее — пятнистость огня
+function fireBallSprites(col, cool) {
+  return vfxSprites((cool ? 'eball' : 'fball') + col, FBALL_N, (m, f) => { const L = lumpMesh(); m.push(); m.rz(f * 2.4); m.rx(f * 1.3); m.poly(L.v, L.fl, 'l'); m.poly(L.v, L.fm, 'm'); m.pop(); }, firePal(col, cool));
+}
+// t — доля прожитой жизни: шар вспухает за первые 14 %, дальше сжимается и остывает (тот же кадр в тёмно-красной палитре)
+function drawFireBall(c, p, cp) {
+  const t = 1 - p.life / p.max, y = p.y - p.z * cp, fr = p.rot | 0;
+  const s = p.size * (t < 0.14 ? 0.45 + 0.55 * Math.sqrt(t / 0.14) : 1 - 0.6 * (t - 0.14) / 0.86) / FBALL_R;
+  if (t > 0.22) vfxDraw(c, fireBallSprites(p.col, true), fr, p.x, y, s, t > 0.56 ? 1 - (t - 0.56) / 0.44 : 1);
+  if (t < 0.56) vfxDraw(c, fireBallSprites(p.col), fr, p.x, y, s, t < 0.3 ? 1 : 1 - (t - 0.3) / 0.26);
+}
+// взрыв ракеты: звезда-вспышка, тонкое кольцо по радиусу поражения, гранёные огненные шары, искры и осколки
+function missileBlast(x, y, r, col) {
+  FX.star(x, y - upY(3), Math.min(r * 0.2, 9), '#ffd9a0', 0.1);
+  FX.ering(x, y, r * 0.25, r, 0.3, col, 1.5, true);
+  const n = FX.parts.length > 1200 ? 2 : 3;
+  for (let i = 0; i < n; i++) {
+    const a = rand(0, TAU), d = i ? r * rand(0.16, 0.26) : 0, big = i === 0;
+    FX.add({ k: 10, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, z: big ? r * 0.12 : rand(0, r * 0.08), vx: Math.cos(a) * r * (big ? 0 : 0.7), vy: Math.sin(a) * r * (big ? 0 : 0.45), vz: r * (big ? 0.9 : rand(0.4, 0.9)),
+      life: big ? 0.5 : rand(0.36, 0.46), max: big ? 0.5 : 0.46, size: r * (big ? 0.3 : rand(0.17, 0.22)), col, drag: 3.6, rot: rand(0, FBALL_N) });
+  }
+  FX.sparks(x, y - upY(3), 8, '#ffd9a0', r * 6, undefined, 0, 0.24);
+  FX.shards(x, y, 4, col, r * 3);
+  FX.light(x, y, r * 1.6, col, 0.28, 0.24);
 }
 
 /* ---------- Световая глефа: металлическая двусторонняя рукоять + два энергоклинка со шлейфом ---------- */
@@ -395,17 +473,28 @@ function flameSprite(col) {
   return (_flameSpr[col] = s);
 }
 function drawFirePool(c, a) {
-  const q = Math.min(1, a.life / a.max * 3), col = a.col || '#ff5a1f', t = G.time;
-  c.globalCompositeOperation = 'lighter';
-  c.globalAlpha = 0.3 * q; c.drawImage(dotSprite(col), a.x - a.r * 1.2, a.y - a.r * 0.75, a.r * 2.4, a.r * 1.5);
-  const n = a.r > 40 ? 6 : 4;
+  const q = Math.min(1, a.life / a.max * 3), col = a.col || '#ff5a1f', t = G.time, ry = floorRy();
+  // зона: тонкий эллипс по краю и едва заметная заливка — без светящегося пятна
+  c.globalAlpha = q;
+  c.fillStyle = rgba(col, 0.1); c.strokeStyle = rgba(col, 0.42); c.lineWidth = 1;
+  c.beginPath(); c.ellipse(a.x, a.y, a.r, a.r * ry, 0, 0, TAU); c.fill(); c.stroke();
+  // языки пламени: две плоские грани (освещённая и теневая) и светлая сердцевина; дальние рисуются первыми
+  const lit = mixHex(col, '#ffd36b', 0.5), dark = mixHex(col, '#b8301a', 0.45), core = '#fff1c4', n = a.r > 40 ? 6 : 4, F = [];
   for (let i = 0; i < n; i++) {
-    const ph = (t * 1.7 + i / n + a.x * 0.013) % 1, fx = a.x + Math.cos(i * 2.4 + a.y) * a.r * 0.5, fy = a.y + Math.sin(i * 1.7 + a.x) * a.r * 0.28;
-    const h = a.r * (0.55 + 0.45 * Math.sin(ph * Math.PI)), w = a.r * 0.28;
-    c.globalAlpha = q * (1 - ph * 0.8) * 0.85;
-    c.drawImage(flameSprite(col), fx - w, fy - h * (1 + ph * 0.6), w * 2, h * 1.5);
+    const ph = (t * 1.5 + i / n + a.x * 0.013) % 1, k = 0.8 + 0.4 * ((i * 0.618 + a.y * 0.007) % 1);
+    F.push({ x: a.x + Math.cos(i * 2.4 + a.y) * a.r * 0.52, y: a.y + Math.sin(i * 1.7 + a.x) * a.r * 0.52 * ry, h: a.r * k * (0.25 + 0.75 * Math.sin(ph * Math.PI)), al: ph > 0.8 ? (1 - ph) / 0.2 : 1, sw: Math.sin(t * 7 + i * 1.9) * 0.35 });
   }
-  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  F.sort((u, v) => u.y - v.y);
+  for (const f of F) {
+    const h = upY(f.h), w = Math.max(2.4, f.h * 0.34), tx = f.x + f.sw * w;
+    c.globalAlpha = q * f.al;
+    // капля из семи вершин: пузатый низ, сужение и изогнутый кончик; шов по оси делит её на две грани
+    const b0 = f.y + w * 0.3 * ry, mx = f.x + (tx - f.x) * 0.35;
+    c.fillStyle = lit; c.beginPath(); c.moveTo(f.x, b0); c.lineTo(f.x - w * 0.85, f.y); c.lineTo(f.x - w, f.y - h * 0.26); c.lineTo(mx - w * 0.55, f.y - h * 0.6); c.lineTo(tx, f.y - h); c.lineTo(mx, f.y - h * 0.5); c.closePath(); c.fill();
+    c.fillStyle = dark; c.beginPath(); c.moveTo(f.x, b0); c.lineTo(mx, f.y - h * 0.5); c.lineTo(tx, f.y - h); c.lineTo(mx + w * 0.5, f.y - h * 0.62); c.lineTo(f.x + w * 0.95, f.y - h * 0.24); c.lineTo(f.x + w * 0.8, f.y); c.closePath(); c.fill();
+    c.fillStyle = core; c.beginPath(); c.moveTo(f.x, b0 - w * 0.1); c.lineTo(f.x - w * 0.5, f.y - h * 0.08); c.lineTo(f.x - w * 0.42, f.y - h * 0.3); c.lineTo(f.x + (tx - f.x) * 0.5, f.y - h * 0.55); c.lineTo(f.x + w * 0.4, f.y - h * 0.28); c.lineTo(f.x + w * 0.45, f.y - h * 0.06); c.closePath(); c.fill();
+  }
+  c.globalAlpha = 1;
 }
 /* ---------- Нанорой: крошечные огранённые наниты на наклонённых орбитах вокруг корпуса ----------
    front — рисовать только тех, кто ближе к камере (второй проход поверх робота), иначе — дальних */

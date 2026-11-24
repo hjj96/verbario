@@ -74,6 +74,8 @@ const FX = {
   },
   // вспышка у дула: чёткая четырёхлучевая звезда — длинный луч по выстрелу, короткий поперёк
   mflash(x, y, ang, size, col) { if (this.flashes.length < 40) this.flashes.push({ x, y, ang, size, col, life: 0.09, max: 0.09 }); },
+  // вспышка взрыва: симметричная четырёхлучевая звезда и малая звезда под 45°
+  star(x, y, size, col, life) { if (this.flashes.length < 40) this.flashes.push({ x, y, ang: rand(-0.3, 0.3), size, col, life: life || 0.1, max: life || 0.1, star: true }); },
   // шестиугольник попадания: чёткая расходящаяся грань
   hexRing(x, y, r0, r1, life, col, w) { if (this.rings.length < 160) this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 1.4, hex: true, rot: Math.random() * TAU }); },
   // кольцо по земле в перспективе (взрывы, удары)
@@ -136,7 +138,7 @@ const FX = {
       if (p.grow) p.size += p.grow * dt;
       if (p.vr) p.rot += p.vr * dt;
       if (p.k === 5) { p.vz -= 900 * dt; p.z += p.vz * dt; if (p.z < 0) { p.z = 0; p.vz = -p.vz * 0.35; p.vx *= 0.6; p.vy *= 0.6; p.vr *= 0.6; } }
-      else if (p.k === 6) { p.vz *= Math.exp(-2.2 * dt); p.z += p.vz * dt; }
+      else if (p.k === 6 || p.k === 10) { p.vz *= Math.exp(-2.2 * dt); p.z += p.vz * dt; }
     }
     const tick = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) removeAt(arr, i); } };
     for (let i = this.arcs.length - 1; i >= 0; i--) {
@@ -211,6 +213,8 @@ const FX = {
         const q = p.life / p.max, s = p.size, y = p.y - p.z * cp;
         if (q < 0.6) { c.globalAlpha = Math.min(1, q / 0.6) * 0.45; const s2 = s * 1.15; c.drawImage(smokeSprite(), p.x - s2, y - s2, s2 * 2, s2 * 2); }
         if (q > 0.3) { c.globalAlpha = Math.min(1, (q - 0.3) / 0.3); c.drawImage(fireSprite(p.col), p.x - s, y - upY(s), s * 2, upY(s * 2)); }
+      } else if (p.k === 10) {
+        c.globalAlpha = 1; drawFireBall(c, p, cp);
       } else if (p.k === 5) {
         if (!cs) cs = chunkSprites();
         c.globalAlpha = Math.min(1, p.life / p.max * 2.5);
@@ -282,6 +286,13 @@ const FX = {
     for (const f of this.flashes) {
       const q = 1 - f.life / f.max, s = f.size * (q < 0.3 ? 0.55 + q / 0.3 * 0.45 : 1 - (q - 0.3) * 0.85);
       c.save(); c.translate(f.x, f.y); c.rotate(f.ang); c.globalAlpha = 1 - q * 0.7;
+      if (f.star) {
+        const ray = (L, w) => { c.beginPath(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; c.lineTo(Math.cos(a) * L, Math.sin(a) * L); c.lineTo(Math.cos(a + Math.PI / 4) * w, Math.sin(a + Math.PI / 4) * w); } c.closePath(); c.fill(); };
+        c.fillStyle = rgba(f.col, 0.85); ray(s * 2.2, s * 0.32);
+        c.rotate(Math.PI / 4); ray(s * 1.1, s * 0.26);
+        c.fillStyle = '#ffffff'; c.rotate(-Math.PI / 4); ray(s * 1.2, s * 0.16);
+        c.restore(); continue;
+      }
       c.fillStyle = rgba(f.col, 0.9);
       c.beginPath(); c.moveTo(s * 2.6, 0); c.lineTo(0, s * 0.4); c.lineTo(-s * 0.55, 0); c.lineTo(0, -s * 0.4); c.closePath(); c.fill();
       c.beginPath(); c.moveTo(0, s * 1.05); c.lineTo(s * 0.28, 0); c.lineTo(0, -s * 1.05); c.lineTo(-s * 0.28, 0); c.closePath(); c.fill();

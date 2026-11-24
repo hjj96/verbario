@@ -274,10 +274,11 @@ WB.missiles = (w, dt, spd) => {
   const W = linkK('focus') ? wellNear(P.x, P.y, 600) : null, ft = W ? nearestEnemy(W.x, W.y, W.r + 30) : null;
   if (ft) tg.unshift(ft, ft, ft);
   fired(w);
+  // пуск веером: попеременно влево и вправо от курса, с выбросом из пусковой и зажиганием
   for (let i = 0; i < p.amount; i++) {
-    const a = P.aim + rand(-1.1, 1.1);
-    spawnProj('missile', m.x + rand(-3, 3), m.y + rand(-3, 3), Math.cos(a) * 150, Math.sin(a) * 150,
-      { dmg: p.dmg, pierce: 1, r: 5, life: p.life, src: w.id, target: tg[i % tg.length], speed: p.speed, turn: p.turn, blast: p.blast * p.area, col: '#ff9a3d' });
+    const side = i % 2 ? 1 : -1, ring = Math.floor(i / 2), a = P.aim + side * (0.6 + ring * 0.3);
+    spawnProj('missile', m.x, m.y, Math.cos(a) * 140, Math.sin(a) * 140,
+      { dmg: p.dmg, pierce: 1, r: 5, life: p.life, src: w.id, target: tg[i % tg.length], speed: p.speed, turn: p.turn, blast: p.blast * p.area, col: '#ff9a3d', delay: ring * 0.12 + (side > 0 ? 0.06 : 0), ign: 0.1, mw: w });
   }
   w.t = p.cd; AUDIO.sfx('missile');
 };
@@ -292,9 +293,9 @@ WB.carpet = (w, dt, spd) => {
   const m = muzzleWorld(w);
   fired(w);
   for (let i = 0; i < p.amount; i++) {
-    const a = P.aim + rand(-1.6, 1.6);
-    spawnProj('missile', m.x + rand(-4, 4), m.y + rand(-4, 4), Math.cos(a) * 180, Math.sin(a) * 180,
-      { dmg: p.dmg, pierce: 1, r: 5, life: p.life, src: w.id, target: list[i % list.length], speed: p.speed, turn: p.turn, blast: p.blast * p.area, col: '#ffb35c', fire: p.fire, delay: i * 0.03 });
+    const side = i % 2 ? 1 : -1, a = P.aim + side * (0.45 + (Math.floor(i / 2) % 5) * 0.22);
+    spawnProj('missile', m.x, m.y, Math.cos(a) * 170, Math.sin(a) * 170,
+      { dmg: p.dmg, pierce: 1, r: 5, life: p.life, src: w.id, target: list[i % list.length], speed: p.speed, turn: p.turn, blast: p.blast * p.area, col: '#ffb35c', fire: p.fire, delay: i * 0.045, ign: 0.08, mw: w });
   }
   w.t = p.cd; AUDIO.sfx('missile');
 };
@@ -884,7 +885,7 @@ function missileBoom(p) {
   const fk = linkK('focus'), W = fk ? wellNear(p.x, p.y, 260) : null;
   if (W && d2(W.x, W.y, p.x, p.y) < (W.r + 14) ** 2) { blast *= 1.4; dmg *= 1 + fk; src = 'link_focus'; FX.ring(p.x, p.y, 6, blast, 0.3, '#b78bff', 3); }
   // компактный огненный шар; радиус поражения показывает тонкое кольцо взрыва
-  FX.explosion(p.x, p.y, blast * 0.55, p.col || '#ff9a3d');
+  missileBlast(p.x, p.y, blast, p.col || '#ff9a3d');
   AUDIO.sfx('boom');
   eachEnemyIn(p.x, p.y, blast, e => { hitEnemy(e, dmg, { src, kb: 120, kx: undefined }); });
   if (p.fire) spawnArea('fire', p.x, p.y, { r: p.blast * 0.55, life: 1.3, dmg: p.fire * P.stats.might, tick: 0.25, burn: 4 * P.stats.burn, src: p.src });
@@ -916,7 +917,14 @@ const PK = {
   },
   missile: {
     update(p, dt) {
-      if (p.delay > 0) { p.delay -= dt; return; }
+      // ждёт своей очереди в пусковой — стартует из текущего положения пусковой, а не оттуда, где был залп
+      if (p.delay > 0) { p.delay -= dt; p.life += dt; if (p.mw) { const m = muzzleWorld(p.mw); p.x = m.x - p.vx * dt; p.y = m.y - p.vy * dt; } return; }
+      if (p.ign > 0) {
+        // выброс из пусковой: летит по инерции и тормозит, затем зажигание с дымком
+        p.ign -= dt; p.vx *= Math.exp(-5 * dt); p.vy *= Math.exp(-5 * dt);
+        if (p.ign <= 0) FX.puff(p.x, p.y - (p.h || 0) * vfxCp(), 3, '#8090a8', 0.5, 0, -8);
+        return;
+      }
       if (!p.target || !p.target.alive) {
         const W = linkK('focus') ? wellNear(p.x, p.y, 420) : null;
         p.target = (W && nearestEnemy(W.x, W.y, W.r + 30)) || nearestEnemy(p.x, p.y, 420);
@@ -929,10 +937,10 @@ const PK = {
       // высота: свечка вверх после пуска и пикирование к цели
       const dist = p.target ? Math.hypot(p.target.x - p.x, p.target.y - p.y) : 160;
       p.h = (p.h || 0) + (Math.min(34, dist * 0.3) * Math.min(1, p.t / 0.3) - (p.h || 0)) * Math.min(1, dt * 6);
-      p.trail = (p.trail || 0) - dt; p.smk = (p.smk || 0) - dt;
-      const cp = vfxCp(), k = p.src === 'carpet' ? 0.75 : 1, ca = Math.cos(a), sa = Math.sin(a) * vfxSp(), tx = p.x - ca * 7 * k, ty = p.y - p.h * cp - sa * 7 * k;
-      if (p.trail <= 0) { p.trail = 0.03; FX.dot(tx, ty, 0, 0, 0.18, 3 * k, '#ffb35c', 0); }
-      if (p.smk <= 0) { p.smk = p.src === 'carpet' ? 0.14 : 0.07; FX.puff(tx, ty, 2.6 * k, '#8090a8', 0.55, rand(-8, 8), -10); }
+      // след: точки сопла за последние ~0,3 с (в координатах кадра — с высотой полёта)
+      const cp = vfxCp(), k = (p.src === 'carpet' ? 0.75 : 1) * 1.45, ca = Math.cos(a), sa = Math.sin(a) * vfxSp(), nT = p.src === 'carpet' ? 12 : 18;
+      (p.tr || (p.tr = [])).unshift({ x: p.x - ca * MSL_TAIL * k, y: p.y - p.h * cp - sa * MSL_TAIL * k });
+      if (p.tr.length > nT) p.tr.length = nT;
     },
     hit(p, e) { missileBoom(p); },
     expire(p) { missileBoom(p); },
@@ -1111,7 +1119,8 @@ const AK = {
     update(a, dt) {
       a.tickT -= dt;
       if (a.tickT <= 0) { a.tickT = a.tick; eachEnemyIn(a.x, a.y, a.r, e => { hitEnemy(e, a.dmg, { src: a.src, burn: a.burn || 0, corrode: a.corr || 0, nocrit: true, combo: a.combo }); }); }
-      if (Math.random() < 0.25) FX.dot(a.x + rand(-a.r, a.r) * 0.7, a.y + rand(-a.r, a.r) * 0.5, 0, -40, 0.4, rand(4, 7), a.col || '#ff7a2e', 1);
+      // искры над огнём: короткие чёткие штрихи вверх
+      if (Math.random() < 0.2) FX.sparks(a.x + rand(-a.r, a.r) * 0.6, a.y + rand(-a.r, a.r) * 0.4 - upY(a.r * 0.3), 1, '#ffc56b', 90, -Math.PI / 2, 0.35, 0.45);
     },
     draw(c, a) { drawFirePool(c, a); },
   },
