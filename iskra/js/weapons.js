@@ -163,7 +163,7 @@ function drawDrone(c, x, y, a, col, sz) {
 }
 WD.drones = (c, w) => {
   const p = w.p, st = w.st, R = p.orbit * p.area;
-  for (let i = 0; i < p.amount; i++) { const a = (st.a || 0) + i * TAU / p.amount; drawDrone(c, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R, a * 3, WEAPONS.drones.color, p.size); }
+  for (let i = 0; i < p.amount; i++) { const a = (st.a || 0) + i * TAU / p.amount; drawDrone3D(c, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R, a + Math.PI / 2, WEAPONS.drones.color, p.size, false, i * 1.7); }
 };
 WB.halo = (w, dt, spd) => {
   const p = w.p, st = w.st;
@@ -191,7 +191,7 @@ WD.halo = (c, w) => {
   for (let i = 0; i < p.amount; i++) {
     const inner = i < half, k = inner ? i : i - half, n = inner ? half : p.amount - half;
     const a = (inner ? (st.a || 0) : -(st.a || 0) * 0.8) + k * TAU / n, R = inner ? R1 : R2;
-    drawDrone(c, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R, a * 3, '#9dffcf', p.size);
+    drawDrone3D(c, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R, a + (inner ? Math.PI / 2 : -Math.PI / 2), '#9dffcf', p.size, true, i * 1.3);
   }
 };
 
@@ -464,7 +464,7 @@ WD.cryo = drawCryo; WD.zero = drawCryo;
 function railShot(w, ang, dmg, width, length, kb, stun) {
   const m = muzzleWorld(w), x = m.x, y = m.y;
   fired(w);
-  FX.light(x, y, 140, '#9fd8ff', 0.6);
+  FX.light(x, y, 90, '#9fd8ff', 0.4);
   const ik = linkK('icebreak');
   lineEnemies(x, y, ang, length, width, e => {
     const frozen = e.st.freezeT > 0, cold = frozen || e.st.chillT > 0;
@@ -478,8 +478,8 @@ function railShot(w, ang, dmg, width, length, kb, stun) {
       }
     }
   });
-  FX.beam(x, y, x + Math.cos(ang) * length, y + Math.sin(ang) * length, width, 0.32, '#9fd8ff');
-  FX.dot(x, y, 0, 0, 0.2, 26, '#ffffff', 0);
+  FX.rail(x, y, x + Math.cos(ang) * length, y + Math.sin(ang) * length, width, 0.42, '#9fd8ff');
+  FX.dot(x, y, 0, 0, 0.14, 11, '#ffffff', 0);
   FX.addShake(3);
   P.fire = 1;
   AUDIO.sfx('rail');
@@ -671,7 +671,12 @@ WB.bladedance = (w, dt, spd) => {
   }
   st.pos.length = p.amount;
 };
-WD.bladedance = (c, w) => { const st = w.st, p = w.p; if (!st.pos) return; const sz = p.size * Math.sqrt(p.area); for (const q of st.pos) drawSaber(c, q.x, q.y, sz, q.rot * 6, '#bffbff'); };
+WD.bladedance = (c, w) => {
+  const st = w.st, p = w.p; if (!st.pos) return;
+  const sz = p.size * Math.sqrt(p.area), tr = st.tr || (st.tr = []);
+  const cols = ['#29a8ff', '#3dff6a', '#c45bff'];
+  st.pos.forEach((q, i) => drawSaber3D(c, q.x, q.y + 6, q.rot * 6, sz * 1.5, cols[i % 3], saberTrail(tr[i] || (tr[i] = []), q.rot * 6)));
+};
 
 /* ---------- Электромагнит: хватает врагов, крутит и швыряет в толпу ---------- */
 function magnetAnchor(w, k, n) {
@@ -802,10 +807,15 @@ function missileBoom(p) {
 const PK = {
   bolt: {
     draw(c, p) {
-      const a = Math.atan2(p.vy, p.vx), L = p.r * 3.2;
-      c.strokeStyle = rgba(p.col, 0.9); c.lineWidth = p.r * 1.6;
-      c.beginPath(); c.moveTo(p.x - Math.cos(a) * L, p.y - Math.sin(a) * L); c.lineTo(p.x, p.y); c.stroke();
-      c.strokeStyle = '#ffffff'; c.lineWidth = p.r * 0.6; c.stroke();
+      const a = Math.atan2(p.vy, p.vx), ca = Math.cos(a), sa = Math.sin(a), L = p.r * 3.6;
+      c.lineCap = 'round';
+      c.beginPath(); c.moveTo(p.x - ca * L * 1.9, p.y - sa * L * 1.9); c.lineTo(p.x, p.y);
+      c.strokeStyle = rgba(p.col, 0.16); c.lineWidth = p.r * 1.2; c.stroke();
+      c.beginPath(); c.moveTo(p.x - ca * L, p.y - sa * L); c.lineTo(p.x, p.y);
+      c.strokeStyle = rgba(p.col, 0.35); c.lineWidth = p.r * 2.8; c.stroke();
+      c.strokeStyle = rgba(p.col, 1); c.lineWidth = p.r * 1.2; c.stroke();
+      c.beginPath(); c.moveTo(p.x - ca * L * 0.7, p.y - sa * L * 0.7); c.lineTo(p.x, p.y);
+      c.strokeStyle = '#ffffff'; c.lineWidth = p.r * 0.55; c.stroke();
     },
   },
   orb: {
@@ -818,10 +828,12 @@ const PK = {
       }
     },
     draw(c, p) {
-      c.drawImage(dotSprite(p.col), p.x - p.r * 2.6, p.y - p.r * 2.6, p.r * 5.2, p.r * 5.2);
       const a = Math.atan2(p.vy, p.vx);
-      c.strokeStyle = rgba(p.col, 0.35); c.lineWidth = p.r * 1.4;
+      c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+      c.strokeStyle = rgba(p.col, 0.2); c.lineWidth = p.r * 0.9;
       c.beginPath(); c.moveTo(p.x - Math.cos(a) * p.r * 4, p.y - Math.sin(a) * p.r * 4); c.lineTo(p.x, p.y); c.stroke();
+      c.restore();
+      drawOrb3D(c, p);
     },
   },
   missile: {
@@ -836,26 +848,32 @@ const PK = {
       if (p.target) a += clamp(angDiff(a, Math.atan2(p.target.y - p.y, p.target.x - p.x)), -p.turn * dt, p.turn * dt);
       const ns = Math.min(p.speed, sp + 520 * dt);
       p.vx = Math.cos(a) * ns; p.vy = Math.sin(a) * ns;
-      p.trail = (p.trail || 0) - dt;
-      if (p.trail <= 0) { p.trail = 0.03; FX.dot(p.x, p.y, 0, 0, 0.22, 3.5, '#ff9a3d', 0); }
+      // высота: свечка вверх после пуска и пикирование к цели
+      const dist = p.target ? Math.hypot(p.target.x - p.x, p.target.y - p.y) : 160;
+      p.h = (p.h || 0) + (Math.min(34, dist * 0.3) * Math.min(1, p.t / 0.3) - (p.h || 0)) * Math.min(1, dt * 6);
+      p.trail = (p.trail || 0) - dt; p.smk = (p.smk || 0) - dt;
+      const cp = vfxCp(), k = p.src === 'carpet' ? 0.75 : 1, ca = Math.cos(a), sa = Math.sin(a) * vfxSp(), tx = p.x - ca * 7 * k, ty = p.y - p.h * cp - sa * 7 * k;
+      if (p.trail <= 0) { p.trail = 0.03; FX.dot(tx, ty, 0, 0, 0.18, 3 * k, '#ffb35c', 0); }
+      if (p.smk <= 0) { p.smk = p.src === 'carpet' ? 0.14 : 0.07; FX.puff(tx, ty, 2.6 * k, '#8090a8', 0.55, rand(-8, 8), -10); }
     },
     hit(p, e) { missileBoom(p); },
     expire(p) { missileBoom(p); },
-    draw(c, p) {
-      const a = Math.atan2(p.vy, p.vx);
-      c.save(); c.translate(p.x, p.y); c.rotate(a);
-      c.beginPath(); c.moveTo(7, 0); c.lineTo(-5, -2.6); c.lineTo(-3, 0); c.lineTo(-5, 2.6); c.closePath();
-      c.fillStyle = 'rgba(10,20,40,0.9)'; c.fill(); c.strokeStyle = p.col; c.lineWidth = 1.2; c.stroke();
-      c.restore();
-      c.drawImage(dotSprite('#ffb35c'), p.x - Math.cos(a) * 6 - 5, p.y - Math.sin(a) * 6 - 5, 10, 10);
-    },
+    draw(c, p) { drawMissile3D(c, p, p.src === 'carpet' ? '#ffd36b' : '#ff9a3d', p.src === 'carpet' ? 0.75 : 1); },
   },
   flame: {
     update(p, dt) { p.r += (p.grow || 0) * dt; },
+    // догорая, порция огня оставляет дымок
+    expire(p) { if (Math.random() < 0.3) FX.puff(p.x, p.y, p.r * 0.7, '#5a6272', 0.6, p.vx * 0.15, p.vy * 0.15 - 14); },
     draw(c, p) {
-      const q = p.life / p.max, s = p.r * 2.1;
-      c.globalAlpha = Math.min(1, q * 1.6);
-      c.drawImage(dotSprite(q > 0.55 ? '#ffcf5a' : q > 0.25 ? '#ff7a2e' : '#c2361b'), p.x - s, p.y - s, s * 2, s * 2);
+      // язык пламени вдоль полёта: раскалённая голова, хвост тянется назад; цвет остывает с возрастом
+      const q = p.life / p.max, s = p.r * 1.2, a = Math.atan2(p.vy, p.vx), al = Math.min(1, q * 2);
+      const col = q > 0.72 ? '#ffc04d' : q > 0.42 ? '#ff7a2e' : '#c8361a';
+      c.globalAlpha = al * 0.35; c.drawImage(dotSprite(col), p.x - s * 1.2, p.y - s * 1.2, s * 2.4, s * 2.4);
+      c.globalAlpha = al * 0.6;
+      c.save(); c.translate(p.x, p.y); c.rotate(a - Math.PI / 2);
+      c.drawImage(flameSprite(col), -s * 0.5, -s * 0.45, s, s * 3.2);
+      c.restore();
+      if (q > 0.6) { c.globalAlpha = (q - 0.6) * 1.1; c.drawImage(dotSprite('#fff2c8'), p.x - s * 0.3, p.y - s * 0.3, s * 0.6, s * 0.6); }
       c.globalAlpha = 1;
     },
   },
@@ -870,7 +888,7 @@ const PK = {
       if (Math.random() < 0.35) FX.dot(p.x, p.y, 0, 0, 0.18, p.len * 0.45, p.col, 0);
     },
     hit(p, e) { hitEnemy(e, p.dmg, p); thunderHop(e, p.dmg); FX.sparks(e.x, e.y, 3, '#d8fbff', 200, undefined, 0, 0.2); AUDIO.sfx('hit'); },
-    draw(c, p) { drawSaber(c, p.x, p.y, p.len, p.rot, p.col); },
+    draw(c, p) { drawSaber3D(c, p.x, p.y, p.rot, p.len * 1.5, p.src === 'link_twin' ? '#c45bff' : '#29a8ff', saberTrail(p.tr || (p.tr = []), p.rot)); },
   },
   saw: {
     update(p, dt) {
@@ -899,7 +917,7 @@ const PK = {
         if (!p.target) p.returning = true;
       }
     },
-    draw(c, p) { drawSaw(c, p.x, p.y, p.r, p.rot, '#ffcf8a'); },
+    draw(c, p) { drawSaw3D(c, p.x, p.y, p.r, p.rot, '#ffcf8a', false); },
   },
   bigsaw: {
     update(p, dt) {
@@ -912,16 +930,10 @@ const PK = {
       if (Math.random() < 0.3) FX.sparks(p.x, p.y, 1, '#ffdcaa', 160);
     },
     hit(p, e) { hitEnemy(e, p.dmg, p); rustSawHit(e, p); },
-    draw(c, p) { drawSaw(c, p.x, p.y, p.r, p.rot, '#ffdcaa'); },
+    draw(c, p) { drawSaw3D(c, p.x, p.y, p.r, p.rot, '#ffdcaa', true); },
   },
   shard: {
-    draw(c, p) {
-      const a = Math.atan2(p.vy, p.vx);
-      c.save(); c.translate(p.x, p.y); c.rotate(a);
-      c.fillStyle = '#e8fbff'; c.beginPath(); c.moveTo(6, 0); c.lineTo(-4, -2.5); c.lineTo(-4, 2.5); c.fill();
-      c.restore();
-      c.drawImage(dotSprite('#8fe8ff'), p.x - 6, p.y - 6, 12, 12);
-    },
+    draw(c, p) { drawShard3D(c, p); },
   },
   feather: {
     update(p, dt) {
@@ -944,7 +956,7 @@ const PK = {
     update(p, dt) { p.vx *= Math.exp(-3 * dt); p.vy *= Math.exp(-3 * dt); },
     hit(p, e) { p.life = 0; },
     expire(p) { FX.explosion(p.x, p.y, p.blast * 0.7, '#fff08a'); AUDIO.sfx('boom'); eachEnemyIn(p.x, p.y, p.blast, e => { hitEnemy(e, p.dmg, { src: p.src, kb: 80, nocrit: true }); }); },
-    draw(c, p) { c.drawImage(dotSprite('#fff08a'), p.x - 5, p.y - 5, 10, 10); },
+    draw(c, p) { drawBomblet3D(c, p); },
   },
   grav: {
     update(p, dt) {
@@ -1019,13 +1031,7 @@ const AK = {
       if (a.tickT <= 0) { a.tickT = a.tick; eachEnemyIn(a.x, a.y, a.r, e => { hitEnemy(e, a.dmg, { src: a.src, burn: a.burn || 0, corrode: a.corr || 0, nocrit: true, combo: a.combo }); }); }
       if (Math.random() < 0.25) FX.dot(a.x + rand(-a.r, a.r) * 0.7, a.y + rand(-a.r, a.r) * 0.5, 0, -40, 0.4, rand(4, 7), a.col || '#ff7a2e', 1);
     },
-    draw(c, a) {
-      const q = Math.min(1, a.life / a.max * 3);
-      c.globalCompositeOperation = 'lighter';
-      c.globalAlpha = 0.5 * q * (0.8 + Math.sin(G.time * 20 + a.x) * 0.2);
-      c.drawImage(dotSprite(a.col || '#ff5a1f'), a.x - a.r * 1.3, a.y - a.r * 0.9, a.r * 2.6, a.r * 1.8);
-      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
-    },
+    draw(c, a) { drawFirePool(c, a); },
   },
   acid: {
     update(a, dt) {
@@ -1093,13 +1099,7 @@ const AK = {
         spawnProj('bomblet', a.x, a.y, Math.cos(an) * s, Math.sin(an) * s, { dmg: a.dmg * 0.5, r: 5, life: 0.45, src: a.src, blast: 32 * P.stats.area, pierce: 1 });
       }
     },
-    draw(c, a) {
-      const armed = a.t >= a.arm, blink = armed && Math.sin(G.time * 12 + a.x) > 0;
-      c.fillStyle = '#2b313b'; c.beginPath(); c.arc(a.x, a.y, 5.5, 0, TAU); c.fill();
-      c.strokeStyle = a.col; c.lineWidth = 1.2; c.stroke();
-      c.fillStyle = blink ? '#ff4d5e' : a.col; c.beginPath(); c.arc(a.x, a.y, 1.8, 0, TAU); c.fill();
-      if (blink) glow(c, a.x, a.y, 9, '#ff4d5e', 0.8);
-    },
+    draw(c, a) { drawMine3D(c, a); },
   },
   ring: {
     update(a, dt) {

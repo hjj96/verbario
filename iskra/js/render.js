@@ -432,9 +432,9 @@ function renderGame() {
   drawPlayer(c, z, e0, f0);
   c.setTransform(z, 0, 0, z, e0, f0);
   c.globalCompositeOperation = 'lighter';
-  for (const p of G.projs) if (p.kind === 'bolt' || p.kind === 'orb' || p.kind === 'flame' || p.kind === 'bomblet' || p.kind === 'grav') PK[p.kind].draw(c, p);
+  for (const p of G.projs) if (p.kind === 'bolt' || p.kind === 'flame' || p.kind === 'grav') PK[p.kind].draw(c, p);
   c.globalCompositeOperation = 'source-over';
-  for (const p of G.projs) if (p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather' || p.kind === 'glaive') PK[p.kind].draw(c, p);
+  for (const p of G.projs) if (p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather' || p.kind === 'glaive' || p.kind === 'orb' || p.kind === 'bomblet') PK[p.kind].draw(c, p);
   for (const a of G.areas) if (a.kind === 'ring' || a.kind === 'strike') AK[a.kind].draw(c, a);
   drawEnemyBullets(c);
   drawWorldGlow(c);
