@@ -186,8 +186,6 @@ WB.halo = (w, dt, spd) => {
 };
 WD.halo = (c, w) => {
   const p = w.p, st = w.st, half = Math.ceil(p.amount / 2), R1 = p.orbit * p.area, R2 = p.orbit2 * p.area;
-  c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#9dffcf', 0.12); c.lineWidth = 2;
-  c.beginPath(); c.arc(P.x, P.y, R1, 0, TAU); c.stroke(); c.beginPath(); c.arc(P.x, P.y, R2, 0, TAU); c.stroke(); c.restore();
   for (let i = 0; i < p.amount; i++) {
     const inner = i < half, k = inner ? i : i - half, n = inner ? half : p.amount - half;
     const a = (inner ? (st.a || 0) : -(st.a || 0) * 0.8) + k * TAU / n, R = inner ? R1 : R2;
@@ -683,7 +681,9 @@ WD.bladedance = (c, w) => {
   const st = w.st, p = w.p; if (!st.pos) return;
   const sz = p.size * Math.sqrt(p.area), tr = st.tr || (st.tr = []);
   const cols = ['#29a8ff', '#3dff6a', '#c45bff'];
-  st.pos.forEach((q, i) => drawSaber3D(c, q.x, q.y + 6, q.rot * 6, sz * 1.5, cols[i % 3], saberTrail(tr[i] || (tr[i] = []), q.x, q.y + 6, q.rot * 6)));
+  // на броске звездой клинки удлиняются
+  const ext = st.out > 0 ? 1 + 0.3 * Math.sin(Math.PI * (1 - st.out / 1.1)) : 1;
+  st.pos.forEach((q, i) => drawSaber3D(c, q.x, q.y + 6, q.rot * 6, sz * 1.5, cols[i % 3], saberTrail(tr[i] || (tr[i] = []), q.x, q.y + 6, q.rot * 6), ext, 0));
 };
 
 /* ---------- Электромагнит: хватает врагов, крутит и швыряет в толпу ---------- */
@@ -896,7 +896,11 @@ const PK = {
       if (Math.random() < 0.35) FX.dot(p.x, p.y, 0, 0, 0.18, p.len * 0.45, p.col, 0);
     },
     hit(p, e) { hitEnemy(e, p.dmg, p); thunderHop(e, p.dmg); FX.sparks(e.x, e.y, 3, '#d8fbff', 200, undefined, 0, 0.2); AUDIO.sfx('hit'); },
-    draw(c, p) { drawSaber3D(c, p.x, p.y, p.rot, p.len * 1.5, p.src === 'link_twin' ? '#c45bff' : '#29a8ff', saberTrail(p.tr || (p.tr = []), p.x, p.y, p.rot)); },
+    draw(c, p) {
+      // клинки зажигаются при броске (выдвигаются со вспышкой) и гаснут, возвращаясь к корпусу
+      const on = p.wait > 0 ? 0 : ease.outCubic(clamp(p.u / 0.14, 0, 1)), off = clamp((1 - p.u) / 0.1, 0, 1), ext = Math.min(on, off);
+      drawSaber3D(c, p.x, p.y, p.rot, p.len * 1.5, p.src === 'link_twin' ? '#c45bff' : '#29a8ff', saberTrail(p.tr || (p.tr = []), p.x, p.y, p.rot), ext, p.wait > 0 ? 0 : clamp(1 - p.u / 0.14, 0, 1) * 0.9);
+    },
   },
   saw: {
     update(p, dt) {

@@ -91,32 +91,29 @@ function drawSaw3D(c, x, y, r, rot, col, big) {
   const dc = deepen(col), S = vfxSprites(big ? 'bigsaw' : 'saw', 12, (m, f) => sawMesh(m, f, 12, 10, big ? 22 : 14, dc), vpal(col));
   const k = r / 10 * (big ? 1.25 : 1.5), f = Math.floor(((rot % (TAU / 3)) + TAU / 3) % (TAU / 3) / (TAU / 3) * 12), R = 10 * k;
   vfxShadow(c, x, y + 10 * k, 8 * k, 0.4);
-  c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.2; c.drawImage(glowSprite(dc), x - R * 1.2, y - R * 1.2, R * 2.4, R * 2.4); c.restore();
   vfxDraw(c, S, f, x, y, k);
-  // кромка в движении: светящееся кольцо по зубьям
-  c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba(dc, 0.55); c.lineWidth = 1.4;
-  c.beginPath(); c.ellipse(x, y, R * 0.98, R * 0.98 * 0.84, 0, 0, TAU); c.stroke(); c.restore();
 }
 
 /* ---------- Дроны: корпус-октагон, купол, сенсор, две пушки и четыре ротора; дрон гало — кольцо вокруг кристалла ---------- */
 function droneMesh(m, f, n, halo, col) {
   m.push(); m.rz(-f / n * TAU);
   if (!halo) {
-    // компактный дрон: сплюснутая шестигранная бипирамида, глаз по курсу, кольцо винта сверху
+    // компактный дрон: сплюснутая шестигранная бипирамида и глаз по курсу
     m.cyl(1.4, 4.6, 2.2, 3.8, 6, 'm');
     m.cyl(4.6, 1.8, 3.8, 5.6, 6, 'l');
     const g = m.glow(null, 4.5, 0, 3.8, 1.1, '#ffffff', 0.9); g.auto = true;
-    m.ring(0, 0, 6.1, 5.2, 'z', col, 1, 0.55);
   } else {
-    // дрон гало: кристалл-излучатель в кольце
-    m.poly(OCTA.v.map(v => [v[0] * 2.6, v[1] * 2.6, v[2] * 3.6 + 4.4]), OCTA.f, 'a');
-    m.ring(0, 0, 4.4, 5.2, 'z', col, 1, 0.6);
+    // дрон гало: тот же силуэт дрона (не путать с кристаллами опыта), сверху — светящийся излучатель
+    m.cyl(1.4, 4.8, 2.2, 3.8, 8, 'm');
+    m.cyl(4.8, 2.0, 3.8, 5.2, 8, 'l');
+    m.poly(OCTA.v.map(v => [v[0] * 1.5, v[1] * 1.5, v[2] * 1.9 + 6.4]), OCTA.f, 'a');
+    const g = m.glow(null, 0, 0, 6.4, 1.6, '#ffffff', 0.85); g.auto = true;
   }
   m.pop();
 }
 function drawDrone3D(c, x, y, ang, col, sz, halo, ph) {
   const S = vfxSprites((halo ? 'halo' : 'drone') + col, 16, (m, f) => droneMesh(m, f, 16, halo, deepen(col)), vpal(col));
-  const k = sz / 8 * (halo ? 1.4 : 1.5), bob = Math.sin(G.time * 6 + (ph || 0)) * 1.2 * vfxCp();
+  const k = sz / 8 * 1.7, bob = Math.sin(G.time * 6 + (ph || 0)) * 1.2 * vfxCp();
   vfxShadow(c, x, y, 6 * k, 0.4);
   vfxDraw(c, S, yawFrame(ang, 16), x, y - bob, k);
   c.save(); c.globalCompositeOperation = 'lighter';
@@ -157,33 +154,44 @@ function drawMissile3D(c, p, col, k) {
 const SABER_Z = 7, SABER_TILT = 0.6;
 // плоскость вращения клинков наклонена к камере: видно весь оборот, а не только горизонталь
 const saberE = () => Math.min(1, Math.sin((VIEW_PITCH[enemyView()] || 0.42) + SABER_TILT));
-// rot — угол рукояти; R — радиус до кончиков; tr — история положений {x, y, r} для шлейфа
-function drawSaber3D(c, x, y, rot, R, col, tr) {
+// rot — угол рукояти; R — радиус до кончиков; tr — история положений {x, y, r} для шлейфа;
+// ext — выдвижение клинков (0 — погашены, 1 — полные, >1 — удлинены); fl — вспышка зажигания 0..1
+function drawSaber3D(c, x, y, rot, R, col, tr, ext, fl) {
   const cy = y - SABER_Z * vfxCp(), h0 = R * 0.26, e = saberE(), ca = Math.cos(rot), sa = Math.sin(rot) * e;
+  ext = ext === undefined ? 1 : ext;
+  const L = h0 + (R - h0) * ext, hum = 1 + Math.sin(G.time * 53 + x * 0.7) * 0.12;
   c.save(); c.globalCompositeOperation = 'lighter';
   // шлейф: лента между настоящими прошлыми положениями клинков — меч и летит, и крутится
-  if (tr && tr.length > 1) {
+  if (ext > 0.3 && tr && tr.length > 1) {
     for (let i = 0; i < tr.length - 1; i++) {
       const A = tr[i], B = tr[i + 1], q = 1 - (i + 1) / tr.length;
+      // только соседние кадры: после паузы или рывка лента не тянется через пол-экрана
+      if (A.t - B.t > 0.05 || Math.abs(A.x - B.x) + Math.abs(A.y - B.y) > L * 0.8) break;
       const a0 = Math.cos(A.r), b0 = Math.sin(A.r) * e, a1 = Math.cos(B.r), b1 = Math.sin(B.r) * e;
-      c.fillStyle = rgba(col, 0.05 + q * 0.17);
+      c.fillStyle = rgba(col, 0.03 + q * 0.1);
       for (const s of [-1, 1]) {
         c.beginPath();
-        c.moveTo(A.x + a0 * R * 0.5 * s, A.y + b0 * R * 0.5 * s); c.lineTo(A.x + a0 * R * s, A.y + b0 * R * s);
-        c.lineTo(B.x + a1 * R * s, B.y + b1 * R * s); c.lineTo(B.x + a1 * R * 0.5 * s, B.y + b1 * R * 0.5 * s);
+        c.moveTo(A.x + a0 * L * 0.7 * s, A.y + b0 * L * 0.7 * s); c.lineTo(A.x + a0 * L * s, A.y + b0 * L * s);
+        c.lineTo(B.x + a1 * L * s, B.y + b1 * L * s); c.lineTo(B.x + a1 * L * 0.7 * s, B.y + b1 * L * 0.7 * s);
         c.closePath(); c.fill();
       }
     }
   }
-  // клинки: белое ядро, насыщенное свечение слоями
-  c.lineCap = 'round';
-  const body = mixHex(col, '#ffffff', 0.35);
-  c.beginPath();
-  for (const s of [-1, 1]) { c.moveTo(x + ca * h0 * s, cy + sa * h0 * s); c.lineTo(x + ca * R * s, cy + sa * R * s); }
-  c.strokeStyle = rgba(col, 0.1); c.lineWidth = R * 0.44; c.stroke();
-  c.strokeStyle = rgba(col, 0.3); c.lineWidth = R * 0.24; c.stroke();
-  c.strokeStyle = rgba(body, 0.95); c.lineWidth = R * 0.1; c.stroke();
-  c.strokeStyle = '#ffffff'; c.lineWidth = R * 0.036; c.stroke();
+  // клинки: белое ядро и насыщенная оболочка; ядро чуть дрожит — «гудит»
+  if (ext > 0.02) {
+    c.lineCap = 'round';
+    c.beginPath();
+    for (const s of [-1, 1]) { c.moveTo(x + ca * h0 * s, cy + sa * h0 * s); c.lineTo(x + ca * L * s, cy + sa * L * s); }
+    c.strokeStyle = rgba(col, 0.2); c.lineWidth = R * 0.2 * hum; c.stroke();
+    c.strokeStyle = rgba(mixHex(col, '#ffffff', 0.3), 0.9); c.lineWidth = R * 0.085; c.stroke();
+    c.strokeStyle = '#ffffff'; c.lineWidth = R * 0.034 * hum; c.stroke();
+  }
+  // вспышка зажигания у эмиттеров
+  if (fl > 0) {
+    c.globalAlpha = fl;
+    for (const s of [-1, 1]) { const ex = x + ca * h0 * s, ey = cy + sa * h0 * s; c.drawImage(dotSprite(col), ex - R * 0.28, ey - R * 0.28, R * 0.56, R * 0.56); }
+    c.globalAlpha = 1;
+  }
   c.restore();
   // рукоять: короткий тёмный стержень строго по оси клинков, светлая кромка
   c.lineCap = 'round';
@@ -191,7 +199,7 @@ function drawSaber3D(c, x, y, rot, R, col, tr) {
   c.strokeStyle = '#141c28'; c.lineWidth = R * 0.14; c.stroke();
   c.strokeStyle = '#7d90aa'; c.lineWidth = R * 0.045; c.stroke();
 }
-function saberTrail(tr, x, y, rot) { tr.unshift({ x, y: y - SABER_Z * vfxCp(), r: rot }); if (tr.length > 4) tr.length = 4; return tr; }
+function saberTrail(tr, x, y, rot) { tr.unshift({ x, y: y - SABER_Z * vfxCp(), r: rot, t: G.time }); if (tr.length > 3) tr.length = 3; return tr; }
 
 /* ---------- Плазменная сфера аннигилятора: икосаэдр, вращается, вокруг — треск ---------- */
 function drawOrb3D(c, p) {
