@@ -135,12 +135,14 @@ function drawEnemies(c, z, e0, f0) {
   det.length = 0; vis.length = 0;
   tickEnemySprites();
   for (const e of G.enemies) if (e.alive && onScreen(e, e.boss ? 170 : 90)) vis.push(e);
+  worldDrawables(vis);
   // дальние (выше на экране) — раньше: машины правильно заслоняют друг друга
   vis.sort((a, b) => a.y - b.y);
   c.setTransform(z, 0, 0, z, e0, f0);
-  for (const e of vis) { if (e.boss) drawBossShadow(c, e); else if (!e.parent && e.T.ai !== 'node') drawEnemyShadow(c, e); }
+  for (const e of vis) { if (e.dz) continue; if (e.boss) drawBossShadow(c, e); else if (!e.parent && e.T.ai !== 'node') drawEnemyShadow(c, e); }
   let live = 0;
   for (const e of vis) {
+    if (e.dz) { e.dz(c, z, e0, f0); continue; }
     if (e.boss) drawBoss3D(c, e, z, e0, f0, t);
     else if (e.parent) drawSeg3D(c, e, z, e0, f0, t);
     else if (e.T.ai === 'node') drawNode3D(c, e, z, e0, f0, t);
@@ -200,10 +202,11 @@ function drawWarns(c) {
   for (const w of G.warns) {
     const q = w.t / w.dur;
     if (w.kind === 'c') {
-      c.fillStyle = rgba('#ff4d5e', 0.12 + q * 0.12);
+      const col = w.ally ? '#46e3ff' : '#ff4d5e';
+      c.fillStyle = rgba(col, 0.12 + q * 0.12);
       c.beginPath(); c.arc(w.x, w.y, w.r, 0, TAU); c.fill();
-      c.fillStyle = rgba('#ff4d5e', 0.3); c.beginPath(); c.arc(w.x, w.y, w.r * q, 0, TAU); c.fill();
-      c.strokeStyle = rgba('#ff4d5e', 0.85); c.lineWidth = 2; c.beginPath(); c.arc(w.x, w.y, w.r, 0, TAU); c.stroke();
+      c.fillStyle = rgba(col, 0.3); c.beginPath(); c.arc(w.x, w.y, w.r * q, 0, TAU); c.fill();
+      c.strokeStyle = rgba(col, 0.85); c.lineWidth = 2; c.beginPath(); c.arc(w.x, w.y, w.r, 0, TAU); c.stroke();
     } else {
       c.strokeStyle = rgba('#ff4d5e', 0.14 + q * 0.2); c.lineWidth = w.w; c.lineCap = 'butt';
       c.beginPath(); c.moveTo(w.x, w.y); c.lineTo(w.x + Math.cos(w.ang) * w.len, w.y + Math.sin(w.ang) * w.len); c.stroke();
@@ -211,6 +214,20 @@ function drawWarns(c) {
       for (const s of [-1, 1]) { const ox = -Math.sin(w.ang) * w.w / 2 * s, oy = Math.cos(w.ang) * w.w / 2 * s; c.beginPath(); c.moveTo(w.x + ox, w.y + oy); c.lineTo(w.x + ox + Math.cos(w.ang) * w.len, w.y + oy + Math.sin(w.ang) * w.len); c.stroke(); }
     }
   }
+}
+// паутина Паучихи на полу: лучи и спираль, тают к концу жизни
+function drawWebs(c) {
+  if (!G.webs || !G.webs.length) return;
+  c.save(); c.lineWidth = 1;
+  for (const w of G.webs) {
+    const a = clamp(w.life / 1.5, 0, 1) * 0.55;
+    c.strokeStyle = rgba('#e8ffe0', a); c.beginPath();
+    for (let i = 0; i < 8; i++) { const an = w.rot + i * TAU / 8; c.moveTo(w.x, w.y); c.lineTo(w.x + Math.cos(an) * w.r, w.y + Math.sin(an) * w.r); }
+    for (let k = 1; k <= 3; k++) { const rr = w.r * k / 3.3; for (let i = 0; i <= 8; i++) { const an = w.rot + i * TAU / 8, x = w.x + Math.cos(an) * rr, y = w.y + Math.sin(an) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } }
+    c.stroke();
+    c.fillStyle = rgba('#c6ff3d', a * 0.12); c.beginPath(); c.arc(w.x, w.y, w.r, 0, TAU); c.fill();
+  }
+  c.restore();
 }
 function drawEnemyBullets(c) {
   c.globalCompositeOperation = 'lighter';
@@ -223,12 +240,26 @@ function drawEnemyBullets(c) {
       c.globalCompositeOperation = 'lighter';
       continue;
     }
+    if (b.kind === 'scythe') {
+      // коса Жнеца: вращающийся полумесяц
+      c.save(); c.translate(b.x, b.y); c.rotate(b.rot); c.lineCap = 'round';
+      c.strokeStyle = rgba(b.col, 0.4); c.lineWidth = 8; c.beginPath(); c.arc(0, 0, b.r, 0, Math.PI * 1.25); c.stroke();
+      c.strokeStyle = '#ffffff'; c.lineWidth = 2.2; c.stroke();
+      c.restore();
+      continue;
+    }
+    if (b.kind === 'fire') {
+      // лужа огня/кислоты на полу: мерцает и гаснет к концу жизни
+      const q = clamp(b.life / 1.2, 0, 1), s = b.r * (1.6 + Math.sin(G.time * 20 + b.x) * 0.12);
+      c.globalAlpha = 0.55 * q; c.drawImage(dotSprite(b.col), b.x - s, b.y - s * 0.55, s * 2, s * 1.1); c.globalAlpha = 1;
+      continue;
+    }
     const s = b.r * 2.6;
     c.drawImage(dotSprite(b.col), b.x - s, b.y - s, s * 2, s * 2);
   }
   c.globalCompositeOperation = 'source-over';
   c.fillStyle = '#ffffff';
-  for (const b of G.ebullets) { if (b.kind === 'glob') continue; c.beginPath(); c.arc(b.x, b.y, b.r * 0.45, 0, TAU); c.fill(); }
+  for (const b of G.ebullets) { if (b.kind === 'glob' || b.kind === 'fire' || b.kind === 'scythe') continue; c.beginPath(); c.arc(b.x, b.y, b.r * 0.45, 0, TAU); c.fill(); }
 }
 
 /* ---------- Игрок ---------- */
@@ -385,10 +416,12 @@ function renderGame() {
   c.setTransform(z, 0, 0, z, e0, f0);
   const vx0 = cx - W / 2 / z, vy0 = cy - H / 2 / z, vx1 = cx + W / 2 / z, vy1 = cy + H / 2 / z;
   drawGround(c, vx0, vy0, vx1, vy1);
+  drawWorldGround(c);
   FX.drawLights(c);
   for (const a of G.areas) if (a.kind !== 'ring' && a.kind !== 'strike') AK[a.kind].draw(c, a);
   drawWarns(c);
   drawPickups(c);
+  drawWebs(c);
   drawPlayerShadow(c, z, e0, f0);
   FX.drawUnder(c);
   drawEnemies(c, z, e0, f0);
@@ -401,9 +434,10 @@ function renderGame() {
   c.globalCompositeOperation = 'lighter';
   for (const p of G.projs) if (p.kind === 'bolt' || p.kind === 'orb' || p.kind === 'flame' || p.kind === 'bomblet' || p.kind === 'grav') PK[p.kind].draw(c, p);
   c.globalCompositeOperation = 'source-over';
-  for (const p of G.projs) if (p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather') PK[p.kind].draw(c, p);
+  for (const p of G.projs) if (p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather' || p.kind === 'glaive') PK[p.kind].draw(c, p);
   for (const a of G.areas) if (a.kind === 'ring' || a.kind === 'strike') AK[a.kind].draw(c, a);
   drawEnemyBullets(c);
+  drawWorldGlow(c);
   FX.drawGlow(c);
   if (bloomOn()) applyBloom(c, 0.6);
   // экранные слои
@@ -442,6 +476,7 @@ function drawOffscreen(c) {
   };
   for (const e of G.enemies) if (e.boss && e.alive) mark(e.x, e.y, '#ff4d5e', e.name);
   for (const it of G.items) if (it.kind === 'chest' || it.kind === 'bigchest') mark(it.x, it.y, it.kind === 'bigchest' ? '#ffd36b' : '#46e3ff', null);
+  if (G.relay && (G.relay.st === 'idle' || G.relay.st === 'cap')) mark(G.relay.x, G.relay.y, '#ffd36b', 'РЕТРАНСЛЯТОР');
 }
 
 /* ===== Главное меню: чертёж и витрина трансформаций ===== */

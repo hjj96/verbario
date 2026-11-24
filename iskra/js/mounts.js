@@ -7,6 +7,7 @@ const SLOT_PREF = {
   blaster: ['armR', 'armL'], blade: ['armL', 'armR'], flamer: ['armL', 'armR'], cryo: ['armR', 'armL'], saw: ['armL', 'armR'],
   missiles: ['shR', 'shL'], drones: ['shL', 'shR'], arc: ['shR', 'shL'],
   rail: ['back', 'shR'], mines: ['back', 'chest'], gravity: ['chest', 'back'], nanites: ['chest', 'back'], shock: ['chest', 'back'],
+  glaive: ['armR', 'armL'], magnet: ['armL', 'armR'],
 };
 function baseOf(w) { return w.evo ? EVOS[w.id].from : w.id; }
 function assignSlot(id) {

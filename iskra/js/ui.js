@@ -8,9 +8,42 @@ function wcode(id) { return 'ОР-' + pad2(WEAPON_ORDER.indexOf(id) + 1); }
 function pips(n, max, cls) { let s = '<span class="pips ' + (cls || '') + '">'; for (let i = 0; i < max; i++) s += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return s + '</span>'; }
 function fmtPct(v) { return (v >= 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + '%'; }
 
+/* ===== Дерево эволюций: модуль → орудия → эволюции (в справочнике — что открыто, в паузе — живой статус забега) ===== */
+function evoTreeHTML(live) {
+  // в забеге выше — модули, на которых уже стоят орудия
+  const owned = pid => P.weapons.filter(w => WEAPONS[baseOf(w)].part === pid).length;
+  const order = live ? PART_ORDER.slice().sort((a, b) => owned(b) - owned(a) || PART_ORDER.indexOf(a) - PART_ORDER.indexOf(b)) : PART_ORDER;
+  const mods = order.map(pid => {
+    const Pd = PARTS[pid], rank = live ? P.parts[pid].rank : 0, br = live ? P.parts[pid].branch : null;
+    const pips = [1, 2, 3, 4, 5].map(i => `<i class="${i <= rank ? 'on' : ''}${i === EVO_RANK ? ' req' : ''}"></i>`).join('');
+    const rows = WEAPON_ORDER.filter(id => WEAPONS[id].part === pid).map(id => {
+      const Wd = WEAPONS[id], E = EVOS[Wd.evo], known = !!SAVE.discovered.evolutions[Wd.evo];
+      let cls = '', wsub = '', esub = '', lv = 0;
+      if (live) {
+        const w = P.weapons.find(x => baseOf(x) === id);
+        if (!w) { cls = 'off'; wsub = 'не установлено'; esub = 'ур. 8 + ' + Pd.name + ' МК-' + ROMAN[EVO_RANK]; }
+        else if (w.evo) { cls = 'done'; wsub = 'эволюционировало'; esub = 'активна'; lv = 8; }
+        else {
+          lv = w.lvl;
+          wsub = 'ур. ' + w.lvl + '/8';
+          if (w.lvl < 8) { cls = 'own'; esub = 'нужен ур. 8' + (rank < EVO_RANK ? ' и МК-' + ROMAN[EVO_RANK] : ''); }
+          else if (rank < EVO_RANK) { cls = 'own need'; esub = 'нужен ' + Pd.name.toLowerCase() + ' МК-' + ROMAN[EVO_RANK]; }
+          else { cls = 'own ready'; esub = 'готово: откройте контейнер'; }
+        }
+      } else { cls = known ? 'done' : 'off'; wsub = Wd.desc.split('.')[0]; esub = known ? E.desc.split('.')[0] : 'ур. 8 + МК-' + ROMAN[EVO_RANK] + ' → контейнер'; }
+      const showEvo = known || (live && cls.includes('done'));
+      return `<div class="erow ${cls}"><div class="ew"><img src="${SPR.icons[id]}" alt=""><div><b>${esc(Wd.name)}</b><span>${esc(wsub)}</span>${live && lv && lv < 8 ? `<em class="lvbar"><i style="width:${lv / 8 * 100}%"></i></em>` : ''}</div></div>
+        <span class="arr"></span>
+        <div class="ee ${showEvo ? '' : 'unk'}"><img src="${SPR.icons[Wd.evo]}" alt=""><div><b>${showEvo ? esc(E.name) : '???'}</b><span>${esc(esub)}</span></div></div></div>`;
+    }).join('');
+    return `<div class="emod" style="--c:${Pd.color}"><div class="emod-h"><img src="${SPR.icons['part_' + pid]}" alt=""><div><b>${esc(Pd.name)}${live ? ' МК-' + ROMAN[rank] : ''}</b><span class="mono">${esc(Pd.code)} · ${esc(Pd.role)}${br ? ' · ' + esc(Pd.branches[br].name) : ''}</span></div><span class="pips" title="МК-${ROMAN[EVO_RANK]} открывает эволюции">${pips}</span></div><div class="erows">${rows}</div></div>`;
+  }).join('');
+  return `<p class="etree-lead">Эволюция = орудие ур. 8 + его модуль МК-${ROMAN[EVO_RANK]} (◆ с рамкой) → контейнер элиты или босса. ${live ? 'Зелёным — готово к эволюции.' : 'Открыто ' + Object.keys(SAVE.discovered.evolutions || {}).length + ' из ' + Object.keys(EVOS).length + '.'}</p><div class="etree">${mods}</div>`;
+}
+
 const UI = {
   modal: null, screen: null, previews: [], hud: {}, sig: '', lastSec: -1, toastQ: [], toastT: 0, sel: { robot: 'iskra', sector: 'rust', threat: 0 },
-  luChoices: null, banishMode: false, codexTab: 'weapons', confirmReset: false, confirmQuit: false, chestRes: null, chestTimer: null, hintT: 0,
+  luChoices: null, banishMode: false, codexTab: 'weapons', pauseTab: 'build', confirmReset: false, confirmQuit: false, chestRes: null, chestTimer: null, hintT: 0,
 
   init() {
     this.root = $('#ui');
@@ -124,7 +157,7 @@ const UI = {
         <div class="menu-list">
           <button class="btn primary" data-act="open" data-scr="hangar" data-autofocus>В бой <span class="n">ангар</span></button>
           <button class="btn" data-act="open" data-scr="workshop">Мастерская <span class="n">${bought}/${maxU}</span></button>
-          <button class="btn" data-act="open" data-scr="codex">Справочник <span class="n">эволюций ${evo}/13</span></button>
+          <button class="btn" data-act="open" data-scr="codex">Справочник <span class="n">эволюций ${evo}/${Object.keys(EVOS).length}</span></button>
           <button class="btn" data-act="open" data-scr="ach">Достижения <span class="n">${ach}/${ACHIEVEMENTS.length}</span></button>
           <button class="btn" data-act="open" data-scr="settings">Настройки <span class="n">звук · графика</span></button>
         </div>
@@ -201,7 +234,7 @@ const UI = {
       </div></section>`;
     },
     codex() {
-      const tabs = [['weapons', 'Орудия'], ['parts', 'Модули'], ['enemies', 'Враги'], ['mech', 'Механики']];
+      const tabs = [['weapons', 'Орудия'], ['tree', 'Эволюции'], ['parts', 'Модули'], ['enemies', 'Враги'], ['world', 'Локации'], ['mech', 'Механики']];
       let body = '';
       if (this.codexTab === 'weapons') {
         body = '<div class="clist">' + WEAPON_ORDER.map(id => {
@@ -222,14 +255,26 @@ const UI = {
           return `<div class="crow"><canvas width="104" height="104" data-enemy="${id}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm">${known ? esc(T.name) : '???'}</div><div class="ds">${known ? esc(T.d) : 'Ещё не встречен'}</div></div><div class="ds mono" style="font-size:11px">${known ? 'прочность ' + T.hp + ' · скорость ' + T.spd : ''}</div></div>`;
         }).join('') + Object.keys(BOSSES).map(id => {
           const B = BOSSES[id], known = SAVE.discovered.enemies['boss_' + id];
-          return `<div class="crow"><canvas width="104" height="104" data-boss="${id}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm" style="color:${known ? B.color : 'inherit'}">${known ? esc(B.name) : '???'}</div><div class="ds">${known ? esc(B.title) + '. ' + esc(B.d) : 'Босс сектора'}</div></div><div class="ds mono" style="font-size:11px">${BOSS_SCHEDULE.find(s => s.id === id) ? 'появляется на ' + fmtTime(BOSS_SCHEDULE.find(s => s.id === id).t) : ''}</div></div>`;
+          return `<div class="crow"><canvas width="104" height="104" data-boss="${id}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm" style="color:${known ? B.color : 'inherit'}">${known ? esc(B.name) : '???'}</div><div class="ds">${known ? esc(B.title) + '. ' + esc(B.d) : 'Босс сектора'}</div></div><div class="ds mono" style="font-size:11px">${SECTORS.map(sc => { const b = bossSchedule(sc.id).find(x => x.id === id); return b ? sc.code + ' · ' + fmtTime(b.t) : ''; }).filter(Boolean).join('<br>')}</div></div>`;
         }).join('') + '</div>';
+      } else if (this.codexTab === 'tree') {
+        body = evoTreeHTML(false);
+      } else if (this.codexTab === 'world') {
+        body = '<div class="tree">' + SECTORS.map(sc => {
+          const Hz = HAZ[sc.id], open = !sc.unlock || SAVE.ach[sc.unlock.ach];
+          return `<div class="tnode"><div class="row"><span class="secdot" style="background:${sc.pal.a}"></span><div><div class="h2">${esc(sc.name)}</div><div class="mono" style="font-size:11px;color:var(--sub)">${esc(sc.code)} · прочность Роя ×${String(sc.hp).replace('.', ',')} · лом ×${String(sc.scrap).replace('.', ',')}</div></div></div>
+            <span class="ds" style="font-size:13px;color:var(--sub)">${esc(sc.desc)}${open ? '' : ' · ' + esc(sc.unlock.text)}</span>
+            ${Hz ? `<div class="rk" style="grid-template-columns:92px 1fr"><b style="color:${Hz.col}">Опасность</b><span><b style="color:var(--ink)">${esc(Hz.name)}</b> — ${esc(Hz.d)}</span></div>` : ''}
+            <div class="rk" style="grid-template-columns:92px 1fr"><b>Боссы</b><span>${bossSchedule(sc.id).map(b => fmtTime(b.t) + ' ' + esc(BOSSES[b.id].name)).join(' · ')}</span></div></div>`;
+        }).join('') + `<div class="tnode"><div class="h2">Ретрансляторы Роя</div>
+            <span class="ds" style="font-size:13px;color:var(--sub)">Каждые полторы минуты (кроме боя с боссом) Рой ставит мачту связи. Встаньте в круг и удерживайте ${String(RELAY.cap).replace('.', ',')} с — Рой будет стягиваться к мачте. Не захватили за ${RELAY.life} с — мачта отключится. Захват притягивает опыт вокруг мачты и даёт одну награду:</span>
+            ${Object.values(RELAY_REW).map(r => `<div class="rk" style="grid-template-columns:150px 1fr"><b>${esc(r.name)}</b><span>${esc(r.d)}</span></div>`).join('')}</div></div>`;
       } else {
         body = `<div class="tree">
           <div class="tnode"><div class="h2">Статусы</div>${STATUSES.map(s => `<div class="rk"><b style="color:${s.color}">${esc(s.name)}</b><span>${esc(s.d)}</span></div>`).join('')}</div>
           <div class="tnode"><div class="h2">Комбинации</div>${COMBOS.map(s => `<div class="rk" style="grid-template-columns:120px 1fr"><b>${esc(s.name)}</b><span>${esc(s.d)}</span></div>`).join('')}</div>
           <div class="tnode"><div class="h2">Советы</div>${TIPS.map(t => `<span class="ds" style="font-size:13px;color:var(--sub)">— ${esc(t)}</span>`).join('')}</div>
-          <div class="tnode"><div class="h2">Расписание забега</div>${BOSS_SCHEDULE.map(b => `<div class="rk"><b>${fmtTime(b.t)}</b><span>${esc(BOSSES[b.id].name)} — ${esc(BOSSES[b.id].title)}</span></div>`).join('')}<div class="rk"><b>20:00+</b><span>Бесконечный режим после победы</span></div></div>
+          <div class="tnode"><div class="h2">Расписание забега</div>${SECTORS.map(sc => `<div class="rk"><b>${esc(sc.code)}</b><span>${bossSchedule(sc.id).map(b => fmtTime(b.t) + ' ' + esc(BOSSES[b.id].name)).join(' · ')}</span></div>`).join('')}<div class="rk"><b>2:30+</b><span>Лейтенанты Роя — каждые 5 минут между боссами</span></div><div class="rk"><b>20:00+</b><span>Бесконечный режим после победы</span></div></div>
         </div>`;
       }
       return `<section class="screen menu solid" id="scr-codex"><div class="wrap">
@@ -307,6 +352,7 @@ const UI = {
       } catch (e) { /* недоступно */ }
     },
     backToPause() { this.pause(true); },
+    ptab(b) { this.pauseTab = b.dataset.id; this.pause(true); },
     // игровые
     pick(b) {
       const i = parseInt(b.dataset.i, 10), ch = this.luChoices[i];
@@ -493,13 +539,14 @@ const UI = {
     const S = P.stats;
     const html = `<section class="screen overlay" id="scr-pause"><div class="pause-wrap">
       <div class="topbar"><div><div class="eyebrow">${esc(G.sector.name)} · ${fmtTime(G.time)}</div><h2 class="h1">Пауза</h2></div></div>
-      <div class="two"><div class="sheet"><div class="in" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">Орудия</div><div class="buildlist">${items}</div><div class="eyebrow">Модули · форма ${FORMS[P.form].code} «${esc(FORMS[P.form].name)}»</div><div class="buildlist">${parts}</div></div></div>
+      <div class="tabs">${[['build', 'Сборка'], ['tree', 'Дерево эволюций']].map(t => `<button class="tab ${this.pauseTab === t[0] ? 'on' : ''}" data-act="ptab" data-id="${t[0]}">${t[1]}</button>`).join('')}</div>
+      ${this.pauseTab === 'tree' ? evoTreeHTML(true) : `<div class="two"><div class="sheet"><div class="in" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">Орудия</div><div class="buildlist">${items}</div><div class="eyebrow">Модули · форма ${FORMS[P.form].code} «${esc(FORMS[P.form].name)}»</div><div class="buildlist">${parts}</div></div></div>
       <div class="sheet"><div class="in"><div class="eyebrow" style="margin-bottom:8px">Характеристики</div><div class="statlist">
         <span>Прочность</span><b>${Math.round(P.hp)}/${S.maxHp}</b><span>Броня</span><b>${S.armor}</b><span>Регенерация</span><b>${S.regen.toFixed(1)}/с</b>
         <span>Урон</span><b>${fmtPct(S.might - 1)}</b><span>Перезарядка</span><b>−${Math.round((1 - S.cdMul) * 100)}%</b><span>Площадь</span><b>${fmtPct(S.area - 1)}</b>
         <span>Снаряды</span><b>+${S.amount}</b><span>Крит</span><b>${Math.round(S.crit * 100)}% ×${S.critDmg.toFixed(1)}</b><span>Скорость</span><b>${Math.round(S.speed)}</b>
         <span>Опыт</span><b>${fmtPct(S.growth - 1)}</b><span>Удача</span><b>${fmtPct(S.luck - 1)}</b><span>Воскрешения</span><b>${P.revives}</b>
-      </div></div></div></div>
+      </div></div></div></div>`}
       <div class="row">
         <button class="btn primary" data-act="resume" data-autofocus>Продолжить</button>
         <button class="btn" data-act="pauseSettings">Настройки</button>
@@ -517,7 +564,7 @@ const UI = {
   showGameOver(r) {
     $('#hud').hidden = true;
     const total = Object.values(r.dmgBy).reduce((a, b) => a + b, 0) || 1;
-    const names = { burn: ['Горение', null], combo: ['Комбинации', null], crit: ['Цепные криты', null], legs: ['Шасси', 'part_legs'], core: ['Ядро', 'part_core'], back: ['Генератор', 'part_back'], tf: ['Трансформации', null], emp: ['ЭМИ-бомбы', null], od: ['Овердрайв', null] };
+    const names = { burn: ['Горение', null], combo: ['Комбинации', null], crit: ['Цепные криты', null], legs: ['Шасси', 'part_legs'], core: ['Ядро', 'part_core'], back: ['Генератор', 'part_back'], tf: ['Трансформации', null], emp: ['ЭМИ-бомбы', null], od: ['Овердрайв', null], hazard: ['Ловушки сектора', null], relay: ['Орбитальный удар', null] };
     const rows = Object.entries(r.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => {
       const d = WEAPONS[k] || EVOS[k];
       const nm = d ? d.name : (names[k] ? names[k][0] : k);
@@ -548,7 +595,9 @@ const UI = {
         </div>
       </div>
       <div class="timer" id="h-time">00:00</div>
-      <div class="bossbar" id="h-boss" hidden><span class="nm" id="h-bossname"></span><div class="bar"><i id="h-bossbar"></i></div></div>
+      <div class="alertchip" id="h-alert" hidden><span>ТРЕВОГА РОЯ</span><b id="h-alertlv">II</b><span class="pips" id="h-alertpips"></span></div>
+      <div class="buffchip" id="h-buff" hidden><span>ЭНЕРГОСЕТЬ</span><b>+25%</b><span id="h-bufft">30</span></div>
+      <div class="bossbar" id="h-boss" hidden><span class="nm" id="h-bossname"></span><div class="bar"><i id="h-bossbar"></i><em style="left:33.3%"></em><em style="left:66.6%"></em></div></div>
       <div class="bottom"><div class="odwrap" id="h-odwrap"><div class="odlbl"><span>ОВЕРДРАЙВ <span class="kbd-only">[E]</span></span><span id="h-odpct">0%</span></div><div class="odbar"><i id="h-od"></i></div><div class="dashpips" id="h-dash"></div></div></div>
       <div class="touchbtns" id="touchbtns" hidden>
         <button class="tbtn" id="t-dash" aria-label="Рывок">РЫВОК</button>
@@ -556,7 +605,7 @@ const UI = {
       </div>
       <div class="hint" id="h-hint"></div>`;
     const H = this.hud;
-    for (const id of ['h-xp', 'h-lvl', 'h-kills', 'h-scrap', 'h-time', 'h-boss', 'h-bossname', 'h-bossbar', 'h-od', 'h-odpct', 'h-odwrap', 'h-dash', 'h-weap', 'h-parts', 'h-hint', 't-od', 't-odring', 't-dash']) H[id] = document.getElementById(id);
+    for (const id of ['h-xp', 'h-lvl', 'h-kills', 'h-scrap', 'h-time', 'h-boss', 'h-bossname', 'h-bossbar', 'h-alert', 'h-alertlv', 'h-alertpips', 'h-buff', 'h-bufft', 'h-od', 'h-odpct', 'h-odwrap', 'h-dash', 'h-weap', 'h-parts', 'h-hint', 't-od', 't-odring', 't-dash']) H[id] = document.getElementById(id);
     hud.addEventListener('click', e => { const b = e.target.closest('[data-hud]'); if (b && b.dataset.hud === 'pause') this.pause(); });
     const hold = (el, name) => {
       el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); AUDIO.init(); INPUT.press(name); el.classList.add('down'); });
@@ -588,9 +637,19 @@ const UI = {
       H['h-scrap'].textContent = '⚙ ' + fmtNum(G.scrapRun);
     }
     const boss = G.enemies.find(e => e.boss && e.alive);
+    const bs = G.surgeT > 0 ? Math.ceil(G.surgeT) : 0;
+    if (this.buffSig !== bs) { this.buffSig = bs; H['h-buff'].hidden = !bs; if (bs) H['h-bufft'].textContent = bs + ' с'; }
+    const al = G.alertLvl || 1;
+    if (this.alertSig !== al + (boss ? 'b' : '')) {
+      this.alertSig = al + (boss ? 'b' : '');
+      H['h-alert'].hidden = al < 2 || !!boss;
+      H['h-alertlv'].textContent = ROMAN[al];
+      H['h-alertpips'].innerHTML = [1, 2, 3, 4, 5].map(i => `<i class="${i <= al ? 'on' : ''}"></i>`).join('');
+      H['h-alert'].dataset.lv = al;
+    }
     if (boss) {
       H['h-boss'].hidden = false;
-      H['h-bossname'].textContent = boss.name + (boss.dmgRes ? ' · ЩИТ' : '');
+      H['h-bossname'].textContent = boss.name + (boss.intro > 0 ? ' · ВЫСАДКА' : boss.phaseT > 0 ? ' · СМЕНА ФАЗЫ' : boss.phase > 1 ? ' · ФАЗА ' + ROMAN[boss.phase] : '') + (boss.enraged ? ' · ЯРОСТЬ' : '') + (boss.dmgRes ? ' · ЩИТ' : '');
       H['h-bossbar'].style.transform = 'scaleX(' + clamp(boss.hp / boss.maxHp, 0, 1).toFixed(4) + ')';
     } else H['h-boss'].hidden = true;
     const odq = P.od.meter / 100, full = odq >= 1 && !P.od.active;

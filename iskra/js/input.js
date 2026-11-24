@@ -111,7 +111,7 @@ function debugKey(k) {
   if (k === 'KeyL') { G.pendingLevels++; }
   if (k === 'KeyK') { for (const e of G.enemies) if (!e.boss && !e.parent) e.alive = false; }
   if (k === 'KeyT') { G.time += 60; }
-  if (k === 'KeyB') { const b = BOSS_SCHEDULE[Math.min(G.bossIdx, BOSS_SCHEDULE.length - 1)]; G.bossIdx++; spawnBoss(b.id, b.final); }
+  if (k === 'KeyB') { const S = G.schedule || BOSS_SCHEDULE, b = S[Math.min(G.bossIdx, S.length - 1)]; G.bossIdx++; spawnBoss(b.id, b.final); }
   if (k === 'KeyO') { P.od.meter = 100; }
   if (k === 'KeyG') { DEBUG_GOD = !DEBUG_GOD; UI.banner('БОГ: ' + (DEBUG_GOD ? 'ВКЛ' : 'ВЫКЛ'), '', 'cyan'); }
   if (k === 'KeyC') { G.pendingChests.push(true); }

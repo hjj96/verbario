@@ -276,6 +276,34 @@ const WEAPONS = {
       { d: '+1 диск, порезы вызывают коррозию', amount: 1, corrode: 0.15 },
     ],
   },
+  glaive: {
+    name: 'Световая глефа', color: '#62f0ff', part: 'head', evo: 'bladedance',
+    desc: 'Вращающиеся световые мечи летят по дуге бумерангом, режут всё на пути туда и обратно.',
+    base: { dmg: 16, cd: 2.2, amount: 1, range: 210, size: 15, dur: 1.15, area: 1, stun: 0 },
+    levels: [
+      { d: '+1 глефа', amount: 1 },
+      { d: 'Урон +6', dmg: 6 },
+      { d: 'Дальность +25%', range: 52 },
+      { d: '+1 глефа', amount: 1 },
+      { d: 'Клинок длиннее на 30%', area: 0.3 },
+      { d: 'Урон +8, перезарядка −0,3 с', dmg: 8, cd: -0.3 },
+      { d: '+1 глефа, удары оглушают', amount: 1, stun: 0.3 },
+    ],
+  },
+  magnet: {
+    name: 'Электромагнит', color: '#ff5a6e', part: 'arms', evo: 'magstorm',
+    desc: 'Хватает ближайших врагов, раскручивает и швыряет их в толпу. Заодно стягивает кристаллы.',
+    base: { dmg: 22, cd: 3.2, amount: 2, range: 170, speed: 560, slam: 26, blast: 0, area: 1 },
+    levels: [
+      { d: '+1 захват', amount: 1 },
+      { d: 'Урон +8', dmg: 8 },
+      { d: 'Радиус захвата +25%', range: 42 },
+      { d: '+1 захват', amount: 1 },
+      { d: 'Перезарядка −0,5 с', cd: -0.5 },
+      { d: 'Урон +10, падение взрывается', dmg: 10, blast: 46 },
+      { d: '+2 захвата', amount: 2 },
+    ],
+  },
   nanites: {
     name: 'Нанорой', color: '#8dff6a', part: 'core', evo: 'goo',
     desc: 'Облако нанитов вокруг корпуса разъедает броню врагов.',
@@ -305,7 +333,7 @@ const WEAPONS = {
     ],
   },
 };
-const WEAPON_ORDER = ['blaster', 'blade', 'drones', 'arc', 'missiles', 'flamer', 'mines', 'gravity', 'cryo', 'rail', 'saw', 'nanites', 'shock'];
+const WEAPON_ORDER = ['blaster', 'blade', 'drones', 'arc', 'missiles', 'flamer', 'mines', 'gravity', 'cryo', 'rail', 'saw', 'nanites', 'shock', 'glaive', 'magnet'];
 
 const EVOS = {
   annihilator: { from: 'blaster', name: 'Аннигилятор', color: '#bff6ff', desc: 'Залпы тяжёлых плазменных сфер: бесконечное пробивание и микровзрывы.', base: { dmg: 26, cd: 0.55, amount: 3, speed: 560, size: 10, life: 1.6, blast: 30 } },
@@ -320,6 +348,8 @@ const EVOS = {
   lance: { from: 'rail', name: 'Орбитальное копьё', color: '#ffffff', desc: 'Рельсовый выстрел плюс удары с орбиты по скоплениям врагов.', base: { dmg: 160, cd: 2.2, amount: 3, radius: 70, rail: 90, width: 16, length: 1000, area: 1 } },
   sawmill: { from: 'saw', name: 'Пилорама', color: '#ffdcaa', desc: 'Огромные пилы рикошетят от краёв экрана и режут всё на пути.', base: { dmg: 24, cd: 7, amount: 4, dur: 6, speed: 420, size: 18, icd: 0.3, area: 1 } },
   goo: { from: 'nanites', name: 'Серая слизь', color: '#c9ffb8', desc: 'Огромное облако нанитов. Каждая смерть внутри порождает новое облако.', base: { dmg: 9, tick: 0.25, radius: 105, corrode: 0.25, leech: 0.5, cloud: 40, area: 1 } },
+  bladedance: { from: 'glaive', name: 'Танец клинков', color: '#bffbff', desc: 'Шесть световых мечей кружат вокруг корпуса и каждые 2,5 с разлетаются звездой и возвращаются.', base: { dmg: 30, amount: 6, orbit: 66, rot: 3.4, cycle: 2.5, range: 250, size: 22, icd: 0.25, area: 1 } },
+  magstorm: { from: 'magnet', name: 'Магнитная буря', color: '#ff9aa6', desc: 'Вихрь затягивает врагов на орбиту вокруг корпуса — они таранят остальных — и каждые 3 с вышвыривает их во все стороны.', base: { dmg: 34, amount: 10, range: 240, orbit: 74, rot: 3.6, cycle: 3, speed: 620, area: 1 } },
   seismic: { from: 'shock', name: 'Сейсмический молот', color: '#ffb59a', desc: 'Тройные кольца сокрушают и оглушают, по земле расходятся раскалённые трещины.', base: { dmg: 30, cd: 1.8, radius: 220, amount: 3, kb: 320, stun: 0.6, fissures: 6, fdmg: 40, area: 1 } },
 };
 const EVO_RANK = 3; // какой ранг модуля нужен для эволюции
@@ -338,22 +368,38 @@ const ENEMIES = {
   blinker: { name: 'Фантом', r: 10, hp: 20, spd: 64, dmg: 9, xp: 3, ai: 'blinker', acc: '#ff4fd8', d: 'Телепортируется рядом с вами.' },
   eater: { name: 'Пожиратель', r: 12, hp: 50, spd: 84, dmg: 8, xp: 5, ai: 'eater', acc: '#b38bff', d: 'Поедает кристаллы опыта и растёт. При гибели отдаёт всё с процентами.' },
   spitter: { name: 'Плевун', r: 12, hp: 26, spd: 50, dmg: 6, xp: 3, ai: 'spitter', acc: '#c6ff3d', d: 'Плюётся кислотой, оставляя лужи.' },
+  egg: { name: 'Кладка', r: 9, hp: 22, spd: 0, dmg: 0, xp: 1, ai: 'egg', acc: '#c6ff3d', kbRes: 1, d: 'Кладка Паучихи. Разбейте, пока не вылупился выводок.' },
   prop: { name: 'Контейнер снабжения', r: 13, hp: 6, spd: 0, dmg: 0, xp: 0, ai: 'none', prop: true, acc: '#ffb43d', d: 'Разбейте — внутри ремкомплекты и полезные устройства.' },
 };
 const ENEMY_CODEX = ['bug', 'tank', 'kami', 'gunner', 'charger', 'splitter', 'shielder', 'medic', 'blinker', 'eater', 'spitter'];
 
+// t — желаемая длительность боя (с): запас прочности босса подстраивается под мощь игрока
 const BOSSES = {
-  hammer: { name: 'МОЛОТ', title: 'Штурмовой шагатель', r: 34, hp: 3000, spd: 58, dmg: 18, color: '#ff8a3d', d: 'Сотрясает землю и бросается в таранную атаку.' },
-  hive: { name: 'УЛЕЙ', title: 'Матка Роя', r: 42, hp: 6500, spd: 34, dmg: 16, color: '#ffd23f', d: 'Выпускает кольца снарядов и рои камикадзе.' },
-  serpent: { name: 'ЗМЕЙ', title: 'Сегментный пожиратель', r: 24, hp: 10000, spd: 125, dmg: 20, color: '#8dff6a', segs: 16, d: 'Гигантская механическая многоножка. Сегменты стреляют.' },
-  core: { name: 'ЯДРО РОЯ', title: 'Источник', r: 56, hp: 26000, spd: 26, dmg: 24, color: '#ff3d5a', d: 'Сердце Роя. Три фазы, лазеры и щиты.' },
+  hammer: { name: 'МОЛОТ', title: 'Штурмовой шагатель', r: 34, hp: 3000, spd: 58, dmg: 18, color: '#ff8a3d', t: 55, d: 'Сотрясает землю и бросается в таранную атаку.' },
+  hive: { name: 'УЛЕЙ', title: 'Матка Роя', r: 42, hp: 6500, spd: 34, dmg: 16, color: '#ffd23f', t: 65, d: 'Выпускает кольца снарядов и рои камикадзе.' },
+  serpent: { name: 'ЗМЕЙ', title: 'Сегментный пожиратель', r: 24, hp: 10000, spd: 125, dmg: 20, color: '#8dff6a', segs: 16, t: 75, d: 'Гигантская механическая многоножка. Сегменты стреляют.' },
+  reaper: { name: 'ЖНЕЦ', title: 'Клинковый призрак', r: 28, hp: 4200, spd: 92, dmg: 17, color: '#ff4fd8', t: 60, d: 'Рывки сквозь поле, вихрь плазменных кос, косы-бумеранги.' },
+  arachna: { name: 'ПАУЧИХА', title: 'Матка-шагатель', r: 40, hp: 8000, spd: 60, dmg: 18, color: '#c6ff3d', t: 70, d: 'Прыгает, оплетает поле паутиной, откладывает кладки.' },
+  core: { name: 'ЯДРО РОЯ', title: 'Источник', r: 56, hp: 26000, spd: 26, dmg: 24, color: '#ff3d5a', t: 140, d: 'Сердце Роя. Три фазы, лазеры и щиты.' },
 };
-const BOSS_SCHEDULE = [
-  { t: 300, id: 'hammer' },
-  { t: 600, id: 'hive' },
-  { t: 900, id: 'serpent' },
-  { t: 1200, id: 'core', final: true },
-];
+// что меняется в бою на второй и третьей фазе
+const BOSS_PHASE_TXT = {
+  hammer: ['Удары молота рождают ударную волну', 'Двойной таран, след из огня'],
+  hive: ['Залпы плотнее, спираль в три луча', 'Улей идёт на таран'],
+  serpent: ['Броски оставляют кислоту, стреляет вдвое больше сегментов', 'Скорость растёт, двойной бросок'],
+  reaper: ['Косы-бумеранги возвращаются дважды', 'Призрачные двойники повторяют рывки'],
+  arachna: ['Паутина гуще, кладки вылупляются быстрее', 'Прыжок за прыжком'],
+  core: ['Лазеры!', 'Уничтожьте щитовые узлы'],
+};
+// у каждого сектора своя тройка боссов; финал — всегда Ядро
+const BOSS_LINEUP = { rust: ['hammer', 'hive', 'serpent'], neon: ['reaper', 'serpent', 'arachna'], hive: ['arachna', 'reaper', 'hive'] };
+function bossSchedule(sid) {
+  const L = BOSS_LINEUP[sid] || BOSS_LINEUP.rust;
+  return [{ t: 300, id: L[0] }, { t: 600, id: L[1] }, { t: 900, id: L[2] }, { t: 1200, id: 'core', final: true }];
+}
+const BOSS_SCHEDULE = bossSchedule('rust');
+// лейтенанты Роя — мини-боссы между большими боссами
+const LIEUTENANT_TIMES = [150, 450, 750, 1050];
 
 // Волны по минутам: скорость появления (в секунду), лимит живых, состав
 const WAVES = [
@@ -473,7 +519,7 @@ const ACHIEVEMENTS = [
   { id: 'winHive', name: 'Сердце тьмы', d: 'Победите в Сердце Роя', r: 1000 },
   { id: 'evolve1', name: 'Эволюция', d: 'Эволюционируйте любое орудие', r: 120, unlock: 'ПЕПЕЛ' },
   { id: 'evolve5', name: 'Коллекционер', d: 'Откройте 5 разных эволюций', r: 400 },
-  { id: 'evolveAll', name: 'Полный арсенал', d: 'Откройте все 13 эволюций', r: 1500 },
+  { id: 'evolveAll', name: 'Полный арсенал', d: 'Откройте все 15 эволюций', r: 1500 },
   { id: 'form3', name: 'Штурмовик', d: 'Достигните Формы III', r: 100, unlock: 'РАЗРЯД' },
   { id: 'formO', name: 'Омега-точка', d: 'Достигните Ω-формы', r: 500 },
   { id: 'branches', name: 'Конструктор', d: 'Установите все 10 веток модулей', r: 400 },
@@ -483,6 +529,7 @@ const ACHIEVEMENTS = [
   { id: 'od10', name: 'Перегрев', d: '10 овердрайвов за один забег', r: 150 },
   { id: 'threat5', name: 'Угроза V', d: 'Победите на угрозе 5 или выше', r: 800 },
   { id: 'endless30', name: 'Бессмертный', d: 'Продержитесь 30 минут', r: 1000 },
+  { id: 'relay3', name: 'Связист', d: 'Захватите 3 ретранслятора Роя за забег', r: 150 },
 ];
 
 /* ---------- Заполнители, когда всё прокачано ---------- */

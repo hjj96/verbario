@@ -16,7 +16,7 @@ function updateWeapons(dt) {
   }
 }
 // отдача корпуса по типу орудия: рельса бьёт сильнее всего
-const KICK = { rail: 1, missiles: 0.45, gravity: 0.5, shock: 0.35, saw: 0.3, mines: 0.25, cryo: 0.2, arc: 0.18, blaster: 0.12, flamer: 0.04 };
+const KICK = { rail: 1, missiles: 0.45, gravity: 0.5, shock: 0.35, saw: 0.3, mines: 0.25, cryo: 0.2, arc: 0.18, blaster: 0.12, flamer: 0.04, glaive: 0.22, magnet: 0.45 };
 function fired(w, k) {
   const q = k === undefined ? 1 : k;
   if (w.anim) w.anim.fire = Math.max(w.anim.fire, q);
@@ -596,6 +596,164 @@ WB.seismic = (w, dt, spd) => {
 };
 
 /* ===== Снаряды ===== */
+/* ---------- Световая глефа: двухклинковые световые мечи летят бумерангом ---------- */
+// путь: уходит дугой в одну сторону, возвращается по другой — к текущему положению корпуса
+function glaivePos(p) {
+  const u = clamp(p.u, 0, 1), R = p.range, ca = Math.cos(p.ang), sa = Math.sin(p.ang);
+  const f = Math.sin(Math.PI * u) * R, l = p.side * Math.sin(TAU * u) * R * 0.42, q = u * u;
+  const hx = lerp(p.ox, P.x, q), hy = lerp(p.oy, P.y - 6, q);
+  return { x: hx + ca * f - sa * l, y: hy + sa * f + ca * l };
+}
+function drawSaber(c, x, y, len, rot, col) {
+  const dx = Math.cos(rot) * len, dy = Math.sin(rot) * len;
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  c.strokeStyle = rgba(col, 0.16); c.lineWidth = 1.4; c.beginPath(); c.arc(x, y, len, 0, TAU); c.stroke();
+  c.beginPath(); c.moveTo(x - dx, y - dy); c.lineTo(x + dx, y + dy);
+  c.strokeStyle = rgba(col, 0.32); c.lineWidth = len * 0.46; c.stroke();
+  c.strokeStyle = rgba(col, 0.9); c.lineWidth = len * 0.18; c.stroke();
+  c.strokeStyle = '#ffffff'; c.lineWidth = len * 0.07; c.stroke();
+  c.restore();
+  c.save(); c.translate(x, y); c.rotate(rot);
+  c.fillStyle = '#16202f'; c.fillRect(-len * 0.17, -len * 0.08, len * 0.34, len * 0.16);
+  c.strokeStyle = '#b8ecff'; c.lineWidth = 0.8; c.strokeRect(-len * 0.17, -len * 0.08, len * 0.34, len * 0.16);
+  c.restore();
+}
+WB.glaive = (w, dt, spd) => {
+  if (!cdReady(w, dt, spd)) return;
+  const p = w.p, tg = nearestK(P.x, P.y, p.amount, p.range * 1.6);
+  if (!tg.length) { w.t = 0.25; return; }
+  const m = muzzleWorld(w);
+  for (let i = 0; i < p.amount; i++) {
+    const t = tg[i % tg.length], a = Math.atan2(t.y - m.y, t.x - m.x) + (i - (p.amount - 1) / 2) * 0.32;
+    w.st.n = ((w.st.n || 0) + 1) % 97;
+    spawnProj('glaive', m.x, m.y, 0, 0, { dmg: p.dmg, pierce: 999, r: p.size * p.area, life: p.dur + 0.5 + i * 0.08, src: w.id, icd: 0.3, icdKey: 'gl' + w.st.n, kb: 70, stun: p.stun || 0,
+      ang: a, side: i % 2 ? -1 : 1, range: p.range, ox: m.x, oy: m.y, u: 0, du: 1 / p.dur, rot: rand(0, TAU), len: p.size * p.area, col: '#62f0ff', wait: i * 0.08, w });
+  }
+  fired(w, 0.6); w.t = p.cd; AUDIO.sfx('swing');
+};
+// Танец клинков: шесть мечей на орбите; раз в цикл разлетаются звездой и возвращаются
+WB.bladedance = (w, dt, spd) => {
+  const p = w.p, st = w.st, R = p.orbit * p.area, sz = p.size * Math.sqrt(p.area), T = 1.1;
+  st.c = (st.c === undefined ? p.cycle : st.c) - dt * spd;
+  if (st.c <= 0 && !st.out) { st.c = p.cycle + T; st.out = T; AUDIO.sfx('swing'); fired(w, 1); }
+  if (st.out > 0) st.out = Math.max(0, st.out - dt * spd); else st.a = (st.a || 0) + p.rot * dt * spd;
+  st.pos = st.pos || [];
+  for (let i = 0; i < p.amount; i++) {
+    const a0 = (st.a || 0) + i * TAU / p.amount;
+    let x, y;
+    if (st.out > 0) { const u = 1 - st.out / T, d = R + Math.sin(Math.PI * u) * p.range, aa = a0 + Math.sin(TAU * u) * 0.55; x = P.x + Math.cos(aa) * d; y = P.y - 6 + Math.sin(aa) * d; }
+    else { x = P.x + Math.cos(a0) * R; y = P.y - 6 + Math.sin(a0) * R; }
+    st.pos[i] = { x, y, rot: (st.spin = (st.spin || 0) + dt * 2.2) + i };
+    eachEnemyIn(x, y, sz, e => { if (icdOk(e, 'bd' + i, p.icd)) hitEnemy(e, p.dmg, { src: w.id, kb: 80 }); });
+  }
+  st.pos.length = p.amount;
+};
+WD.bladedance = (c, w) => { const st = w.st, p = w.p; if (!st.pos) return; const sz = p.size * Math.sqrt(p.area); for (const q of st.pos) drawSaber(c, q.x, q.y, sz, q.rot * 6, '#bffbff'); };
+
+/* ---------- Электромагнит: хватает врагов, крутит и швыряет в толпу ---------- */
+function magnetAnchor(w, k, n) {
+  const m = muzzleWorld(w), a = P.aim + (n > 1 ? (k / (n - 1) - 0.5) * 1.2 : 0);
+  return { x: m.x + Math.cos(a) * 26, y: m.y + Math.sin(a) * 26 };
+}
+const magnetable = e => e.alive && !e.boss && !e.parent && !e.elite && !e.mag && !e.T.prop && e.T.ai !== 'node';
+WB.magnet = (w, dt, spd) => {
+  if (!cdReady(w, dt, spd)) return;
+  const p = w.p, R = p.range * p.area, cand = [];
+  eachEnemyIn(P.x, P.y, R, e => { if (magnetable(e)) cand.push(e); });
+  if (!cand.length) { w.t = 0.25; return; }
+  cand.sort((a, b) => d2(a.x, a.y, P.x, P.y) - d2(b.x, b.y, P.x, P.y));
+  const n = Math.min(p.amount, cand.length);
+  for (let k = 0; k < n; k++) cand[k].mag = { w, k, n, t: 0, ph: 'pull', hits: new Set() };
+  for (const g of G.gems) if (!g.mag && d2(g.x, g.y, P.x, P.y) < (R * 1.6) ** 2) g.mag = true;
+  fired(w, 0.8); w.t = p.cd; AUDIO.sfx('charge');
+  FX.ring(P.x, P.y, 10, R, 0.35, '#ff5a6e', 2);
+};
+// Магнитная буря: враги на орбите таранят остальных, раз в цикл разлетаются во все стороны
+WB.magstorm = (w, dt, spd) => {
+  const p = w.p, st = w.st, R = p.orbit * p.area;
+  st.a = (st.a || 0) + p.rot * dt * spd;
+  st.ring = (st.ring || []).filter(e => e.alive && e.mag && e.mag.w === w && e.mag.ph === 'orbit');
+  st.pullT = (st.pullT || 0) - dt * spd;
+  if (st.ring.length < p.amount && st.pullT <= 0) {
+    st.pullT = 0.18;
+    let best = null, bd = (p.range * p.area) ** 2;
+    eachEnemyIn(P.x, P.y, p.range * p.area, e => { if (!magnetable(e)) return; const d = d2(e.x, e.y, P.x, P.y); if (d < bd) { bd = d; best = e; } });
+    if (best) { best.mag = { w, ph: 'orbit', t: 0, hits: new Set() }; st.ring.push(best); }
+    for (const g of G.gems) if (!g.mag && d2(g.x, g.y, P.x, P.y) < (p.range * 1.3) ** 2) g.mag = true;
+  }
+  st.ring.forEach((e, i) => { const a = st.a + i * TAU / Math.max(1, st.ring.length); e.mag.tx = P.x + Math.cos(a) * R; e.mag.ty = P.y - 4 + Math.sin(a) * R; });
+  st.c = (st.c === undefined ? p.cycle : st.c) - dt * spd;
+  if (st.c <= 0) {
+    st.c = p.cycle;
+    if (st.ring.length) {
+      for (const e of st.ring) { const a = Math.atan2(e.y - P.y, e.x - P.x); e.mag = { w, ph: 'fly', t: 0, vx: Math.cos(a) * p.speed, vy: Math.sin(a) * p.speed, hits: new Set() }; }
+      st.ring = []; FX.ring(P.x, P.y, R, R * 2.6, 0.4, '#ff9aa6', 5); AUDIO.sfx('dash'); fired(w, 1);
+    }
+  }
+};
+// поля магнита: дуги от модуля к удерживаемым врагам
+function drawMagnetArcs(c, w) {
+  const m = muzzleWorld(w);
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineWidth = 1.3;
+  for (const e of G.enemies) {
+    if (!e.mag || e.mag.w !== w || e.mag.ph === 'fly') continue;
+    for (let k = 0; k < 2; k++) {
+      c.strokeStyle = k ? 'rgba(90,168,255,0.65)' : 'rgba(255,90,110,0.65)';
+      c.beginPath(); c.moveTo(m.x, m.y);
+      c.quadraticCurveTo((m.x + e.x) / 2 + rand(-12, 12), (m.y + e.y) / 2 - 12 + rand(-8, 8), e.x, e.y); c.stroke();
+    }
+  }
+  c.restore();
+}
+WD.magnet = drawMagnetArcs;
+WD.magstorm = (c, w) => {
+  drawMagnetArcs(c, w);
+  const p = w.p, R = p.orbit * p.area;
+  c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#ff9aa6', 0.18); c.lineWidth = 2; c.setLineDash([6, 6]);
+  c.beginPath(); c.arc(P.x, P.y - 4, R, (w.st.a || 0), (w.st.a || 0) + TAU); c.stroke(); c.restore();
+};
+// шаг удерживаемого врага: подтягивание, удержание, орбита, полёт; true — обычный ИИ пропускается
+function magnetStep(e, dt) {
+  const M = e.mag, w = M.w, p = w.p;
+  if (!P.weapons.includes(w)) { e.mag = null; return false; }
+  M.t += dt; e.vx = e.vy = 0; e.kbx = e.kby = 0; e.ang = (e.ang || 0) + dt * 12;
+  if (M.ph === 'pull' || M.ph === 'hold' || M.ph === 'orbit') {
+    let tx, ty;
+    if (M.ph === 'orbit') { tx = M.tx === undefined ? e.x : M.tx; ty = M.ty === undefined ? e.y : M.ty; }
+    else { const an = magnetAnchor(w, M.k, M.n), sp = M.t * 9 + M.k * TAU / M.n; tx = an.x + Math.cos(sp) * 12; ty = an.y + Math.sin(sp) * 12; }
+    const k = 1 - Math.exp(-dt * (M.ph === 'pull' ? 9 : 16));
+    e.x += (tx - e.x) * k; e.y += (ty - e.y) * k;
+    if (M.ph === 'orbit') eachEnemyIn(e.x, e.y, e.r + 6, o => { if (o !== e && !o.mag && icdOk(o, 'ms' + e.id, 0.35)) { hitEnemy(o, p.dmg * 0.5, { src: w.id, kb: 180 }); FX.sparks(o.x, o.y, 2, '#ffd0d6', 160); } });
+    if (M.ph === 'pull' && M.t > 0.35) M.ph = 'hold';
+    if (M.ph === 'hold' && M.t > 0.62) {
+      let best = null, bd = 460 * 460;
+      for (const o of G.enemies) { if (o === e || o.mag || !o.alive || o.T.prop) continue; const d = d2(o.x, o.y, e.x, e.y); if (d < bd) { bd = d; best = o; } }
+      const a = best ? Math.atan2(best.y - e.y, best.x - e.x) : P.aim;
+      M.ph = 'fly'; M.t = 0; M.vx = Math.cos(a) * p.speed; M.vy = Math.sin(a) * p.speed;
+      FX.sparks(e.x, e.y, 6, '#ff9aa6', 220); AUDIO.sfx('dash');
+    }
+    return true;
+  }
+  e.x += M.vx * dt; e.y += M.vy * dt;
+  if (Math.random() < 0.6) FX.dot(e.x, e.y, 0, 0, 0.25, e.r * 0.8, '#ff5a6e', 0);
+  const l = Math.hypot(M.vx, M.vy) || 1;
+  eachEnemyIn(e.x, e.y, e.r + 4, o => {
+    if (o === e || o.mag || M.hits.has(o)) return;
+    M.hits.add(o);
+    hitEnemy(o, p.dmg, { src: w.id, kb: 240, kx: M.vx / l, ky: M.vy / l });
+    if (e.alive) hitEnemy(e, p.dmg * 0.35, { src: w.id, nocrit: true });
+    FX.sparks(o.x, o.y, 4, '#ffd0d6', 200);
+  });
+  if (M.t > 0.55 || !e.alive) {
+    if (e.alive) {
+      hitEnemy(e, p.slam || p.dmg * 0.8, { src: w.id, nocrit: true });
+      if (p.blast) { FX.explosion(e.x, e.y, p.blast, '#ff5a6e'); const x = e.x, y = e.y; eachEnemyIn(x, y, p.blast, o => { if (o !== e) hitEnemy(o, p.dmg * 0.6, { src: w.id, kb: 150 }); }); }
+    }
+    FX.ring(e.x, e.y, 4, 30, 0.25, '#ff9aa6', 2);
+    e.mag = null;
+  }
+  return true;
+}
 function spawnProj(kind, x, y, vx, vy, o) {
   const p = { kind, x, y, vx, vy, r: 4, dmg: 0, pierce: 1, life: 1, src: 'other', hits: null, dead: false, t: 0 };
   if (o) for (const k in o) p[k] = o[k];
@@ -669,6 +827,19 @@ const PK = {
       c.drawImage(dotSprite(q > 0.55 ? '#ffcf5a' : q > 0.25 ? '#ff7a2e' : '#c2361b'), p.x - s, p.y - s, s * 2, s * 2);
       c.globalAlpha = 1;
     },
+  },
+  glaive: {
+    update(p, dt) {
+      p.vx = p.vy = 0;
+      if (p.wait > 0) { p.wait -= dt; if (p.w) { const m = muzzleWorld(p.w); p.x = p.ox = m.x; p.y = p.oy = m.y; } p.noHit = true; return; }
+      p.noHit = false;
+      p.u += dt * p.du; p.rot += dt * 19;
+      const q = glaivePos(p); p.x = q.x; p.y = q.y;
+      if (p.u >= 1) p.dead = true;
+      if (Math.random() < 0.35) FX.dot(p.x, p.y, 0, 0, 0.18, p.len * 0.45, p.col, 0);
+    },
+    hit(p, e) { hitEnemy(e, p.dmg, p); FX.sparks(e.x, e.y, 3, '#d8fbff', 200, undefined, 0, 0.2); AUDIO.sfx('hit'); },
+    draw(c, p) { drawSaber(c, p.x, p.y, p.len, p.rot, p.col); },
   },
   saw: {
     update(p, dt) {

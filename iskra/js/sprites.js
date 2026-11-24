@@ -223,6 +223,21 @@ const ICON_DRAW = {
     for (const x of [-10, -4]) { c.beginPath(); c.moveTo(x, -6); c.lineTo(x, 6); c.stroke(); }
     pathRR(c, -14, -3.5, 8, 7, 1.5); c.fillStyle = '#4a5363'; c.fill();
   },
+  glaive(c, k) {
+    c.save(); c.rotate(-0.7); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+    c.strokeStyle = rgba(k, 0.35); c.lineWidth = 7; c.beginPath(); c.moveTo(-13, 0); c.lineTo(13, 0); c.stroke();
+    c.strokeStyle = k; c.lineWidth = 3; c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.stroke();
+    c.restore();
+    c.save(); c.rotate(-0.7); c.fillStyle = '#16202f'; c.fillRect(-3.5, -2, 7, 4); c.strokeStyle = '#b8ecff'; c.lineWidth = 0.8; c.strokeRect(-3.5, -2, 7, 4); c.restore();
+    c.strokeStyle = rgba(k, 0.4); c.lineWidth = 1; c.beginPath(); c.arc(0, 0, 13, 0.3, 2.4); c.stroke();
+  },
+  magnet(c, k) {
+    c.lineCap = 'butt'; c.lineWidth = 6;
+    c.strokeStyle = grad(c, -10, -10, 10, 10, ['#ffffff', '#c9d3e6', '#6f7c94']);
+    c.beginPath(); c.arc(0, -1, 7, Math.PI, 0); c.lineTo(7, 8); c.moveTo(-7, -1); c.lineTo(-7, 8); c.stroke();
+    c.fillStyle = '#ff5a6e'; c.fillRect(-10, 6, 6, 5); c.fillStyle = '#5aa8ff'; c.fillRect(4, 6, 6, 5);
+    c.strokeStyle = rgba(k, 0.5); c.lineWidth = 1; for (const r of [11, 14]) { c.beginPath(); c.arc(0, 12, r, -2.6, -0.55); c.stroke(); }
+  },
   saw(c, k) {
     c.beginPath();
     for (let i = 0; i < 24; i++) { const a = i * TAU / 24, r = i % 2 ? 9 : 12; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }

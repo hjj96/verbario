@@ -212,6 +212,12 @@ const EM = {
     m.anchor('muzzle', 0, 0.62 * r, 1.7 * r, 0, 0.4, 1);
     for (const s of [-1, 1]) eEye(m, null, s * 0.3 * r, 0.72 * r, 0.7 * r, 0.08 * r, ps.pal.e);
   } },
+  // Кладка: пульсирующий кокон на ножках
+  egg: { frames: 2, fps: 3, build(m, r, ps) {
+    for (let i = 0; i < 3; i++) { const a = i * TAU / 3; m.strut([Math.cos(a) * 0.3 * r, Math.sin(a) * 0.3 * r, 0.5 * r], [Math.cos(a) * 0.9 * r, Math.sin(a) * 0.9 * r, 0], 0.08 * r, 0.03 * r, 3, 'd', true); }
+    bicone(m, 0, 0, 0.95 * r, 0.7 * r * (1 + ps.ph * 0.08), 0.55 * r, 0.75 * r, 8, 'a', 'a');
+    const g = m.glow(null, 0, 0, 1.0 * r, 1.1 * r, ps.pal.a, 0.55 + ps.ph * 0.3); g.auto = true;
+  } },
   // Контейнер снабжения: ящик с лентами и светящимся замком
   prop: { frames: 1, fps: 1, static: true, build(m, r, ps) {
     const b = m.box(-0.8 * r, -0.8 * r, 0, 0.8 * r, 0.8 * r, 1.0 * r, 'd');

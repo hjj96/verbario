@@ -1,11 +1,11 @@
 'use strict';
 /* ===== Боссы в 3D: модели, позы по состоянию ИИ, высадка по деталям с неба, гибель по деталям ===== */
 
-const BOSS_NOM = { hammer: 34, hive: 42, serpent: 24, core: 56 };
-const BOSS_ZC = { hammer: 34, hive: 28, serpent: 12, core: 52 };   // высота точки привязки над полом (номинал)
+const BOSS_NOM = { hammer: 34, hive: 42, serpent: 24, core: 56, reaper: 28, arachna: 40 };
+const BOSS_ZC = { hammer: 34, hive: 28, serpent: 12, core: 52, reaper: 34, arachna: 20 };   // высота точки привязки над полом (номинал)
 const BOSS_INTRO = 2.2;
 // босс визуально заметно крупнее своего круга столкновения — он должен нависать над героем
-const BOSS_VIS = { hammer: 1.75, hive: 1.45, serpent: 1.3, core: 1.0 };
+const BOSS_VIS = { hammer: 1.75, hive: 1.45, serpent: 1.3, core: 1.0, reaper: 1.55, arachna: 1.3 };
 const bossSc = e => e.r / BOSS_NOM[e.bid] * BOSS_VIS[e.bid];
 function bossPal(bid) { return enemyPal(G.sector ? G.sector.pal : SECTORS[0].pal, BOSSES[bid].color, false); }
 
@@ -158,6 +158,56 @@ const BOSS_M = {
     m.pop();
     m.pop();
   },
+  // ЖНЕЦ: парящий призрак — плащ из пластин, череп с прорезью, две энергокосы
+  reaper(m, ps) {
+    const st = ps.st, q = ps.q, t = ps.t, col = BOSSES.reaper.color;
+    m.push(); m.t(0, 0, 14 + Math.sin(t * 2) * 2);
+    if (ps.spin) m.rz(ps.spin);
+    if (st === 'dash') m.rx(-0.45); else if (st === 'wind') m.rx(0.2 * q);
+    for (let i = 0; i < 7; i++) { const a = i * TAU / 7; m.push(); m.rz(a); m.t(0, 6.5, 14); m.rx(0.32 + Math.sin(t * 4 + i) * 0.1); m.plate([[-4, 0], [4, 0], [2.2, -17], [-1, -22]], 'y', 0, i % 2 ? 'd' : 'm'); m.pop(); }
+    m.prism([[-8, 14], [8, 14], [10, 26], [6, 32], [-6, 32], [-10, 26]], -4.5, 4.5, 'y', 'm');
+    m.plate([[-1, 15], [1, 15], [0.5, 31], [-0.5, 31]], 'x', 0, 'a');
+    const hd = m.prism([[0, 7.5], [-5, 3], [-4.4, -4], [4.4, -4], [5, 3]], 33, 41, 'z', 'd');
+    m.glow(hd.s[0], -2.4, 5.4, 37.5, 3, col, 0.95); m.glow(hd.s[4], 2.4, 5.4, 37.5, 3, col, 0.95);
+    for (const s of [-1, 1]) m.strut([s * 3, -2, 40], [s * 8, -9, 50], 1.2, 0.2, 4, 'a', true);
+    for (const s of [-1, 1]) {
+      let sw = 0.9, fw = 0.3;
+      if (st === 'wind' || st === 'dash') { sw = -0.6; fw = 0.1; } else if (st === 'throw') { sw = 1.7 - q * 0.4; fw = 0; } else if (ps.spin) { sw = 1.57; fw = 0; }
+      m.push(); m.t(s * 10, 0, 29); m.rz(s * 0.35); m.rx(sw);
+      m.cyl(1.8, 1.4, -11, 0, 6, 'l'); m.t(0, 0, -11); m.rx(fw); m.cyl(1.4, 1.1, -10, 0, 6, 'm'); m.t(0, 0, -10);
+      if (!ps.thrown) {
+        m.strut([0, 0, 4], [0, 0, -26], 0.9, 0.9, 5, 'd', true);
+        const blade = []; for (let k = 0; k <= 7; k++) { const a = k / 7 * 2.2; blade.push([Math.sin(a) * 19, -26 + (1 - Math.cos(a)) * 10 - 2]); }
+        for (let k = 7; k >= 0; k--) { const a = k / 7 * 2.2; blade.push([Math.sin(a) * 12.5, -26 + (1 - Math.cos(a)) * 6.5]); }
+        m.plate(blade, 'x', 0, 'a');
+        const g = m.glow(null, 0, 10, -24, 7, col, 0.5); g.auto = true;
+      }
+      m.pop();
+    }
+    m.pop();
+  },
+  // ПАУЧИХА: восемь трёхзвенных ног, головогрудь с шестью глазами, брюшко с кислотной меткой
+  arachna(m, ps) {
+    const t = ps.t, col = BOSSES.arachna.color, lift = ps.leapH || 0, crouch = ps.st === 'crouch' ? 1 : 0;
+    m.push(); m.t(0, 0, lift - crouch * 5);
+    for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+      const y0 = 9 - i * 5, ph = ps.wp + i * Math.PI / 2 + (s > 0 ? 0 : Math.PI), sw = Math.sin(ph) * 5 * ps.mv, up = Math.max(0, Math.cos(ph)) * 6 * ps.mv, fan = (1.5 - i) * 0.5;
+      const tuck = lift > 4 ? 0.55 : 1;
+      m.side = s;
+      const hip = [s * 7, y0, 17], knee = [s * 22 * tuck, y0 + fan * 14 + sw * 0.5, 32 + up * 0.5 - crouch * 3], foot = [s * 35 * tuck, y0 + fan * 28 + sw, lift > 4 ? 8 - lift * 0.2 : up + crouch * 5];
+      m.strut(hip, knee, 2.5, 2.1, 5, 'm'); m.strut(knee, foot, 2.1, 0.5, 5, 'l');
+    }
+    m.side = 0;
+    const oc = []; for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + TAU / 16; oc.push([Math.cos(a) * 11, Math.sin(a) * 12 + 3]); }
+    const ce = m.prism(oc, 12, 22, 'z', 'm');
+    for (let k = 0; k < 6; k++) { const x = (k % 3 - 1) * 3.2, z = 18.5 + Math.floor(k / 3) * 2.6; eEye(m, null, x, 14.6, z, k < 3 ? 1.2 : 0.9, col); }
+    for (const s of [-1, 1]) m.strut([s * 3, 14, 14], [s * 1.5, 20, 6], 1.6, 0.3, 4, 'a', true);
+    bicone(m, 0, -17, 21, 16, 10, 12, 8, 'm', 'l');
+    m.push(); m.t(0, -17, 33); m.cyl(3.4, 2, 0, 2, 6, 'a'); m.pop();
+    const pulse = ps.st === 'eggs' ? 1 : 0.4 + Math.sin(t * 3) * 0.2;
+    const g = m.glow(null, 0, -17, 26, 14 * pulse, col, 0.55); g.auto = true;
+    m.pop();
+  },
   // щитовой узел ядра: октаэдр-пилон с кольцом
   node(m, ps) {
     m.push(); m.t(0, 0, 22 + Math.sin(ps.t * 3 + ps.idx) * 2); m.rz(ps.t * 1.5);
@@ -176,6 +226,14 @@ function bossPose(e, t) {
     return { st, q: st === 'walk' ? 0 : clamp(1 - a.t / dur, 0, 1), wp: e.t * (st === 'charge' ? 9 : 4.2), yaw: st === 'charge' || st === 'wind' ? a.ang : toP, t, pal };
   }
   if (bid === 'hive') return { t, rot: e.rot || 0, open: clamp(a.hatch || 0, 0, 1), fire: a.s === 'spiral' ? 1 : clamp(a.flare || 0, 0, 1), yaw: Math.PI / 2, pal };
+  if (bid === 'reaper') {
+    const st = a.s || 'walk', dur = { wind: 0.65, dash: 0.8, throw: 0.5, whirl: 2.2 }[st] || 1;
+    return { st, q: st === 'walk' ? 0 : clamp(1 - a.t / dur, 0, 1), t, yaw: st === 'dash' || st === 'wind' ? a.ang : toP, spin: st === 'whirl' ? t * 14 : 0, thrown: G.ebullets.some(b => b.kind === 'scythe' && b.host === e), pal };
+  }
+  if (bid === 'arachna') {
+    const st = a.s || 'walk';
+    return { st, q: 0, wp: e.t * 7, mv: st === 'walk' ? 1 : 0, t, leapH: e.leapH || 0, yaw: st === 'leap' || st === 'crouch' ? Math.atan2(a.ty - e.y, a.tx - e.x) : toP, pal };
+  }
   if (bid === 'serpent') return { t, open: a.s === 'wind' || a.s === 'lunge' ? 1 : 0.15 + Math.sin(t * 5) * 0.1, yaw: Math.atan2(e.vy, e.vx) || 0, pal };
   return { t, rot: e.rot || 0, ph: a.ph || 1, laser: !!a.laserOn, yaw: toP, pal };
 }
@@ -201,10 +259,13 @@ function drawBoss3D(c, e, z, e0, f0, t) {
   const bid = e.bid, sc = bossSc(e), ps = bossPose(e, t), view = enemyView();
   const m = bossMesh(bid, ps, sc);
   if (e.intro > 0) skyAssemble(1 - e.intro / BOSS_INTRO, e.id)(m);
+  // смена фазы: броня «вздыхает» — детали расходятся и возвращаются
+  else if (e.phaseT > 0) explodeAnim(0.45 * Math.sin(Math.PI * (1 - e.phaseT / 1.4)))(m);
   c.setTransform(z, 0, 0, z, e.x * z + e0, e.y * z + f0);
   renderMesh(c, m, ps.pal, view, {});
   if (e.flash > 0.035) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.16; renderMesh(c, m, ps.pal, view, { flat: '#ffffff' }); c.restore(); }
   if (e.st.chillT > 0 || e.st.freezeT > 0) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.18; renderMesh(c, m, ps.pal, view, { flat: '#9ff0ff' }); c.restore(); }
+  if (e.enraged) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.1 + Math.sin(t * 10) * 0.06; renderMesh(c, m, ps.pal, view, { flat: '#ff2a3a' }); c.restore(); }
   c.setTransform(z, 0, 0, z, e0, f0);
   if (bid === 'core') {
     if (e.dmgRes) { c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#46e3ff', 0.5 + Math.sin(t * 8) * 0.2); c.lineWidth = 2; c.beginPath(); c.arc(e.x, e.y, e.r * 1.25, 0, TAU); c.stroke(); c.restore(); }

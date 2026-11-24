@@ -113,12 +113,14 @@ function startRun(robotId, sectorId, threat) {
   G.robot = robot; G.sector = sector; G.threat = threat || 0;
   G.time = 0; G.rt = 0;
   G.enemies.length = 0; G.bigs.length = 0; G.projs.length = 0; G.ebullets.length = 0; G.areas.length = 0;
-  G.gems.length = 0; G.items.length = 0; G.warns.length = 0; G.wrecks.length = 0;
+  G.gems.length = 0; G.items.length = 0; G.warns.length = 0; G.wrecks.length = 0; G.webs = [];
   G.kills = 0; G.eid = 0; G.pendingLevels = 0; G.pendingChests.length = 0;
   G.eliteIdx = 0; G.eventIdx = 0; G.bossIdx = 0; G.spawnAcc = 0; G.propT = 4; G.nextEliteEndless = 0;
   G.banished = new Set(); G.dmgBy = {}; G.scrapRun = 0; G.bossKills = 0; G.bossesAlive = 0; G.evolvedThisRun = [];
   G.hitstop = 0; G.freezeT = 0; G.endless = false; G.won = false; G.final = null;
   G.runAch = new Set(); G.statusT = 0; G.lastHurtT = -99; G.pendingWin = false; G.dmgTaken = 0; G.endlessBossT = undefined;
+  G.dps = 0; G.dmgWin = 0; G.dmgWinT = 0; G.alert = 1; G.alertLvl = 1; G.alertEliteT = 40; G.ltIdx = 0; G.schedule = bossSchedule(sector.id);
+  resetWorld();
   G.tf.clear(); FX.clear(); LATER.length = 0;
   RENDER.ghostKey = '';
   P = newPlayer(robot);
@@ -181,12 +183,17 @@ function eachEnemyIn(x, y, r, fn) {
   }
 }
 function targetable(e) { return e.alive && !e.T.prop && !e.phased; }
+// босс, лейтенант и щитовые узлы — приоритетные цели: прицел считает их ближе, чем они есть; неуязвимых — дальше
+function tgtPrio(e) { return e.inv ? 3 : e.boss || e.lt || e.T.ai === 'node' ? 0.3 : 1; }
 function nearestEnemy(x, y, maxD, skip) {
-  let best = null, bd = (maxD || 1e9) * (maxD || 1e9);
+  let best = null, bd = Infinity;
+  const md = (maxD || 1e9) * (maxD || 1e9);
   for (const e of G.enemies) {
     if (!targetable(e) || (skip && skip.has(e))) continue;
     const d = d2(x, y, e.x, e.y);
-    if (d < bd) { bd = d; best = e; }
+    if (d > md) continue;
+    const ed = e.boss || e.lt || e.inv || e.T.ai === 'node' ? d * tgtPrio(e) : d;
+    if (ed < bd) { bd = ed; best = e; }
   }
   return best;
 }
@@ -194,8 +201,9 @@ function nearestK(x, y, k, maxD) {
   const out = [], md = maxD * maxD;
   for (const e of G.enemies) {
     if (!targetable(e)) continue;
-    const d = d2(x, y, e.x, e.y);
+    let d = d2(x, y, e.x, e.y);
     if (d > md) continue;
+    if (e.boss || e.lt || e.inv || e.T.ai === 'node') d *= tgtPrio(e);
     if (out.length < k) { out.push({ e, d }); out.sort((a, b) => a.d - b.d); }
     else if (d < out[k - 1].d) { out[k - 1] = { e, d }; out.sort((a, b) => a.d - b.d); }
   }
@@ -246,8 +254,10 @@ function hitEnemy(e, dmg, o) {
   if (e.T.armor) d *= 1 - e.T.armor;
   if (e.dmgRes) d *= 1 - e.dmgRes;
   if (e.armored) d *= 0.55;
+  if ((e.boss || e.lt) && e.bossK !== undefined) { e.rawAcc = (e.rawAcc || 0) + d; d *= e.bossK; }
   const before = e.hp;
   e.hp -= d;
+  if (o.src !== 'hazard' && o.src !== 'relay') G.dmgWin += Math.min(d, e.maxHp * 1.5);
   if (e.armored && e.hp < e.maxHp * ELITE_ARMOR_AT && e.hp > 0) {
     // бронеплиты слетают, обнажённая машина ускоряется
     e.armored = false; e.spd *= 1.25;
@@ -356,7 +366,7 @@ function killEnemy(e, o) {
   const odGain = (e.elite ? 7 : 0.38) * P.stats.odRate;
   if (!P.od.active) P.od.meter = Math.min(100, P.od.meter + odGain);
   const m = G.time / 60;
-  const xp = e.xp * (1 + m * 0.02) * (e.elite ? 10 : 1);
+  const xp = e.xp * (1 + m * 0.02) * (e.elite ? 10 : 1) * (e.xpK || 1);
   dropGem(e.x, e.y, xp);
   if (e.ate) dropGem(e.x + 6, e.y, e.ate * 1.5);
   const luck = P.stats.luck;
@@ -510,7 +520,7 @@ function updatePickups(dt) {
 function updatePlayer(dt) {
   const S = P.stats;
   const mv = INPUT.move();
-  let sp = S.speed * (P.od.active ? 1.2 : 1);
+  let sp = S.speed * (P.od.active ? 1.2 : 1) * (G.webs && G.webs.length && inWeb(P.x, P.y) ? 0.5 : 1);
   if (P.dash.t > 0) {
     P.dash.t -= dt;
     const ds = 640;
@@ -572,7 +582,7 @@ function updatePlayer(dt) {
   P.dist += Math.hypot(P.vx, P.vy) * dt;
   if (moving < 0.1) P.still += dt; else P.still = 0;
   P.siege = hasBranch('arms', 'A', 5) && P.still > 0.7;
-  G.dmgMul = (P.od.active ? 1.5 : 1) * (P.siege ? 1.35 : 1);
+  G.dmgMul = (P.od.active ? 1.5 : 1) * (P.siege ? 1.35 : 1) * (G.surgeT > 0 ? 1.25 : 1);
   // рывок
   if (P.dash.charges < P.dash.max) {
     P.dash.cdT -= dt;
@@ -850,7 +860,7 @@ function evolveWeapon(wid, evo) {
       achieve('evolve1');
       const n = Object.keys(SAVE.discovered.evolutions || {}).length;
       if (n >= 5) achieve('evolve5');
-      if (n >= 13) achieve('evolveAll');
+      if (n >= Object.keys(EVOS).length) achieve('evolveAll');
       SAVE.stats.evolutions = (SAVE.stats.evolutions || 0) + 1;
     },
   }));
@@ -876,11 +886,14 @@ function step(dt) {
   updateWeapons(dt);
   updateProjectiles(dt);
   updateAreas(dt);
+  updateWorld(dt);
   updateEnemies(dt);
   updateEnemyBullets(dt);
   updatePickups(dt);
   FX.update(dt);
+  updatePower(dt);
   updateWrecks(dt);
+  if (G.webs) for (let i = G.webs.length - 1; i >= 0; i--) { G.webs[i].life -= dt; if (G.webs[i].life <= 0) removeAt(G.webs, i); }
   G.tf.update(dt);
   updateCamera(dt);
   checkProgress();
@@ -898,12 +911,36 @@ function updateCamera(dt) {
   const tz = G.tf.zoom();
   G.cam.zoom = lerp(G.cam.zoom, tz, 1 - Math.exp(-10 * dt));
 }
+/* ---------- Тревога Роя: Рой подстраивается под мощь игрока ---------- */
+// мощь — скользящий урон в секунду; ожидание — урон хорошей сборки к этой минуте
+function expectedDps(m) { return 40 + 9 * m * m; }
+function alertLevel(a) { return a < 1.25 ? 1 : a < 1.7 ? 2 : a < 2.3 ? 3 : a < 3 ? 4 : 5; }
+function updatePower(dt) {
+  G.dmgWinT += dt;
+  if (G.dmgWinT >= 0.5) {
+    const inst = G.dmgWin / G.dmgWinT;
+    G.dps += (inst - G.dps) * (1 - Math.exp(-G.dmgWinT / 14));
+    G.dmgWin = 0; G.dmgWinT = 0;
+  }
+  const m = G.time / 60, R = G.dps / (expectedDps(m) * Math.sqrt(Math.max(1, G.alert)));
+  // сильнее ожидаемого — машины крепче и их больше; слабее — Рой чуть отступает
+  let want = R >= 1 ? Math.min(5, Math.pow(R, 0.6)) : Math.max(0.7, Math.pow(R, 0.3));
+  if (G.time < 60) want = 1;
+  G.alert += (want - G.alert) * Math.min(1, dt / 16);
+  const lvl = alertLevel(G.alert);
+  if (lvl > G.alertLvl) {
+    G.alertLvl = lvl;
+    UI.banner('РОЙ АДАПТИРУЕТСЯ · ТРЕВОГА ' + ROMAN[lvl], ['', '', 'Машины крепче, их больше', 'Элита выходит чаще', 'Рой бросает всё, что есть', 'Предельная тревога'][lvl], 'red');
+    AUDIO.sfx('warn');
+  } else if (lvl < G.alertLvl - 1 || (lvl < G.alertLvl && G.alert < 1.1)) G.alertLvl = lvl;
+}
 function checkProgress() {
   const t = G.time;
   if (t >= 300) achieve('survive5');
   if (t >= 600) achieve('survive10');
   if (t >= 1800) achieve('endless30');
   if (G.kills >= 1000) achieve('kills1k');
+  if (G.relayN >= 3) achieve('relay3');
 }
 
 function endRun(victory) {

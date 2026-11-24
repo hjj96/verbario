@@ -889,6 +889,21 @@ function buildModule3(m, w, pal, ps) {
       for (let i = 0; i < 4; i++) { const a = t * 3 + i * 1.7; const g = m.glow(null, Math.cos(a) * 3, 5 + Math.sin(a * 1.3) * 2, Math.sin(a) * 3, 1.5, col, 0.9); g.auto = true; }
       tip = 4; break;
     }
+    case 'glaive': {
+      // рукоять светового меча с коротким клинком
+      m.barrel(1.2, 1.2, -2.5, 4, 6, 'd'); m.barrel(1.7, 1.7, 4, 5.2, 8, 'a');
+      const bl = m.line(null, 0, 5.4, 0, 0, 15 + f * 4, 0, col, 2.4, 0.95); bl.auto = true;
+      const g = m.glow(null, 0, 10, 0, 6 + f * 4, col, 0.5); g.auto = true;
+      tip = 15; break;
+    }
+    case 'magnet': {
+      // подкова электромагнита: красный и синий полюса
+      m.box(-4.4, -1, -2, 4.4, 2.6, 2, 'm');
+      for (const s of [-1, 1]) { m.box(s * 4.4 - (s > 0 ? 2.4 : 0), 2.6, -1.8, s * 4.4 + (s > 0 ? 0 : 2.4), 10, 1.8, 'l'); m.box(s * 4.4 - (s > 0 ? 2.4 : 0), 10, -1.9, s * 4.4 + (s > 0 ? 0 : 2.4), 12.4, 1.9, 'a'); }
+      const g1 = m.glow(null, -3.2, 12.6, 0, 3.2 + f * 3, '#ff5a6e', 0.85); g1.auto = true;
+      const g2 = m.glow(null, 3.2, 12.6, 0, 3.2 + f * 3, '#5aa8ff', 0.85); g2.auto = true;
+      tip = 12.5; break;
+    }
     case 'shock': {
       m.barrel(3.6, 3.6, -1.5, 2.5, 10, 'm');
       const rg = m.ring(0, 2.6, 0, 5.2 + f * 2, 'y', col, 1, 0.85); rg.auto = true;
