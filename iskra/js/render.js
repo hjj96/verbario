@@ -162,7 +162,7 @@ function drawEnemies(c, z, e0, f0) {
     else if (e.elite && live++ < 6) drawElite3D(c, e, z, e0, f0, t);
     else drawEnemySprite(c, e, z, e0, f0, t);
     if (e.boss || e.parent) continue;
-    if (e.t < 0.4 || e.tid === 'kami' || e.tid === 'charger' || e.shieldT > 0 || e.st.stunT > 0 || e.st.markT > 0 || e.elite || e.tid === 'shielder' || e.tid === 'medic' || (e.tid === 'eater' && e.ate)) det.push(e);
+    if (e.t < 0.4 || e.tid === 'kami' || e.tid === 'charger' || e.tid === 'nest' || e.shieldT > 0 || e.st.stunT > 0 || e.st.markT > 0 || e.elite || e.tid === 'shielder' || e.tid === 'medic' || (e.tid === 'eater' && e.ate)) det.push(e);
   }
   worldT(c);
   drawWrecks(c, z, e0, f0);
@@ -201,6 +201,15 @@ function drawEnemies(c, z, e0, f0) {
     }
     if (e.tid === 'eater' && e.ate) { const q = Math.min(1, e.ate / 40); glow(c, e.x, e.y, e.r * (0.6 + q * 0.6), '#b38bff', 0.5 + q * 0.5); }
     if (e.st.markT > 0) { c.strokeStyle = 'rgba(255,77,94,0.85)'; c.lineWidth = 1; c.beginPath(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + t * 2; c.moveTo(e.x + Math.cos(a) * (e.r + 3), e.y + Math.sin(a) * (e.r + 3)); c.lineTo(e.x + Math.cos(a) * (e.r + 9), e.y + Math.sin(a) * (e.r + 9)); } c.stroke(); }
+    if (e.tid === 'nest') {
+      const w = 64, q = clamp(e.hp / e.maxHp, 0, 1), mat = e.ai.mature;
+      uprightAt(c, e.x, e.y - eTop(e));
+      c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(-w / 2, -12, w, 5);
+      c.fillStyle = mat ? '#ffd36b' : '#ff3b5c'; c.fillRect(-w / 2, -12, w * q, 5);
+      c.font = '700 7px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillStyle = mat ? 'rgba(255,211,107,0.95)' : 'rgba(255,120,140,0.95)';
+      c.fillText(mat ? 'ГНЕЗДО · ЗРЕЛОЕ' : 'ГНЕЗДО РОЯ', 0, -14); c.textAlign = 'left';
+      worldT(c);
+    }
     if (e.elite) {
       // полоса прочности и табличка свойства — вертикальные, без сжатия пола
       const w = e.r * 2.4, q = clamp(e.hp / e.maxHp, 0, 1);
@@ -494,7 +503,7 @@ function drawOffscreen(c) {
     c.restore();
     if (label) { c.font = '600 10px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.fillStyle = col; c.fillText(label, ax - Math.cos(a) * 22, ay - Math.sin(a) * 22 + 3); }
   };
-  for (const e of G.enemies) if (e.boss && e.alive) mark(e.x, e.y, '#ff4d5e', e.name);
+  for (const e of G.enemies) if (e.boss && e.alive) mark(e.x, e.y, '#ff4d5e', e.name); else if (e.alive && e.tid === 'nest') mark(e.x, e.y, e.ai.mature ? '#ffd36b' : '#ff3b5c', 'ГНЕЗДО');
   for (const it of G.items) if (it.kind === 'chest' || it.kind === 'bigchest') mark(it.x, it.y, it.kind === 'bigchest' ? '#ffd36b' : '#46e3ff', null);
   if (G.relay && (G.relay.st === 'idle' || G.relay.st === 'cap')) mark(G.relay.x, G.relay.y, '#ffd36b', 'РЕТРАНСЛЯТОР');
 }

@@ -104,17 +104,22 @@ function director(dt) {
   }
   if (G.freezeT > 0) G.freezeT -= dt;
 }
+// свойство элиты (броня, разгон, матка, нестабильность) и его следствия; plain — без свойства
+function eliteSetup(e, plain) {
+  const af = plain ? null : pick(Object.keys(ELITE_AFFIX));
+  e.affix = af;
+  if (af === 'armored') e.armored = true;
+  else if (af === 'overclock') { e.spd *= 1.55; e.hp *= 0.8; e.maxHp = e.hp; }
+  else if (af === 'brood') e.ai.brood = 2.5;
+  return af;
+}
 function spawnElite(pool) {
   const keys = Object.keys(pool).filter(k => k !== 'bug' && k !== 'kami' && k !== 'mini');
   const tid = keys.length ? pick(keys) : 'tank';
   const p = spawnPoint();
   const e = spawnEnemy(tid, p.x, p.y, { elite: true });
   // первая элита — без свойства, дальше — со случайным
-  const af = G.eliteIdx <= 1 && !G.endless ? null : pick(Object.keys(ELITE_AFFIX));
-  e.affix = af;
-  if (af === 'armored') e.armored = true;
-  else if (af === 'overclock') { e.spd *= 1.55; e.hp *= 0.8; e.maxHp = e.hp; }
-  else if (af === 'brood') e.ai.brood = 2.5;
+  const af = eliteSetup(e, G.eliteIdx <= 1 && !G.endless);
   UI.banner('ЭЛИТНЫЙ ВРАГ', (af ? ELITE_AFFIX[af].name + ' ' + ENEMIES[tid].name.toLowerCase() + ' · ' + ELITE_AFFIX[af].d.toLowerCase() : ENEMIES[tid].name + ' · внутри контейнер'), 'gold');
   AUDIO.sfx('elite');
 }
@@ -327,6 +332,36 @@ const AI = {
       FX.burst(mz.x, mz.y, 4, '#c6ff3d', 80, 0.25, 3);
     }
   },
+  // гнездо: раз в 2,6 с раскрывает лепестки и выпускает машины текущей волны (не больше cap живых «детей»);
+  // через 45 с созревает — выпускает чаще и раз в 16 с добавляет элиту
+  nest(e, dt) {
+    e.vx = e.vy = 0; e.kbx = e.kby = 0;
+    const a = e.ai;
+    a.age = (a.age || 0) + dt;
+    if (a.open > 0) a.open -= dt;
+    if (!a.mature && a.age > 45) {
+      a.mature = true; a.eT = 4;
+      FX.hexRing(e.x, bodyY(e), 6, 60, 0.5, '#ffd36b', 2); AUDIO.sfx('warn');
+      if (onScreen(e, 0)) FX.text(e.x, e.y - 56, 'ГНЕЗДО СОЗРЕЛО', '#ffd36b', 12);
+    }
+    a.cd = (a.cd === undefined ? 1.2 : a.cd) - dt;
+    if (a.mature) a.eT -= dt;
+    if (a.cd > 0 && !(a.mature && a.eT <= 0)) return;
+    let kids = 0;
+    for (const k of G.enemies) if (k.alive && k.nest === e) kids++;
+    if (kids >= a.cap) { a.cd = 0.8; return; }
+    const elite = a.mature && a.eT <= 0, n = elite ? 1 : 2 + Math.min(3, Math.floor(minutes() / 4)), W = currentWave(), y0 = bodyY(e);
+    for (let i = 0; i < n; i++) {
+      const an = rand(0, TAU), d = e.r + 12;
+      const k = spawnEnemy(elite ? pick(['tank', 'charger', 'gunner']) : weightedKey(W.pool), e.x + Math.cos(an) * d, e.y + Math.sin(an) * d, elite ? { elite: true } : undefined);
+      if (elite) eliteSetup(k);
+      k.nest = e; k.kbx = Math.cos(an) * 160; k.kby = Math.sin(an) * 160;
+    }
+    if (elite) a.eT = 16; else a.cd = a.mature ? 1.7 : 2.6;
+    a.open = 0.6;
+    FX.hexRing(e.x, y0, 4, 34, 0.3, '#ff3b5c', 1.4); FX.sparks(e.x, y0, 8, '#ffb0bb', 200, undefined, 0, 0.3);
+    if (onScreen(e, 40)) AUDIO.sfx('thump');
+  },
   // кладка: отсчитывает до вылупления; разбили раньше — выводка нет
   egg(e, dt) {
     e.vx = e.vy = 0;
@@ -399,6 +434,7 @@ function updateEnemies(dt) {
     if (frozen && !e.boss) slow = 0;
     e.x += (e.vx * slow + e.kbx) * dt;
     e.y += (e.vy * slow + e.kby) * dt;
+    enemyVsStructures(e, dt);
     const kd = Math.exp(-8 * dt);
     e.kbx *= kd; e.kby *= kd;
     if (e.vx > 5) e.face = 1; else if (e.vx < -5) e.face = -1;
@@ -409,7 +445,7 @@ function updateEnemies(dt) {
       e.ang = e.ang === undefined ? want : e.ang + angDiff(e.ang, want) * Math.min(1, dt * 9);
     }
     // расталкивание
-    if (!e.boss && !e.parent && !e.T.prop && ((e.id & 1) === sepOdd)) {
+    if (!e.boss && !e.parent && !e.T.prop && e.T.ai !== 'nest' && ((e.id & 1) === sepOdd)) {
       let k = 0;
       G.grid.each(e.x, e.y, e.r + 14, n => {
         if (n === e || !n.alive || k > 6) return;
@@ -422,7 +458,11 @@ function updateEnemies(dt) {
       });
     }
     // контакт с игроком
-    if (!e.T.prop) {
+    if (e.T.ai === 'nest') {
+      // гнездо — твёрдое: выталкивает робота, само не сдвигается
+      const rr = e.r + P.r * 0.7, dx = P.x - e.x, dy = P.y - e.y, dd = dx * dx + dy * dy;
+      if (dd < rr * rr) { const d = Math.sqrt(dd) || 1; P.x = e.x + dx / d * rr; P.y = e.y + dy / d * rr; }
+    } else if (!e.T.prop) {
       const rr = e.r + P.r - 3, dx = e.x - P.x, dy = e.y - P.y, dd = dx * dx + dy * dy;
       if (dd < rr * rr) {
         if (e.T.ai !== 'kami' && e.T.ai !== 'egg' && !e.phased && !(e.leapH > 12)) hurtPlayer(e.dmg, e);
@@ -430,7 +470,7 @@ function updateEnemies(dt) {
       }
     }
     // переброска отставших
-    if (!e.boss && !e.parent && !e.ai.rush && (Math.abs(e.x - P.x) > far || Math.abs(e.y - P.y) > far)) {
+    if (!e.boss && !e.parent && !e.ai.rush && e.T.ai !== 'nest' && (Math.abs(e.x - P.x) > far || Math.abs(e.y - P.y) > far)) {
       if (e.T.prop) { e.alive = false; removeAt(arr, i); continue; }
       const p = spawnPoint(); e.x = p.x; e.y = p.y; e.kbx = e.kby = 0;
     }

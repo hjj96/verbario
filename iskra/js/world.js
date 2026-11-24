@@ -13,7 +13,7 @@ const HAZ = {
 };
 const HZ_CACHE = new Map(), HZ_LIST = [];
 function hazDef() { return G.sector ? HAZ[G.sector.id] || null : null; }
-function resetWorld() { HZ_CACHE.clear(); HZ_LIST.length = 0; G.relay = null; G.relayT = 70; G.relayN = 0; G.surgeT = 0; }
+function resetWorld() { HZ_CACHE.clear(); HZ_LIST.length = 0; if (typeof resetStructures === 'function') resetStructures(); G.relay = null; G.nestT = undefined; G.nestKills = 0; G.relayT = 70; G.relayN = 0; G.surgeT = 0; }
 const smooth01 = q => q * q * (3 - 2 * q);
 
 // опасности вокруг игрока: детерминированно по ячейкам, состояние ячейки — в кэше
@@ -102,6 +102,7 @@ function spawnRelay() {
   for (let i = 0; i < 12; i++) {
     const a = rand(0, TAU), d = rand(400, 540), x = P.x + Math.cos(a) * d, y = P.y + Math.sin(a) * d;
     if (HZ_LIST.some(h => (h.kind === 'fence' ? segD2(x, y, h.ax, h.ay, h.bx, h.by) : d2(h.x, h.y, x, y)) < 190 * 190)) continue;
+    if (BLD_LIST.some(b => Math.abs(b.x - x) < b.ex + RELAY.r + 30 && Math.abs(b.y - y) < b.ey + RELAY.r + 30)) continue;
     G.relay = { x, y, t: 0, prog: 0, st: 'idle', waveT: 1.2, doneT: 0, rew: null, rot: rand(0, TAU) };
     UI.banner('РЕТРАНСЛЯТОР РОЯ', 'Захватите: стойте в круге ' + RELAY.cap.toString().replace('.', ',') + ' с — Рой будет мешать', 'gold');
     AUDIO.sfx('reveal');
@@ -167,8 +168,10 @@ function relayCaptured(R) {
   UI.banner('РЕТРАНСЛЯТОР ЗАХВАЧЕН', RELAY_REW[id].name + ' — ' + RELAY_REW[id].d, 'gold');
 }
 function updateWorld(dt) {
+  structuresAround();
   updateHazards(dt);
   updateRelay(dt);
+  updateNests(dt);
   if (G.surgeT > 0) G.surgeT = Math.max(0, G.surgeT - dt);
 }
 
@@ -278,6 +281,7 @@ function worldDrawables(vis) {
       }, y: h.y + (h.kind === 'press' ? 30 : 0) });
     }
   }
+  for (const b of BLD_LIST) if (onScreen(b, b.ex + 60)) vis.push({ dz: (c, z, e0, f0) => drawStructure(c, b, z, e0, f0, view), y: b.y + b.ey - 2 });
   const R = G.relay;
   if (R && onScreen(R, 120)) {
     const al = R.st === 'off' ? 1 - R.doneT / 1.2 : R.t < 0.6 ? R.t / 0.6 : 1;
@@ -286,6 +290,7 @@ function worldDrawables(vis) {
 }
 // пол: подложки опасностей, круги предупреждения, круг захвата
 function drawWorldGround(c) {
+  drawStructureGround(c);
   const H = hazDef(), t = G.time;
   if (H) for (const h of HZ_LIST) {
     if (!onScreen(h, h.kind === 'fence' ? H.len / 2 + 40 : 90)) continue;

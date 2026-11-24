@@ -218,6 +218,22 @@ const EM = {
     bicone(m, 0, 0, 0.95 * r, 0.7 * r * (1 + ps.ph * 0.08), 0.55 * r, 0.75 * r, 8, 'a', 'a');
     const g = m.glow(null, 0, 0, 1.0 * r, 1.1 * r, ps.pal.a, 0.55 + ps.ph * 0.3); g.auto = true;
   } },
+  // Гнездо Роя: шестигранный цоколь, шесть лепестков-когтей вокруг пульсирующего гранёного ядра;
+  // поза 'open' — лепестки раскрыты, ядро поднято: машина выходит наружу
+  nest: { frames: 6, fps: 5, poses: ['walk', 'open'], build(m, r, ps) {
+    const open = ps.pose === 'open' ? 1 : 0, br = 1 + Math.sin(ps.ph * TAU) * 0.06;
+    m.cyl(1.0 * r, 1.08 * r, 0, 0.16 * r, 6, 'd');
+    m.cyl(0.78 * r, 0.86 * r, 0.16 * r, 0.26 * r, 6, 'm');
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6 + 0.26, c = Math.cos(a), s = Math.sin(a);
+      const k = (0.6 + 0.08 * Math.sin(ps.ph * TAU + i)) * (1 - open) + 1.08 * open, z1 = (1.05 - 0.25 * open) * r;
+      const mid = [c * 0.98 * r, s * 0.98 * r, 0.55 * r], tip = [c * k * 0.62 * r, s * k * 0.62 * r, z1];
+      m.strut([c * 0.82 * r, s * 0.82 * r, 0.2 * r], mid, 0.15 * r, 0.11 * r, 4, 'm', true);
+      m.strut(mid, tip, 0.11 * r, 0.025 * r, 4, i % 2 ? 'l' : 'm', true);
+    }
+    bicone(m, 0, 0, (0.55 + 0.2 * open) * r, 0.36 * r * br, 0.28 * r, 0.4 * r, 6, 'a', 'a');
+    const g = m.glow(null, 0, 0, (0.6 + 0.2 * open) * r, (0.55 + 0.25 * open) * r, ps.pal.a, 0.5 + 0.3 * open); g.auto = true;
+  } },
   // Контейнер снабжения: ящик с лентами и светящимся замком
   prop: { frames: 1, fps: 1, static: true, build(m, r, ps) {
     const b = m.box(-0.8 * r, -0.8 * r, 0, 0.8 * r, 0.8 * r, 1.0 * r, 'd');
@@ -344,7 +360,8 @@ function drawEnemySprite(c, e, z, e0, f0, t) {
   const S = enemySprites(e.tid), Y = eYawIdx(e.T.prop ? Math.PI / 2 - 0.5 : e.ang);
   let pi = 0, fi = 0;
   if (e.tid === 'charger') pi = e.ai.s === 'wind' ? 1 : e.ai.s === 'dash' ? 2 : 0;
-  if (pi === 0 && S.nF > 1 && (S.fly || Math.abs(e.vx) + Math.abs(e.vy) > 8)) fi = Math.floor(e.t * S.fps + e.anim * 3) % S.nF;
+  else if (e.tid === 'nest') pi = e.ai.open > 0 ? 1 : 0;
+  if (pi === 0 && S.nF > 1 && (S.fly || e.tid === 'nest' || Math.abs(e.vx) + Math.abs(e.vy) > 8)) fi = Math.floor(e.t * S.fps + e.anim * 3) % S.nF;
   const img = S.sp[pi][Y.yi][fi], k = e.scale || 1;
   let oy = dropOff(e);
   if (S.fly) oy -= Math.sin(t * 3 + e.anim) * S.r * 0.1;

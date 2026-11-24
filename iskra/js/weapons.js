@@ -755,7 +755,7 @@ function magnetAnchor(w, k, n) {
   const m = muzzleWorld(w), a = P.aim + (n > 1 ? (k / (n - 1) - 0.5) * 1.2 : 0);
   return { x: m.x + Math.cos(a) * 26, y: m.y + Math.sin(a) * 26 };
 }
-const magnetable = e => e.alive && !e.boss && !e.parent && !e.elite && !e.mag && !e.T.prop && e.T.ai !== 'node';
+const magnetable = e => e.alive && !e.boss && !e.parent && !e.elite && !e.mag && !e.T.prop && e.T.ai !== 'node' && e.T.ai !== 'nest';
 WB.magnet = (w, dt, spd) => {
   if (!cdReady(w, dt, spd)) return;
   const p = w.p, R = p.range * p.area, cand = [];

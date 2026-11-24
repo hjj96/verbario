@@ -184,7 +184,7 @@ function eachEnemyIn(x, y, r, fn) {
 }
 function targetable(e) { return e.alive && !e.T.prop && !e.phased; }
 // босс, лейтенант и щитовые узлы — приоритетные цели: прицел считает их ближе, чем они есть; неуязвимых — дальше
-function tgtPrio(e) { return e.inv ? 3 : e.boss || e.lt || e.T.ai === 'node' ? 0.3 : 1; }
+function tgtPrio(e) { return e.inv ? 3 : e.boss || e.lt || e.T.ai === 'node' ? 0.3 : e.T.ai === 'nest' ? 0.55 : 1; }
 function nearestEnemy(x, y, maxD, skip) {
   let best = null, bd = Infinity;
   const md = (maxD || 1e9) * (maxD || 1e9);
@@ -192,7 +192,7 @@ function nearestEnemy(x, y, maxD, skip) {
     if (!targetable(e) || (skip && skip.has(e))) continue;
     const d = d2(x, y, e.x, e.y);
     if (d > md) continue;
-    const ed = e.boss || e.lt || e.inv || e.T.ai === 'node' ? d * tgtPrio(e) : d;
+    const ed = e.boss || e.lt || e.inv || e.T.ai === 'node' || e.T.ai === 'nest' ? d * tgtPrio(e) : d;
     if (ed < bd) { bd = ed; best = e; }
   }
   return best;
@@ -203,7 +203,7 @@ function nearestK(x, y, k, maxD) {
     if (!targetable(e)) continue;
     let d = d2(x, y, e.x, e.y);
     if (d > md) continue;
-    if (e.boss || e.lt || e.inv || e.T.ai === 'node') d *= tgtPrio(e);
+    if (e.boss || e.lt || e.inv || e.T.ai === 'node' || e.T.ai === 'nest') d *= tgtPrio(e);
     if (out.length < k) { out.push({ e, d }); out.sort((a, b) => a.d - b.d); }
     else if (d < out[k - 1].d) { out[k - 1] = { e, d }; out.sort((a, b) => a.d - b.d); }
   }
@@ -363,6 +363,7 @@ function killEnemy(e, o) {
     return;
   }
   if (e.boss) { bossKilled(e); return; }
+  if (T.ai === 'nest') { nestKilled(e); return; }
   G.kills++;
   if (e.elite) {
     eliteWreck(e, false);
@@ -551,6 +552,8 @@ function updatePlayer(dt) {
     P.vx = mv.x * sp; P.vy = mv.y * sp;
     P.x += P.vx * dt; P.y += P.vy * dt;
   }
+  // постройки: робот обходит их (и в рывке тоже упирается)
+  if (BLD_LIST.length) collideStructures(P, P.r * 0.7);
   const moving = Math.hypot(mv.x, mv.y);
   P.moving = lerp(P.moving, moving > 0.1 ? 1 : 0, 1 - Math.exp(-10 * dt));
   // корпус доворачивается к цели; без цели — по ходу, а в покое — лицом к камере
