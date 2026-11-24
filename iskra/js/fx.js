@@ -50,18 +50,19 @@ const FX = {
     }
   },
   explosion(x, y, r, col, big) {
-    this.dot(x, y, 0, 0, 0.08, r * 1.0, '#ffffff', 0);
-    this.dot(x, y, 0, 0, 0.14, r * 1.3, col, 0);
+    // короткое белое ядро вспышки — маленькое: объём дают огненные клубы, а не светящееся пятно
+    this.dot(x, y, 0, 0, 0.06, Math.min(r * 0.35, 16), '#ffffff', 0);
+    this.dot(x, y, 0, 0, 0.1, Math.min(r * 0.6, 26), col, 0);
     // огненный шар: несколько объёмных клубов, поднимаются и темнеют в дым
-    const n = Math.max(2, Math.round((big ? 5 : 3) * this.quality * (this.parts.length > 900 ? 0.6 : 1)));
+    const n = Math.max(2, Math.round((big ? 5 : r < 30 ? 2 : 3) * this.quality * (this.parts.length > 900 ? 0.6 : 1)));
     for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU, d = rand(0, r * 0.35), up = rand(0.5, 1.4);
       this.add({ k: 6, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, z: rand(0, r * 0.25), vx: Math.cos(a) * r * rand(0.8, 1.8), vy: Math.sin(a) * r * rand(0.5, 1.2), vz: r * up * 2.2,
         life: rand(0.42, 0.65) * (big ? 1.25 : 1), max: 0.65 * (big ? 1.25 : 1), size: r * rand(0.26, 0.42), grow: r * 0.75, col, drag: 3.4 });
     }
     // ударная волна по земле: эллипс в перспективе камеры
-    this.ering(x, y, r * 0.25, r * 1.35, 0.34, col, 2.6);
-    if (big) this.ering(x, y, r * 0.2, r * 1.9, 0.5, '#ffffff', 1.4);
+    this.ering(x, y, r * 0.25, r * 1.6, 0.34, col, 1.6, true);
+    if (big) this.ering(x, y, r * 0.2, r * 1.8, 0.45, '#ffffff', 1, true);
     // раскалённые обломки: летят по дуге, падают и подпрыгивают
     const m = Math.round((big ? 6 : 3) * this.quality * (this.parts.length > 900 ? 0.5 : 1));
     for (let i = 0; i < m; i++) {
@@ -69,7 +70,7 @@ const FX = {
       this.add({ k: 5, x, y, z: r * 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: r * rand(3, 6.5), life: rand(0.6, 1.05), max: 1.05, size: rand(0.55, 1.05) * Math.min(1.6, r / 30), rot: rand(0, 8), vr: rand(-14, 14), col, drag: 1.1 });
     }
     this.sparks(x, y, big ? 14 : 6, '#ffffff', r * 7, undefined, 0, 0.32);
-    this.light(x, y, r * 3.2, col, big ? 0.7 : 0.45, big ? 0.45 : 0.3);
+    this.light(x, y, r * 2.2, col, big ? 0.45 : 0.3, big ? 0.4 : 0.28);
   },
   // вспышка у дула: чёткая четырёхлучевая звезда — длинный луч по выстрелу, короткий поперёк
   mflash(x, y, ang, size, col) { if (this.flashes.length < 40) this.flashes.push({ x, y, ang, size, col, life: 0.09, max: 0.09 }); },
@@ -82,7 +83,7 @@ const FX = {
   puff(x, y, size, col, life, vx, vy) { return this.add({ k: 3, x, y, vx: vx || 0, vy: vy || -12, life, max: life, size, col, drag: 1.5, grow: size * 1.6, soft: true }); },
   ring(x, y, r0, r1, life, col, w) { this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 2 }); },
   beam(x1, y1, x2, y2, w, life, col) { this.beams.push({ x1, y1, x2, y2, w, life, max: life, col, cs: sheathCol(col) }); },
-  slash(x, y, ang, arc, r, life, col, w) { this.slashes.push({ x, y, ang, arc, r, life, max: life, col, w: w || 1 }); },
+  slash(x, y, ang, arc, r, life, col, w) { this.slashes.push({ x, y, ang, arc, r, life, max: life, col, cs: sheathCol(col), w: w || 1 }); },
   // молния: ломаная с ответвлениями; прорастает от источника за 30 мс и потрескивает (перестраивается каждые 45 мс).
   // o.d — задержка появления (цепь видимо перескакивает), o.fk — число ответвлений
   lightning(x1, y1, x2, y2, col, w, life, jag, o) {
@@ -330,22 +331,27 @@ const FX = {
       }
     }
     c.lineCap = 'butt';
+    // взмах клинка: чёткий серп — кромка из сегментов (хвост тусклый, голова яркая), три тонкие дуги-«скорости»
+    // внутри, едва заметное тело серпа и световая кромка-лезвие на голове взмаха
+    c.lineCap = 'round';
     for (const s of this.slashes) {
-      const q = 1 - s.life / s.max;
-      const a0 = s.ang - s.arc / 2, sweep = s.arc * ease.outCubic(Math.min(1, q * 1.6));
-      c.globalAlpha = (1 - q);
-      const g = c.createRadialGradient(s.x, s.y, s.r * 0.35, s.x, s.y, s.r);
-      g.addColorStop(0, rgba(s.col, 0)); g.addColorStop(0.7, rgba(s.col, 0.5)); g.addColorStop(0.92, rgba('#ffffff', 0.95)); g.addColorStop(1, rgba(s.col, 0));
-      c.fillStyle = g;
-      c.beginPath(); c.arc(s.x, s.y, s.r, a0, a0 + sweep); c.arc(s.x, s.y, s.r * 0.45, a0 + sweep, a0, true); c.closePath(); c.fill();
+      const q = 1 - s.life / s.max, fade = 1 - q;
+      const a0 = s.ang - s.arc / 2, sweep = s.arc * ease.outCubic(Math.min(1, q * 1.6)), ae = a0 + sweep, w = s.w || 1;
+      c.globalAlpha = 0.08 * fade; c.fillStyle = s.cs;
+      c.beginPath(); c.arc(s.x, s.y, s.r, a0, ae); c.arc(s.x, s.y, s.r * 0.55, ae, a0, true); c.closePath(); c.fill();
+      const N = 8;
+      c.strokeStyle = s.cs; c.lineWidth = 2 * w;
+      for (let i = 0; i < N; i++) { c.globalAlpha = fade * (i + 1) / N; c.beginPath(); c.arc(s.x, s.y, s.r, a0 + sweep * i / N, a0 + sweep * (i + 1) / N + 0.01); c.stroke(); }
+      c.strokeStyle = mixHex(s.col, '#ffffff', 0.4); c.lineWidth = 0.8;
+      for (let k = 0; k < 3; k++) { const rr = s.r * (0.64 + k * 0.11), st = a0 + sweep * (0.35 + k * 0.12); if (ae > st) { c.globalAlpha = 0.5 * fade; c.beginPath(); c.arc(s.x, s.y, rr, st, ae); c.stroke(); } }
       if (q < 0.75) {
-        const ae = a0 + sweep, ex = Math.cos(ae), ey = Math.sin(ae), w = s.w || 1;
-        c.lineCap = 'round'; c.beginPath(); c.moveTo(s.x + ex * s.r * 0.42, s.y + ey * s.r * 0.42); c.lineTo(s.x + ex * s.r * 1.02, s.y + ey * s.r * 1.02);
-        c.globalAlpha = (1 - q) * 0.3; c.strokeStyle = s.col; c.lineWidth = 9 * w; c.stroke();
-        c.globalAlpha = (1 - q) * 0.9; c.lineWidth = 4 * w; c.stroke();
-        c.globalAlpha = 1 - q; c.strokeStyle = '#ffffff'; c.lineWidth = 1.8 * w; c.stroke();
+        const ex = Math.cos(ae), ey = Math.sin(ae);
+        c.beginPath(); c.moveTo(s.x + ex * s.r * 0.5, s.y + ey * s.r * 0.5); c.lineTo(s.x + ex * s.r * 1.03, s.y + ey * s.r * 1.03);
+        c.globalAlpha = fade; c.strokeStyle = s.cs; c.lineWidth = 3 * w; c.stroke();
+        c.strokeStyle = '#ffffff'; c.lineWidth = 1.2 * w; c.stroke();
       }
     }
+    c.lineCap = 'butt';
     c.globalAlpha = 1;
     c.globalCompositeOperation = 'source-over';
   },

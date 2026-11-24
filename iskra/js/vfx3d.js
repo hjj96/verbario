@@ -78,28 +78,65 @@ function vfxShadow(c, x, y, r, a) {
 }
 
 /* ---------- Пила: зубчатый диск со ступицей и облегчающими окнами, наклонён к камере ---------- */
-function sawMesh(m, f, n, R, teeth, col) {
-  m.push(); m.rx(0.6); m.rz(f / n * TAU / 3);
+// пила: стальной диск, раскалённое кольцо зубьев, ступица; летит над полом, слегка наклонена к камере
+const SAW_TILT = 0.35, SAW_H = 4;
+function sawMesh(m, f, n, R, teeth) {
+  m.push(); m.t(0, 0, SAW_H); m.rx(SAW_TILT); m.rz(f / n * TAU / 3);
   const pts = [];
   for (let i = 0; i < teeth; i++) {
     const a0 = i * TAU / teeth, da = TAU / teeth;
     pts.push([Math.cos(a0 + da * 0.62) * R, Math.sin(a0 + da * 0.62) * R]);
-    pts.push([Math.cos(a0 + da * 0.9) * R * 0.87, Math.sin(a0 + da * 0.9) * R * 0.87]);
-    pts.push([Math.cos(a0 + da) * R * 0.78, Math.sin(a0 + da) * R * 0.78]);
+    pts.push([Math.cos(a0 + da * 0.9) * R * 0.86, Math.sin(a0 + da * 0.9) * R * 0.86]);
+    pts.push([Math.cos(a0 + da) * R * 0.76, Math.sin(a0 + da) * R * 0.76]);
   }
-  m.prism(pts, -0.5, 0.5, 'z', 'm');
+  m.prism(pts, -0.45, 0.45, 'z', 'a');
   const inner = [];
-  for (let i = 0; i < 12; i++) { const a = i * TAU / 12; inner.push([Math.cos(a) * R * 0.62, Math.sin(a) * R * 0.62]); }
-  m.prism(inner, -0.85, 0.85, 'z', 'l');
-  m.cyl(R * 0.22, R * 0.2, -1.6, 1.6, 8, 'd');
-  for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; m.ring(Math.cos(a) * R * 0.4, Math.sin(a) * R * 0.4, 0.9, R * 0.1, 'z', col, 0.7, 0.6); }
+  for (let i = 0; i < 12; i++) { const a = i * TAU / 12; inner.push([Math.cos(a) * R * 0.7, Math.sin(a) * R * 0.7]); }
+  m.prism(inner, -0.7, 0.7, 'z', 'm');
+  // три прорези-окна в диске
+  for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5, cx = Math.cos(a) * R * 0.44, cy = Math.sin(a) * R * 0.44, s = R * 0.11; m.prism([[cx - s, cy - s], [cx + s, cy - s], [cx + s, cy + s], [cx - s, cy + s]].map(([px, py]) => { const dx = px - cx, dy = py - cy, ca = Math.cos(a), sa = Math.sin(a); return [cx + dx * ca - dy * sa, cy + dx * sa + dy * ca]; }), 0.7, 0.85, 'z', 'd'); }
+  m.cyl(R * 0.2, R * 0.18, -1.4, 1.4, 8, 'd');
   m.pop();
 }
-function drawSaw3D(c, x, y, r, rot, col, big) {
-  const dc = deepen(col), S = vfxSprites(big ? 'bigsaw' : 'saw', 12, (m, f) => sawMesh(m, f, 12, 10, big ? 22 : 14, dc), vpal(col));
+// палитра пилы: тёмная сталь со стальными рёбрами (свечение её не выбеливает), зубья — раскалённый цвет орудия
+function sawPal(col) {
+  const key = 'saw' + col;
+  if (_vpal[key]) return _vpal[key];
+  const base = vpal(col, true), C = hexToRgb, dc = deepen(col);
+  const p = Object.assign({}, base, {
+    T: Object.assign({}, base.T, { m: [C('#04070d'), C('#1c2636'), 0.98], a: [C(shade(dc, -0.6)), C(shade(dc, -0.12)), 0.97], d: [C('#010204'), C('#0a1019'), 0.99] }),
+    ln: '#8ea2ba', ag: mixHex(dc, '#ffffff', 0.25), ls: '#4c5d73',
+  });
+  p.FS = fillSteps(p.T);
+  return (_vpal[key] = p);
+}
+// дуги вращения по ободу (две «кометы») и линии скорости позади — чёткие, без свечения
+function drawSaw3D(c, x, y, r, rot, col, big, vx, vy) {
+  const S = vfxSprites(big ? 'bigsaw' : 'saw', 12, (m, f) => sawMesh(m, f, 12, 10, big ? 22 : 14), sawPal(col));
   const k = r / 10 * (big ? 1.25 : 1.5), f = Math.floor(((rot % (TAU / 3)) + TAU / 3) % (TAU / 3) / (TAU / 3) * 12), R = 10 * k;
-  vfxShadow(c, x, y + 10 * k, 8 * k, 0.4);
-  vfxDraw(c, S, f, x, y, k);
+  const sp = vfxSp(), cp = vfxCp(), cy = y - SAW_H * k * cp, ry = Math.cos(SAW_TILT) * sp + Math.sin(SAW_TILT) * cp, cs = sheathCol(col);
+  vfxShadow(c, x, y, 8 * k, 0.4);
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  const v = Math.hypot(vx || 0, vy || 0);
+  if (v > 40) {
+    const ux = vx / v, uy = vy / v, L = Math.min(R * 2.2, v * 0.07);
+    for (const sd of [-1, 1]) {
+      const sx = x - uy * sd * R * 0.85, sy = cy + ux * sd * R * 0.85 * ry, g = c.createLinearGradient(sx, sy, sx - ux * L, sy - uy * L);
+      g.addColorStop(0, rgba(cs, 0.55)); g.addColorStop(1, rgba(cs, 0));
+      c.strokeStyle = g; c.lineWidth = 1; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx - ux * L, sy - uy * L); c.stroke();
+    }
+  }
+  c.restore();
+  vfxDraw(c, S, f, x, cy + SAW_H * k * cp, k);
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  for (let i = 0; i < 2; i++) {
+    const h0 = -rot * 1.3 + i * Math.PI;
+    for (let s = 0; s < 3; s++) {
+      c.strokeStyle = s === 2 ? '#ffffff' : cs; c.globalAlpha = 0.25 + s * 0.28; c.lineWidth = 0.7 + s * 0.4;
+      c.beginPath(); c.ellipse(x, cy, R * 1.1, R * 1.1 * ry, 0, h0 + s * 0.3, h0 + s * 0.3 + 0.32); c.stroke();
+    }
+  }
+  c.restore();
 }
 
 /* ---------- Дроны: корпус-октагон, купол, сенсор, две пушки и четыре ротора; дрон гало — кольцо вокруг кристалла ---------- */
@@ -260,20 +297,33 @@ function drawOrb3D(c, p) {
 }
 
 /* ---------- Мина: диск с куполом, кольцом и тремя упорами; бомбочка кластера; ледяной осколок ---------- */
+// мина: шестигранный корпус с цветной полосой, купол-детонатор, три лапы-упора. Падает с подскоком,
+// раскрывается; на взводе от неё расходится тонкое кольцо до радиуса срабатывания и остаётся пунктир
 function drawMine3D(c, a) {
   const S = vfxSprites('mine' + a.col, 1, m => {
-    m.cyl(5, 5.2, 0, 1.4, 12, 'd');
-    m.cyl(5.35, 5.35, 0.5, 1.0, 12, 'a');
-    m.cyl(3.0, 1.7, 1.4, 2.8, 10, 'm');
-    for (let i = 0; i < 3; i++) { const an = i * TAU / 3 + 0.4; m.strut([Math.cos(an) * 4.6, Math.sin(an) * 4.6, 0.6], [Math.cos(an) * 7.2, Math.sin(an) * 7.2, 0], 0.5, 0.35, 4, 'm'); }
+    m.cyl(5.2, 5.6, 0, 1.5, 6, 'd');
+    m.cyl(5.75, 5.75, 0.55, 1.05, 6, 'a');
+    m.cyl(3.0, 1.8, 1.5, 3.0, 6, 'm');
+    for (let i = 0; i < 3; i++) { const an = i * TAU / 3 + 0.5; m.strut([Math.cos(an) * 4.8, Math.sin(an) * 4.8, 0.6], [Math.cos(an) * 7.6, Math.sin(an) * 7.6, 0], 0.55, 0.38, 4, 'm'); }
   }, vpal(a.col));
-  const armed = a.t >= a.arm, q = armed ? 1 : 0.55 + 0.45 * ease.outBack(clamp(a.t / a.arm, 0, 1));
+  const u = clamp(a.t / a.arm, 0, 1), armed = a.t >= a.arm, cp = vfxCp();
+  const drop = a.t < 0.22 ? (1 - ease.outBounce(a.t / 0.22)) * 14 : 0, q = 0.7 + 0.3 * ease.outBack(clamp(a.t / 0.3, 0, 1)), K = 1.75 * q;
+  if (armed) {
+    const ta = a.t - a.arm;
+    c.save(); c.globalCompositeOperation = 'lighter';
+    if (ta < 0.35) { const v = ease.outCubic(ta / 0.35); c.strokeStyle = rgba(a.col, 0.8 * (1 - v)); c.lineWidth = 1.4; c.beginPath(); c.arc(a.x, a.y, 6 + (a.r - 6) * v, 0, TAU); c.stroke(); }
+    c.strokeStyle = rgba(a.col, 0.22); c.lineWidth = 1; c.setLineDash([3, 5]); c.lineDashOffset = -G.time * 6;
+    c.beginPath(); c.arc(a.x, a.y, a.r, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.restore();
+  }
   vfxShadow(c, a.x, a.y, 10, 0.4);
-  vfxDraw(c, S, 0, a.x, a.y, 1.4 * q);
-  const blink = armed && Math.sin(G.time * 12 + a.x) > 0, ly = a.y - 2.9 * 1.4 * vfxCp();
+  vfxDraw(c, S, 0, a.x, a.y - drop * cp, K);
+  // огонёк детонатора: при взведении мигает красным всё чаще
+  const blink = armed && Math.sin(G.time * 12 + a.x) > 0, ly = a.y - 3.2 * K * cp - drop * cp;
   c.save(); c.globalCompositeOperation = 'lighter';
-  c.drawImage(dotSprite(blink ? '#ff4d5e' : a.col), a.x - 5, ly - 5, 10, 10);
-  if (blink) c.drawImage(glowSprite('#ff4d5e'), a.x - 12, ly - 12, 24, 24);
+  c.fillStyle = blink ? '#ff4d5e' : armed ? a.col : rgba(a.col, 0.4 + 0.6 * u);
+  c.beginPath(); c.arc(a.x, ly, blink ? 2.2 : 1.6, 0, TAU); c.fill();
+  if (blink) { c.strokeStyle = rgba('#ff4d5e', 0.6); c.lineWidth = 1; c.beginPath(); c.arc(a.x, ly, 4.5, 0, TAU); c.stroke(); }
   c.restore();
 }
 function drawBomblet3D(c, p) {
