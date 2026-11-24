@@ -340,7 +340,7 @@ const ROBOT_STYLE = {
 const styleOf = L => ROBOT_STYLE[L.robot] || ROBOT_STYLE.iskra;
 function buildRobot(L, ps) {
   const m = new Mesh(), ly = robotLayout(L);
-  const lift = ly.hover ? 4.5 + (ps.static ? 0 : Math.sin(ps.t * 3.2) * 1.3) : (ps.static ? 0 : Math.abs(Math.sin(ps.wp)) * 0.8 * ps.mv);
+  const lift = ly.hover ? (ly.falcon ? 9 : 4.5) + (ps.static ? 0 : Math.sin(ps.t * (ly.falcon ? 2.2 : 3.2)) * (ly.falcon ? 2.2 : 1.3)) : (ps.static ? 0 : Math.abs(Math.sin(ps.wp)) * 0.8 * ps.mv);
   m.lift = lift;
   if (ps.squash) m.sc(1 + ps.squash * 0.1, 1 + ps.squash * 0.1, 1 - ps.squash * 0.18);
   m.push(); m.mul(m3yaw(ps.yawL)); m.t(0, 0, lift); m.g = 'legs'; buildLegs3(m, L, ly, ps); m.pop();
@@ -398,6 +398,7 @@ function buildLegs3(m, L, ly, ps) {
     }
     return;
   }
+  if (r >= 3 && br === 'C') { buildSpider3(m, L, ly, ps, r); return; }
   m.box(-tw * 0.5, -4.2, 12.5, tw * 0.5, 4.2, 16.5, 'd');
   if (r >= 3 && br === 'B') {
     const col = r >= 5 ? '#b38bff' : pal.a, od = L.od || 0;
@@ -434,6 +435,30 @@ function buildLegs3(m, L, ly, ps) {
     m.box(-fw, -2.6, -1.8, fw, fl - 2.6, 0.1, 'd');
     if (r >= 2) m.box(-fw + 0.4, fl - 3.3, -1.5, fw - 0.4, fl - 2.3, -0.2, 'a');
     m.pop();
+  }
+  m.side = 0;
+}
+
+// паучьи лапы: таз-брюшко и три (на МК-V четыре) пары членистых лап веером; треножная походка —
+// одна тройка лап несёт корпус, другая переступает; на МК-IV и выше концы лап — светящиеся жала
+function buildSpider3(m, L, ly, ps, r) {
+  const tw = ly.tw, pal = L.pal, n = r >= 5 ? 4 : 3, t = ps.t || 0;
+  m.box(-tw * 0.55, -6.5, 10, tw * 0.55, 6.5, 16.5, 'd');
+  m.push(); m.t(0, -8, 13); m.rx(0.5); m.cyl(5.2, 2.2, 0, 9, 6, 'm'); m.cyl(5.4, 5.4, 1.5, 3, 6, 'a'); m.pop();
+  const FY = n === 3 ? [7, 0.5, -6] : [8, 3, -2.5, -7.5], SPR = n === 3 ? [0.62, 0.05, -0.55] : [0.75, 0.28, -0.2, -0.65];
+  for (let i = 0; i < n; i++) for (const s of [-1, 1]) {
+    m.side = s;
+    const grp = (i + (s > 0 ? 0 : 1)) % 2, ph = (ps.wp || 0) * 1.4 + grp * Math.PI;
+    const lift = Math.max(0, Math.sin(ph)) * 3.4 * ps.mv, sw = Math.cos(ph) * 2.8 * ps.mv, idle = ps.static ? 0 : Math.sin(t * 2 + i + s) * 0.4 * (1 - ps.mv);
+    const ca = Math.cos(SPR[i]), sa = Math.sin(SPR[i]);
+    const hip = [s * tw * 0.5, FY[i] * 0.75, 14];
+    const knee = [hip[0] + s * ca * 9.5, hip[1] + sa * 9.5 + sw * 0.4, 23 + lift * 0.5 + idle];
+    const foot = [hip[0] + s * ca * 20, hip[1] + sa * 20 + sw, lift];
+    m.strut(hip, knee, 1.8, 1.35, 5, 'm');
+    m.strut(knee, foot, 1.35, 0.3, 5, 'l', true);
+    m.push(); m.t(knee[0], knee[1], knee[2]); m.cyl(1.85, 1.85, -1.1, 1.1, 6, 'd'); m.pop();
+    const g = m.glow(null, knee[0], knee[1], knee[2] + 1.2, 1.2, pal.a, 0.85); g.auto = true;
+    if (r >= 4) { const tip = m.glow(null, foot[0], foot[1], foot[2] + 0.6, 1.6, '#c6ff3d', 0.9); tip.auto = true; }
   }
   m.side = 0;
 }
@@ -654,7 +679,7 @@ function buildArms3(m, L, ly, ps) {
       if (r >= 5) { const g = m.glow(null, 0, 0, -12 - len, 4, '#ff7a35', 0.8); g.auto = true; }
       tipZ = -12 - len;
     } else {
-      const as = styleOf(L).arms, w1 = [2, 2.5, 2.6][r] * as, w2 = [1.9, 2.5, 2.8][r] * as;
+      const as = styleOf(L).arms, rr = Math.min(r, 2), w1 = [2, 2.5, 2.6][rr] * as, w2 = [1.9, 2.5, 2.8][rr] * as;
       m.cyl(w1, w1 * 0.95, -9.5, 0, 6, 'm');
       m.t(0, 0, -9.5);
       if (r >= 1) { m.push(); m.ry(Math.PI / 2); m.cyl(2.4, 2.4, -1.6, 1.6, 8, 'd'); m.pop(); }
@@ -677,6 +702,32 @@ function buildArms3(m, L, ly, ps) {
     m.pop();
   }
   m.side = 0;
+  if (r >= 3 && br === 'C') buildMiniArms3(m, L, ly, ps, r);
+}
+// многорук: из-за плеч, бёдер и спины выдвигаются малые руки с трёхствольными мини-пушками;
+// каждая наводится на свою цель (ps.mg — локальные углы от курса корпуса), стволы крутятся при стрельбе
+function buildMiniArms3(m, L, ly, ps, r) {
+  const tw = ly.tw, pal = L.pal, n = r >= 5 ? 3 : r >= 4 ? 2 : 1, t = ps.t || 0;
+  const ROWS = [[37, -3.5], [19, -2.5], [28, -8.5]];
+  for (let k = 0; k < n; k++) for (const s of [-1, 1]) {
+    const idx = k * 2 + (s > 0 ? 0 : 1), [z, y] = ROWS[k];
+    const a = ps.mg && ps.mg[idx] !== undefined ? ps.mg[idx] : s * (0.55 + k * 0.35) + (ps.static ? 0 : Math.sin(t * 1.3 + idx) * 0.12);
+    const fire = ps.mgF ? ps.mgF[idx] || 0 : 0, d = [Math.sin(a), Math.cos(a), 0.1], p = [Math.cos(a), -Math.sin(a), 0];
+    const sh = [s * (tw + 0.8), y, z], el = [sh[0] + s * 2.5 + d[0] * 4, sh[1] + d[1] * 4, z + 3], gb = [el[0] + d[0] * 5.5, el[1] + d[1] * 5.5, el[2] + 0.4];
+    m.push(); m.t(sh[0], sh[1], sh[2]); m.cyl(1.7, 1.7, -1.2, 1.2, 6, 'd'); m.pop();
+    m.strut(sh, el, 1.15, 0.95, 5, 'm');
+    m.strut(el, gb, 0.95, 0.85, 5, 'l');
+    const gq = [gb[0] + d[0] * 2.6, gb[1] + d[1] * 2.6, gb[2] + d[2] * 2.6];
+    m.strut(gb, gq, 1.55, 1.4, 6, 'd');
+    const spin = t * (fire > 0.05 ? 45 : 3) + idx;
+    for (let b = 0; b < 3; b++) {
+      const w = spin + b * TAU / 3, o = [p[0] * Math.cos(w) * 0.7, p[1] * Math.cos(w) * 0.7, Math.sin(w) * 0.7];
+      m.strut([gq[0] + o[0], gq[1] + o[1], gq[2] + o[2]], [gq[0] + o[0] + d[0] * 5.5, gq[1] + o[1] + d[1] * 5.5, gq[2] + o[2] + d[2] * 5.5], 0.32, 0.32, 4, 'l');
+    }
+    const mz = [gq[0] + d[0] * 5.8, gq[1] + d[1] * 5.8, gq[2] + d[2] * 5.8];
+    m.anchor('mg' + idx, mz[0], mz[1], mz[2], d[0], d[1], d[2]);
+    const g = m.glow(null, mz[0], mz[1], mz[2], 1.2 + fire * 2.4, fire > 0.05 ? '#ffffff' : pal.a, 0.5 + fire * 0.5); g.auto = true;
+  }
 }
 
 /* ----- генератор (спина) ----- */
@@ -698,6 +749,7 @@ function buildBack3(m, L, ly, ps) {
   }
   if (r >= 3 && br === 'A') buildWings3(m, L, ly, ps, r);
   if (r >= 3 && br === 'B') buildHalo3(m, L, ly, ps, r);
+  if (r >= 3 && br === 'C') buildFalcon3(m, L, ly, ps, r);
 }
 function buildPackStyled(m, L, r, pk, t) {
   const pal = L.pal;
@@ -761,6 +813,43 @@ function buildWings3(m, L, ly, ps, r) {
       m.plate([[x - s * 1.1, 0], [x + s * 1.1, 0], [x + s * 3, -fl], [x + s * 1.4, -fl + 1]], 'y', 0, w === 0 ? 'm' : 'l');
     }
     const tip = m.glow(null, s * len, 0, 0, 5.5, r === 5 ? '#ffffff' : pal.a, 0.8); tip.auto = true;
+    m.pop();
+  }
+}
+// крылья сокола: кость крыла (плечо → локоть → запястье), сплошная кроющая плоскость, веер маховых перьев от
+// запястья и второстепенные вдоль предплечья; в полёте крылья машут, в покое — парят; ниже — хвост веером
+function buildFalcon3(m, L, ly, ps, r) {
+  const pal = L.pal, t = ps.t || 0, od = L.od || 0, mv = ps.static ? 0 : ps.mv;
+  const flap = ps.static ? 0 : Math.sin(t * (4.2 + od * 3)) * (0.08 + 0.2 * mv) + Math.sin(t * 1.4) * 0.04;
+  const NP = r >= 4 ? 6 : 5, span = r >= 4 ? 0.95 : 0.85;
+  const P2 = (s, pts) => (s > 0 ? pts : pts.slice().reverse());
+  for (const s of [-1, 1]) {
+    m.push(); m.t(s * 4.8, -9.5, 31); m.rz(-s * 0.32); m.ry(-s * (0.38 + flap + od * 0.1));
+    const X = v => s * v * span;
+    // кость крыла и сустав-запястье
+    m.strut([0, 0, 0], [X(14), 0, 2.6], 1.4, 1.1, 5, 'l');
+    m.strut([X(14), 0, 2.6], [X(26), 0, 1], 1.1, 0.8, 5, 'l');
+    m.push(); m.t(X(26), 0, 1); m.ry(Math.PI / 2); m.cyl(1.3, 1.3, -1, 1, 6, 'd'); m.pop();
+    // кроющие: сплошная плоскость у кости
+    m.plate(P2(s, [[0, 0.4], [X(14), 3], [X(26), 1.2], [X(24), -4.5], [X(12), -6.5], [X(1), -6]]), 'y', 0, 'm');
+    // второстепенные перья: внахлёст, сплошная задняя кромка, чуть отведены назад
+    for (let k = 0; k < 5; k++) {
+      const bx = 2 + k * 4.4, L = 11 + k * 0.9;
+      m.plate(P2(s, [[X(bx - 0.4), -4.5], [X(bx + 4.6), -4.5], [X(bx + 5.6), -4.5 - L], [X(bx + 0.8), -5.5 - L]]), 'y', 0, k % 2 ? 'd' : 'm');
+    }
+    // маховые перья: веер от запястья — от почти горизонтального к опущенному
+    for (let k = 0; k < NP; k++) {
+      const q = k / (NP - 1), a = 0.12 + q * 1.05, L = 16 - q * 5, cx = 25.5 - q * 2.5, ca = Math.cos(a), sa = Math.sin(a);
+      const tip = [cx + ca * L, -sa * L - 1];
+      m.plate(P2(s, [[X(cx - 0.6), 1], [X(cx + 1.6), 0], [X(tip[0] + sa * 0.9), tip[1] - ca * 0.4], [X(tip[0] - sa * 0.9), tip[1] + ca * 1.2]]), 'y', 0, k === 0 && r >= 4 ? 'a' : k % 2 ? 'l' : 'm');
+    }
+    if (r >= 5) { m.line(null, 0, 0, 1, X(14), 0, 3.4, '#ffd36b', 1.2, 0.9); m.line(null, X(14), 0, 3.4, X(26), 0, 1.6, '#ffd36b', 1.2, 0.9); const g = m.glow(null, X(41), 0, -3, 4, '#ffd36b', 0.8); g.auto = true; }
+    m.pop();
+  }
+  // хвост: три пера веером под генератором
+  for (let k = -1; k <= 1; k++) {
+    m.push(); m.t(0, -10.5, 20); m.ry(k * 0.35); m.rx(0.25);
+    m.plate([[-1.6, 0], [1.6, 0], [2.2, -12 + Math.abs(k) * 2], [-2.2, -12 + Math.abs(k) * 2]], 'y', 0, k ? 'l' : 'm');
     m.pop();
   }
 }

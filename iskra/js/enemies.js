@@ -435,6 +435,7 @@ function updateEnemies(dt) {
     let slow = 1;
     if (s.chillT > 0) slow = 1 - s.chill * (e.boss ? 0.5 : 1);
     if (frozen && !e.boss) slow = 0;
+    if (P.od.active && G.robot.od && G.robot.od.id === 'avatar') slow *= 0.5;
     e.x += (e.vx * slow + e.kbx) * dt;
     e.y += (e.vy * slow + e.kby) * dt;
     enemyVsStructures(e, dt);
@@ -511,7 +512,7 @@ function updateEnemyBullets(dt) {
     if (G.freezeT > 0) { b.life -= dt * 2; } else { b.x += b.vx * dt; b.y += b.vy * dt; }
     if (b.accel) { b.vx *= 1 + b.accel * dt; b.vy *= 1 + b.accel * dt; }
     const rr = b.r + P.r - 4;
-    if (d2(b.x, b.y, P.x, P.y) < rr * rr) {
+    if (d2(b.x, b.y, P.x, P.y) < rr * rr && !(b.kind === 'fire' && hasBranch('back', 'C'))) {
       // ледяной сгусток: кроме урона, замедляет робота (если удар прошёл — не в рывке, не в неуязвимости)
       if (b.frost && P.iframes <= 0 && !(P.dash.t > 0) && !P.od.active) { P.slowT = Math.max(P.slowT || 0, b.frost); FX.hexRing(P.x, P.y - upY(18), 4, 22, 0.3, '#bff0ff', 1.2); }
       hurtPlayer(b.dmg, null); FX.burst(b.x, b.y, 4, b.col, 100, 0.2, 4); removeAt(arr, i); continue;

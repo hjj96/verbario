@@ -301,6 +301,7 @@ function playerOpts(extra) {
   const o = {
     moving: P.moving, wp: P.wp, back: P.back, fire: P.fire, siege: P.siege, dist: P.dist, view: P.view, aim: P.aim, hd: P.hd, mounts: P.weapons, squash: P.squash,
     mvDir: P.back ? P.hd + Math.PI : P.hd, kick: P.kick || 0, hurt: P.hurtFlash * P.hurtFlash, hitA: P.hitA, headYaw: P.hy || 0,
+    mg: P.mg && P.mg.length ? P.mg : null, mgF: P.mgF && P.mgF.length ? P.mgF : null,
   };
   if (extra) for (const k in extra) o[k] = extra[k];
   return o;
@@ -380,7 +381,7 @@ function drawPlayer(c, z, e0, f0) {
     drawSnap(c, gs.snap, g.od ? gs.mag : gs.cyan, 1);
     c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
   }
-  c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z * RENDER.k + f0);
+  c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z * RENDER.k + f0 - (P.hop || 0) * z);
   const ly = robotLayout(L), view = P.view === 'top' ? 'top' : 'front', K = robotK(L, view), fy = feetY(L, view), flat = Math.sin(VIEW_PITCH[view]);
   // тень на полу: эллипс в проекции камеры, у парящего робота — меньше и бледнее
   const sr = (ly.tread ? 19 : ly.hover ? 11 : 14) * K, g = c.createRadialGradient(0, fy, 0, 0, fy, sr);
@@ -465,9 +466,11 @@ function renderGame() {
   if (dim > 0) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(2,4,10,' + dim + ')'; c.fillRect(0, 0, W, H); }
   worldT(c);
   if (!G.tf.cur) for (const w of P.weapons) { const d = WD[w.id]; if (d) d(c, w); }
+  drawOdSwarm(c, false);
   drawPlayer(c, z, e0, f0);
   worldT(c);
   if (!G.tf.cur) for (const w of P.weapons) { const d = WF[w.id]; if (d) d(c, w); }
+  drawOdSwarm(c, true);
   worldT(c);
   c.globalCompositeOperation = 'lighter';
   for (const p of G.projs) if (p.kind === 'flame') PK[p.kind].draw(c, p);

@@ -1118,7 +1118,8 @@ const AK = {
   acid: {
     update(a, dt) {
       a.tickT -= dt;
-      if (a.tickT <= 0) { a.tickT = 0.5; if (d2(a.x, a.y, P.x, P.y) < (a.r + P.r * 0.5) ** 2) hurtPlayer(a.dmg, null); }
+      // парящий сокол над кислотой не горит
+      if (a.tickT <= 0) { a.tickT = 0.5; if (!hasBranch('back', 'C') && d2(a.x, a.y, P.x, P.y) < (a.r + P.r * 0.5) ** 2) hurtPlayer(a.dmg, null); }
     },
     draw(c, a) {
       const q = Math.min(1, a.life / a.max * 4), g = Math.min(1, a.t * 5);
@@ -1180,6 +1181,23 @@ const AK = {
       }
     },
     draw(c, a) { drawMine3D(c, a); },
+  },
+  // паутина паука: Рой в ней вязнет (замедление), нити — чёткие радиальные линии и кольца на полу
+  eweb: {
+    update(a, dt) {
+      a.tickT = (a.tickT || 0) - dt;
+      if (a.tickT > 0) return;
+      a.tickT = a.tick;
+      eachEnemyIn(a.x, a.y, a.r, e => { if (!e.boss) applyChill(e, 0.55, 0, 0, true); });
+    },
+    draw(c, a) {
+      const q = Math.min(1, a.life / a.max * 3) * Math.min(1, a.t * 6), R = a.r * Math.min(1, 0.4 + a.t * 4);
+      c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#d8ffb0', 0.45 * q); c.lineWidth = 0.9;
+      c.beginPath();
+      for (let i = 0; i < 8; i++) { const an = a.rot + i * TAU / 8; c.moveTo(a.x, a.y); c.lineTo(a.x + Math.cos(an) * R, a.y + Math.sin(an) * R); }
+      for (let k = 1; k <= 3; k++) { const rr = R * k / 3.2; for (let i = 0; i <= 8; i++) { const an = a.rot + i * TAU / 8, px = a.x + Math.cos(an) * rr, py = a.y + Math.sin(an) * rr; i ? c.lineTo(px, py) : c.moveTo(px, py); } }
+      c.stroke(); c.restore();
+    },
   },
   ring: {
     update(a, dt) {

@@ -100,8 +100,7 @@ const UI = {
   afterRender(id) {
     for (const cv of this.root.querySelectorAll('canvas[data-robot]')) {
       const r = ROBOTS.find(x => x.id === cv.dataset.robot);
-      const parts = {}; for (const k of PART_ORDER) parts[k] = { rank: r.startParts || 0, branch: null };
-      this.previews.push({ cv, look: makeLook(r, parts, 0, 0), anim: true, zoom: 1.05 });
+      this.previews.push({ cv, look: makeLook(r, startPartsFor(r), 0, 0), anim: true, zoom: 1.05 });
     }
   },
   focusables() {
@@ -225,6 +224,8 @@ const UI = {
             <div class="h2">${esc(sel.name)} — ${esc(sel.role)}</div>
             <p class="lead" style="font-size:14px">${esc(sel.desc)}</p>
             <div class="row">${w ? `<img src="${SPR.icons[sel.weapon]}" width="40" height="40" alt=""><span><span class="eyebrow" style="display:block">Стартовое орудие</span><b>${esc(w.name)}</b></span>` : '<span class="eyebrow">Стартовое орудие: случайное</span>'}</div>
+            ${sel.startPart ? `<div class="row prow"><img src="${SPR.icons['part_' + sel.startPart]}" width="40" height="40" alt=""><span><span class="eyebrow" style="display:block">Стартовый модуль</span><b>${esc(PARTS[sel.startPart].name)} МК-I · ${esc(PARTS[sel.startPart].ranks[0].name)}</b> <span class="mono" style="font-size:11px;color:var(--sub)">${esc(PARTS[sel.startPart].ranks[0].d)}</span></span></div>` : ''}
+            ${sel.od ? `<div class="row prow"><span class="odchip">E</span><span><span class="eyebrow" style="display:block">Овердрайв прототипа</span><b>${esc(sel.od.name)}</b> <span class="mono" style="font-size:11px;color:var(--sub)">— ${esc(sel.od.d)}</span></span></div>` : ''}
             ${stats.length ? `<div class="statlist">${stats.join('')}</div>` : ''}
           </div></div>
         </div>
@@ -264,7 +265,7 @@ const UI = {
       } else if (this.codexTab === 'parts') {
         body = '<div class="tree">' + PART_ORDER.map(id => {
           const p = PARTS[id];
-          const br = ['A', 'B'].map(b => { const B = p.branches[b]; return `<div style="border-color:${B.color}"><strong>${esc(B.name)}</strong><span class="mono" style="font-size:10px;color:${B.color};letter-spacing:.12em">${esc(B.tag.toUpperCase())}</span>${B.ranks.map((r, i) => `<span><b class="mono" style="color:var(--cyan);font-size:10px">МК-${ROMAN[i + 3]}</b> ${esc(r.name)}: ${esc(r.d)}</span>`).join('')}</div>`; }).join('');
+          const br = Object.keys(p.branches).map(b => { const B = p.branches[b]; return `<div style="border-color:${B.color}"><strong>${esc(B.name)}</strong><span class="mono" style="font-size:10px;color:${B.color};letter-spacing:.12em">${esc(B.tag.toUpperCase())}</span>${B.ranks.map((r, i) => `<span><b class="mono" style="color:var(--cyan);font-size:10px">МК-${ROMAN[i + 3]}</b> ${esc(r.name)}: ${esc(r.d)}</span>`).join('')}</div>`; }).join('');
           return `<div class="tnode"><div class="row"><img src="${SPR.icons['part_' + id]}" width="40" height="40" alt=""><div><div class="h2">${esc(p.name)}</div><div class="mono" style="font-size:11px;color:var(--sub)">${p.code} · ${esc(p.role)}</div></div></div>
             ${p.ranks.map((r, i) => `<div class="rk"><b>МК-${ROMAN[i + 1]}</b><span>${esc(r.name)}: ${esc(r.d)}</span></div>`).join('')}<div class="br">${br}</div></div>`;
         }).join('') + `<div class="tnode"><div class="h2">Формы корпуса</div>${FORMS.map(f => `<div class="rk"><b>${f.code}</b><span><b style="color:var(--ink)">${esc(f.name)}</b> — с ${f.at} рангов модулей${f.d ? '. ' + esc(f.d) : ''}</span></div>`).join('')}</div></div>`;
@@ -454,7 +455,7 @@ const UI = {
       if (nr === 3) {
         return { cls: 'k-part', left: 'Модуль · ' + def.code, tag: 'Развилка', name: def.name + ' МК-III', part: ch.id, look: null,
           lv: pips(nr, 5, 'mag'), lvTxt: 'МК-' + ROMAN[nr] + '/V',
-          fx: 'Выберите ветку: «' + def.branches.A.name + '» или «' + def.branches.B.name + '»',
+          fx: 'Выберите ветку: ' + Object.values(def.branches).map(B => '«' + B.name + '»').join(', ').replace(/, ([^,]*)$/, ' или $1'),
           note: nf > P.form ? '→ Форма ' + FORMS[nf].code + ': ' + FORMS[nf].name : 'Нужен для эволюций: ' + evos.join(', '), dim: def.role.toLowerCase() };
       }
       const rd = partRankDef(ch.id, nr, pr.branch);
@@ -497,14 +498,15 @@ const UI = {
   showBranch(ch) {
     this.branchCh = ch;
     const id = ch.id, def = PARTS[id];
-    const cards = ['A', 'B'].map((b, i) => {
+    const keys = Object.keys(def.branches);
+    const cards = keys.map((b, i) => {
       const B = def.branches[b];
       return `<button class="bcard" data-act="branch" data-b="${b}">
         <canvas width="320" height="240" data-bprev="${b}"></canvas>
         <span class="body"><span class="tg" style="color:${B.color}">Ветка ${b} · ${esc(B.tag)}</span><span class="nm">${esc(B.name)}</span>
         <ol>${B.ranks.map((r, k) => `<li><span>МК-${ROMAN[k + 3]}</span><b>${esc(r.name)}.</b> ${esc(r.d)}</li>`).join('')}</ol></span></button>`;
     }).join('');
-    const html = `<section class="screen overlay" id="scr-branch"><div class="lu-wrap" style="max-width:900px">
+    const html = `<section class="screen overlay" id="scr-branch"><div class="lu-wrap" style="max-width:${keys.length > 2 ? 1180 : 900}px">
       <div class="lu-head"><span class="eyebrow">Развилка трансформации</span><h2 class="h1">${esc(def.name)}: выберите ветку</h2></div>
       <div class="branch-cards">${cards}</div>
       <div class="lu-actions"><button class="btn small" data-act="branchBack">← К карточкам</button></div></div></section>`;
@@ -601,7 +603,7 @@ const UI = {
   showGameOver(r) {
     $('#hud').hidden = true;
     const total = Object.values(r.dmgBy).reduce((a, b) => a + b, 0) || 1;
-    const names = { burn: ['Горение', null], combo: ['Комбинации', null], crit: ['Цепные криты', null], legs: ['Шасси', 'part_legs'], core: ['Ядро', 'part_core'], back: ['Генератор', 'part_back'], tf: ['Трансформации', null], emp: ['ЭМИ-бомбы', null], od: ['Овердрайв', null], hazard: ['Ловушки сектора', null], relay: ['Орбитальный удар', null] };
+    const names = { mg: ['Мини-пушки многорука', 'part_arms'], burn: ['Горение', null], combo: ['Комбинации', null], crit: ['Цепные криты', null], legs: ['Шасси', 'part_legs'], core: ['Ядро', 'part_core'], back: ['Генератор', 'part_back'], tf: ['Трансформации', null], emp: ['ЭМИ-бомбы', null], od: ['Овердрайв', null], hazard: ['Ловушки сектора', null], relay: ['Орбитальный удар', null] };
     for (const id in REACTIONS) names['rx_' + id] = ['Реакция: ' + REACTIONS[id].name, null];
     for (const L of LINKS) names['link_' + L.id] = ['Связка: ' + L.name, 'link:' + L.a];
     const rows = Object.entries(r.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => {

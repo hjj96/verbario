@@ -88,9 +88,15 @@ function partRank(id) { return P.parts[id].rank; }
 function hasBranch(id, b, minRank) { const pr = P.parts[id]; return pr.branch === b && pr.rank >= (minRank || 3); }
 
 /* ---------- Создание забега ---------- */
-function newPlayer(robot) {
+// стартовые модули прототипа: у каждого класса свой модуль уже МК-I — другой силуэт и бонус с первой минуты
+function startPartsFor(robot) {
   const parts = {};
   for (const k of PART_ORDER) parts[k] = { rank: robot.startParts || 0, branch: null };
+  if (robot.startPart) parts[robot.startPart].rank = Math.max(1, parts[robot.startPart].rank);
+  return parts;
+}
+function newPlayer(robot) {
+  const parts = startPartsFor(robot);
   return {
     x: 0, y: 0, vx: 0, vy: 0, r: 13, face: 1, wp: 0, dist: 0, moving: 0,
     hp: 100, stats: null, weapons: [], parts, form: 0, fillerSt: {},
@@ -533,9 +539,12 @@ function updatePlayer(dt) {
   const S = P.stats;
   const mv = INPUT.move();
   if (P.slowT > 0) { P.slowT -= dt; if (Math.random() < dt * 10) FX.sparks(P.x + rand(-12, 12), P.y - upY(rand(4, 30)), 1, '#bff0ff', 40, -Math.PI / 2, 0.6, 0.4); }
-  let sp = S.speed * (P.od.active ? 1.2 : 1) * (G.webs && G.webs.length && inWeb(P.x, P.y) ? 0.5 : 1) * (P.slowT > 0 ? 0.6 : 1);
+  const noSlow = hasBranch('legs', 'C'), flying = hasBranch('back', 'C');
+  if (noSlow && P.slowT > 0) P.slowT = 0;
+  let sp = S.speed * (P.od.active ? 1.2 : 1) * (G.webs && G.webs.length && !noSlow && !flying && inWeb(P.x, P.y) ? 0.5 : 1) * (P.slowT > 0 ? 0.6 : 1);
   if (P.dash.t > 0) {
     P.dash.t -= dt;
+    if (P.dash.leap && P.dash.t <= 0) spiderLand();
     const ds = 640;
     P.x += P.dash.dx * ds * dt; P.y += P.dash.dy * ds * dt;
     if (!P.split && Math.random() < 0.9) FX.ghosts.push({ x: P.x, y: P.y, life: 0.25, max: 0.25, face: P.face });
@@ -551,6 +560,15 @@ function updatePlayer(dt) {
         FX.sparks(e.x, e.y, 6, '#ffd23f', 240);
       });
     }
+    if (hasBranch('back', 'C', 4)) {
+      eachEnemyIn(P.x, P.y, P.r + 22, e => {
+        if (P.dash.hit.has(e)) return;
+        P.dash.hit.add(e);
+        hitEnemy(e, 60 * S.might, { src: 'back', kb: 300, kx: P.dash.dx, ky: P.dash.dy });
+        FX.slash(e.x, bodyY(e), Math.atan2(P.dash.dy, P.dash.dx) + Math.PI / 2, 1.2, 18, 0.18, '#ffd36b');
+      });
+    }
+    if (P.dash.leap) P.hop = Math.sin(Math.PI * (1 - P.dash.t / P.dash.T)) * 26;
   } else {
     P.vx = mv.x * sp; P.vy = mv.y * sp;
     P.x += P.vx * dt; P.y += P.vy * dt;
@@ -610,12 +628,14 @@ function updatePlayer(dt) {
   P.hurtFlash = Math.max(0, P.hurtFlash - dt * 3);
   P.fire = Math.max(0, P.fire - dt * 6);
   if (S.regen > 0 && P.hp < S.maxHp) { P.hp = Math.min(S.maxHp, P.hp + S.regen * dt); }
+  branchTick(dt);
   if (P.shield.has && !P.shield.ready) { P.shield.t -= dt; if (P.shield.t <= 0) { P.shield.ready = true; FX.ring(P.x, P.y, 30, 16, 0.3, '#ff9a4a', 2); } }
   // овердрайв
   if (P.od.active) {
     P.od.t -= dt;
     P.od.meter = Math.max(0, 100 * P.od.t / S.odDur);
     if (Math.random() < 0.6) FX.ghosts.push({ x: P.x, y: P.y, life: 0.18, max: 0.18, face: P.face, od: true });
+    odClassTick(dt);
     if (P.od.t <= 0) endOverdrive();
   } else if (P.od.meter < 100) {
     P.od.meter = Math.min(100, P.od.meter + 0.12 * S.odRate * dt);
@@ -666,6 +686,14 @@ function tryDash(mv) {
   if (l < 0.1) { dx = Math.cos(P.aim); dy = Math.sin(P.aim); } else { dx /= l; dy /= l; }
   if (P.dash.charges === P.dash.max) P.dash.cdT = 2.6 * P.stats.dashCd;
   P.dash.charges--;
+  if (hasBranch('legs', 'C', 5)) {
+    // прыжок паука: длиннее и выше обычного рывка, при приземлении — волна и паутина
+    P.dash.t = P.dash.T = 0.36; P.dash.dx = dx * 0.62; P.dash.dy = dy * 0.62; P.dash.hit = new Set(); P.dash.leap = true;
+    P.iframes = Math.max(P.iframes, 0.45);
+    AUDIO.sfx('dash'); FX.ring(P.x, P.y, 6, 36, 0.25, '#c6ff3d', 2);
+    return;
+  }
+  P.dash.leap = false;
   if (hasBranch('legs', 'B', 5)) {
     // фазовый скачок
     const S = P.stats, dist = 160;
@@ -705,6 +733,104 @@ function splitArrive() {
   FX.light(P.x, P.y, 110, '#46e3ff', 0.5);
   AUDIO.sfx('clank');
 }
+/* ---------- Новые блоки трансформации: паук, многорук, сокол ---------- */
+// приземление прыжка паука: ударная волна и паутина, в которой вязнет Рой
+function spiderLand() {
+  const S = P.stats;
+  P.hop = 0; P.dash.leap = false;
+  spawnArea('ring', P.x, P.y, { r: 0, maxR: 95 * S.area, life: 0.3, dmg: 40 * S.might, kb: 220, stun: 0.4, src: 'legs', hits: new Set(), col: '#c6ff3d', rot: rand(0, TAU) });
+  spawnArea('eweb', P.x, P.y, { r: 85 * S.area, life: 3.2, tick: 0.25, src: 'legs', rot: rand(0, TAU) });
+  FX.addShake(4); AUDIO.sfx('thump');
+}
+function branchTick(dt) {
+  const S = P.stats;
+  // жала паука: до трёх ближайших целей у лап, урон и коррозия
+  if (hasBranch('legs', 'C', 4)) {
+    P.stingT = (P.stingT || 0) - dt;
+    if (P.stingT <= 0) {
+      P.stingT = 0.5;
+      const k = robotK(P.look, P.view === 'top' ? 'top' : 'front');
+      for (const e of nearestK(P.x, P.y, 3, 26 * k + 22)) {
+        hitEnemy(e, 12 * S.might, { src: 'legs', corrode: 0.2, nocrit: false });
+        FX.beam(P.x + Math.sign(e.x - P.x) * 14 * k, P.y + upY(2), e.x, bodyY(e), 0.8, 0.1, '#c6ff3d'); FX.hexRing(e.x, bodyY(e), 1.5, 7, 0.14, '#c6ff3d', 1);
+      }
+    }
+  }
+  // мини-пушки многорука: каждая по своей цели, стволы и руки наводятся (P.mg — углы от курса корпуса)
+  if (hasBranch('arms', 'C')) miniGuns(dt);
+  else if (P.mg && P.mg.length) { P.mg.length = 0; P.mgF.length = 0; }
+  // буревестник: в полёте взмах крыльев раз в 2,5 с — порыв ветра
+  if (hasBranch('back', 'C', 5)) {
+    P.gustT = (P.gustT || 2.5) - dt * (P.moving > 0.3 ? 1 : 0.5);
+    if (P.gustT <= 0) {
+      P.gustT = 2.5;
+      spawnArea('ring', P.x, P.y, { r: 0, maxR: 120 * S.area, life: 0.32, dmg: 16 * S.might, kb: 340, src: 'back', hits: new Set(), col: '#ffd36b', rot: rand(0, TAU) });
+      AUDIO.sfx('swing');
+    }
+  }
+}
+function miniGuns(dt) {
+  const S = P.stats, r = P.parts.arms.rank, n = r >= 5 ? 6 : r >= 4 ? 4 : 2, cd = (r >= 5 ? 0.42 : r >= 4 ? 0.52 : 0.6) * S.cdMul;
+  if (!P.mg) { P.mg = []; P.mgF = []; P.mgT = []; }
+  const tg = nearestK(P.x, P.y, n, 380);
+  let R = null;
+  for (let i = 0; i < n; i++) {
+    P.mgF[i] = Math.max(0, (P.mgF[i] || 0) - dt * 6);
+    P.mgT[i] = (P.mgT[i] === undefined ? i * cd / n : P.mgT[i]) - dt * (P.od.active ? 2 : 1);
+    const t = tg.length ? tg[i % tg.length] : null, rest = (i % 2 ? -1 : 1) * (0.6 + Math.floor(i / 2) * 0.35);
+    const want = t ? angDiff(P.aim, Math.atan2(t.y - P.y, t.x - P.x)) : rest;
+    P.mg[i] = P.mg[i] === undefined ? want : P.mg[i] + angDiff(P.mg[i], want) * Math.min(1, dt * 12);
+    if (!t || P.mgT[i] > 0) continue;
+    P.mgT[i] = cd;
+    R = R || playerPoints();
+    const an = R.an['mg' + i], mx = P.x + (an ? an.x : 0), my = P.y + (an ? upY(an.y) : -upY(20)), a = Math.atan2(bodyY(t) - my, t.x - mx);
+    spawnProj('bolt', mx, my, Math.cos(a) * 560, Math.sin(a) * 560, { dmg: 5.5 * S.might * (r >= 5 ? 1.3 : 1), pierce: r >= 5 ? 2 : 1, r: 2.4, life: 0.8, src: 'mg', col: '#9ff0ff', kb: 10 });
+    FX.mflash(mx, my, a, 2.2, '#9ff0ff');
+    P.mgF[i] = 1;
+  }
+}
+/* ---------- Овердрайв класса: у каждого прототипа своя форма поверх общей ---------- */
+const odId = () => (P.od.active && G.robot && G.robot.od ? G.robot.od.id : null);
+function odClassTick(dt) {
+  const id = odId(), S = P.stats;
+  if (!id) return;
+  P.odT = (P.odT || 0) - dt;
+  if (id === 'storm' && P.odT <= 0) {
+    P.odT = 0.25;
+    const t = randomOnScreen();
+    if (t) chainZap(t.x + rand(-40, 40), t.y - 360, t, 2, 120, 26 * S.might, 'od', 0.3, '#e2d4ff', { w: 1.6, life: 0.2, jag: 22, fk: 2 });
+  } else if (id === 'quake' && P.odT <= 0) {
+    P.odT = 0.7;
+    spawnArea('ring', P.x, P.y, { r: 0, maxR: 150 * S.area, life: 0.36, dmg: 30 * S.might, kb: 280, stun: 0.5, src: 'od', hits: new Set(), col: '#ffb43d', rot: rand(0, TAU) });
+    P.squash = 1; FX.addShake(4); AUDIO.sfx('thump');
+  } else if (id === 'firestorm' && P.odT <= 0) {
+    P.odT = 0.11;
+    const a = G.time * 4.2, R = 95 * S.area;
+    for (let k = 0; k < 3; k++) spawnArea('fire', P.x + Math.cos(a + k * TAU / 3) * R, P.y + Math.sin(a + k * TAU / 3) * R, { r: 24, life: 1.3, dmg: 8 * S.might, tick: 0.25, burn: 5 * S.burn, src: 'od' });
+  } else if (id === 'swarm') {
+    P.odA = (P.odA || 0) + dt * 3.4;
+    const R = 62 * S.area;
+    for (let i = 0; i < 8; i++) {
+      const a = P.odA + i * TAU / 8, x = P.x + Math.cos(a) * R, y = P.y + Math.sin(a) * R;
+      eachEnemyIn(x, y, 12, e => { if (icdOk(e, 'osw', 0.3)) { hitEnemy(e, 16 * S.might, { src: 'od', kb: 120 }); FX.hexRing(e.x, bodyY(e), 2, 8, 0.15, '#ffef5c', 1.1); } });
+    }
+  }
+}
+// осиный рой: восемь дронов на орбите, задняя половина — за корпусом, передняя — перед ним;
+// у Аватара — поле замедленного времени: пунктирный круг и бегущие по нему засечки-«стрелки»
+function drawOdSwarm(c, front) {
+  if (!front && odId() === 'avatar') {
+    const R = 210, t = G.time;
+    c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#ff4f9a', 0.35); c.lineWidth = 1.2;
+    c.setLineDash([10, 10]); c.lineDashOffset = -t * 20; c.beginPath(); c.arc(P.x, P.y, R, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.strokeStyle = rgba('#ffd6ea', 0.6); c.beginPath();
+    for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + t * 0.25; c.moveTo(P.x + Math.cos(a) * (R - 8), P.y + Math.sin(a) * (R - 8)); c.lineTo(P.x + Math.cos(a) * (R + 6), P.y + Math.sin(a) * (R + 6)); }
+    c.stroke(); c.restore();
+  }
+  if (odId() !== 'swarm') return;
+  const R = 62 * P.stats.area;
+  for (let i = 0; i < 8; i++) { const a = (P.odA || 0) + i * TAU / 8; if ((Math.sin(a) > 0) === front) drawDroneOrbit(c, P.x, P.y, a, R, 1, '#ffef5c', 7, false, i * 1.3); }
+}
 function blinkBoom(x, y) {
   const S = P.stats;
   FX.explosion(x, y, 50, '#b38bff');
@@ -716,12 +842,13 @@ function tryOverdrive() {
   if (P.od.count >= 10) achieve('od10');
   G.tf.push(seqOverdrive(P, {
     onCommit() {
-      P.od.active = true; P.od.t = P.stats.odDur;
+      P.od.active = true; P.od.t = P.stats.odDur + (G.robot.od && G.robot.od.id === 'boost' ? 2 : 0); P.odT = 0; P.odA = 0;
       eachEnemyIn(P.x, P.y, 170, e => { hitEnemy(e, 30 * P.stats.might, { src: 'od', kb: 300, nocrit: true }); });
       if (hasBranch('back', 'B', 5)) {
         spawnArea('well', P.x, P.y, { r: 200 * P.stats.area, life: 1.6, dmg: 20 * P.stats.might, tick: 0.2, pull: 260, src: 'back', collapse: 200 * P.stats.might });
       }
-      UI.banner('ОВЕРДРАЙВ', 'Урон ×1,5 · перезарядка ×2 · неуязвимость', 'magenta');
+      const od = G.robot.od;
+      UI.banner('ОВЕРДРАЙВ' + (od ? ' · ' + od.name.toUpperCase() : ''), 'Урон ×1,5 · перезарядка ×2 · неуязвимость' + (od && od.id !== 'boost' ? ' · ' + od.d : ''), 'magenta');
     },
   }));
 }

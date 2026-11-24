@@ -110,7 +110,8 @@ function robotLayout(L) {
   else tw = [9.5, 10.4, 11.3][cr];
   tw *= Math.sqrt(b);
   const lr = P.legs.rank, lb = P.legs.branch;
-  return { tw, hover: lr >= 3 && lb === 'B', tread: lr >= 3 && lb === 'A' };
+  const falcon = P.back.rank >= 3 && P.back.branch === 'C';
+  return { tw, hover: (lr >= 3 && lb === 'B') || falcon, falcon, tread: lr >= 3 && lb === 'A', spider: lr >= 3 && lb === 'C' };
 }
 function viewOf(o) { return o && o.view === 'top' ? 'top' : 'front'; }
 // экранный масштаб робота: единицы модели → единицы мира
@@ -131,6 +132,7 @@ function robotPose(L, t, o) {
     mounts: o.mounts || null, armed: o.armed !== false, siege: !!o.siege, squash: o.squash || 0,
     mvDir: o.mvDir, kick: st ? 0 : o.kick || 0, hurt: st ? 0 : o.hurt || 0, hitA: o.hitA, headYaw: o.headYaw || 0,
     breath: st ? 0 : (1 - (o.moving || 0)) * Math.sin((t || 0) * 2.3) * 0.35,
+    mg: o.mg || null, mgF: o.mgF || null,
   };
 }
 
