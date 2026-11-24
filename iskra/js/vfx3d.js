@@ -316,15 +316,10 @@ function drawSaber3D(c, x, y, rot, R, col, tr, ext, fl) {
       }
     }
   }
-  // клинки: белое ядро и насыщенная оболочка; ядро чуть дрожит — «гудит»
-  if (ext > 0.02) {
-    c.lineCap = 'round';
-    c.beginPath();
-    for (const s of [-1, 1]) { c.moveTo(x + ca * h0 * s, cy + sa * h0 * s); c.lineTo(x + ca * L * s, cy + sa * L * s); }
-    c.strokeStyle = rgba(col, 0.2); c.lineWidth = R * 0.2 * hum; c.stroke();
-    c.strokeStyle = rgba(mixHex(col, '#ffffff', 0.3), 0.9); c.lineWidth = R * 0.085; c.stroke();
-    c.strokeStyle = '#ffffff'; c.lineWidth = R * 0.034 * hum; c.stroke();
-  }
+  // ближний к камере конец оси (глубина конца s пропорциональна s·sin(rot)·cos(наклон камеры + наклон плоскости)):
+  // его клинок выходит из видимого торца эмиттера и рисуется поверх рукояти, дальний — под ней
+  const near = Math.sin(rot) * Math.cos((VIEW_PITCH[enemyView()] || 0.42) + SABER_TILT) >= 0 ? 1 : -1;
+  if (ext > 0.02) saberBlade(c, x, cy, ca, sa, h0, L, R, col, hum, -near);
   // вспышка зажигания у эмиттеров
   if (fl > 0) {
     c.globalAlpha = fl;
@@ -332,8 +327,17 @@ function drawSaber3D(c, x, y, rot, R, col, tr, ext, fl) {
     c.globalAlpha = 1;
   }
   c.restore();
-  // рукоять: гранёная модель поверх оснований клинков
+  // рукоять: гранёная модель между дальним и ближним клинком
   drawHilt3D(c, x, cy, rot, h0, col);
+  if (ext > 0.02) { c.save(); c.globalCompositeOperation = 'lighter'; saberBlade(c, x, cy, ca, sa, h0, L, R, col, hum, near); c.restore(); }
+}
+// клинок со стороны s: белое ядро и насыщенная оболочка от торца эмиттера; ядро чуть дрожит — «гудит»
+function saberBlade(c, x, cy, ca, sa, h0, L, R, col, hum, s) {
+  c.lineCap = 'round';
+  c.beginPath(); c.moveTo(x + ca * h0 * s, cy + sa * h0 * s); c.lineTo(x + ca * L * s, cy + sa * L * s);
+  c.strokeStyle = rgba(col, 0.2); c.lineWidth = R * 0.2 * hum; c.stroke();
+  c.strokeStyle = rgba(mixHex(col, '#ffffff', 0.3), 0.9); c.lineWidth = R * 0.085; c.stroke();
+  c.strokeStyle = '#ffffff'; c.lineWidth = R * 0.034 * hum; c.stroke();
 }
 // гранёная рукоять: шестигранный хват с двумя рёбрами, расширяющиеся раструбы-эмиттеры и цветные кольца излучателей.
 // Ось рукояти лежит в той же наклонённой плоскости, что и клинки (см. saberE), поэтому совпадает с ними при любом угле.
