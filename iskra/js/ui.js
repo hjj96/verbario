@@ -41,6 +41,25 @@ function evoTreeHTML(live) {
   return `<p class="etree-lead">Эволюция = орудие ур. 8 + его модуль МК-${ROMAN[EVO_RANK]} (◆ с рамкой) → контейнер элиты или босса. ${live ? 'Зелёным — готово к эволюции.' : 'Открыто ' + Object.keys(SAVE.discovered.evolutions || {}).length + ' из ' + Object.keys(EVOS).length + '.'}</p><div class="etree">${mods}</div>`;
 }
 
+/* ===== Справочник: таблица реакций и связки орудий ===== */
+function comboHTML() {
+  const ST = ['burn', 'chill', 'shock', 'corrode'], SN = Object.fromEntries(STATUSES.map(x => [x.id, x])), rx = (a, b) => Object.keys(REACTIONS).find(k => (REACTIONS[k].a === a && REACTIONS[k].b === b) || (REACTIONS[k].a === b && REACTIONS[k].b === a));
+  const seenRx = SAVE.discovered.reactions || {}, seenL = SAVE.discovered.links || {};
+  const head = '<tr><th></th>' + ST.map(s => `<th style="color:${SN[s].color}">${esc(SN[s].name)}</th>`).join('') + '</tr>';
+  const rows = ST.map((a, i) => `<tr><th style="color:${SN[a].color}">${esc(SN[a].name)}</th>` + ST.map((b, j) => {
+    if (i === j) return '<td class="x">—</td>';
+    const k = rx(a, b), R = REACTIONS[k];
+    return `<td style="--c:${R.col}" class="${seenRx[k] ? 'seen' : ''}">${esc(R.name)}</td>`;
+  }).join('') + '</tr>').join('');
+  const rxList = Object.keys(REACTIONS).map(k => { const R = REACTIONS[k]; return `<div class="rk" style="grid-template-columns:150px 1fr"><b style="color:${R.col}">${seenRx[k] ? '✓ ' : ''}${esc(R.name)}</b><span>${esc(R.d)}</span></div>`; }).join('');
+  const links = LINKS.map(L => `<div class="lcard ${seenL[L.id] ? 'seen' : ''}" style="--c:${L.col}">
+      <div class="lpair"><img src="${SPR.icons[L.a]}" alt=""><span>+</span><img src="${SPR.icons[L.b]}" alt=""></div>
+      <div><div class="nm">${seenL[L.id] ? '✓ ' : ''}${esc(L.name)}</div><div class="mono lw">${esc(WEAPONS[L.a].name)} + ${esc(WEAPONS[L.b].name)}</div><div class="ds">${esc(L.d)}</div></div></div>`).join('');
+  return `<p class="etree-lead">Реакция — два статуса на одной машине: срабатывает сама, на боссах тоже (их не оглушает, но реакцию шок даёт). Связка — два орудия на корпусе меняют поведение друг друга; эволюции связку сохраняют, сила растёт с уровнем младшего орудия пары.</p>
+    <div class="tree"><div class="tnode"><div class="h2">Таблица реакций</div><div class="rxwrap"><table class="rxgrid">${head}${rows}</table></div>${rxList}</div></div>
+    <div class="h2" style="margin:18px 0 10px">Связки орудий · ${Object.keys(seenL).length} из ${LINKS.length}</div><div class="lgrid">${links}</div>`;
+}
+
 const UI = {
   modal: null, screen: null, previews: [], hud: {}, sig: '', lastSec: -1, toastQ: [], toastT: 0, sel: { robot: 'iskra', sector: 'rust', threat: 0 },
   luChoices: null, banishMode: false, codexTab: 'weapons', pauseTab: 'build', confirmReset: false, confirmQuit: false, chestRes: null, chestTimer: null, hintT: 0,
@@ -234,7 +253,7 @@ const UI = {
       </div></section>`;
     },
     codex() {
-      const tabs = [['weapons', 'Орудия'], ['tree', 'Эволюции'], ['parts', 'Модули'], ['enemies', 'Враги'], ['world', 'Локации'], ['mech', 'Механики']];
+      const tabs = [['weapons', 'Орудия'], ['tree', 'Эволюции'], ['combo', 'Связки'], ['parts', 'Модули'], ['enemies', 'Враги'], ['world', 'Локации'], ['mech', 'Механики']];
       let body = '';
       if (this.codexTab === 'weapons') {
         body = '<div class="clist">' + WEAPON_ORDER.map(id => {
@@ -259,6 +278,8 @@ const UI = {
         }).join('') + '</div>';
       } else if (this.codexTab === 'tree') {
         body = evoTreeHTML(false);
+      } else if (this.codexTab === 'combo') {
+        body = comboHTML();
       } else if (this.codexTab === 'world') {
         body = '<div class="tree">' + SECTORS.map(sc => {
           const Hz = HAZ[sc.id], open = !sc.unlock || SAVE.ach[sc.unlock.ach];
@@ -272,7 +293,7 @@ const UI = {
       } else {
         body = `<div class="tree">
           <div class="tnode"><div class="h2">Статусы</div>${STATUSES.map(s => `<div class="rk"><b style="color:${s.color}">${esc(s.name)}</b><span>${esc(s.d)}</span></div>`).join('')}</div>
-          <div class="tnode"><div class="h2">Комбинации</div>${COMBOS.map(s => `<div class="rk" style="grid-template-columns:120px 1fr"><b>${esc(s.name)}</b><span>${esc(s.d)}</span></div>`).join('')}</div>
+          <div class="tnode"><div class="h2">Реакции</div>${COMBOS.map(s => `<div class="rk" style="grid-template-columns:150px 1fr"><b style="color:${s.col}">${esc(s.name)}</b><span>${esc(s.d)}</span></div>`).join('')}<span class="ds" style="font-size:12px;color:var(--dim)">Таблица реакций и связки орудий — во вкладке «Связки».</span></div>
           <div class="tnode"><div class="h2">Советы</div>${TIPS.map(t => `<span class="ds" style="font-size:13px;color:var(--sub)">— ${esc(t)}</span>`).join('')}</div>
           <div class="tnode"><div class="h2">Расписание забега</div>${SECTORS.map(sc => `<div class="rk"><b>${esc(sc.code)}</b><span>${bossSchedule(sc.id).map(b => fmtTime(b.t) + ' ' + esc(BOSSES[b.id].name)).join(' · ')}</span></div>`).join('')}<div class="rk"><b>2:30+</b><span>Лейтенанты Роя — каждые 5 минут между боссами</span></div><div class="rk"><b>20:00+</b><span>Бесконечный режим после победы</span></div></div>
         </div>`;
@@ -407,8 +428,12 @@ const UI = {
     if (ch.kind === 'wnew' || ch.kind === 'wup') {
       const def = WEAPONS[ch.id], w = P.weapons.find(x => x.id === ch.id), cur = w ? w.lvl : 0;
       const ready = P.parts[def.part].rank >= EVO_RANK, known = SAVE.discovered.evolutions[def.evo];
-      const p = def.base;
+      const p = def.base, lk = linksFor(ch.id), done = lk.find(l => l.have);
+      let link = null;
+      if (done) link = { col: done.L.col, txt: (ch.kind === 'wnew' ? 'СВЯЗКА «' + done.L.name + '» · пара: ' : 'Связка «' + done.L.name + '» усилится · пара: ') + WEAPONS[done.other].name.toLowerCase(), on: true };
+      else if (lk.length) link = { col: lk[0].L.col, txt: 'Пара для связки: ' + lk.map(l => WEAPONS[l.other].name.toLowerCase()).join(' или '), on: false };
       return {
+        link,
         cls: ch.kind === 'wnew' ? 'k-new' : 'k-w', left: 'Орудие · ' + wcode(ch.id), tag: ch.kind === 'wnew' ? 'Новое' : 'Ур. ' + cur + ' → ' + (cur + 1),
         name: def.name, img: SPR.icons[ch.id], lv: pips(cur + 1, 8), lvTxt: 'ур. ' + (cur + 1) + '/8',
         fx: ch.kind === 'wnew' ? def.desc : def.levels[cur - 1].d,
@@ -445,7 +470,7 @@ const UI = {
         <span class="strip"><span>${esc(I.left)}</span><span class="tag">${esc(I.tag)}</span></span>
         <span class="num kbd-only">${i + 1}</span>
         <span class="fig">${fig}${I.dim ? `<span class="dimx">${esc(I.dim)}</span>` : ''}</span>
-        <span class="body"><span class="nm">${esc(I.name)}</span>${I.lv ? `<span class="lvline">${I.lv}<span>${I.lvTxt}</span></span>` : ''}<span class="fx">${esc(I.fx)}</span><span class="note">${esc(I.note)}</span></span>
+        <span class="body"><span class="nm">${esc(I.name)}</span>${I.lv ? `<span class="lvline">${I.lv}<span>${I.lvTxt}</span></span>` : ''}<span class="fx">${esc(I.fx)}</span><span class="note">${esc(I.note)}</span>${I.link ? `<span class="lnk ${I.link.on ? 'on' : ''}" style="--c:${I.link.col}">${esc(I.link.txt)}</span>` : ''}</span>
       </button>`;
     }).join('');
     const html = `<section class="screen overlay" id="scr-levelup"><div class="lu-wrap">
@@ -537,10 +562,16 @@ const UI = {
     const items = P.weapons.map(w => { const d = weaponDef(w); return `<div class="bitem"><img src="${SPR.icons[w.id]}" alt=""><div><b>${esc(d.name)}</b><div class="m">${w.evo ? 'эволюция' : 'ур. ' + w.lvl + '/8'} · урон ${fmtNum(G.dmgBy[w.id] || 0)}</div></div></div>`; }).join('');
     const parts = PART_ORDER.map(id => { const pr = P.parts[id], d = pr.rank ? partRankDef(id, pr.rank, pr.branch) : null; return `<div class="bitem"><img src="${SPR.icons['part_' + id]}" alt=""><div><b>${esc(PARTS[id].name)} МК-${ROMAN[pr.rank]}</b><div class="m">${d ? esc(d.name) : 'базовый'}${pr.branch ? ' · ' + esc(PARTS[id].branches[pr.branch].name) : ''}</div></div></div>`; }).join('');
     const S = P.stats;
+    const links = LINKS.map(L => {
+      const a = !!ownedBase(L.a), b = !!ownedBase(L.b);
+      if (!a && !b) return '';
+      const on = a && b, miss = a ? L.b : L.a;
+      return `<div class="bitem lnkitem ${on ? 'on' : ''}" style="--c:${L.col}"><span class="pair"><img src="${SPR.icons[L.a]}" alt=""><img src="${SPR.icons[L.b]}" alt=""></span><div><b>${esc(L.name)}</b><div class="m">${on ? 'активна · ' + Math.round(linkK(L.id) * 100) + '% · урон ' + fmtNum(G.dmgBy['link_' + L.id] || 0) : 'нужно: ' + esc(WEAPONS[miss].name.toLowerCase())}</div></div></div>`;
+    }).join('');
     const html = `<section class="screen overlay" id="scr-pause"><div class="pause-wrap">
       <div class="topbar"><div><div class="eyebrow">${esc(G.sector.name)} · ${fmtTime(G.time)}</div><h2 class="h1">Пауза</h2></div></div>
       <div class="tabs">${[['build', 'Сборка'], ['tree', 'Дерево эволюций']].map(t => `<button class="tab ${this.pauseTab === t[0] ? 'on' : ''}" data-act="ptab" data-id="${t[0]}">${t[1]}</button>`).join('')}</div>
-      ${this.pauseTab === 'tree' ? evoTreeHTML(true) : `<div class="two"><div class="sheet"><div class="in" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">Орудия</div><div class="buildlist">${items}</div><div class="eyebrow">Модули · форма ${FORMS[P.form].code} «${esc(FORMS[P.form].name)}»</div><div class="buildlist">${parts}</div></div></div>
+      ${this.pauseTab === 'tree' ? evoTreeHTML(true) : `<div class="two"><div class="sheet"><div class="in" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">Орудия</div><div class="buildlist">${items}</div>${links ? `<div class="eyebrow">Связки орудий</div><div class="buildlist">${links}</div>` : ''}<div class="eyebrow">Модули · форма ${FORMS[P.form].code} «${esc(FORMS[P.form].name)}»</div><div class="buildlist">${parts}</div></div></div>
       <div class="sheet"><div class="in"><div class="eyebrow" style="margin-bottom:8px">Характеристики</div><div class="statlist">
         <span>Прочность</span><b>${Math.round(P.hp)}/${S.maxHp}</b><span>Броня</span><b>${S.armor}</b><span>Регенерация</span><b>${S.regen.toFixed(1)}/с</b>
         <span>Урон</span><b>${fmtPct(S.might - 1)}</b><span>Перезарядка</span><b>−${Math.round((1 - S.cdMul) * 100)}%</b><span>Площадь</span><b>${fmtPct(S.area - 1)}</b>
@@ -565,10 +596,12 @@ const UI = {
     $('#hud').hidden = true;
     const total = Object.values(r.dmgBy).reduce((a, b) => a + b, 0) || 1;
     const names = { burn: ['Горение', null], combo: ['Комбинации', null], crit: ['Цепные криты', null], legs: ['Шасси', 'part_legs'], core: ['Ядро', 'part_core'], back: ['Генератор', 'part_back'], tf: ['Трансформации', null], emp: ['ЭМИ-бомбы', null], od: ['Овердрайв', null], hazard: ['Ловушки сектора', null], relay: ['Орбитальный удар', null] };
+    for (const id in REACTIONS) names['rx_' + id] = ['Реакция: ' + REACTIONS[id].name, null];
+    for (const L of LINKS) names['link_' + L.id] = ['Связка: ' + L.name, 'link:' + L.a];
     const rows = Object.entries(r.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => {
       const d = WEAPONS[k] || EVOS[k];
       const nm = d ? d.name : (names[k] ? names[k][0] : k);
-      const ic = d ? SPR.icons[k] : names[k] && names[k][1] ? SPR.icons[names[k][1]] : null;
+      const ic = d ? SPR.icons[k] : names[k] && names[k][1] ? SPR.icons[names[k][1].replace('link:', '')] : null;
       return `<div class="dmgrow">${ic ? `<img src="${ic}" alt="">` : '<span></span>'}<div><div>${esc(nm)}</div><div class="bar"><i style="width:${(v / total * 100).toFixed(1)}%"></i></div></div><span class="v">${fmtNum(v)}</span></div>`;
     }).join('');
     const ach = r.ach.map(id => { const a = ACHIEVEMENTS.find(x => x.id === id); return a ? `<div>✓ <b>${esc(a.name)}</b> +${a.r}${a.unlock ? ' · открыто: ' + esc(a.unlock) : ''}</div>` : ''; }).join('');

@@ -119,7 +119,7 @@ function startRun(robotId, sectorId, threat) {
   G.banished = new Set(); G.dmgBy = {}; G.scrapRun = 0; G.bossKills = 0; G.bossesAlive = 0; G.evolvedThisRun = [];
   G.hitstop = 0; G.freezeT = 0; G.endless = false; G.won = false; G.final = null;
   G.runAch = new Set(); G.statusT = 0; G.lastHurtT = -99; G.pendingWin = false; G.dmgTaken = 0; G.endlessBossT = undefined;
-  G.dps = 0; G.dmgWin = 0; G.dmgWinT = 0; G.alert = 1; G.alertLvl = 1; G.alertEliteT = 40; G.ltIdx = 0; G.schedule = bossSchedule(sector.id);
+  G.dps = 0; G.dmgWin = 0; G.dmgWinT = 0; G.rxN = {}; G.rxLbl = {}; G.twinN = 0; G.alert = 1; G.alertLvl = 1; G.alertEliteT = 40; G.ltIdx = 0; G.schedule = bossSchedule(sector.id);
   resetWorld();
   G.tf.clear(); FX.clear(); LATER.length = 0;
   RENDER.ghostKey = '';
@@ -279,11 +279,26 @@ function hitEnemy(e, dmg, o) {
       e.kbx += kx * k; e.kby += ky * k;
     }
   }
-  if (o.burn) applyBurn(e, o.burn);
-  if (o.chill) applyChill(e, o.chill, o.frost || 0, o.freeze);
-  if (o.corrode) { s.corr = Math.max(s.corr, o.corrode); s.corrT = Math.max(s.corrT, 2.5); }
+  if (o.burn) applyBurn(e, o.burn, o.combo);
+  if (o.chill) applyChill(e, o.chill, o.frost || 0, o.freeze, o.combo);
+  if (o.corrode) {
+    const fresh = s.corrT <= 0;
+    s.corr = Math.max(s.corr, o.corrode); s.corrT = Math.max(s.corrT, 2.5);
+    // свежая коррозия на горящей / замороженной / оглушённой машине — реакция
+    if (fresh && !o.combo && e.alive) {
+      if (s.burnT > 0) react(e, 'thermite');
+      else if (s.freezeT > 0 || s.frost >= 50 || (e.boss && s.chillT > 0)) react(e, 'brittle');
+      else if (s.stunT > 0) react(e, 'short');
+    }
+  }
   if (o.stun && (o.stunChance === undefined || Math.random() < o.stunChance)) {
-    if (!e.boss) { s.stunT = Math.max(s.stunT, o.stun); if (s.corrT > 0 && !o.combo) shortCircuit(e); }
+    if (!e.boss) s.stunT = Math.max(s.stunT, o.stun);
+    // шок по разъеденной / охлаждённой / горящей машине — реакция (боссов не оглушает, но реакцию даёт)
+    if (!o.combo && e.alive) {
+      if (s.corrT > 0) react(e, 'short');
+      else if (s.chillT > 0 || s.freezeT > 0) react(e, 'super');
+      else if (s.burnT > 0) react(e, 'plasma');
+    }
   }
   if (crit) {
     if (hasBranch('head', 'A', 4)) s.markT = 3;
@@ -292,42 +307,36 @@ function hitEnemy(e, dmg, o) {
   if (e.hp <= 0) killEnemy(e, o);
   return d;
 }
-function applyBurn(e, dps) {
-  const s = e.st;
-  if (s.freezeT > 0 && !e.boss) { thermoShock(e); return; }
+function applyBurn(e, dps, combo) {
+  const s = e.st, fresh = s.burnT <= 0;
+  if (!combo && e.alive) {
+    // огонь по замороженной (боссу — по охлаждённому) — термошок; свежий огонь по разъеденной / оглушённой — термит / пробой
+    if ((s.freezeT > 0 || s.frost >= 50 || (e.boss && s.chillT > 0)) && react(e, 'thermo')) return;
+    if (fresh) { if (s.corrT > 0) react(e, 'thermite'); else if (s.stunT > 0) react(e, 'plasma'); }
+  }
   s.burn = Math.max(s.burn, dps); s.burnT = Math.max(s.burnT, 2.6);
 }
-function applyChill(e, slow, frost, freezeDur) {
-  const s = e.st;
+function applyChill(e, slow, frost, freezeDur, combo) {
+  const s = e.st, fresh = s.chillT <= 0;
   s.chill = Math.max(s.chill, slow); s.chillT = Math.max(s.chillT, 1.2);
+  if (!combo && fresh && e.alive) {
+    if (s.stunT > 0) react(e, 'super');
+    else if (e.boss && s.burnT > 0) react(e, 'thermo');
+    else if (e.boss && s.corrT > 0) react(e, 'brittle');
+  }
   if (e.boss) return;
   s.frost += frost;
+  // полузамёрзшая горящая / разъеденная машина уже реагирует — огонь редко даёт дождаться полной заморозки
+  if (!combo && s.frost >= 50 && s.burnT > 0 && react(e, 'thermo')) return;
+  if (!combo && s.frost >= 50 && s.corrT > 0 && react(e, 'brittle')) return;
   if (s.frost >= 100) {
     s.frost = 0;
-    if (s.burnT > 0) { thermoShock(e); return; }
+    // замерзает горящая — термошок, разъеденная — хрупкость
+    if (!combo && s.burnT > 0 && react(e, 'thermo')) return;
+    if (!combo && s.corrT > 0 && react(e, 'brittle')) return;
     s.freezeT = freezeDur || 1.5;
     AUDIO.sfx('freeze');
   }
-}
-function thermoShock(e) {
-  const s = e.st;
-  s.burnT = 0; s.freezeT = 0; s.frost = 0;
-  const dmg = Math.max(e.maxHp * 0.3, 40 * P.stats.might);
-  FX.text(e.x, e.y - 18, 'ТЕРМОШОК', '#ffd36b', 13, { life: 0.9 });
-  FX.burst(e.x, e.y, 12, '#8fe8ff', 220, 0.5, 6);
-  FX.burst(e.x, e.y, 12, '#ff7a2e', 220, 0.5, 6);
-  FX.ring(e.x, e.y, 6, 60, 0.35, '#ffffff', 3);
-  AUDIO.sfx('thermo');
-  hitEnemy(e, dmg, { src: 'combo', nocrit: true, combo: true });
-  eachEnemyIn(e.x, e.y, 50, n => { if (n !== e) hitEnemy(n, dmg * 0.35, { src: 'combo', nocrit: true, combo: true }); });
-}
-function shortCircuit(e) {
-  const dmg = 30 * P.stats.might;
-  FX.ring(e.x, e.y, 6, 70, 0.3, '#c9a6ff', 3);
-  for (let i = 0; i < 4; i++) { const a = rand(0, TAU); FX.lightning(e.x, e.y, e.x + Math.cos(a) * 55, e.y + Math.sin(a) * 55, '#c9a6ff', 1.2, 0.15); }
-  AUDIO.sfx('zap');
-  eachEnemyIn(e.x, e.y, 70, n => { hitEnemy(n, dmg, { src: 'combo', nocrit: true, combo: true }); });
-  e.st.corrT = 0;
 }
 function critChain(e, d) {
   let cur = e;
@@ -724,8 +733,9 @@ function unlockedWeapons() { return WEAPON_ORDER; }
 function ownedBase(id) { return P.weapons.find(w => (w.evo ? EVOS[w.id].from : w.id) === id); }
 function buildPool() {
   const pool = [];
-  for (const w of P.weapons) if (!w.evo && w.lvl < 8 && !G.banished.has(w.id)) pool.push({ kind: 'wup', id: w.id, w: 10 });
-  if (P.weapons.length < MAX_WEAPONS) for (const id of unlockedWeapons()) if (!ownedBase(id) && !G.banished.has(id)) pool.push({ kind: 'wnew', id, w: 6 });
+  // орудие, которое достроит связку с уже стоящим, предлагается чаще
+  for (const w of P.weapons) if (!w.evo && w.lvl < 8 && !G.banished.has(w.id)) pool.push({ kind: 'wup', id: w.id, w: linksFor(w.id).some(l => l.have) ? 11 : 10 });
+  if (P.weapons.length < MAX_WEAPONS) for (const id of unlockedWeapons()) if (!ownedBase(id) && !G.banished.has(id)) pool.push({ kind: 'wnew', id, w: linksFor(id).some(l => l.have) ? 9 : 6 });
   for (const id of PART_ORDER) if (P.parts[id].rank < 5 && !G.banished.has('part_' + id)) pool.push({ kind: 'part', id, w: 9 });
   return pool;
 }
