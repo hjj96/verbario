@@ -3,8 +3,9 @@
    Стоят на карте детерминированно по ячейкам (как опасности), не пересекаются с опасностями и стартом.
    Робот и машины Роя обходят их (летуны и боссы — пролетают), снаряды летят поверх. */
 
+// on: постройки временно отключены (вид будет переделан) — список пуст, столкновения, обход и отрисовка не срабатывают
 const BLD = {
-  cell: 600, ch: 0.36,
+  on: false, cell: 600, ch: 0.36,
   types: { rust: ['container', 'silo', 'wall', 'chimney', 'container'], neon: ['tower', 'billboard', 'kiosk', 'antenna', 'tower'], hive: ['spire', 'pod', 'arch', 'spire'],
     cryo: ['tank', 'dome', 'pipes', 'icewall', 'tank'], orbit: ['crate', 'reactor', 'dish', 'console', 'crate'] },
   col: { rust: '#c9a46a', neon: '#8f7bff', hive: '#d0486a', cryo: '#7fd0ff', orbit: '#8a96ff' },
@@ -51,7 +52,7 @@ function nearHazard(x, y, R) {
 }
 function structuresAround() {
   BLD_LIST.length = 0;
-  const types = G.sector && BLD.types[G.sector.id];
+  const types = BLD.on && G.sector && BLD.types[G.sector.id];
   if (!types) return BLD_LIST;
   const C = BLD.cell, seed = 911 + SECTORS.indexOf(G.sector) * 53;
   const x0 = P.x - 1150, x1 = P.x + 1150, y0 = P.y - 1000, y1 = P.y + 1000;
