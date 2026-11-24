@@ -312,3 +312,83 @@ function drawFirePool(c, a) {
   }
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
 }
+/* ---------- Нанорой: крошечные огранённые наниты на наклонённых орбитах вокруг корпуса ----------
+   front — рисовать только тех, кто ближе к камере (второй проход поверх робота), иначе — дальних */
+function nanoSwarm(c, x, y, R, col, n, t, front, zc, rings) {
+  const sp = vfxSp(), cp = vfxCp(), RN = rings || 3, per = Math.ceil(n / RN), edge = mixHex(col, '#ffffff', 0.25);
+  c.lineJoin = 'round'; c.lineWidth = 0.9;
+  for (let k = 0; k < n; k++) {
+    const ring = k % RN, idx = Math.floor(k / RN), tilt = 0.32 + ring * 0.05, az = ring * TAU / RN + 0.4;
+    const th = t * (1.2 + ring * 0.3) * (ring % 2 ? -1 : 1) + idx * TAU / per, r = R * (0.6 + 0.25 * Math.sin(idx * 1.7 + ring));
+    const px = Math.cos(th) * r, py0 = Math.sin(th) * r, y1 = py0 * Math.cos(tilt), z1 = py0 * Math.sin(tilt);
+    const x2 = px * Math.cos(az) - y1 * Math.sin(az), y2 = px * Math.sin(az) + y1 * Math.cos(az);
+    if (front !== undefined && ((-y2 * cp + z1 * sp) > 0) !== front) continue;
+    const sx = x + x2, sy = y - y2 * sp - (z1 + zc) * cp, s = 1.9 + (k % 3) * 0.55, ro = t * 5 + k * 1.3;
+    c.beginPath();
+    for (let i = 0; i < 3; i++) { const a = ro + i * TAU / 3, rr = i ? s : s * 1.5; i ? c.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr * 0.8) : c.moveTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr * 0.8); }
+    c.closePath(); c.fillStyle = rgba(col, 0.32); c.fill(); c.strokeStyle = edge; c.stroke();
+  }
+}
+/* ---------- Сингулярность гравитона: гранёный чёрный кристалл над полом и кометные дуги аккреционного диска ---------- */
+function singulSprite() {
+  return vfxSprites('singul', 10, (m, f) => { m.push(); m.rx(0.55); m.rz(f / 10 * TAU / 5); m.poly(ICO.v.map(v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l * 10, v[1] / l * 10, v[2] / l * 10]; }), ICO.f, 'd'); m.pop(); }, vpal('#b98cff'));
+}
+// кольца диска: каждая дуга — «комета» из 4 сегментов (яркая голова, тонкий хвост); задняя половина — за ядром, передняя — перед
+function holeDisc(c, x, cy, R, t, col, a, sp, front) {
+  const B = R * 2 + 40, head = mixHex(col, '#ffffff', 0.55);
+  c.save(); c.translate(x, cy); c.rotate(-0.16);
+  c.beginPath(); c.rect(-B, front ? 0 : -B, B * 2, B); c.clip();
+  c.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const rr = R * (0.34 + i * 0.22), ry = rr * sp * 0.6, w = t * (2.3 - i * 0.5) * (1 + 18 / Math.max(rr, 18)) * 0.6, nS = 2 + i, L = 1.15 - i * 0.15, A = (0.95 - i * 0.22) * a;
+    for (let s = 0; s < nS; s++) {
+      const h0 = w + s * TAU / nS + i * 1.3;
+      for (let k = 0; k < 4; k++) {
+        c.strokeStyle = rgba(k === 0 ? head : col, A * (1 - k * 0.22)); c.lineWidth = Math.max(0.5, (2 - i * 0.35) * (1 - k * 0.24));
+        c.beginPath(); c.ellipse(0, 0, rr, ry, 0, h0 - L * (k + 1) / 4, h0 - L * k / 4); c.stroke();
+      }
+    }
+  }
+  c.restore();
+}
+function drawHole3D(c, x, y, R, t, col, a) {
+  if (!(R >= 2) || !isFinite(x) || !isFinite(y)) return;
+  const sp = vfxSp(), cp = vfxCp(), rc = clamp(R * 0.12, 5, 13), cy = y - (rc + 7) * cp;
+  c.save();
+  // провал на полу: тёмный эллипс и тонкий край зоны притяжения
+  c.globalAlpha = 0.55 * a; c.fillStyle = '#000000'; c.beginPath(); c.ellipse(x, y, R * 0.5, R * 0.5 * sp, 0, 0, TAU); c.fill();
+  c.globalAlpha = 0.22 * a; c.strokeStyle = col; c.lineWidth = 1; c.setLineDash([5, 7]); c.lineDashOffset = t * 10;
+  c.beginPath(); c.ellipse(x, y, R, R * sp, 0, 0, TAU); c.stroke(); c.setLineDash([]);
+  c.globalAlpha = 1; c.globalCompositeOperation = 'lighter';
+  holeDisc(c, x, cy, R, t, col, a, sp, false);
+  c.globalCompositeOperation = 'source-over';
+  // ядро: гранёный кристалл; фотонное кольцо — тонкая окружность с бегущим бликом
+  vfxDraw(c, singulSprite(), Math.floor(t * 9), x, cy, rc / 10 * 1.1, a);
+  c.globalCompositeOperation = 'lighter';
+  c.strokeStyle = rgba(col, 0.75 * a); c.lineWidth = 1.1; c.beginPath(); c.arc(x, cy, rc * 1.45, 0, TAU); c.stroke();
+  c.strokeStyle = rgba('#ffffff', 0.85 * a); c.lineWidth = 1.2; c.lineCap = 'round'; c.beginPath(); c.arc(x, cy, rc * 1.45, t * 2.2, t * 2.2 + 0.9); c.stroke();
+  holeDisc(c, x, cy, R, t, col, a, sp, true);
+  c.restore();
+}
+// зерно сингулярности в полёте: тот же кристалл, маленький, с двумя орбитальными бликами
+function drawGravSeed(c, p) {
+  const cp = vfxCp(), cy = p.y - 9 * cp;
+  vfxShadow(c, p.x, p.y + 9 * cp, 6, 0.35);
+  vfxDraw(c, singulSprite(), Math.floor(G.time * 16), p.x, cy, 0.45);
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.lineWidth = 1.1;
+  const t = G.time * 9;
+  for (let k = 0; k < 2; k++) { const a0 = t + k * Math.PI; c.strokeStyle = rgba(k ? '#c08bff' : '#ffffff', 0.9); c.beginPath(); c.ellipse(p.x, cy, 8, 8 * vfxSp() * 0.7, -0.16, a0, a0 + 1.2); c.stroke(); }
+  c.restore();
+}
+// схлопывание поля: имплозия без огненного шара — эллипс по полу, шестиугольник, осколки
+function gravBurst(x, y, R, col) {
+  const cy = y - (clamp(R * 0.12, 5, 13) + 7) * vfxCp();
+  FX.ering(x, y, R, R * 0.04, 0.16, '#e6d6ff', 1.4, true);          // всё стягивается в точку
+  FX.ering(x, y, 6, R * 1.25, 0.46, col, 2.2, true);                  // и выплёвывается тонкой волной по полу
+  FX.ering(x, y, 4, R * 0.75, 0.3, '#ffffff', 1, true);
+  FX.hexRing(x, cy, 3, Math.min(R * 0.3, 34), 0.22, '#ffffff', 1.3);
+  FX.dot(x, cy, 0, 0, 0.07, Math.min(R * 0.1, 12), '#ffffff', 0);
+  FX.sparks(x, cy, 12, '#e6d6ff', R * 4.2, undefined, 0, 0.3);
+  FX.shards(x, y, 8, col, R * 3);
+  FX.light(x, y, R * 1.1, col, 0.3, 0.3);
+}

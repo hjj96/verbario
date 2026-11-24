@@ -2,7 +2,9 @@
 /* ===== Орудия: поведение, снаряды, зоны поражения ===== */
 
 const WB = {};   // логика орудий
-const WD = {};   // постоянная отрисовка (дроны, лучи, ауры)
+const WD = {};   // постоянная отрисовка (дроны, лучи, ауры) — под корпусом
+const WF = {};   // второй проход поверх корпуса: то, что ближе к камере (наниты на передней дуге орбит)
+const WG = {};   // проход по полу — под врагами (поля, воронки)
 
 function cdReady(w, dt, spd) { w.t -= dt * spd; return w.t <= 0; }
 function updateWeapons(dt) {
@@ -377,30 +379,16 @@ WB.horizon = (w, dt, spd) => {
       else hitEnemy(e, p.dmg, { src: w.id, nocrit: false });
     }
   });
-  if (Math.random() < 0.5) { const a = rand(0, TAU), r = R * rand(0.7, 1.1); FX.dot(h.x + Math.cos(a) * r, h.y + Math.sin(a) * r, -Math.cos(a) * r * 2 - Math.sin(a) * 90, -Math.sin(a) * r * 2 + Math.cos(a) * 90, 0.4, 3.5, '#c08bff', 0.5); }
+  if (Math.random() < 0.6) { const a = rand(0, TAU), r = R * rand(0.75, 1.1); FX.sparks(h.x + Math.cos(a) * r, h.y + Math.sin(a) * r, 1, '#d8c2ff', r * 2.4, a + Math.PI + 0.9, 0.1, 0.34); }
   if (h.t >= p.cycle) {
     h.t = 0; h.grow = 0.15;
     const BR = R * 1.3;
-    FX.explosion(h.x, h.y, BR, '#c08bff', true); FX.ring(h.x, h.y, 10, BR * 1.4, 0.5, '#ffffff', 5); FX.addShake(7);
+    gravBurst(h.x, h.y, BR, '#c08bff'); FX.addShake(7);
     AUDIO.sfx('boom', { big: true });
     eachEnemyIn(h.x, h.y, BR, e => { hitEnemy(e, p.burst * P.stats.might, { src: w.id, kb: 300 }); });
   }
 };
-WD.horizon = (c, w) => { const h = w.st.h; if (h) drawHole(c, h.x, h.y, w.p.radius * w.p.area * h.grow, G.time, '#c08bff', 1); };
-function drawHole(c, x, y, R, t, col, a) {
-  if (!(R >= 2) || !isFinite(x) || !isFinite(y)) return;
-  c.save();
-  const g = c.createRadialGradient(x, y, 0, x, y, R);
-  g.addColorStop(0, 'rgba(0,0,0,0.95)'); g.addColorStop(0.35, 'rgba(10,3,20,0.85)'); g.addColorStop(0.75, rgba(col, 0.18 * a)); g.addColorStop(1, rgba(col, 0));
-  c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill();
-  c.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 4; i++) {
-    c.strokeStyle = rgba(i % 2 ? '#ffffff' : col, (0.5 - i * 0.08) * a); c.lineWidth = 2 - i * 0.3;
-    c.beginPath(); c.arc(x, y, R * (0.3 + i * 0.16), t * (3 - i * 0.5) + i, t * (3 - i * 0.5) + i + 2.4); c.stroke();
-  }
-  c.strokeStyle = rgba(col, 0.7 * a); c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, R * 0.22, 0, TAU); c.stroke();
-  c.restore();
-}
+WG.horizon = (c, w) => { const h = w.st.h; if (h) drawHole3D(c, h.x, h.y, w.p.radius * w.p.area * h.grow, G.time, '#c08bff', 1); };
 
 /* ---------- Криолуч ---------- */
 function cryoUpdate(w, dt, spd, isZero) {
@@ -567,7 +555,16 @@ function auraUpdate(w, dt, spd, isGoo) {
   st.tick = (st.tick || 0) - dt * spd;
   if (st.tick > 0) return;
   st.tick = p.tick;
-  eachEnemyIn(P.x, P.y, R, e => { hitEnemy(e, p.dmg, { src: w.id, corrode: p.corrode, nocrit: true }); if (p.leech) leech(p.leech); });
+  // укус: нанит бросается к машине, на ней вспыхивает шестиугольник коррозии
+  const col = isGoo ? EVOS.goo.color : WEAPONS.nanites.color, cy = P.y - 14 * vfxCp();
+  let darts = 0;
+  eachEnemyIn(P.x, P.y, R, e => {
+    hitEnemy(e, p.dmg, { src: w.id, corrode: p.corrode, nocrit: true }); if (p.leech) leech(p.leech);
+    if (darts < (isGoo ? 5 : 3) && Math.random() < 0.5) {
+      darts++; const a = Math.atan2(e.y - P.y, e.x - P.x) + rand(-0.6, 0.6);
+      FX.beam(P.x + Math.cos(a) * R * 0.55, cy + Math.sin(a) * R * 0.22, e.x, e.y - 3, 1, 0.12, col); FX.hexRing(e.x, e.y - 3, 1.5, 7, 0.2, col, 1);
+    }
+  });
 }
 WB.nanites = (w, dt, spd) => auraUpdate(w, dt, spd, false);
 WB.goo = (w, dt, spd) => auraUpdate(w, dt, spd, true);
@@ -586,8 +583,10 @@ function drawAuraCloud(c, w, col, n) {
   }
   c.restore();
 }
-WD.nanites = (c, w) => drawAuraCloud(c, w, '#8dff6a', 46);
-WD.goo = (c, w) => drawAuraCloud(c, w, '#c9ffb8', 90);
+WD.nanites = (c, w) => nanoSwarm(c, P.x, P.y, w.p.radius * w.p.area, WEAPONS.nanites.color, 30, G.time, false, 14, 3);
+WF.nanites = (c, w) => nanoSwarm(c, P.x, P.y, w.p.radius * w.p.area, WEAPONS.nanites.color, 30, G.time, true, 14, 3);
+WD.goo = (c, w) => nanoSwarm(c, P.x, P.y, w.p.radius * w.p.area, EVOS.goo.color, 46, G.time, false, 14, 4);
+WF.goo = (c, w) => nanoSwarm(c, P.x, P.y, w.p.radius * w.p.area, EVOS.goo.color, 46, G.time, true, 14, 4);
 
 /* ---------- Ударная волна ---------- */
 WB.shock = (w, dt, spd) => {
@@ -973,7 +972,7 @@ const PK = {
       spawnArea('well', p.tx, p.ty, { r: W.r, life: W.life, dmg: W.dmg, tick: W.tick, pull: W.pull, collapse: W.collapse, src: p.src });
       FX.ring(p.tx, p.ty, 4, W.r, 0.4, '#a77bff', 3);
     },
-    draw(c, p) { c.drawImage(dotSprite('#a77bff'), p.x - 8, p.y - 8, 16, 16); c.fillStyle = '#000'; c.beginPath(); c.arc(p.x, p.y, 3, 0, TAU); c.fill(); },
+    draw(c, p) { drawGravSeed(c, p); },
   },
 };
 function drawSaw(c, x, y, r, rot, col) {
@@ -1064,14 +1063,14 @@ const AK = {
         if (!e.boss) { const pull = Math.min(d, a.pull * dt * (0.4 + 0.6 * (1 - d / (R + e.r)))); e.x += dx / d * pull; e.y += dy / d * pull; }
         if (doTick) hitEnemy(e, a.dmg, { src: a.src, nocrit: true });
       });
-      if (Math.random() < 0.6) { const an = rand(0, TAU), rr = R * rand(0.6, 1); FX.dot(a.x + Math.cos(an) * rr, a.y + Math.sin(an) * rr, -Math.cos(an) * rr * 2.5 - Math.sin(an) * 70, -Math.sin(an) * rr * 2.5 + Math.cos(an) * 70, 0.35, 3, '#a77bff', 0.3); }
+      if (Math.random() < 0.5) { const an = rand(0, TAU), rr = R * rand(0.7, 1); FX.sparks(a.x + Math.cos(an) * rr, a.y + Math.sin(an) * rr, 1, '#c9a6ff', rr * 2.6, an + Math.PI + 0.9, 0.1, 0.32); }
     },
     end(a) {
       if (!a.collapse) return;
-      FX.explosion(a.x, a.y, a.r * 0.8, '#a77bff', true); AUDIO.sfx('boom');
+      gravBurst(a.x, a.y, a.r * 0.8, '#a77bff'); AUDIO.sfx('boom');
       eachEnemyIn(a.x, a.y, a.r * 0.9, e => { hitEnemy(e, a.collapse, { src: a.src, kb: 250 }); });
     },
-    draw(c, a) { const q = Math.min(1, a.life / 0.25); drawHole(c, a.x, a.y, a.r * Math.min(1, a.t * 4) * q, G.time + a.x, '#a77bff', q); },
+    draw(c, a) { const q = Math.min(1, a.life / 0.25); drawHole3D(c, a.x, a.y, a.r * Math.min(1, a.t * 4) * q, G.time + a.x, '#a77bff', q); },
   },
   cloud: {
     update(a, dt) {
@@ -1080,9 +1079,7 @@ const AK = {
     },
     draw(c, a) {
       const q = Math.min(1, a.life / a.max * 2);
-      c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.35 * q;
-      c.drawImage(dotSprite('#8dff6a'), a.x - a.r, a.y - a.r, a.r * 2, a.r * 2);
-      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      c.globalAlpha = q; nanoSwarm(c, a.x, a.y, a.r * 0.9, '#8dff6a', 9, G.time + a.x * 0.01, undefined, 4, 2); c.globalAlpha = 1;
     },
   },
   mine: {

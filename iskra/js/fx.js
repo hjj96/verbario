@@ -76,7 +76,7 @@ const FX = {
   // шестиугольник попадания: чёткая расходящаяся грань
   hexRing(x, y, r0, r1, life, col, w) { if (this.rings.length < 160) this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 1.4, hex: true, rot: Math.random() * TAU }); },
   // кольцо по земле в перспективе (взрывы, удары)
-  ering(x, y, r0, r1, life, col, w) { this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 2, ell: true }); },
+  ering(x, y, r0, r1, life, col, w, thin) { this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 2, ell: true, thin }); },
   // рельсовый луч со спиралью и кольцами давления вдоль ствола
   rail(x1, y1, x2, y2, w, life, col) { this.beams.push({ x1, y1, x2, y2, w, life, max: life, col, helix: true, ph: Math.random() * TAU }); },
   puff(x, y, size, col, life, vx, vy) { return this.add({ k: 3, x, y, vx: vx || 0, vy: vy || -12, life, max: life, size, col, drag: 1.5, grow: size * 1.6, soft: true }); },
@@ -228,7 +228,7 @@ const FX = {
       c.strokeStyle = r.col; c.lineWidth = r.w * (1 - q * 0.6);
       c.beginPath();
       if (r.hex) { for (let i = 0; i <= 6; i++) { const a = r.rot + i * TAU / 6 + q * 0.6, px = r.x + Math.cos(a) * rad, py = r.y + Math.sin(a) * rad; i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke(); }
-      else if (r.ell) { const sp = vfxSp(); c.ellipse(r.x, r.y, Math.max(0.1, rad), Math.max(0.1, rad * sp), 0, 0, TAU); c.stroke(); c.globalAlpha *= 0.35; c.lineWidth *= 3.5; c.stroke(); }
+      else if (r.ell) { const sp = vfxSp(); c.ellipse(r.x, r.y, Math.max(0.1, rad), Math.max(0.1, rad * sp), 0, 0, TAU); c.stroke(); if (!r.thin) { c.globalAlpha *= 0.35; c.lineWidth *= 3.5; c.stroke(); } }
       else { c.arc(r.x, r.y, Math.max(0.1, rad), 0, TAU); c.stroke(); }
     }
     for (const f of this.flashes) {

@@ -419,6 +419,7 @@ function renderGame() {
   drawWorldGround(c);
   FX.drawLights(c);
   for (const a of G.areas) if (a.kind !== 'ring' && a.kind !== 'strike') AK[a.kind].draw(c, a);
+  if (!G.tf.cur) for (const w of P.weapons) { const d = WG[w.id]; if (d) d(c, w); }
   drawWarns(c);
   drawPickups(c);
   drawWebs(c);
@@ -431,10 +432,12 @@ function renderGame() {
   if (!G.tf.cur) for (const w of P.weapons) { const d = WD[w.id]; if (d) d(c, w); }
   drawPlayer(c, z, e0, f0);
   c.setTransform(z, 0, 0, z, e0, f0);
+  if (!G.tf.cur) for (const w of P.weapons) { const d = WF[w.id]; if (d) d(c, w); }
+  c.setTransform(z, 0, 0, z, e0, f0);
   c.globalCompositeOperation = 'lighter';
-  for (const p of G.projs) if (p.kind === 'flame' || p.kind === 'grav') PK[p.kind].draw(c, p);
+  for (const p of G.projs) if (p.kind === 'flame') PK[p.kind].draw(c, p);
   c.globalCompositeOperation = 'source-over';
-  for (const p of G.projs) if (p.kind === 'bolt' || p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather' || p.kind === 'glaive' || p.kind === 'orb' || p.kind === 'bomblet') PK[p.kind].draw(c, p);
+  for (const p of G.projs) if (p.kind === 'bolt' || p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather' || p.kind === 'glaive' || p.kind === 'orb' || p.kind === 'bomblet' || p.kind === 'grav') PK[p.kind].draw(c, p);
   for (const a of G.areas) if (a.kind === 'ring' || a.kind === 'strike') AK[a.kind].draw(c, a);
   drawEnemyBullets(c);
   drawWorldGlow(c);
