@@ -210,7 +210,7 @@ const FX = {
       if (p.k === 6) {
         const q = p.life / p.max, s = p.size, y = p.y - p.z * cp;
         if (q < 0.6) { c.globalAlpha = Math.min(1, q / 0.6) * 0.45; const s2 = s * 1.15; c.drawImage(smokeSprite(), p.x - s2, y - s2, s2 * 2, s2 * 2); }
-        if (q > 0.3) { c.globalAlpha = Math.min(1, (q - 0.3) / 0.3); c.drawImage(fireSprite(p.col), p.x - s, y - s, s * 2, s * 2); }
+        if (q > 0.3) { c.globalAlpha = Math.min(1, (q - 0.3) / 0.3); c.drawImage(fireSprite(p.col), p.x - s, y - upY(s), s * 2, upY(s * 2)); }
       } else if (p.k === 5) {
         if (!cs) cs = chunkSprites();
         c.globalAlpha = Math.min(1, p.life / p.max * 2.5);
@@ -276,7 +276,7 @@ const FX = {
       c.strokeStyle = r.col; c.lineWidth = r.w * (1 - q * 0.6);
       c.beginPath();
       if (r.hex) { for (let i = 0; i <= 6; i++) { const a = r.rot + i * TAU / 6 + q * 0.6, px = r.x + Math.cos(a) * rad, py = r.y + Math.sin(a) * rad; i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke(); }
-      else if (r.ell) { const sp = vfxSp(); c.ellipse(r.x, r.y, Math.max(0.1, rad), Math.max(0.1, rad * sp), 0, 0, TAU); c.stroke(); if (!r.thin) { c.globalAlpha *= 0.35; c.lineWidth *= 3.5; c.stroke(); } }
+      else if (r.ell) { const sp = floorRy(); c.ellipse(r.x, r.y, Math.max(0.1, rad), Math.max(0.1, rad * sp), 0, 0, TAU); c.stroke(); if (!r.thin) { c.globalAlpha *= 0.35; c.lineWidth *= 3.5; c.stroke(); } }
       else { c.arc(r.x, r.y, Math.max(0.1, rad), 0, TAU); c.stroke(); }
     }
     for (const f of this.flashes) {

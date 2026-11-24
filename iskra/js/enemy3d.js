@@ -327,7 +327,7 @@ function enemyMuzzle(e) {
   const S = SPR.enemies[e.tid];
   if (!S || !S.muz.length) return { x: e.x, y: e.y };
   const Y = eYawIdx(e.ang), q = S.muz[Y.yi] || { x: 0, y: 0 }, k = e.scale || 1;
-  return { x: e.x + (Y.mir ? -q.x : q.x) * k, y: e.y + q.y * k };
+  return { x: e.x + (Y.mir ? -q.x : q.x) * k, y: e.y + upY(q.y * k) };
 }
 // враг во льду: та же модель, но грани — голубое стекло, рёбра — иней (а не белая заливка силуэта)
 function iceOf(S, yi) {
@@ -349,7 +349,7 @@ function drawEnemySprite(c, e, z, e0, f0, t) {
   let oy = dropOff(e);
   if (S.fly) oy -= Math.sin(t * 3 + e.anim) * S.r * 0.1;
   const a = z * k / S.res;
-  c.setTransform(Y.mir ? -a : a, 0, 0, a, e.x * z + e0, (e.y + oy) * z + f0);
+  c.setTransform(Y.mir ? -a : a, 0, 0, a, e.x * z + e0, e.y * z * RENDER.k + oy * z + f0);
   let al = e.t < 0.4 ? Math.min(1, e.t * 5) : 1;
   if (e.phased) al *= 0.3 + Math.sin(t * 50) * 0.15;
   c.globalAlpha = al;
@@ -360,8 +360,8 @@ function drawEnemySprite(c, e, z, e0, f0, t) {
   c.globalAlpha = 1;
 }
 // экранные смещения от позиции машины: до точки на полу и до её верхушки (для колец, полос, звёзд оглушения)
-function eGround(e) { const S = SPR.enemies[e.tid]; return S ? S.zc * S.cp * (e.scale || 1) : e.r * 0.4; }
-function eTop(e) { const S = SPR.enemies[e.tid], D = _eDim[e.tid]; return S && D ? ((D.top - S.zc) * S.cp + (e.elite ? e.T.r * 0.6 : 0)) * (e.scale || 1) : e.r; }
+function eGround(e) { const S = SPR.enemies[e.tid]; return upY(S ? S.zc * S.cp * (e.scale || 1) : e.r * 0.4); }
+function eTop(e) { const S = SPR.enemies[e.tid], D = _eDim[e.tid]; return upY(S && D ? ((D.top - S.zc) * S.cp + (e.elite ? e.T.r * 0.6 : 0)) * (e.scale || 1) : e.r); }
 // мягкая тень-пятно на полу под машиной (одна на всех, рисуется до врагов)
 function shadowBlob() {
   if (SPR.shadow) return SPR.shadow;
@@ -372,8 +372,8 @@ function shadowBlob() {
 }
 function drawEnemyShadow(c, e) {
   const S = SPR.enemies[e.tid]; if (!S) return;
-  const k = e.scale || 1, q = e.t < 0.4 ? 0.35 + 0.65 * (e.t / 0.4) : 1, rx = S.rad * 1.2 * k * q, ry = rx * Math.max(0.42, S.sn);
-  c.drawImage(shadowBlob(), e.x - rx, e.y + S.zc * S.cp * k - ry, rx * 2, ry * 2);
+  const k = e.scale || 1, q = e.t < 0.4 ? 0.35 + 0.65 * (e.t / 0.4) : 1, rx = S.rad * 1.2 * k * q, ry = rx * (RENDER.k < 1 ? 1 : Math.max(0.42, S.sn));
+  c.drawImage(shadowBlob(), e.x - rx, e.y + upY(S.zc * S.cp * k) - ry, rx * 2, ry * 2);
 }
 
 /* ===== Элита: живая модель с короной и признаками свойства ===== */
@@ -387,7 +387,7 @@ function drawElite3D(c, e, z, e0, f0, t) {
   const m = eModelMesh(e.tid, e.T.r, e.ang || 0, ps, S.zc);
   let oy = dropOff(e);
   if (S.fly) oy -= Math.sin(t * 3 + e.anim) * S.r * 0.1;
-  c.setTransform(z * k, 0, 0, z * k, e.x * z + e0, (e.y + oy) * z + f0);
+  c.setTransform(z * k, 0, 0, z * k, e.x * z + e0, e.y * z * RENDER.k + oy * z + f0);
   if (e.t < 0.4) c.globalAlpha = Math.min(1, e.t * 5);
   renderMesh(c, m, ps.pal, view, {});
   if (e.flash > 0) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.6; renderMesh(c, m, ps.pal, view, { flat: '#ffffff' }); c.restore(); }
@@ -423,7 +423,7 @@ function drawWrecks(c, z, e0, f0) {
     if (Math.abs(w.x - G.cam.x) > VIEW.hw + 260 || Math.abs(w.y - G.cam.y) > VIEW.hh + 260) continue;
     const m = w.build(G.time);
     wreckAnim(w.t / w.dur, w.seed, w.D)(m);
-    c.setTransform(z * w.k, 0, 0, z * w.k, w.x * z + e0, w.y * z + f0);
+    c.setTransform(z * w.k, 0, 0, z * w.k, w.x * z + e0, w.y * z * RENDER.k + f0);
     renderMesh(c, m, w.pal, view, w.only ? { only: w.only } : {});
   }
 }

@@ -33,6 +33,6 @@ function playerPoints() {
 function muzzleWorld(w) {
   if (!P || !P.look) return { x: 0, y: 0 };
   const R = playerPoints(), a = R.an[w.slot || 'chest'];
-  if (a) return { x: P.x + a.x, y: P.y + a.y };
-  return { x: P.x + Math.cos(P.aim) * 12 * R.k, y: P.y + Math.sin(P.aim) * 12 * R.k - 6 * R.k };
+  if (a) return { x: P.x + a.x, y: P.y + upY(a.y) };
+  return { x: P.x + Math.cos(P.aim) * 12 * R.k, y: P.y + Math.sin(P.aim) * 12 * R.k - upY(6 * R.k) };
 }

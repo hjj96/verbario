@@ -45,8 +45,9 @@ function vpal(col0, metal) {
 
 /* ---------- Атлас кадров: модель → n кадров (вращение или курс) с общим якорем ---------- */
 const VFX = { view: null, res: 0, cache: {} };
-const vfxSp = () => Math.max(0.42, Math.sin(VIEW_PITCH[enemyView()] || 0.42));
-const vfxCp = () => Math.cos(VIEW_PITCH[enemyView()] || 0.42);
+// проекция модели в координатах мира кадра: экранные величины делятся на сжатие пола (см. floorK)
+const vfxSp = () => Math.max(0.42, Math.sin(VIEW_PITCH[enemyView()] || 0.42)) / RENDER.k;
+const vfxCp = () => Math.cos(VIEW_PITCH[enemyView()] || 0.42) / RENDER.k;
 function vfxSprites(key, n, build, pal) {
   const view = enemyView(), res = clamp((VIEW.scale || 1) * (VIEW.dpr || 1) * 1.3, 1.6, 3.4);
   if (VFX.view !== view || Math.abs(VFX.res - res) > 0.35) { VFX.view = view; VFX.res = res; VFX.cache = {}; }
@@ -64,16 +65,17 @@ function vfxSprites(key, n, build, pal) {
   S = { cv, pw, ph, ax, ay, res, n };
   return (VFX.cache[key] = S);
 }
+// кадр модели рисуется вертикально: высота растягивается обратно на сжатие пола
 function vfxDraw(c, S, f, x, y, k, alpha) {
-  const cv = S.cv[((f % S.n) + S.n) % S.n], s = (k || 1) / S.res;
-  if (alpha !== undefined && alpha < 1) { const ga = c.globalAlpha; c.globalAlpha = ga * alpha; c.drawImage(cv, x - S.ax * s, y - S.ay * s, S.pw * s, S.ph * s); c.globalAlpha = ga; }
-  else c.drawImage(cv, x - S.ax * s, y - S.ay * s, S.pw * s, S.ph * s);
+  const cv = S.cv[((f % S.n) + S.n) % S.n], s = (k || 1) / S.res, sy = s / RENDER.k;
+  if (alpha !== undefined && alpha < 1) { const ga = c.globalAlpha; c.globalAlpha = ga * alpha; c.drawImage(cv, x - S.ax * s, y - S.ay * sy, S.pw * s, S.ph * sy); c.globalAlpha = ga; }
+  else c.drawImage(cv, x - S.ax * s, y - S.ay * sy, S.pw * s, S.ph * sy);
 }
 // экранный курс → кадр (модель в кадре f смотрит в мировой угол f·2π/n)
 const yawFrame = (a, n) => Math.round((((a % TAU) + TAU) % TAU) / TAU * n) % n;
 // тень на полу под летящим предметом
 function vfxShadow(c, x, y, r, a) {
-  const sp = vfxSp();
+  const sp = floorRy();
   c.globalAlpha = a; c.drawImage(shadowBlob(), x - r, y - r * sp, r * 2, r * 2 * sp); c.globalAlpha = 1;
 }
 
@@ -98,8 +100,8 @@ function sawMesh(m, f, n, R, teeth) {
   m.cyl(R * 0.2, R * 0.18, -1.4, 1.4, 8, 'd');
   m.pop();
 }
-// палитра пилы: тёмная сталь со стальными рёбрами (свечение её не выбеливает), зубья — раскалённый цвет орудия
-function sawPal(col) {
+// стальная палитра (пила, рукоять меча): тёмная сталь со стальными рёбрами (свечение её не выбеливает), акцент — цвет орудия
+function steelPal(col) {
   const key = 'saw' + col;
   if (_vpal[key]) return _vpal[key];
   const base = vpal(col, true), C = hexToRgb, dc = deepen(col);
@@ -112,7 +114,7 @@ function sawPal(col) {
 }
 // дуги вращения по ободу (две «кометы») и линии скорости позади — чёткие, без свечения
 function drawSaw3D(c, x, y, r, rot, col, big, vx, vy) {
-  const S = vfxSprites(big ? 'bigsaw' : 'saw', 12, (m, f) => sawMesh(m, f, 12, 10, big ? 22 : 14), sawPal(col));
+  const S = vfxSprites(big ? 'bigsaw' : 'saw', 12, (m, f) => sawMesh(m, f, 12, 10, big ? 22 : 14), steelPal(col));
   const k = r / 10 * (big ? 1.25 : 1.5), f = Math.floor(((rot % (TAU / 3)) + TAU / 3) % (TAU / 3) / (TAU / 3) * 12), R = 10 * k;
   const sp = vfxSp(), cp = vfxCp(), cy = y - SAW_H * k * cp, ry = Math.cos(SAW_TILT) * sp + Math.sin(SAW_TILT) * cp, cs = sheathCol(col);
   vfxShadow(c, x, y, 8 * k, 0.4);
@@ -212,11 +214,11 @@ function drawMissile3D(c, p, col, k) {
 /* ---------- Световая глефа: металлическая двусторонняя рукоять + два энергоклинка со шлейфом ---------- */
 const SABER_Z = 7, SABER_TILT = 0.6;
 // плоскость вращения клинков наклонена к камере: видно весь оборот, а не только горизонталь
-const saberE = () => Math.min(1, Math.sin((VIEW_PITCH[enemyView()] || 0.42) + SABER_TILT));
+const saberE = () => Math.min(1, Math.sin((VIEW_PITCH[enemyView()] || 0.42) + SABER_TILT)) / RENDER.k;
 // rot — угол рукояти; R — радиус до кончиков; tr — история положений {x, y, r} для шлейфа;
 // ext — выдвижение клинков (0 — погашены, 1 — полные, >1 — удлинены); fl — вспышка зажигания 0..1
 function drawSaber3D(c, x, y, rot, R, col, tr, ext, fl) {
-  const cy = y - SABER_Z * vfxCp(), h0 = R * 0.26, e = saberE(), ca = Math.cos(rot), sa = Math.sin(rot) * e;
+  const cy = y - SABER_Z * vfxCp(), h0 = R * 0.3, e = saberE(), ca = Math.cos(rot), sa = Math.sin(rot) * e;
   ext = ext === undefined ? 1 : ext;
   const L = h0 + (R - h0) * ext, hum = 1 + Math.sin(G.time * 53 + x * 0.7) * 0.12;
   c.save(); c.globalCompositeOperation = 'lighter';
@@ -252,11 +254,32 @@ function drawSaber3D(c, x, y, rot, R, col, tr, ext, fl) {
     c.globalAlpha = 1;
   }
   c.restore();
-  // рукоять: короткий тёмный стержень строго по оси клинков, светлая кромка
-  c.lineCap = 'round';
-  c.beginPath(); c.moveTo(x - ca * h0, cy - sa * h0); c.lineTo(x + ca * h0, cy + sa * h0);
-  c.strokeStyle = '#141c28'; c.lineWidth = R * 0.14; c.stroke();
-  c.strokeStyle = '#7d90aa'; c.lineWidth = R * 0.045; c.stroke();
+  // рукоять: гранёная модель поверх оснований клинков
+  drawHilt3D(c, x, cy, rot, h0, col);
+}
+// гранёная рукоять: шестигранный хват с двумя рёбрами, расширяющиеся раструбы-эмиттеры и цветные кольца излучателей.
+// Ось рукояти лежит в той же наклонённой плоскости, что и клинки (см. saberE), поэтому совпадает с ними при любом угле.
+// Рукоять симметрична, поэтому модели кешируются по углу через каждый градус в пределах полуоборота
+const HILT_L = 4, _hilt = {};
+function hiltMesh(rot) {
+  const key = Math.round(((rot % Math.PI) + Math.PI) % Math.PI / Math.PI * 180) % 180;
+  if (_hilt[key]) return _hilt[key];
+  const r = key / 180 * Math.PI, cr = Math.cos(r), sr = Math.sin(r), ct = Math.cos(SABER_TILT), st = Math.sin(SABER_TILT);
+  const A = [cr, -sr * ct, -sr * st], B = [-sr, -cr * ct, -cr * st], N = [0, st, -ct];
+  const m = new Mesh(); m.zc = 0;
+  m.push(); m.mul([B[0], N[0], A[0], 0, B[1], N[1], A[1], 0, B[2], N[2], A[2], 0]);
+  m.cyl(1.12, 1.12, -2.3, 2.3, 6, 'm');
+  m.cyl(1.45, 1.45, -1.45, -0.85, 6, 'd'); m.cyl(1.45, 1.45, 0.85, 1.45, 6, 'd');
+  m.cyl(1.72, 1.18, -3.5, -2.3, 8, 'l'); m.cyl(1.18, 1.72, 2.3, 3.5, 8, 'l');
+  m.cyl(1.8, 1.8, -HILT_L, -3.5, 8, 'a'); m.cyl(1.8, 1.8, 3.5, HILT_L, 8, 'a');
+  m.pop();
+  return (_hilt[key] = m);
+}
+function drawHilt3D(c, x, y, rot, h0, col) {
+  const k = h0 / HILT_L;
+  c.save(); c.translate(x, y); c.scale(k, k / RENDER.k);
+  renderMesh(c, hiltMesh(rot), steelPal(col), enemyView(), {});
+  c.restore();
 }
 function saberTrail(tr, x, y, rot) { tr.unshift({ x, y: y - SABER_Z * vfxCp(), r: rot, t: G.time }); if (tr.length > 3) tr.length = 3; return tr; }
 
@@ -428,9 +451,10 @@ function drawHole3D(c, x, y, R, t, col, a) {
   const sp = vfxSp(), cp = vfxCp(), rc = clamp(R * 0.12, 5, 13), cy = y - (rc + 7) * cp;
   c.save();
   // провал на полу: тёмный эллипс и тонкий край зоны притяжения
-  c.globalAlpha = 0.55 * a; c.fillStyle = '#000000'; c.beginPath(); c.ellipse(x, y, R * 0.5, R * 0.5 * sp, 0, 0, TAU); c.fill();
+  const fr = floorRy();
+  c.globalAlpha = 0.55 * a; c.fillStyle = '#000000'; c.beginPath(); c.ellipse(x, y, R * 0.5, R * 0.5 * fr, 0, 0, TAU); c.fill();
   c.globalAlpha = 0.22 * a; c.strokeStyle = col; c.lineWidth = 1; c.setLineDash([5, 7]); c.lineDashOffset = t * 10;
-  c.beginPath(); c.ellipse(x, y, R, R * sp, 0, 0, TAU); c.stroke(); c.setLineDash([]);
+  c.beginPath(); c.ellipse(x, y, R, R * fr, 0, 0, TAU); c.stroke(); c.setLineDash([]);
   c.globalAlpha = 1; c.globalCompositeOperation = 'lighter';
   holeDisc(c, x, cy, R, t, col, a, sp, false);
   c.globalCompositeOperation = 'source-over';

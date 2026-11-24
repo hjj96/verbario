@@ -177,13 +177,15 @@ const WORLD_PAL = {};
 function hazPal(col) { return WORLD_PAL[col] || (WORLD_PAL[col] = enemyPal({ enemy: col, enemyD: mixHex('#06070c', col, 0.18), eye: '#ffffff', enemyL: mixHex('#ffffff', col, 0.5) }, col, false)); }
 function relayPal(R) { return R.st === 'done' ? hazPal('#46e3ff') : enemyPal(G.sector.pal, R.st === 'cap' ? '#46e3ff' : '#ffd36b', false); }
 const viewSp = view => Math.max(0.35, Math.sin(VIEW_PITCH[view] || 0.42));
+// растяжка глубины моделей на полу: основание совпадает с кругом на полу (с проекцией пола — с его эллипсом)
+const floorFit = view => RENDER.k / viewSp(view);
 const viewCp = view => Math.cos(VIEW_PITCH[view] || 0.42);
 
 // пресс: четыре стойки, рама, гидроцилиндр и плита-молот; глубина растянута, чтобы основание совпадало с кругом удара
 // пресс: задняя рама → плита-молот → гидрошток → передняя рама; слои рисуются по порядку,
 // поэтому шток не «протыкает» плиту при подъёме, как было при общей сортировке граней
 function pressMeshes(h, H, view) {
-  const R = 36, top = 70, ky = 1 / viewSp(view);
+  const R = 36, top = 70, ky = floorFit(view);
   let hz;
   if (h.ph === 0) hz = 4 + 46 * smooth01(h.u / H.t0);
   else if (h.ph === 1) hz = 50 + Math.sin(G.time * 70) * 1.2;
@@ -224,7 +226,7 @@ function pylonMesh(h, H, s) {
 // гейзер: кольцо камней по кромке жерла
 function geyserMesh(h, H, view) {
   const m = new Mesh(); m.zc = 0;
-  m.push(); m.sc(1, 1 / viewSp(view), 1);
+  m.push(); m.sc(1, floorFit(view), 1);
   for (let i = 0; i < 8; i++) {
     const a = i * TAU / 8 + h.ang, rr = H.r * (0.86 + hash2(h.key, i, 7) * 0.16), hh = 6 + hash2(h.key, i, 9) * 12, w = 7 + hash2(h.key, i, 11) * 5;
     m.push(); m.t(Math.cos(a) * rr, Math.sin(a) * rr, 0); m.rz(a);
@@ -256,7 +258,7 @@ function relayMesh(R) {
   return m;
 }
 function drawMeshAt(c, m, pal, x, y, z, e0, f0, view, alpha) {
-  c.setTransform(z, 0, 0, z, x * z + e0, y * z + f0);
+  c.setTransform(z, 0, 0, z, x * z + e0, y * z * RENDER.k + f0);
   if (alpha !== undefined && alpha < 1) { const ga = c.globalAlpha; c.globalAlpha = ga * alpha; renderMesh(c, m, pal, view, {}); c.globalAlpha = ga; }
   else renderMesh(c, m, pal, view, {});
 }
@@ -336,7 +338,7 @@ function drawWorldGround(c) {
 }
 // свечение поверх машин: лучи заборов, столбы кислоты, связь с ретранслятором
 function drawWorldGlow(c) {
-  const H = hazDef(), t = G.time, cp = viewCp(enemyView());
+  const H = hazDef(), t = G.time, cp = viewCp(enemyView()) / RENDER.k;
   c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
   if (H) for (const h of HZ_LIST) {
     if (h.kind === 'fence' && h.ph >= 1) {
@@ -365,7 +367,7 @@ function drawWorldGlow(c) {
     const tz = 80 * cp;
     if (R.st === 'cap') {
       c.strokeStyle = rgba('#46e3ff', 0.55); c.lineWidth = 1.5; c.setLineDash([4, 6]); c.lineDashOffset = -t * 60;
-      c.beginPath(); c.moveTo(P.x, P.y - 20); c.lineTo(R.x, R.y - tz); c.stroke(); c.setLineDash([]); c.lineDashOffset = 0;
+      c.beginPath(); c.moveTo(P.x, P.y - upY(20)); c.lineTo(R.x, R.y - tz); c.stroke(); c.setLineDash([]); c.lineDashOffset = 0;
       c.strokeStyle = rgba('#46e3ff', 0.2 + R.prog * 0.4); c.lineWidth = 2 + R.prog * 4; c.beginPath(); c.moveTo(R.x, R.y - tz); c.lineTo(R.x, R.y - tz - 120 * R.prog); c.stroke();
     } else {
       const k = Math.max(0, 1 - R.doneT / 3);

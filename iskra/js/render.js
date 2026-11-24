@@ -2,7 +2,7 @@
 /* ===== Отрисовка мира и главного меню ===== */
 
 let canvas = null, ctx = null;
-const RENDER = { z: 1, e0: 0, f0: 0, vign: null, frameMs: 16, slowFrames: 0, autoLow: false, ghost: null, ghostKey: '' };
+const RENDER = { z: 1, k: 1, e0: 0, f0: 0, vign: null, frameMs: 16, slowFrames: 0, autoLow: false, ghost: null, ghostKey: '' };
 
 function initCanvas() {
   canvas = document.getElementById('game');
@@ -52,7 +52,14 @@ function buildVignette() {
   c.fillStyle = g; c.fillRect(0, 0, w, h);
   RENDER.vign = v;
 }
-function worldToScreen(x, y) { return { x: (x * RENDER.z + RENDER.e0) / VIEW.dpr, y: (y * RENDER.z + RENDER.f0) / VIEW.dpr }; }
+function worldToScreen(x, y) { return { x: (x * RENDER.z + RENDER.e0) / VIEW.dpr, y: (y * RENDER.z * RENDER.k + RENDER.f0) / VIEW.dpr }; }
+// мировое преобразование кадра (пол сжат проекцией) и вертикальный якорь без сжатия — для надписей и значков в мире
+function worldT(c) { c.setTransform(RENDER.z, 0, 0, RENDER.z * RENDER.k, RENDER.e0, RENDER.f0); }
+function uprightAt(c, x, y, s) { const z = RENDER.z * (s || 1); c.setTransform(z, 0, 0, z, x * RENDER.z + RENDER.e0, y * RENDER.z * RENDER.k + RENDER.f0); }
+// экранная высота (вертикальное смещение «вверх» на экране) → смещение в координатах мира кадра
+const upY = h => h / RENDER.k;
+// отношение осей эллипса на полу в координатах мира: при проекции пол сжимает круг сам
+const floorRy = () => (RENDER.k < 1 ? 1 : vfxSp());
 
 /* ---------- Пол: план-чертёж сектора ---------- */
 function drawGround(c, x0, y0, x1, y1) {
@@ -90,7 +97,7 @@ function drawGround(c, x0, y0, x1, y1) {
       if (x + d.r < x0 || x - d.r > x1 || y + d.r < y0 || y - d.r > y1) continue;
       const rot = Math.floor(hash2(cx, cy, seed + 9) * 4) * Math.PI / 2, sc = 0.9 + hash2(cx, cy, seed + 13) * 0.35;
       const ca = Math.cos(rot) * sc * z, sa = Math.sin(rot) * sc * z;
-      c.setTransform(ca, sa, -sa, ca, x * z + e0, y * z + f0);
+      c.setTransform(ca, sa * RENDER.k, -sa, ca * RENDER.k, x * z + e0, y * z * RENDER.k + f0);
       for (const st of d.s) {
         c.globalAlpha = st.a; c.strokeStyle = st.col; c.lineWidth = st.w * VIEW.dpr / (z * sc);
         if (st.dash) c.setLineDash(st.dash);
@@ -98,11 +105,17 @@ function drawGround(c, x0, y0, x1, y1) {
         if (st.dash) c.setLineDash([]);
       }
       c.globalAlpha = 1;
-      if (d.t) { c.setTransform(sc * z, 0, 0, sc * z, x * z + e0, y * z + f0); c.font = '600 8px "JetBrains Mono", monospace'; c.fillStyle = Pl.note; for (const t of d.t) c.fillText(t[2], t[0], t[1]); }
+      if (d.t) { c.setTransform(sc * z, 0, 0, sc * z * RENDER.k, x * z + e0, y * z * RENDER.k + f0); c.font = '600 8px "JetBrains Mono", monospace'; c.fillStyle = Pl.note; for (const t of d.t) c.fillText(t[2], t[0], t[1]); }
     }
-    c.setTransform(z, 0, 0, z, e0, f0);
+    worldT(c);
   }
   c.textBaseline = 'alphabetic';
+  // глубина: дальняя (верхняя) часть пола уходит в дымку — плоскость читается наклонённой
+  if (RENDER.k < 1) {
+    const h = (y1 - y0) * 0.6, g = c.createLinearGradient(0, y0, 0, y0 + h);
+    g.addColorStop(0, rgba(Pl.ground, 0.62)); g.addColorStop(1, rgba(Pl.ground, 0));
+    c.fillStyle = g; c.fillRect(x0, y0, x1 - x0, h);
+  }
 }
 
 /* ---------- Подбираемое ---------- */
@@ -112,7 +125,7 @@ function drawPickups(c) {
     if (!onScreen(g, 30)) continue;
     const s = SPR.gems[g.tier], bob = g.mag ? 0 : Math.sin(t * 4 + g.t) * 1.5;
     if (g.mag && g.sp > 200) { const d = Math.hypot(P.x - g.x, P.y - g.y) || 1, l = Math.min(26, g.sp * 0.03); c.strokeStyle = GEM_TIERS[g.tier].col; c.globalAlpha = 0.5; c.lineWidth = 1.2; c.beginPath(); c.moveTo(g.x, g.y); c.lineTo(g.x - (P.x - g.x) / d * l, g.y - (P.y - g.y) / d * l); c.stroke(); c.globalAlpha = 1; }
-    c.drawImage(s.cv, g.x - s.size / 2, g.y - s.size / 2 + bob, s.size, s.size);
+    c.drawImage(s.cv, g.x - s.size / 2, g.y + upY(-s.size / 2 + bob), s.size, upY(s.size));
   }
   for (const it of G.items) {
     const s = SPR.items[it.kind];
@@ -124,7 +137,7 @@ function drawPickups(c) {
       c.strokeStyle = rgba(it.kind === 'bigchest' ? '#ffd36b' : '#46e3ff', 0.4 + Math.sin(t * 5) * 0.2); c.lineWidth = 1.5;
       c.beginPath(); c.arc(it.x, it.y, 22 + Math.sin(t * 3) * 3, 0, TAU); c.stroke(); c.restore();
     }
-    c.drawImage(s.cv, it.x - s.size * k / 2, it.y - s.size * k / 2 + bob, s.size * k, s.size * k);
+    c.drawImage(s.cv, it.x - s.size * k / 2, it.y + upY(-s.size * k / 2 + bob), s.size * k, upY(s.size * k));
   }
 }
 
@@ -138,7 +151,7 @@ function drawEnemies(c, z, e0, f0) {
   worldDrawables(vis);
   // дальние (выше на экране) — раньше: машины правильно заслоняют друг друга
   vis.sort((a, b) => a.y - b.y);
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   for (const e of vis) { if (e.dz) continue; if (e.boss) drawBossShadow(c, e); else if (!e.parent && e.T.ai !== 'node') drawEnemyShadow(c, e); }
   let live = 0;
   for (const e of vis) {
@@ -151,14 +164,14 @@ function drawEnemies(c, z, e0, f0) {
     if (e.boss || e.parent) continue;
     if (e.t < 0.4 || e.tid === 'kami' || e.tid === 'charger' || e.shieldT > 0 || e.st.stunT > 0 || e.st.markT > 0 || e.elite || e.tid === 'shielder' || e.tid === 'medic' || (e.tid === 'eater' && e.ate)) det.push(e);
   }
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   drawWrecks(c, z, e0, f0);
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   if (!det.length) return;
   const Pl = G.sector.pal;
   c.lineCap = 'round';
   c.strokeStyle = rgba(Pl.enemy, 0.7); c.lineWidth = 1; c.beginPath();
-  for (const e of det) if (e.t < 0.4) { const q = e.t / 0.4, r = e.r * (2.6 - q * 1.4), gy = e.y + eGround(e); c.moveTo(e.x + r, gy); c.ellipse(e.x, gy, r, r * 0.5, 0, 0, TAU * (0.3 + q * 0.7)); }
+  for (const e of det) if (e.t < 0.4) { const q = e.t / 0.4, r = e.r * (2.6 - q * 1.4), gy = e.y + eGround(e), ry = RENDER.k < 1 ? r : r * 0.5; c.moveTo(e.x + r, gy); c.ellipse(e.x, gy, r, ry, 0, 0, TAU * (0.3 + q * 0.7)); }
   c.stroke();
   c.strokeStyle = 'rgba(167,123,255,0.4)'; c.lineWidth = 1; c.beginPath();
   for (const e of det) if (e.shieldT > 0) { c.moveTo(e.x + e.r + 4, e.y); c.arc(e.x, e.y, e.r + 4, 0, TAU); }
@@ -172,7 +185,7 @@ function drawEnemies(c, z, e0, f0) {
   c.stroke();
   c.setLineDash([]);
   c.fillStyle = '#ffe66b'; c.beginPath();
-  for (const e of det) if (e.st.stunT > 0) for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3, sx = e.x + Math.cos(a) * e.r * 0.8, sy = e.y - eTop(e) - 4 + Math.sin(a) * 3; c.moveTo(sx + 1.6, sy); c.arc(sx, sy, 1.6, 0, TAU); }
+  for (const e of det) if (e.st.stunT > 0) for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3, sx = e.x + Math.cos(a) * e.r * 0.8, sy = e.y - eTop(e) - upY(4 - Math.sin(a) * 3); c.moveTo(sx + 1.6, sy); c.arc(sx, sy, 1.6, 0, TAU); }
   c.fill();
   for (const e of det) {
     if (e.tid === 'kami' && e.ai.fuse !== undefined) {
@@ -189,11 +202,14 @@ function drawEnemies(c, z, e0, f0) {
     if (e.tid === 'eater' && e.ate) { const q = Math.min(1, e.ate / 40); glow(c, e.x, e.y, e.r * (0.6 + q * 0.6), '#b38bff', 0.5 + q * 0.5); }
     if (e.st.markT > 0) { c.strokeStyle = 'rgba(255,77,94,0.85)'; c.lineWidth = 1; c.beginPath(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + t * 2; c.moveTo(e.x + Math.cos(a) * (e.r + 3), e.y + Math.sin(a) * (e.r + 3)); c.lineTo(e.x + Math.cos(a) * (e.r + 9), e.y + Math.sin(a) * (e.r + 9)); } c.stroke(); }
     if (e.elite) {
-      const w = e.r * 2.4, q = clamp(e.hp / e.maxHp, 0, 1), y = e.y - eTop(e) - 10;
-      c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(e.x - w / 2, y, w, 4);
-      c.fillStyle = '#ffd36b'; c.fillRect(e.x - w / 2, y, w * q, 4);
-      if (e.armored) { c.fillStyle = '#9fdcff'; c.fillRect(e.x - w / 2, y + 5, w * clamp((e.hp - e.maxHp * ELITE_ARMOR_AT) / (e.maxHp * (1 - ELITE_ARMOR_AT)), 0, 1), 2); }
-      if (e.affix) { c.font = '700 7px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,211,107,0.95)'; c.fillText(ELITE_AFFIX[e.affix].name.toUpperCase() + ' · ' + e.T.name.toUpperCase(), e.x, y - 2); c.textAlign = 'left'; }
+      // полоса прочности и табличка свойства — вертикальные, без сжатия пола
+      const w = e.r * 2.4, q = clamp(e.hp / e.maxHp, 0, 1);
+      uprightAt(c, e.x, e.y - eTop(e));
+      c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(-w / 2, -10, w, 4);
+      c.fillStyle = '#ffd36b'; c.fillRect(-w / 2, -10, w * q, 4);
+      if (e.armored) { c.fillStyle = '#9fdcff'; c.fillRect(-w / 2, -5, w * clamp((e.hp - e.maxHp * ELITE_ARMOR_AT) / (e.maxHp * (1 - ELITE_ARMOR_AT)), 0, 1), 2); }
+      if (e.affix) { c.font = '700 7px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,211,107,0.95)'; c.fillText(ELITE_AFFIX[e.affix].name.toUpperCase() + ' · ' + e.T.name.toUpperCase(), 0, -12); c.textAlign = 'left'; }
+      worldT(c);
     }
   }
   c.lineCap = 'butt';
@@ -283,14 +299,14 @@ function playerMesh() {
 function drawPlayerShadow(c, z, e0, f0) {
   if (G.tf.cur || P.split || !P.look) return;
   const view = P.view === 'top' ? 'top' : 'front', k = robotK(P.look, view);
-  c.setTransform(z * k, 0, 0, z * k, P.x * z + e0, P.y * z + f0);
+  c.setTransform(z * k, 0, 0, z * k, P.x * z + e0, P.y * z * RENDER.k + f0);
   // светлое пятно реактора на полу — на нём читается тень
   const fy = ZC * Math.cos(VIEW_PITCH[view]), fl = Math.sin(VIEW_PITCH[view]), lc = P.od.active ? '255,79,154' : '70,227,255';
   const g = c.createRadialGradient(0, fy, 0, 0, fy, 46);
   g.addColorStop(0, 'rgba(' + lc + ',0.13)'); g.addColorStop(1, 'rgba(' + lc + ',0)');
   c.fillStyle = g; c.beginPath(); c.ellipse(0, fy, 46, 46 * fl, 0, 0, TAU); c.fill();
   renderShadow(c, playerMesh(), view, {}, 0.42);
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
 }
 function ghostSprite() {
   const L = P.look;
@@ -305,7 +321,7 @@ function ghostSprite() {
 function drawSplit(c, z, e0, f0) {
   const sp = P.split, q = clamp(sp.t / sp.dur, 0, 1), L = P.look;
   c.save();
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
   const paths = [];
   for (const pt of sp.parts) {
@@ -330,23 +346,23 @@ function drawSplit(c, z, e0, f0) {
     const key = pt.only === 'arms' ? 'arms' + pt.armSide : pt.only;
     const an = (pt.only === 'arms' ? m.pa[pt.armSide > 0 ? 'jR' : 'jL'] : m.pa[pt.only]) || [0, 0, ZC];
     const hop = Math.sin(qq * Math.PI);
-    GM[key] = animMat(an, (cur.x - P.x) / k, -(cur.y - P.y) / (k * spn), hop * 7, pt.ax[0], pt.ax[1], pt.ax[2], hop * pt.spin * 1.4, 1);
+    GM[key] = animMat(an, (cur.x - P.x) / k, -(cur.y - P.y) * RENDER.k / (k * spn), hop * 7, pt.ax[0], pt.ax[1], pt.ax[2], hop * pt.spin * 1.4, 1);
   }
   const gk = x => (x.g === 'arms' ? 'arms' + x.side : x.g);
   m.animate(pr => (GM[gk(pr)] ? { m: GM[gk(pr)] } : null), d => GM[gk(d)] || null);
-  c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z + f0);
+  c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z * RENDER.k + f0);
   drawRobot(c, L, G.time, Object.assign({}, vo, { mesh: m }));
 }
 function drawPlayer(c, z, e0, f0) {
   const L = P.look, sc = L.scale;
   const gs = FX.ghosts.length ? ghostSprite() : null;
   if (gs) for (const g of FX.ghosts) {
-    c.setTransform(z, 0, 0, z, g.x * z + e0, g.y * z + f0);
+    c.setTransform(z, 0, 0, z, g.x * z + e0, g.y * z * RENDER.k + f0);
     c.globalAlpha = (g.life / g.max) * 0.45; c.globalCompositeOperation = 'lighter';
     drawSnap(c, gs.snap, g.od ? gs.mag : gs.cyan, 1);
     c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
   }
-  c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z + f0);
+  c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z * RENDER.k + f0);
   const ly = robotLayout(L), view = P.view === 'top' ? 'top' : 'front', K = robotK(L, view), fy = feetY(L, view), flat = Math.sin(VIEW_PITCH[view]);
   // тень на полу: эллипс в проекции камеры, у парящего робота — меньше и бледнее
   const sr = (ly.tread ? 19 : ly.hover ? 11 : 14) * K, g = c.createRadialGradient(0, fy, 0, 0, fy, sr);
@@ -355,7 +371,7 @@ function drawPlayer(c, z, e0, f0) {
   glow(c, 0, 0, 46 * sc, '#46e3ff', 0.12);
   if (P.siege) { c.strokeStyle = rgba('#ff8a3d', 0.5 + Math.sin(G.time * 10) * 0.2); c.lineWidth = 1.5; c.setLineDash([4, 4]); c.beginPath(); c.ellipse(0, fy, 26 * K, 26 * K * flat, 0, 0, TAU); c.stroke(); c.setLineDash([]); }
   const tf = G.tf.cur;
-  if (P.split && !tf) { drawSplit(c, z, e0, f0); c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z + f0); }
+  if (P.split && !tf) { drawSplit(c, z, e0, f0); c.setTransform(z, 0, 0, z, P.x * z + e0, P.y * z * RENDER.k + f0); }
   else {
     const blink = P.iframes > 0 && P.hurtFlash > 0 && !P.od.active && (Math.floor(G.rt * 22) % 2 === 0);
     if (blink) c.globalAlpha = 0.45;
@@ -408,13 +424,14 @@ function renderGame() {
   const z = VIEW.scale * G.cam.zoom * dpr;
   let sx = 0, sy = 0;
   if (FX.shake > 0 && SAVE.settings.shake && G.state === 'play') { sx = rand(-1, 1) * FX.shake; sy = rand(-1, 1) * FX.shake; }
-  const cx = G.cam.x + sx / VIEW.scale, cy = G.cam.y + sy / VIEW.scale;
-  const e0 = W / 2 - cx * z, f0 = H / 2 - cy * z;
-  RENDER.z = z; RENDER.e0 = e0; RENDER.f0 = f0;
+  const cx = G.cam.x + sx / VIEW.scale, cy = G.cam.y + sy / VIEW.scale, K = floorK();
+  const e0 = W / 2 - cx * z, f0 = H / 2 - cy * z * K;
+  RENDER.z = z; RENDER.k = K; RENDER.e0 = e0; RENDER.f0 = f0;
+  VIEW.hh = VIEW.h / 2 / VIEW.scale / K;
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.fillStyle = G.sector.pal.ground; c.fillRect(0, 0, W, H);
-  c.setTransform(z, 0, 0, z, e0, f0);
-  const vx0 = cx - W / 2 / z, vy0 = cy - H / 2 / z, vx1 = cx + W / 2 / z, vy1 = cy + H / 2 / z;
+  worldT(c);
+  const vx0 = cx - W / 2 / z, vy0 = cy - H / 2 / (z * K), vx1 = cx + W / 2 / z, vy1 = cy + H / 2 / (z * K);
   drawGround(c, vx0, vy0, vx1, vy1);
   drawWorldGround(c);
   FX.drawLights(c);
@@ -428,12 +445,12 @@ function renderGame() {
   drawEnemies(c, z, e0, f0);
   const dim = G.tf.dim();
   if (dim > 0) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(2,4,10,' + dim + ')'; c.fillRect(0, 0, W, H); }
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   if (!G.tf.cur) for (const w of P.weapons) { const d = WD[w.id]; if (d) d(c, w); }
   drawPlayer(c, z, e0, f0);
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   if (!G.tf.cur) for (const w of P.weapons) { const d = WF[w.id]; if (d) d(c, w); }
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   c.globalCompositeOperation = 'lighter';
   for (const p of G.projs) if (p.kind === 'flame') PK[p.kind].draw(c, p);
   c.globalCompositeOperation = 'source-over';

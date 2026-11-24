@@ -215,8 +215,8 @@ function seqPart(subj, part, rank, branch, opts) {
       const t = this.t, t0 = this.t0;
       if (t > t0 && !this.sparked) {
         this.sparked = true;
-        FX.sparks(subj.x + this.anchor.x, subj.y + this.anchor.y, 14, '#ffd36b', 260, undefined, 0, 0.5);
-        FX.shards(subj.x + this.anchor.x, subj.y + this.anchor.y, 8, '#eaf6ff', 160);
+        FX.sparks(subj.x + this.anchor.x, subj.y + upY(this.anchor.y), 14, '#ffd36b', 260, undefined, 0, 0.5);
+        FX.shards(subj.x + this.anchor.x, subj.y + upY(this.anchor.y), 8, '#eaf6ff', 160);
         if (!opts.silent) AUDIO.sfx('swing');
       }
       fireLocks(this, subj, this.nl, this.view, this.pitch, this.prevT, t);
@@ -225,7 +225,7 @@ function seqPart(subj, part, rank, branch, opts) {
         this.committed = true;
         subj.look.parts[part] = { rank: this.nl.parts[part].rank, branch: this.nl.parts[part].branch };
         refreshLook(subj.look);
-        const ax = subj.x + this.anchor.x, ay = subj.y + this.anchor.y;
+        const ax = subj.x + this.anchor.x, ay = subj.y + upY(this.anchor.y);
         FX.ring(ax, ay, 6, 90, 0.45, '#46e3ff', 3);
         FX.ring(subj.x, subj.y, 10, 130, 0.55, '#eaf6ff', 2);
         FX.burst(ax, ay, 16, PARTS[part].color, 200, 0.6, 7);
@@ -323,7 +323,7 @@ function seqMount(subj, w, opts) {
       if (!this.done && t >= this.dur - 0.32) {
         this.done = true;
         w.hidden = false;
-        const x = subj.x + this.slotW.x, y = subj.y + this.slotW.y;
+        const x = subj.x + this.slotW.x, y = subj.y + upY(this.slotW.y);
         FX.ring(x, y, 4, 60, 0.35, evoTo ? '#ffd36b' : '#46e3ff', 3);
         FX.sparks(x, y, 14, '#eaf6ff', 260, undefined, 0, 0.4);
         FX.light(x, y, 120, evoTo ? '#ffd36b' : '#46e3ff', 0.6);

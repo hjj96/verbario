@@ -319,6 +319,7 @@ const UI = {
           <div class="set-row"><span>Цифры урона</span><button class="btn small" data-act="toggle" data-k="dmg">${S.dmg ? 'Вкл' : 'Выкл'}</button></div>
           <div class="set-row"><span>Тряска экрана</span><button class="btn small" data-act="toggle" data-k="shake">${S.shake ? 'Вкл' : 'Выкл'}</button></div>
           <div class="set-row"><span>Камера</span><span class="seg">${[['front', 'Во весь рост'], ['top', 'Сверху']].map(v => `<button class="${(S.view || 'front') === v[0] ? 'on' : ''}" data-act="view" data-v="${v[0]}">${v[1]}</button>`).join('')}</span></div>
+          <div class="set-row"><span>Проекция пола (наклон)</span><button class="btn small" data-act="proj">${S.proj !== false ? 'Вкл' : 'Выкл'}</button></div>
           <div class="set-row"><span>Качество графики (свечение)</span><span class="seg">${[['auto', 'Авто'], ['high', 'Высокое'], ['low', 'Низкое']].map(q => `<button class="${S.quality === q[0] ? 'on' : ''}" data-act="quality" data-q="${q[0]}">${q[1]}</button>`).join('')}</span></div>
           <div class="set-row"><span>Полный экран</span><button class="btn small" data-act="fullscreen">Переключить</button></div>
           <div class="sheet"><div class="in"><div class="eyebrow" style="margin-bottom:8px">Управление</div><div class="keys">
@@ -364,6 +365,7 @@ const UI = {
     tab(b) { this.codexTab = b.dataset.id; this.open('codex'); },
     toggle(b) { const k = b.dataset.k; SAVE.settings[k] = !SAVE.settings[k]; FX.dmgNumbers = SAVE.settings.dmg; persist(); this.reopenSettings(); },
     quality(b) { SAVE.settings.quality = b.dataset.q; RENDER.autoLow = false; persist(); resize(); this.reopenSettings(); },
+    proj() { SAVE.settings.proj = SAVE.settings.proj === false; persist(); this.reopenSettings(); },
     view(b) { SAVE.settings.view = b.dataset.v; if (P) { P.view = b.dataset.v; RENDER.ghostKey = ''; } persist(); this.reopenSettings(); },
     fullscreen() {
       const d = document;

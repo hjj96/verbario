@@ -261,12 +261,12 @@ function drawBoss3D(c, e, z, e0, f0, t) {
   if (e.intro > 0) skyAssemble(1 - e.intro / BOSS_INTRO, e.id)(m);
   // смена фазы: броня «вздыхает» — детали расходятся и возвращаются
   else if (e.phaseT > 0) explodeAnim(0.45 * Math.sin(Math.PI * (1 - e.phaseT / 1.4)))(m);
-  c.setTransform(z, 0, 0, z, e.x * z + e0, e.y * z + f0);
+  c.setTransform(z, 0, 0, z, e.x * z + e0, e.y * z * RENDER.k + f0);
   renderMesh(c, m, ps.pal, view, {});
   if (e.flash > 0.035) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.16; renderMesh(c, m, ps.pal, view, { flat: '#ffffff' }); c.restore(); }
   if (e.st.chillT > 0 || e.st.freezeT > 0) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.18; renderMesh(c, m, ps.pal, view, { flat: '#9ff0ff' }); c.restore(); }
   if (e.enraged) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.1 + Math.sin(t * 10) * 0.06; renderMesh(c, m, ps.pal, view, { flat: '#ff2a3a' }); c.restore(); }
-  c.setTransform(z, 0, 0, z, e0, f0);
+  worldT(c);
   if (bid === 'core') {
     if (e.dmgRes) { c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#46e3ff', 0.5 + Math.sin(t * 8) * 0.2); c.lineWidth = 2; c.beginPath(); c.arc(e.x, e.y, e.r * 1.25, 0, TAU); c.stroke(); c.restore(); }
     if (e.ai.laserOn) {
@@ -282,8 +282,8 @@ function drawBoss3D(c, e, z, e0, f0, t) {
 }
 function drawBossShadow(c, e) {
   const sc = bossSc(e), view = enemyView(), cp = Math.cos(VIEW_PITCH[view]), sn = Math.max(0.42, Math.sin(VIEW_PITCH[view]));
-  const q = e.intro > 0 ? 1 - e.intro / BOSS_INTRO : 1, rx = e.r * BOSS_VIS[e.bid] * (e.bid === 'serpent' ? 1.1 : 1.25) * (0.4 + 0.6 * q), ry = rx * sn;
-  c.drawImage(shadowBlob(), e.x - rx, e.y + BOSS_ZC[e.bid] * sc * cp - ry, rx * 2, ry * 2);
+  const q = e.intro > 0 ? 1 - e.intro / BOSS_INTRO : 1, rx = e.r * BOSS_VIS[e.bid] * (e.bid === 'serpent' ? 1.1 : 1.25) * (0.4 + 0.6 * q), ry = rx * (RENDER.k < 1 ? 1 : sn);
+  c.drawImage(shadowBlob(), e.x - rx, e.y + upY(BOSS_ZC[e.bid] * sc * cp) - ry, rx * 2, ry * 2);
 }
 // позвонки змея: живые модели, при высадке собираются вслед за головой
 function drawSeg3D(c, e, z, e0, f0, t) {
@@ -292,9 +292,9 @@ function drawSeg3D(c, e, z, e0, f0, t) {
   const m = new Mesh(); m.zc = 12 * sc;
   m.push(); m.mul(m3yaw(ps.yaw)); m.sc(sc); BOSS_M.seg(m, ps); m.pop();
   if (B && B.intro > 0) { const q = 1 - B.intro / BOSS_INTRO; skyAssemble(clamp((q - 0.25 - e.idx * 0.025) / 0.6, 0, 1), e.id)(m); }
-  c.setTransform(z, 0, 0, z, e0, f0);
-  const rx = e.r * 1.15, ry = rx * sn; c.drawImage(shadowBlob(), e.x - rx, e.y + 12 * sc * cp - ry, rx * 2, ry * 2);
-  c.setTransform(z, 0, 0, z, e.x * z + e0, e.y * z + f0);
+  worldT(c);
+  const rx = e.r * 1.15, ry = rx * (RENDER.k < 1 ? 1 : sn); c.drawImage(shadowBlob(), e.x - rx, e.y + upY(12 * sc * cp) - ry, rx * 2, ry * 2);
+  c.setTransform(z, 0, 0, z, e.x * z + e0, e.y * z * RENDER.k + f0);
   renderMesh(c, m, ps.pal, view, {});
   if (e.flash > 0) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.4; renderMesh(c, m, ps.pal, view, { flat: '#ffffff' }); c.restore(); }
 }
@@ -304,13 +304,13 @@ function drawNode3D(c, e, z, e0, f0, t) {
   const m = new Mesh(); m.zc = 22;
   m.push(); BOSS_M.node(m, ps); m.pop();
   if (e.host && e.host.alive) {
-    c.setTransform(z, 0, 0, z, e0, f0);
+    worldT(c);
     c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = rgba('#46e3ff', 0.35 + Math.sin(t * 9 + e.id) * 0.15); c.lineWidth = 2; c.setLineDash([6, 5]);
     c.beginPath(); c.moveTo(e.x, e.y); c.lineTo(e.host.x, e.host.y); c.stroke(); c.restore();
   }
-  c.setTransform(z, 0, 0, z, e0, f0);
-  c.drawImage(shadowBlob(), e.x - 14, e.y + 22 * cp - 7, 28, 14);
-  c.setTransform(z, 0, 0, z, e.x * z + e0, e.y * z + f0);
+  worldT(c);
+  { const ry = RENDER.k < 1 ? 14 : 7; c.drawImage(shadowBlob(), e.x - 14, e.y + upY(22 * cp) - ry, 28, ry * 2); }
+  c.setTransform(z, 0, 0, z, e.x * z + e0, e.y * z * RENDER.k + f0);
   renderMesh(c, m, ps.pal, view, {});
   if (e.flash > 0) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.5; renderMesh(c, m, ps.pal, view, { flat: '#ffffff' }); c.restore(); }
 }

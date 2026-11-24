@@ -579,14 +579,14 @@ function updatePlayer(dt) {
     P.stepS = Math.sign(Math.cos(P.wp)) || 1;
     if (walker && P.look && !P.split) {
       const view = P.view === 'top' ? 'top' : 'front', k = robotK(P.look, view), side = P.stepS, sp = Math.sin(VIEW_PITCH[view]);
-      const fx = P.x - Math.sin(P.hd) * side * 5.2 * k, fy = P.y + feetY(P.look, view) + Math.cos(P.hd) * side * 5.2 * k * sp;
+      const fx = P.x - Math.sin(P.hd) * side * 5.2 * k, fy = P.y + upY(feetY(P.look, view) + Math.cos(P.hd) * side * 5.2 * k * sp);
       FX.ring(fx, fy, 1.5, 9 * k, 0.32, '#46e3ff', 1);
       FX.dot(fx, fy, rand(-20, 20), rand(-14, 4), 0.3, 1.6, '#bff6ff', 0.4);
     }
   } else if (moving > 0.1 && lg.rank >= 3 && lg.branch === 'A' && Math.random() < dt * 14) {
     // гусеницы поднимают крошку
     const view = P.view === 'top' ? 'top' : 'front', k = robotK(P.look, view);
-    FX.dot(P.x - Math.cos(P.hd) * 14 * k + rand(-6, 6), P.y + feetY(P.look, view) - Math.sin(P.hd) * 5 * k, -Math.cos(P.hd) * 40 + rand(-15, 15), rand(-25, -5), 0.35, 1.8, '#6f86a6', 0.5);
+    FX.dot(P.x - Math.cos(P.hd) * 14 * k + rand(-6, 6), P.y + upY(feetY(P.look, view) - Math.sin(P.hd) * 5 * k), -Math.cos(P.hd) * 40 + rand(-15, 15), rand(-25, -5), 0.35, 1.8, '#6f86a6', 0.5);
   }
   P.dist += Math.hypot(P.vx, P.vy) * dt;
   if (moving < 0.1) P.still += dt; else P.still = 0;
