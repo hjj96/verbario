@@ -361,29 +361,33 @@ function drawHilt3D(c, x, y, rot, h0, col) {
 }
 function saberTrail(tr, x, y, rot) { tr.unshift({ x, y: y - SABER_Z * vfxCp(), r: rot, t: G.time }); if (tr.length > 3) tr.length = 3; return tr; }
 
-/* ---------- Импульс бластера: огранённый кристалл энергии (острый нос, длинный хвост, белое ядро по оси) ---------- */
-function boltMesh(m, f, n) {
-  m.push(); m.rz(-f / n * TAU);
-  const R = 1.8, v = [[5.4, 0, 0], [-8.6, 0, 0]];
-  for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.26; v.push([0.6, Math.cos(a) * R, Math.sin(a) * R]); }
-  const F = [];
-  for (let i = 0; i < 6; i++) { const j = (i + 1) % 6; F.push([0, 2 + i, 2 + j]); F.push([1, 2 + j, 2 + i]); }
-  m.poly(v, F, 'a');
-  const g = m.line(null, 4.4, 0, 0, -6.8, 0, 0, '#ffffff', 1.3, 0.95); g.auto = true;
-  m.pop();
+/* ---------- Импульс бластера: неоновая капсула — насыщенная оболочка, белое ядро по оси, тонкий затухающий след ----------
+   края чёткие (линии с круглыми концами); свечение даёт общий проход bloom */
+const _boltGr = {};
+// градиент следа в локальных координатах импульса: от хвоста капсулы (-L) до конца следа (-1,9·L)
+function boltGrad(c, cs, L) {
+  const key = cs + L;
+  let g = _boltGr[key];
+  if (!g) { g = c.createLinearGradient(-L, 0, -L * 1.9, 0); g.addColorStop(0, rgba(cs, 0.6)); g.addColorStop(1, rgba(cs, 0)); _boltGr[key] = g; }
+  return g;
 }
 function drawBolt3D(c, p) {
-  const col = p.col || '#46e3ff', S = vfxSprites('bolt' + col, 16, (m, f) => boltMesh(m, f, 16), vpal(col));
-  const a = Math.atan2(p.vy, p.vx), ca = Math.cos(a), sa = Math.sin(a);
-  // вылет из ствола: кристалл дорастает за 0,06 с
-  const k = p.r / 3.6 * (0.5 + 0.5 * Math.min(1, p.t / 0.06)), L = 8.6 * k;
-  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-  // чёткий след без размытия: тонкая линия за хвостом
-  c.strokeStyle = rgba(col, 0.4); c.lineWidth = 1.3 * k;
-  c.beginPath(); c.moveTo(p.x - ca * L, p.y - sa * L); c.lineTo(p.x - ca * L * 2.4, p.y - sa * L * 2.4); c.stroke();
-  c.globalAlpha = 0.22; c.drawImage(dotSprite(col), p.x - 4 * k, p.y - 4 * k, 8 * k, 8 * k);
+  const col = p.col || '#46e3ff', cs = sheathCol(col), a = Math.atan2(p.vy, p.vx);
+  const L = Math.round(6 + p.r * 2.6), w = 0.5 + p.r * 0.4, g = Math.min(1, p.t / 0.07);
+  c.save(); c.translate(p.x, p.y); c.rotate(a);
+  // вылет из ствола: капсула дорастает за 0,07 с, чтобы не торчать назад из пушки
+  if (g < 1) c.scale(0.3 + 0.7 * g, 1);
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  c.strokeStyle = boltGrad(c, cs, L); c.lineWidth = 1; c.beginPath(); c.moveTo(-L, 0); c.lineTo(-L * 1.9, 0); c.stroke();
+  c.strokeStyle = rgba(cs, 0.92); c.lineWidth = w * 2; c.beginPath(); c.moveTo(-w * 0.2, 0); c.lineTo(-L + w, 0); c.stroke();
+  c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = w * 0.85; c.beginPath(); c.moveTo(-w * 0.4, 0); c.lineTo(-L + w * 1.3, 0); c.stroke();
   c.restore();
-  vfxDraw(c, S, yawFrame(a, 16), p.x, p.y, k);
+}
+// попадание импульса: короткая звезда в цвет выстрела и брызги искр назад, к стрелку
+function boltHit(p) {
+  const col = p.col || '#46e3ff', a = Math.atan2(p.vy, p.vx);
+  FX.star(p.x, p.y, 2.5 + p.r * 0.55, col, 0.09);
+  FX.sparks(p.x, p.y, 3, mixHex(col, '#ffffff', 0.4), 240, a + Math.PI, 0.9, 0.14);
 }
 
 /* ---------- Плазменная сфера аннигилятора: икосаэдр, вращается, вокруг — треск ---------- */

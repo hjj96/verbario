@@ -892,8 +892,8 @@ function missileBoom(p) {
 }
 const PK = {
   bolt: {
-    // попадание: расходящийся шестиугольник и пара осколков — чётко, без пятна
-    hit(p, e) { hitEnemy(e, p.dmg, p); FX.hexRing(p.x, p.y, 2, 6 + p.r * 1.6, 0.16, p.col, 1.3); FX.shards(p.x, p.y, 2, p.col, 150); },
+    // попадание: звезда-вспышка и искры назад — чётко, без пятна
+    hit(p, e) { hitEnemy(e, p.dmg, p); boltHit(p); },
     draw(c, p) { drawBolt3D(c, p); },
   },
   orb: {
@@ -901,7 +901,9 @@ const PK = {
       hitEnemy(e, p.dmg, p);
       p.nb = (p.nb || 0) + 1;
       if (p.nb % 2 === 1) {
-        FX.hexRing(e.x, e.y, 4, p.blast, 0.22, p.col, 1.6); FX.dot(e.x, e.y, 0, 0, 0.08, p.blast * 0.35, '#ffffff', 0);
+        // микровзрыв: звезда-вспышка, тонкое кольцо по земле на радиус поражения и искры — без шестиугольника и пятна
+        FX.star(e.x, e.y, Math.min(p.blast * 0.22, 9), p.col, 0.1); FX.ering(e.x, e.y, p.blast * 0.3, p.blast, 0.24, p.col, 1.3, true);
+        FX.sparks(e.x, e.y, 4, '#ffffff', p.blast * 6, undefined, 0, 0.18);
         eachEnemyIn(e.x, e.y, p.blast, n => { if (n !== e) hitEnemy(n, p.dmg * 0.5, { src: p.src, nocrit: true }); });
       }
     },
