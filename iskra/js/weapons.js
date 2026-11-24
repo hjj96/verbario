@@ -443,20 +443,28 @@ WB.zero = (w, dt, spd) => cryoUpdate(w, dt, spd, true);
 function drawCryo(c, w) {
   const st = w.st, p = w.p;
   if (!(st.on > 0) || !st.beams) return;
+  const ox = st.mx !== undefined ? st.mx : P.x, oy = st.my !== undefined ? st.my : P.y, t = G.time, fl = 1 + Math.sin(t * 40) * 0.12;
   c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
   for (const b of st.beams) {
     if (!b.tgt) continue;
-    const ox = st.mx !== undefined ? st.mx : P.x, oy = st.my !== undefined ? st.my : P.y;
-    const x1 = ox, y1 = oy;
-    const x2 = ox + Math.cos(b.ang) * p.range, y2 = oy + Math.sin(b.ang) * p.range;
-    const g = c.createLinearGradient(x1, y1, x2, y2);
-    g.addColorStop(0, rgba('#8fe8ff', 0.85)); g.addColorStop(0.8, rgba('#8fe8ff', 0.5)); g.addColorStop(1, rgba('#8fe8ff', 0));
-    c.strokeStyle = g; c.lineWidth = p.width * (1.1 + Math.sin(G.time * 40) * 0.15);
-    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
-    c.strokeStyle = rgba('#ffffff', 0.9); c.lineWidth = p.width * 0.3; c.stroke();
-    glow(c, x1, y1, 14, '#8fe8ff', 0.8);
+    const ca = Math.cos(b.ang), sa = Math.sin(b.ang), L = p.range, x2 = ox + ca * L, y2 = oy + sa * L;
+    c.beginPath(); c.moveTo(ox, oy); c.lineTo(x2, y2);
+    c.strokeStyle = rgba('#5fd0ff', 0.12); c.lineWidth = p.width * 1.5 * fl; c.stroke();
+    c.strokeStyle = rgba('#8fe8ff', 0.55); c.lineWidth = p.width * 0.5 * fl; c.stroke();
+    c.strokeStyle = 'rgba(235,252,255,0.95)'; c.lineWidth = Math.max(1.2, p.width * 0.14); c.stroke();
+    c.globalAlpha = 0.7; c.drawImage(dotSprite('#8fe8ff'), ox - 8, oy - 8, 16, 16); c.globalAlpha = 1;
   }
   c.restore();
+  // ледяные кристаллы летят вдоль луча и кувыркаются
+  const S = vfxSprites('shard', 16, (m, f) => { m.push(); m.t(0, 0, 3); m.rz(-f / 16 * TAU); m.poly(OCTA.v.map(v => [v[0] * 6, v[1] * 1.7, v[2] * 1.7]), OCTA.f, f % 2 ? 'l' : 'a'); m.pop(); }, vpal('#8fe8ff'));
+  for (const b of st.beams) {
+    if (!b.tgt) continue;
+    const ca = Math.cos(b.ang), sa = Math.sin(b.ang);
+    for (let k = 0; k < 4; k++) {
+      const u = (t * 1.6 + k / 4) % 1, d = u * p.range, x = ox + ca * d - sa * Math.sin(u * 9 + k) * 4, y = oy + sa * d + ca * Math.sin(u * 9 + k) * 4;
+      vfxDraw(c, S, Math.floor(t * 18 + k * 5), x, y, 0.55, 1 - u * 0.7);
+    }
+  }
 }
 WD.cryo = drawCryo; WD.zero = drawCryo;
 
@@ -464,7 +472,7 @@ WD.cryo = drawCryo; WD.zero = drawCryo;
 function railShot(w, ang, dmg, width, length, kb, stun) {
   const m = muzzleWorld(w), x = m.x, y = m.y;
   fired(w);
-  FX.light(x, y, 90, '#9fd8ff', 0.4);
+  FX.light(x, y, 70, '#9fd8ff', 0.28);
   const ik = linkK('icebreak');
   lineEnemies(x, y, ang, length, width, e => {
     const frozen = e.st.freezeT > 0, cold = frozen || e.st.chillT > 0;
@@ -478,8 +486,8 @@ function railShot(w, ang, dmg, width, length, kb, stun) {
       }
     }
   });
-  FX.rail(x, y, x + Math.cos(ang) * length, y + Math.sin(ang) * length, width, 0.42, '#9fd8ff');
-  FX.dot(x, y, 0, 0, 0.14, 11, '#ffffff', 0);
+  FX.rail(x, y, x + Math.cos(ang) * length, y + Math.sin(ang) * length, width, 0.3, '#9fd8ff');
+  FX.dot(x, y, 0, 0, 0.1, 6, '#ffffff', 0);
   FX.addShake(3);
   P.fire = 1;
   AUDIO.sfx('rail');
@@ -675,7 +683,7 @@ WD.bladedance = (c, w) => {
   const st = w.st, p = w.p; if (!st.pos) return;
   const sz = p.size * Math.sqrt(p.area), tr = st.tr || (st.tr = []);
   const cols = ['#29a8ff', '#3dff6a', '#c45bff'];
-  st.pos.forEach((q, i) => drawSaber3D(c, q.x, q.y + 6, q.rot * 6, sz * 1.5, cols[i % 3], saberTrail(tr[i] || (tr[i] = []), q.rot * 6)));
+  st.pos.forEach((q, i) => drawSaber3D(c, q.x, q.y + 6, q.rot * 6, sz * 1.5, cols[i % 3], saberTrail(tr[i] || (tr[i] = []), q.x, q.y + 6, q.rot * 6)));
 };
 
 /* ---------- Электромагнит: хватает врагов, крутит и швыряет в толпу ---------- */
@@ -823,7 +831,7 @@ const PK = {
       hitEnemy(e, p.dmg, p);
       p.nb = (p.nb || 0) + 1;
       if (p.nb % 2 === 1) {
-        FX.dot(e.x, e.y, 0, 0, 0.15, p.blast * 1.2, p.col, 0);
+        FX.dot(e.x, e.y, 0, 0, 0.12, p.blast * 0.7, p.col, 0);
         eachEnemyIn(e.x, e.y, p.blast, n => { if (n !== e) hitEnemy(n, p.dmg * 0.5, { src: p.src, nocrit: true }); });
       }
     },
@@ -888,7 +896,7 @@ const PK = {
       if (Math.random() < 0.35) FX.dot(p.x, p.y, 0, 0, 0.18, p.len * 0.45, p.col, 0);
     },
     hit(p, e) { hitEnemy(e, p.dmg, p); thunderHop(e, p.dmg); FX.sparks(e.x, e.y, 3, '#d8fbff', 200, undefined, 0, 0.2); AUDIO.sfx('hit'); },
-    draw(c, p) { drawSaber3D(c, p.x, p.y, p.rot, p.len * 1.5, p.src === 'link_twin' ? '#c45bff' : '#29a8ff', saberTrail(p.tr || (p.tr = []), p.rot)); },
+    draw(c, p) { drawSaber3D(c, p.x, p.y, p.rot, p.len * 1.5, p.src === 'link_twin' ? '#c45bff' : '#29a8ff', saberTrail(p.tr || (p.tr = []), p.x, p.y, p.rot)); },
   },
   saw: {
     update(p, dt) {

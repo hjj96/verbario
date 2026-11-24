@@ -84,8 +84,7 @@ function sawMesh(m, f, n, R, teeth, col) {
   for (let i = 0; i < 12; i++) { const a = i * TAU / 12; inner.push([Math.cos(a) * R * 0.62, Math.sin(a) * R * 0.62]); }
   m.prism(inner, -0.85, 0.85, 'z', 'l');
   m.cyl(R * 0.22, R * 0.2, -1.6, 1.6, 8, 'd');
-  for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; m.ring(Math.cos(a) * R * 0.4, Math.sin(a) * R * 0.4, 0.9, R * 0.1, 'z', col, 0.7, 0.7); }
-  m.ring(0, 0, 0.9, R * 0.6, 'z', col, 0.8, 0.6);
+  for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; m.ring(Math.cos(a) * R * 0.4, Math.sin(a) * R * 0.4, 0.9, R * 0.1, 'z', col, 0.7, 0.6); }
   m.pop();
 }
 function drawSaw3D(c, x, y, r, rot, col, big) {
@@ -103,31 +102,21 @@ function drawSaw3D(c, x, y, r, rot, col, big) {
 function droneMesh(m, f, n, halo, col) {
   m.push(); m.rz(-f / n * TAU);
   if (!halo) {
-    const hull = [];
-    for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + TAU / 16; hull.push([Math.cos(a) * 4.6, Math.sin(a) * 3.4]); }
-    m.prism(hull, 2.6, 4.8, 'z', 'm');
-    m.cyl(2.6, 1.3, 4.8, 6.4, 8, 'l');
-    m.box(3.2, -1.1, 2.9, 5.3, 1.1, 4.4, 'd');
-    const g = m.glow(null, 5.5, 0, 3.7, 0.9, '#ffffff', 0.9); g.auto = true;
-    for (const s of [-1, 1]) { m.push(); m.t(1.4, s * 2.7, 2.5); m.rz(-Math.PI / 2); m.barrel(0.55, 0.45, 0, 3.8, 6, 'd'); m.pop(); }
-    for (let i = 0; i < 4; i++) {
-      const a = TAU / 8 + i * TAU / 4, rx = Math.cos(a) * 6.4, ry = Math.sin(a) * 5.4;
-      m.strut([Math.cos(a) * 3.4, Math.sin(a) * 2.5, 3.9], [rx, ry, 4.7], 0.45, 0.38, 4, 'd');
-      m.push(); m.t(rx, ry, 4.7); m.cyl(0.65, 0.65, 0, 0.6, 6, 'a'); m.pop();
-      m.ring(rx, ry, 5.0, 2.4, 'z', col, 0.8, 0.55);
-      m.line(null, rx - 2.1, ry, 5.0, rx + 2.1, ry, 5.0, col, 0.7, 0.45);
-    }
+    // компактный дрон: сплюснутая шестигранная бипирамида, глаз по курсу, кольцо винта сверху
+    m.cyl(1.4, 4.6, 2.2, 3.8, 6, 'm');
+    m.cyl(4.6, 1.8, 3.8, 5.6, 6, 'l');
+    const g = m.glow(null, 4.5, 0, 3.8, 1.1, '#ffffff', 0.9); g.auto = true;
+    m.ring(0, 0, 6.1, 5.2, 'z', col, 1, 0.55);
   } else {
-    for (let i = 0; i < 8; i++) { const a = i * TAU / 8; m.push(); m.t(Math.cos(a) * 4.9, Math.sin(a) * 4.9, 4.2); m.rz(a); m.box(-0.9, -1.5, -0.75, 0.9, 1.5, 0.75, i % 2 ? 'm' : 'l'); m.pop(); }
-    m.poly(OCTA.v.map(v => [v[0] * 2.3, v[1] * 2.3, v[2] * 3.1 + 4.2]), OCTA.f, 'a');
-    m.box(4.5, -0.55, 3.6, 7.4, 0.55, 4.8, 'd');
-    const g = m.glow(null, 0, 0, 4.2, 1.8, col, 0.7); g.auto = true;
+    // дрон гало: кристалл-излучатель в кольце
+    m.poly(OCTA.v.map(v => [v[0] * 2.6, v[1] * 2.6, v[2] * 3.6 + 4.4]), OCTA.f, 'a');
+    m.ring(0, 0, 4.4, 5.2, 'z', col, 1, 0.6);
   }
   m.pop();
 }
 function drawDrone3D(c, x, y, ang, col, sz, halo, ph) {
   const S = vfxSprites((halo ? 'halo' : 'drone') + col, 16, (m, f) => droneMesh(m, f, 16, halo, deepen(col)), vpal(col));
-  const k = sz / 8 * (halo ? 1.5 : 1.7), bob = Math.sin(G.time * 6 + (ph || 0)) * 1.2 * vfxCp();
+  const k = sz / 8 * (halo ? 1.4 : 1.5), bob = Math.sin(G.time * 6 + (ph || 0)) * 1.2 * vfxCp();
   vfxShadow(c, x, y, 6 * k, 0.4);
   vfxDraw(c, S, yawFrame(ang, 16), x, y - bob, k);
   c.save(); c.globalCompositeOperation = 'lighter';
@@ -168,51 +157,41 @@ function drawMissile3D(c, p, col, k) {
 const SABER_Z = 7, SABER_TILT = 0.6;
 // плоскость вращения клинков наклонена к камере: видно весь оборот, а не только горизонталь
 const saberE = () => Math.min(1, Math.sin((VIEW_PITCH[enemyView()] || 0.42) + SABER_TILT));
-function hiltMesh(m, f, n) {
-  m.push(); m.t(0, 0, SABER_Z); m.rx(SABER_TILT); m.rz(-f / n * Math.PI); m.ry(Math.PI / 2);
-  m.cyl(0.95, 0.95, -2.3, 2.3, 8, 'l');
-  for (const z of [-1.5, -0.5, 0.5, 1.5]) m.cyl(1.12, 1.12, z - 0.18, z + 0.18, 8, 'd');
-  for (const s of [-1, 1]) {
-    m.cyl(1.05, 1.35, s * 2.3, s * 3.9, 8, 'm');
-    m.cyl(1.42, 1.42, s * 3.9, s * 4.5, 8, 'a');
-  }
-  m.box(-1.4, -0.45, -0.6, -0.75, 0.45, 0.6, 'a');
-  m.pop();
-}
-// rot — угол рукояти на полу; R — радиус до кончиков клинков; tr — шлейф (прошлые углы)
+// rot — угол рукояти; R — радиус до кончиков; tr — история положений {x, y, r} для шлейфа
 function drawSaber3D(c, x, y, rot, R, col, tr) {
-  const sp = vfxSp(), cp = vfxCp(), cy = y - SABER_Z * cp, h0 = R * 0.3, e = saberE();
-  const ca = Math.cos(rot), sa = Math.sin(rot) * e;
+  const cy = y - SABER_Z * vfxCp(), h0 = R * 0.26, e = saberE(), ca = Math.cos(rot), sa = Math.sin(rot) * e;
   c.save(); c.globalCompositeOperation = 'lighter';
-  c.globalAlpha = 0.16; c.drawImage(glowSprite(col), x - R * 0.9, y - R * 0.9 * sp, R * 1.8, R * 1.8 * sp); c.globalAlpha = 1;
+  // шлейф: лента между настоящими прошлыми положениями клинков — меч и летит, и крутится
   if (tr && tr.length > 1) {
-    // шлейф взмаха: веер между прошлыми положениями клинков
-    for (let i = tr.length - 1; i > 0; i--) {
-      const a0 = tr[i], a1 = tr[i - 1], q = 1 - i / tr.length;
-      c.fillStyle = rgba(col, 0.05 + q * 0.2);
+    for (let i = 0; i < tr.length - 1; i++) {
+      const A = tr[i], B = tr[i + 1], q = 1 - (i + 1) / tr.length;
+      const a0 = Math.cos(A.r), b0 = Math.sin(A.r) * e, a1 = Math.cos(B.r), b1 = Math.sin(B.r) * e;
+      c.fillStyle = rgba(col, 0.05 + q * 0.17);
       for (const s of [-1, 1]) {
-        const c0 = Math.cos(a0) * s, s0 = Math.sin(a0) * e * s, c1 = Math.cos(a1) * s, s1 = Math.sin(a1) * e * s;
-        c.beginPath(); c.moveTo(x + c0 * h0, cy + s0 * h0); c.lineTo(x + c0 * R, cy + s0 * R); c.lineTo(x + c1 * R, cy + s1 * R); c.lineTo(x + c1 * h0, cy + s1 * h0); c.closePath(); c.fill();
+        c.beginPath();
+        c.moveTo(A.x + a0 * R * 0.5 * s, A.y + b0 * R * 0.5 * s); c.lineTo(A.x + a0 * R * s, A.y + b0 * R * s);
+        c.lineTo(B.x + a1 * R * s, B.y + b1 * R * s); c.lineTo(B.x + a1 * R * 0.5 * s, B.y + b1 * R * 0.5 * s);
+        c.closePath(); c.fill();
       }
     }
   }
+  // клинки: белое ядро, насыщенное свечение слоями
   c.lineCap = 'round';
   const body = mixHex(col, '#ffffff', 0.35);
-  for (const s of [-1, 1]) {
-    const x0 = x + ca * h0 * s, y0 = cy + sa * h0 * s, x1 = x + ca * R * s, y1 = cy + sa * R * s;
-    c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1);
-    c.strokeStyle = rgba(col, 0.1); c.lineWidth = R * 0.5; c.stroke();
-    c.strokeStyle = rgba(col, 0.26); c.lineWidth = R * 0.28; c.stroke();
-    c.strokeStyle = rgba(col, 0.75); c.lineWidth = R * 0.15; c.stroke();
-    c.strokeStyle = rgba(body, 0.95); c.lineWidth = R * 0.085; c.stroke();
-    c.strokeStyle = '#ffffff'; c.lineWidth = R * 0.035; c.stroke();
-    c.drawImage(dotSprite(col), x0 - R * 0.2, y0 - R * 0.2, R * 0.4, R * 0.4);
-  }
+  c.beginPath();
+  for (const s of [-1, 1]) { c.moveTo(x + ca * h0 * s, cy + sa * h0 * s); c.lineTo(x + ca * R * s, cy + sa * R * s); }
+  c.strokeStyle = rgba(col, 0.1); c.lineWidth = R * 0.44; c.stroke();
+  c.strokeStyle = rgba(col, 0.3); c.lineWidth = R * 0.24; c.stroke();
+  c.strokeStyle = rgba(body, 0.95); c.lineWidth = R * 0.1; c.stroke();
+  c.strokeStyle = '#ffffff'; c.lineWidth = R * 0.036; c.stroke();
   c.restore();
-  const S = vfxSprites('hilt', 16, (m, f) => hiltMesh(m, f, 16), vpal('#9fb0c6', true));
-  vfxDraw(c, S, Math.round((((rot % Math.PI) + Math.PI) % Math.PI) / Math.PI * 16) % 16, x, y, R / 13);
+  // рукоять: короткий тёмный стержень строго по оси клинков, светлая кромка
+  c.lineCap = 'round';
+  c.beginPath(); c.moveTo(x - ca * h0, cy - sa * h0); c.lineTo(x + ca * h0, cy + sa * h0);
+  c.strokeStyle = '#141c28'; c.lineWidth = R * 0.14; c.stroke();
+  c.strokeStyle = '#7d90aa'; c.lineWidth = R * 0.045; c.stroke();
 }
-function saberTrail(tr, rot) { tr.unshift(rot); if (tr.length > 6) tr.length = 6; return tr; }
+function saberTrail(tr, x, y, rot) { tr.unshift({ x, y: y - SABER_Z * vfxCp(), r: rot }); if (tr.length > 4) tr.length = 4; return tr; }
 
 /* ---------- Плазменная сфера аннигилятора: икосаэдр, вращается, вокруг — треск ---------- */
 function drawOrb3D(c, p) {

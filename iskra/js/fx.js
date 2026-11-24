@@ -57,7 +57,7 @@ const FX = {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU, d = rand(0, r * 0.35), up = rand(0.5, 1.4);
       this.add({ k: 6, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, z: rand(0, r * 0.25), vx: Math.cos(a) * r * rand(0.8, 1.8), vy: Math.sin(a) * r * rand(0.5, 1.2), vz: r * up * 2.2,
-        life: rand(0.55, 0.85) * (big ? 1.25 : 1), max: 0.85 * (big ? 1.25 : 1), size: r * rand(0.26, 0.42), grow: r * 0.75, col, drag: 3.4 });
+        life: rand(0.42, 0.65) * (big ? 1.25 : 1), max: 0.65 * (big ? 1.25 : 1), size: r * rand(0.26, 0.42), grow: r * 0.75, col, drag: 3.4 });
     }
     // ударная волна по земле: эллипс в перспективе камеры
     this.ering(x, y, r * 0.25, r * 1.35, 0.34, col, 2.6);
@@ -157,7 +157,7 @@ const FX = {
     for (const p of this.parts) {
       if (p.k === 6) {
         const q = p.life / p.max, s = p.size, y = p.y - p.z * cp;
-        if (q < 0.6) { c.globalAlpha = Math.min(1, q / 0.6) * 0.6; const s2 = s * 1.15; c.drawImage(smokeSprite(), p.x - s2, y - s2, s2 * 2, s2 * 2); }
+        if (q < 0.6) { c.globalAlpha = Math.min(1, q / 0.6) * 0.45; const s2 = s * 1.15; c.drawImage(smokeSprite(), p.x - s2, y - s2, s2 * 2, s2 * 2); }
         if (q > 0.3) { c.globalAlpha = Math.min(1, (q - 0.3) / 0.3); c.drawImage(fireSprite(p.col), p.x - s, y - s, s * 2, s * 2); }
       } else if (p.k === 5) {
         if (!cs) cs = chunkSprites();
@@ -241,7 +241,7 @@ const FX = {
       }
       if (b.helix) {
         const dx = b.x2 - b.x1, dy = b.y2 - b.y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
-        const amp = b.w * (0.55 + (1 - q) * 0.6), N = Math.min(140, Math.ceil(L / 6)), ph = b.ph + (1 - q) * 9;
+        const amp = b.w * (0.4 + (1 - q) * 0.35), N = Math.min(140, Math.ceil(L / 6)), ph = b.ph + (1 - q) * 9;
         for (const off of [0, Math.PI]) {
           c.beginPath();
           for (let i = 0; i <= N; i++) { const t = i / N, d = L * t, o = Math.sin(d * 0.09 + ph + off) * amp; const px = b.x1 + ux * d + nx * o, py = b.y1 + uy * d + ny * o; i ? c.lineTo(px, py) : c.moveTo(px, py); }
@@ -249,7 +249,7 @@ const FX = {
         }
         c.globalAlpha = q * 0.5; c.strokeStyle = b.col; c.lineWidth = 1.2;
         const sp = vfxSp(), rr = b.w * (0.8 + (1 - q) * 1.6);
-        for (let k = 1; k <= 5; k++) { const d = L * k / 6, px = b.x1 + ux * d, py = b.y1 + uy * d; c.beginPath(); c.ellipse(px, py, rr * 0.45, rr, Math.atan2(uy, ux), 0, TAU); c.stroke(); }
+        for (let k = 1; k <= 3; k++) { const d = L * k / 7, px = b.x1 + ux * d, py = b.y1 + uy * d; c.beginPath(); c.ellipse(px, py, rr * 0.4, rr * 0.85, Math.atan2(uy, ux), 0, TAU); c.stroke(); }
       }
     }
     for (const a of this.arcs) {
