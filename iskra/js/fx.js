@@ -2,9 +2,9 @@
 /* ===== Визуальные эффекты: частицы, молнии, лучи, кольца, цифры урона ===== */
 
 const FX = {
-  parts: [], texts: [], arcs: [], beams: [], rings: [], slashes: [], ghosts: [], lights: [], flashes: [],
+  parts: [], texts: [], arcs: [], beams: [], rings: [], slashes: [], ghosts: [], lights: [], flashes: [], timers: [], cracks: [],
   max: 1800, quality: 1, shake: 0, flashA: 0, flashCol: '#ffffff', dmgNumbers: true, impact: 0, speedT: 0, speedDir: 0,
-  clear() { this.parts.length = 0; this.texts.length = 0; this.arcs.length = 0; this.beams.length = 0; this.rings.length = 0; this.slashes.length = 0; this.ghosts.length = 0; this.lights.length = 0; this.flashes.length = 0; this.shake = 0; this.flashA = 0; this.impact = 0; this.speedT = 0; },
+  clear() { this.parts.length = 0; this.texts.length = 0; this.arcs.length = 0; this.beams.length = 0; this.rings.length = 0; this.slashes.length = 0; this.ghosts.length = 0; this.lights.length = 0; this.flashes.length = 0; this.timers.length = 0; this.cracks.length = 0; this.shake = 0; this.flashA = 0; this.impact = 0; this.speedT = 0; },
 
   add(p) {
     if (this.parts.length >= this.max * this.quality) return null;
@@ -81,19 +81,36 @@ const FX = {
   rail(x1, y1, x2, y2, w, life, col) { this.beams.push({ x1, y1, x2, y2, w, life, max: life, col, helix: true, ph: Math.random() * TAU }); },
   puff(x, y, size, col, life, vx, vy) { return this.add({ k: 3, x, y, vx: vx || 0, vy: vy || -12, life, max: life, size, col, drag: 1.5, grow: size * 1.6, soft: true }); },
   ring(x, y, r0, r1, life, col, w) { this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 2 }); },
-  beam(x1, y1, x2, y2, w, life, col) { this.beams.push({ x1, y1, x2, y2, w, life, max: life, col }); },
+  beam(x1, y1, x2, y2, w, life, col) { this.beams.push({ x1, y1, x2, y2, w, life, max: life, col, cs: sheathCol(col) }); },
   slash(x, y, ang, arc, r, life, col, w) { this.slashes.push({ x, y, ang, arc, r, life, max: life, col, w: w || 1 }); },
-  lightning(x1, y1, x2, y2, col, w, life, jag) {
-    const pts = [x1, y1];
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), n = Math.max(2, Math.ceil(len / 16));
-    const nx = -dy / (len || 1), ny = dx / (len || 1), j = jag || 9;
-    for (let i = 1; i < n; i++) {
-      const q = i / n, off = rand(-j, j) * Math.sin(q * Math.PI);
-      pts.push(x1 + dx * q + nx * off, y1 + dy * q + ny * off);
-    }
-    pts.push(x2, y2);
-    this.arcs.push({ pts, life: life || 0.16, max: life || 0.16, col, w: w || 2 });
+  // молния: ломаная с ответвлениями; прорастает от источника за 30 мс и потрескивает (перестраивается каждые 45 мс).
+  // o.d — задержка появления (цепь видимо перескакивает), o.fk — число ответвлений
+  lightning(x1, y1, x2, y2, col, w, life, jag, o) {
+    if (this.arcs.length > 220) return;
+    const a = { x1, y1, x2, y2, col, cs: sheathCol(col), w: w || 2, life: life || 0.16, max: life || 0.16, j: jag || 9, d: (o && o.d) || 0, t: 0, rt: o && o.still ? 1e9 : 0.045, gr: (o && o.grow) || 0.03, fk: o && o.fk !== undefined ? o.fk : 1, pts: null, fp: null };
+    this.zag(a); this.arcs.push(a);
   },
+  zag(a) {
+    const dx = a.x2 - a.x1, dy = a.y2 - a.y1, len = Math.hypot(dx, dy) || 1, n = Math.max(2, Math.ceil(len / 15));
+    const nx = -dy / len, ny = dx / len, pts = [a.x1, a.y1];
+    for (let i = 1; i < n; i++) { const q = i / n, off = rand(-a.j, a.j) * Math.sin(q * Math.PI); pts.push(a.x1 + dx * q + nx * off, a.y1 + dy * q + ny * off); }
+    pts.push(a.x2, a.y2);
+    a.pts = pts; a.fp = [];
+    if (len > 50) for (let k = 0; k < a.fk; k++) {
+      const i = 1 + ((Math.random() * (n - 1)) | 0), bx = pts[i * 2], by = pts[i * 2 + 1];
+      const an = Math.atan2(dy, dx) + (Math.random() < 0.5 ? -1 : 1) * rand(0.45, 0.95), L = Math.min(60, len * rand(0.18, 0.3)), fp = [bx, by];
+      for (let s = 1; s <= 3; s++) fp.push(bx + Math.cos(an) * L * s / 3 + rand(-3, 3), by + Math.sin(an) * L * s / 3 + rand(-3, 3));
+      a.fp.push(fp);
+    }
+  },
+  // раскалённый разлом в полу: тёмная щель, внутри остывающая лава (белое → оранжевое → тёмно-красное); рисуется под врагами
+  crack(x1, y1, x2, y2, col, life, d) {
+    if (this.cracks.length > 60) return;
+    const a = { x1, y1, x2, y2, j: 7, fk: 2, life, max: life, t: 0, d: d || 0, col };
+    this.zag(a); this.cracks.push(a);
+  },
+  // отложенный вызов (вспышки попаданий по цепи приходят вместе с разрядом)
+  later(d, fn) { if (d <= 0) fn(); else if (this.timers.length < 300) this.timers.push({ d, fn }); },
   text(x, y, str, col, size, opt) {
     if (this.texts.length > 70) return;
     this.texts.push({ x, y, str, col, size: size || 14, life: (opt && opt.life) || 0.8, max: (opt && opt.life) || 0.8, vy: (opt && opt.vy) || -38, big: opt && opt.big });
@@ -121,7 +138,16 @@ const FX = {
       else if (p.k === 6) { p.vz *= Math.exp(-2.2 * dt); p.z += p.vz * dt; }
     }
     const tick = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) removeAt(arr, i); } };
-    tick(this.arcs); tick(this.beams); tick(this.rings); tick(this.slashes); tick(this.ghosts); tick(this.lights); tick(this.flashes);
+    for (let i = this.arcs.length - 1; i >= 0; i--) {
+      const a = this.arcs[i];
+      if (a.d > 0) { a.d -= dt; continue; }
+      a.t += dt; a.life -= dt;
+      if (a.life <= 0) { removeAt(this.arcs, i); continue; }
+      a.rt -= dt; if (a.rt <= 0) { a.rt = 0.045; this.zag(a); }
+    }
+    for (let i = this.cracks.length - 1; i >= 0; i--) { const a = this.cracks[i]; if (a.d > 0) { a.d -= dt; continue; } a.t += dt; a.life -= dt; if (a.life <= 0) removeAt(this.cracks, i); }
+    for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.d -= dt; if (t.d <= 0) { removeAt(this.timers, i); t.fn(); } }
+    tick(this.beams); tick(this.rings); tick(this.slashes); tick(this.ghosts); tick(this.lights); tick(this.flashes);
     if (this.speedT > 0) this.speedT -= dt;
     const T = this.texts;
     for (let i = T.length - 1; i >= 0; i--) { const t = T[i]; t.life -= dt; t.y += t.vy * dt; t.vy *= Math.exp(-3 * dt); if (t.life <= 0) removeAt(T, i); }
@@ -143,6 +169,27 @@ const FX = {
   },
   // нормальное наложение: дым
   drawUnder(c) {
+    if (this.cracks.length) {
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      for (const a of this.cracks) {
+        if (a.d > 0) continue;
+        const q = a.life / a.max, g = Math.min(1, a.t / 0.16), P = a.pts, N = P.length / 2, last = (N - 1) * g, li = Math.floor(last);
+        const path = () => {
+          c.beginPath(); c.moveTo(P[0], P[1]);
+          for (let i = 1; i <= li; i++) c.lineTo(P[i * 2], P[i * 2 + 1]);
+          if (li < N - 1) { const f = last - li; c.lineTo(lerp(P[li * 2], P[li * 2 + 2], f), lerp(P[li * 2 + 1], P[li * 2 + 3], f)); }
+          if (g >= 1) for (const fp of a.fp) { c.moveTo(fp[0], fp[1]); for (let i = 2; i < fp.length; i += 2) c.lineTo(fp[i], fp[i + 1]); }
+        };
+        path();
+        c.globalAlpha = Math.min(1, q * 2) * 0.85; c.strokeStyle = '#05070c'; c.lineWidth = 3.2; c.stroke();
+        c.globalCompositeOperation = 'lighter';
+        const hot = clamp((q - 0.55) / 0.45, 0, 1);
+        c.globalAlpha = Math.min(1, q * 1.6); c.strokeStyle = mixHex('#8a1d0a', a.col, Math.min(1, q * 1.5)); c.lineWidth = 1.5; c.stroke();
+        if (hot > 0) { c.globalAlpha = hot; c.strokeStyle = '#ffe9b0'; c.lineWidth = 0.7; c.stroke(); }
+        c.globalCompositeOperation = 'source-over';
+      }
+      c.globalAlpha = 1; c.lineCap = 'butt';
+    }
     for (const p of this.parts) {
       if (p.k === 3) {
         const a = clamp(p.life / p.max, 0, 1) * (p.soft ? 0.32 : 0.5);
@@ -250,7 +297,7 @@ const FX = {
         c.globalAlpha = q; c.strokeStyle = '#ffffff'; c.lineWidth = b.w * 0.16 * (0.4 + q * 0.6); c.stroke();
       } else {
         c.globalAlpha = q;
-        c.strokeStyle = b.col; c.lineWidth = b.w * (0.4 + q * 0.6) * 2.2; c.stroke();
+        c.strokeStyle = b.cs || b.col; c.lineWidth = b.w * (0.4 + q * 0.6) * 2.2; c.stroke();
         c.strokeStyle = '#ffffff'; c.lineWidth = b.w * q * 0.7; c.stroke();
       }
       if (b.helix) {
@@ -266,16 +313,23 @@ const FX = {
         for (let k = 1; k <= 3; k++) { const d = L * k / 7, px = b.x1 + ux * d, py = b.y1 + uy * d; c.beginPath(); c.ellipse(px, py, rr * 0.4, rr * 0.85, Math.atan2(uy, ux), 0, TAU); c.stroke(); }
       }
     }
+    c.lineJoin = 'round'; c.lineCap = 'round';
     for (const a of this.arcs) {
-      const q = a.life / a.max;
-      c.globalAlpha = q;
-      c.beginPath(); c.moveTo(a.pts[0], a.pts[1]);
-      for (let i = 2; i < a.pts.length; i += 2) c.lineTo(a.pts[i], a.pts[i + 1]);
-      c.lineJoin = 'round';
-      c.globalAlpha = q * 0.3; c.strokeStyle = a.col; c.lineWidth = a.w * 6; c.stroke();
-      c.globalAlpha = q; c.lineWidth = a.w * 2.2; c.stroke();
-      c.strokeStyle = '#ffffff'; c.lineWidth = a.w * 0.8; c.stroke();
+      if (a.d > 0) continue;
+      const q = a.life / a.max, al = Math.min(1, q * 2), g = Math.min(1, a.t / a.gr), P = a.pts, N = P.length / 2;
+      const last = (N - 1) * g, li = Math.floor(last);
+      c.beginPath(); c.moveTo(P[0], P[1]);
+      for (let i = 1; i <= li; i++) c.lineTo(P[i * 2], P[i * 2 + 1]);
+      if (li < N - 1) { const f = last - li; c.lineTo(lerp(P[li * 2], P[li * 2 + 2], f), lerp(P[li * 2 + 1], P[li * 2 + 3], f)); }
+      c.globalAlpha = al; c.strokeStyle = a.cs; c.lineWidth = a.w * 1.6; c.stroke();
+      c.strokeStyle = '#ffffff'; c.lineWidth = a.w * 0.6; c.stroke();
+      if (g >= 1 && a.fp.length) {
+        c.beginPath();
+        for (const fp of a.fp) { c.moveTo(fp[0], fp[1]); for (let i = 2; i < fp.length; i += 2) c.lineTo(fp[i], fp[i + 1]); }
+        c.globalAlpha = al * 0.85; c.strokeStyle = a.cs; c.lineWidth = a.w * 0.75; c.stroke();
+      }
     }
+    c.lineCap = 'butt';
     for (const s of this.slashes) {
       const q = 1 - s.life / s.max;
       const a0 = s.ang - s.arc / 2, sweep = s.arc * ease.outCubic(Math.min(1, q * 1.6));

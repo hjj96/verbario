@@ -15,6 +15,14 @@ function deepen(col) {
   return '#' + hx(r1) + hx(g1) + hx(b1);
 }
 const _vpal = {};
+// оболочка молнии/луча: насыщенный оттенок цвета (белое и почти белое остаётся как есть)
+const _sheath = {};
+function sheathCol(col) {
+  let s = _sheath[col];
+  if (s) return s;
+  const [r, g, b] = hexToRgb(col), mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  return (_sheath[col] = mx - mn < 40 ? col : deepen(col));
+}
 function vpal(col0, metal) {
   const key = col0 + (metal ? 'M' : '');
   let p = _vpal[key];
@@ -111,14 +119,28 @@ function droneMesh(m, f, n, halo, col) {
   }
   m.pop();
 }
-function drawDrone3D(c, x, y, ang, col, sz, halo, ph) {
+const DRONE_H = 9;   // высота полёта дронов над полом
+const droneEmit = sz => DRONE_H + 6.4 * sz / 8 * 1.7;   // высота излучателя гало-дрона (для лазера)
+function drawDrone3D(c, x, y, ang, col, sz, halo, ph, hov) {
   const S = vfxSprites((halo ? 'halo' : 'drone') + col, 16, (m, f) => droneMesh(m, f, 16, halo, deepen(col)), vpal(col));
-  const k = sz / 8 * 1.7, bob = Math.sin(G.time * 6 + (ph || 0)) * 1.2 * vfxCp();
-  vfxShadow(c, x, y, 6 * k, 0.4);
-  vfxDraw(c, S, yawFrame(ang, 16), x, y - bob, k);
+  const k = sz / 8 * 1.7, cp = vfxCp(), lift = ((hov || 0) + Math.sin(G.time * 6 + (ph || 0)) * 1.2) * cp;
+  vfxShadow(c, x, y, 6 * k, hov ? 0.3 : 0.4);
+  vfxDraw(c, S, yawFrame(ang, 16), x, y - lift, k);
   c.save(); c.globalCompositeOperation = 'lighter';
-  c.globalAlpha = 0.55; c.drawImage(dotSprite(col), x - 3 * k, y - 2.4 * k * vfxCp() - bob - 3 * k, 6 * k, 6 * k);   // тяга под корпусом
+  c.globalAlpha = 0.55; c.drawImage(dotSprite(col), x - 3 * k, y - 2.4 * k * cp - lift - 3 * k, 6 * k, 6 * k);   // тяга под корпусом
   c.restore();
+}
+// дрон на орбите вокруг корпуса: след-дуга по орбите позади (три сегмента: тонкий хвост → плотная голова), затем сам дрон
+function drawDroneOrbit(c, cx, cy, a, R, dir, col, sz, halo, ph) {
+  const cp = vfxCp(), oy = cy - DRONE_H * cp, cs = sheathCol(col);
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.strokeStyle = cs;
+  for (let s = 0; s < 3; s++) {
+    const a0 = a - dir * (0.62 - s * 0.19), a1 = a - dir * (0.43 - s * 0.19) - dir * 0.02;
+    c.globalAlpha = 0.14 + s * 0.17; c.lineWidth = 0.6 + s * 0.45;
+    c.beginPath(); c.arc(cx, oy, R, Math.min(a0, a1), Math.max(a0, a1)); c.stroke();
+  }
+  c.restore();
+  drawDrone3D(c, cx + Math.cos(a) * R, cy + Math.sin(a) * R, a + dir * Math.PI / 2, col, sz, halo, ph, DRONE_H);
 }
 
 /* ---------- Ракета: корпус, обтекатель, полоса, сопло и стабилизаторы крест-накрест ---------- */
@@ -381,14 +403,39 @@ function drawGravSeed(c, p) {
   c.restore();
 }
 // схлопывание поля: имплозия без огненного шара — эллипс по полу, шестиугольник, осколки
-function gravBurst(x, y, R, col) {
-  const cy = y - (clamp(R * 0.12, 5, 13) + 7) * vfxCp();
-  FX.ering(x, y, R, R * 0.04, 0.16, '#e6d6ff', 1.4, true);          // всё стягивается в точку
-  FX.ering(x, y, 6, R * 1.25, 0.46, col, 2.2, true);                  // и выплёвывается тонкой волной по полу
+// ударная волна: невысокая светящаяся стена-кольцо — круг на полу, тот же круг на высоте h и рёбра между ними
+function drawShockWall(c, a) {
+  const q = 1 - a.life / a.max, R = Math.max(2, a.r), cp = vfxCp(), h = 15 * (1 - q * 0.75), al = 1 - q * q, x = a.x, y = a.y, top = y - h * cp;
+  c.save(); c.globalCompositeOperation = 'lighter';
+  // внутренняя сторона дальней половины и наружная сторона ближней — полупрозрачные полосы
+  c.fillStyle = rgba(a.col, 0.1 * al);
+  c.beginPath(); c.moveTo(x + R, y); c.arc(x, y, R, 0, Math.PI, true); c.lineTo(x - R, top); c.arc(x, top, R, Math.PI, TAU); c.closePath(); c.fill();
+  c.fillStyle = rgba(a.col, 0.2 * al);
+  c.beginPath(); c.moveTo(x + R, y); c.arc(x, y, R, 0, Math.PI); c.lineTo(x - R, top); c.arc(x, top, R, Math.PI, 0, true); c.closePath(); c.fill();
+  // рёбра стены
+  c.strokeStyle = rgba(a.col, 0.45 * al); c.lineWidth = 0.9; c.beginPath();
+  const n = R > 60 ? 28 : 18, r0 = (a.rot || 0) + q * 0.5;
+  for (let i = 0; i < n; i++) { const an = r0 + i * TAU / n, px = x + Math.cos(an) * R, py = y + Math.sin(an) * R; c.moveTo(px, py); c.lineTo(px, py - h * cp); }
+  c.stroke();
+  // кромки: яркий круг на полу, тонкий сверху, рябь позади фронта
+  c.strokeStyle = rgba(sheathCol(a.col), al); c.lineWidth = 2.2; c.beginPath(); c.arc(x, y, R, 0, TAU); c.stroke();
+  c.strokeStyle = rgba('#ffffff', 0.85 * al); c.lineWidth = 0.9; c.stroke();
+  c.strokeStyle = rgba(mixHex(a.col, '#ffffff', 0.5), 0.7 * al); c.lineWidth = 1; c.beginPath(); c.arc(x, top, R, 0, TAU); c.stroke();
+  if (R > 20) { c.strokeStyle = rgba(a.col, 0.35 * al); c.lineWidth = 1; c.beginPath(); c.arc(x, y, R * 0.8, 0, TAU); c.stroke(); }
+  c.restore();
+}
+// чёткий удар без огненного шара: тонкие волны по полу, шестигранник, искры-штрихи, осколки
+function crispBurst(x, y, R, col, cy) {
+  if (cy === undefined) cy = y - 6 * vfxCp();
+  FX.ering(x, y, 6, R * 1.25, 0.46, col, 2.2, true);
   FX.ering(x, y, 4, R * 0.75, 0.3, '#ffffff', 1, true);
   FX.hexRing(x, cy, 3, Math.min(R * 0.3, 34), 0.22, '#ffffff', 1.3);
   FX.dot(x, cy, 0, 0, 0.07, Math.min(R * 0.1, 12), '#ffffff', 0);
-  FX.sparks(x, cy, 12, '#e6d6ff', R * 4.2, undefined, 0, 0.3);
+  FX.sparks(x, cy, 12, mixHex(col, '#ffffff', 0.6), R * 4.2, undefined, 0, 0.3);
   FX.shards(x, y, 8, col, R * 3);
   FX.light(x, y, R * 1.1, col, 0.3, 0.3);
+}
+function gravBurst(x, y, R, col) {
+  FX.ering(x, y, R, R * 0.04, 0.16, '#e6d6ff', 1.4, true);          // всё стягивается в точку
+  crispBurst(x, y, R, col, y - (clamp(R * 0.12, 5, 13) + 7) * vfxCp()); // и выплёвывается тонкой волной по полу
 }

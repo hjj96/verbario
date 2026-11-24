@@ -152,7 +152,7 @@ function droneVolley(tgt, dmg) {
   const dw = P.weapons.find(w => baseOf(w) === 'drones'); if (!dw || !dw.p) return;
   const st = dw.st, p = dw.p, R = p.orbit * p.area, n = dw.id === 'halo' ? Math.ceil(p.amount / 2) : p.amount;
   for (let i = 0; i < Math.min(4, n); i++) {
-    const a = (st.a || 0) + i * TAU / n, x = P.x + Math.cos(a) * R, y = P.y + Math.sin(a) * R, an = Math.atan2(tgt.y - y, tgt.x - x);
+    const a = (st.a || 0) + i * TAU / n, x = P.x + Math.cos(a) * R, y = P.y + Math.sin(a) * R - DRONE_H * vfxCp(), an = Math.atan2(tgt.y - y, tgt.x - x);
     spawnProj('bolt', x, y, Math.cos(an) * 520, Math.sin(an) * 520, { dmg: dmg * 0.7 * k, pierce: 1, r: 3, life: 1.1, src: 'link_support', col: '#7dffb0', kb: 20 });
   }
 }

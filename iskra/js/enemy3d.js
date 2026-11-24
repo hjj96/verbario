@@ -329,8 +329,14 @@ function enemyMuzzle(e) {
   const Y = eYawIdx(e.ang), q = S.muz[Y.yi] || { x: 0, y: 0 }, k = e.scale || 1;
   return { x: e.x + (Y.mir ? -q.x : q.x) * k, y: e.y + q.y * k };
 }
+// враг во льду: та же модель, но грани — голубое стекло, рёбра — иней (а не белая заливка силуэта)
 function iceOf(S, yi) {
-  return S.ice[yi] || (S.ice[yi] = silhouette(S.sp[0][yi][0], '#9ff0ff'));
+  if (S.ice[yi]) return S.ice[yi];
+  const pal = vpal('#8fe8ff'), m = eModelMesh(S.tid, S.r, eYaw(yi), { ph: 0, mv: 0, t: 0, pal, pose: S.poses[0] }, S.zc);
+  const cv = makeCanvas(S.pw, S.ph), c = cv.getContext('2d');
+  c.setTransform(S.res, 0, 0, S.res, S.ax, S.ay);
+  renderMesh(c, m, pal, enemyView(), {});
+  return (S.ice[yi] = cv);
 }
 // высота «падения» при появлении: враги высаживаются сверху
 function dropOff(e) { return e.t < 0.4 ? -(1 - ease.inQuad(e.t / 0.4)) * 110 : 0; }
@@ -349,8 +355,8 @@ function drawEnemySprite(c, e, z, e0, f0, t) {
   c.globalAlpha = al;
   c.drawImage(img, -S.ax, -S.ay);
   if (e.flash > 0) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.8 * al; c.drawImage(img, -S.ax, -S.ay); c.globalCompositeOperation = 'source-over'; }
-  if (e.st.freezeT > 0) { c.globalAlpha = 0.7 * al; c.drawImage(iceOf(S, Y.yi), -S.ax, -S.ay); }
-  else if (e.st.chillT > 0) { c.globalAlpha = 0.28 * al; c.drawImage(iceOf(S, Y.yi), -S.ax, -S.ay); }
+  if (e.st.freezeT > 0) { c.globalAlpha = 0.9 * al; c.drawImage(iceOf(S, Y.yi), -S.ax, -S.ay); }
+  else if (e.st.chillT > 0) { c.globalAlpha = 0.3 * al; c.drawImage(iceOf(S, Y.yi), -S.ax, -S.ay); }
   c.globalAlpha = 1;
 }
 // экранные смещения от позиции машины: до точки на полу и до её верхушки (для колец, полос, звёзд оглушения)

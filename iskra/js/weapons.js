@@ -151,7 +151,7 @@ WB.drones = (w, dt, spd) => {
   const R = p.orbit * p.area, n = p.amount;
   for (let i = 0; i < n; i++) {
     const a = st.a + i * TAU / n, x = P.x + Math.cos(a) * R, y = P.y + Math.sin(a) * R;
-    eachEnemyIn(x, y, p.size, e => { if (icdOk(e, 'dr', p.icd)) { hitEnemy(e, p.dmg, { src: w.id, kb: p.kb }); FX.sparks(x, y, 2, WEAPONS.drones.color, 140); } });
+    eachEnemyIn(x, y, p.size, e => { if (icdOk(e, 'dr', p.icd)) { hitEnemy(e, p.dmg, { src: w.id, kb: p.kb }); const hy = bodyY(e); FX.hexRing(e.x, hy, 2, 8, 0.15, WEAPONS.drones.color, 1.1); FX.sparks(e.x, hy, 3, '#ffffff', 150, Math.atan2(e.y - P.y, e.x - P.x), 0.8, 0.18); } });
   }
 };
 function drawDrone(c, x, y, a, col, sz) {
@@ -163,10 +163,28 @@ function drawDrone(c, x, y, a, col, sz) {
   c.fillStyle = '#ffffff'; c.beginPath(); c.arc(0, 0, sz * 0.28, 0, TAU); c.fill();
   c.restore();
 }
-WD.drones = (c, w) => {
-  const p = w.p, st = w.st, R = p.orbit * p.area;
-  for (let i = 0; i < p.amount; i++) { const a = (st.a || 0) + i * TAU / p.amount; drawDrone3D(c, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R, a + Math.PI / 2, WEAPONS.drones.color, p.size, false, i * 1.7); }
-};
+// дроны на орбите: позиция, радиус и направление облёта (+1 — по часовой на экране)
+function droneList(w) {
+  const p = w.p, st = w.st, out = [];
+  if (w.id === 'halo') {
+    const half = Math.ceil(p.amount / 2), R1 = p.orbit * p.area, R2 = p.orbit2 * p.area;
+    for (let i = 0; i < p.amount; i++) {
+      const inner = i < half, k = inner ? i : i - half, n = inner ? half : p.amount - half;
+      out.push({ a: (inner ? (st.a || 0) : -(st.a || 0) * 0.8) + k * TAU / n, R: inner ? R1 : R2, dir: inner ? 1 : -1, ph: i * 1.3 });
+    }
+  } else for (let i = 0; i < p.amount; i++) out.push({ a: (st.a || 0) + i * TAU / p.amount, R: p.orbit * p.area, dir: 1, ph: i * 1.7 });
+  return out;
+}
+// задняя половина орбиты рисуется до корпуса, передняя — после: дроны честно облетают робота
+function drawDrones(c, w, front) {
+  const halo = w.id === 'halo', col = halo ? '#9dffcf' : WEAPONS.drones.color;
+  for (const d of droneList(w)) {
+    if ((Math.sin(d.a) > 0) !== front) continue;
+    drawDroneOrbit(c, P.x, P.y, d.a, d.R, d.dir, col, w.p.size, halo, d.ph);
+  }
+}
+WD.drones = (c, w) => drawDrones(c, w, false);
+WF.drones = (c, w) => drawDrones(c, w, true);
 WB.halo = (w, dt, spd) => {
   const p = w.p, st = w.st;
   st.a = (st.a || 0) + p.rot * dt * spd;
@@ -181,33 +199,33 @@ WB.halo = (w, dt, spd) => {
     eachEnemyIn(x, y, p.size, e => { if (icdOk(e, 'hl', p.icd)) hitEnemy(e, p.dmg, { src: w.id, kb: 70 }); });
     if (fireL) {
       const t = nearestEnemy(x, y, 220);
-      if (t) { FX.beam(x, y, t.x, t.y, 1.4, 0.12, '#9dffcf'); hitEnemy(t, p.laser * P.stats.might, { src: w.id }); }
+      if (t) { const ey = y - droneEmit(p.size) * vfxCp(), ty = bodyY(t); FX.beam(x, ey, t.x, ty, 1, 0.12, '#9dffcf'); FX.hexRing(t.x, ty, 1.5, 6, 0.14, '#9dffcf', 1); hitEnemy(t, p.laser * P.stats.might, { src: w.id }); }
     }
   }
   if (fireL) AUDIO.sfx('laser');
 };
-WD.halo = (c, w) => {
-  const p = w.p, st = w.st, half = Math.ceil(p.amount / 2), R1 = p.orbit * p.area, R2 = p.orbit2 * p.area;
-  for (let i = 0; i < p.amount; i++) {
-    const inner = i < half, k = inner ? i : i - half, n = inner ? half : p.amount - half;
-    const a = (inner ? (st.a || 0) : -(st.a || 0) * 0.8) + k * TAU / n, R = inner ? R1 : R2;
-    drawDrone3D(c, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R, a + (inner ? Math.PI / 2 : -Math.PI / 2), '#9dffcf', p.size, true, i * 1.3);
-  }
-};
+WD.halo = (c, w) => drawDrones(c, w, false);
+WF.halo = (c, w) => drawDrones(c, w, true);
 
 /* ---------- Дуговой разрядник ---------- */
-function chainZap(x, y, first, chains, range, dmg, src, stunChance, col) {
-  let cx = x, cy = y, cur = first;
+// точка попадания — середина корпуса врага, а не пол под ним
+const bodyY = e => e.y - (e.r || 10) * 0.5 * vfxCp();
+function zapMark(x, y, col) { FX.hexRing(x, y, 2, 9, 0.16, col, 1.1); FX.sparks(x, y, 3, '#ffffff', 170, undefined, 0, 0.16); }
+// цепной разряд: каждый перескок появляется на 22 мс позже предыдущего; o — вид первого отрезка (небесный удар купола)
+function chainZap(x, y, first, chains, range, dmg, src, stunChance, col, o) {
+  let cx = x, cy = y, cur = first, dl = 0;
   const hit = new Set();
   for (let i = 0; i <= chains && cur; i++) {
-    FX.lightning(cx, cy, cur.x, cur.y, col, 1.5, 0.16);
-    FX.sparks(cur.x, cur.y, 3, col, 150);
+    const ty = bodyY(cur), mx = cur.x, fx = cur.x, fy = cur.y;
+    if (i === 0 && o) FX.lightning(cx, cy, mx, ty, o.col || col, o.w, o.life, o.jag, { fk: o.fk });
+    else FX.lightning(cx, cy, mx, ty, col, 1.3, 0.17, 8, { d: dl, fk: i === 0 || Math.random() < 0.4 ? 1 : 0 });
+    FX.later(dl, () => zapMark(mx, ty, col));
+    dl += 0.022;
     hit.add(cur);
-    const ex = cur.x, ey = cur.y;
     hitEnemy(cur, dmg, { src, stun: 0.4, stunChance, kb: 15 });
-    cx = ex; cy = ey;
+    cx = mx; cy = ty;
     let nx = null, bd = range * range;
-    eachEnemyIn(cx, cy, range, n => { if (!hit.has(n) && targetable(n)) { const d = d2(cx, cy, n.x, n.y); if (d < bd) { bd = d; nx = n; } } });
+    eachEnemyIn(fx, fy, range, n => { if (!hit.has(n) && targetable(n)) { const q = d2(fx, fy, n.x, n.y); if (q < bd) { bd = q; nx = n; } } });
     cur = nx;
   }
 }
@@ -216,6 +234,7 @@ WB.arc = (w, dt, spd) => {
   const p = w.p, firsts = nearestK(P.x, P.y, p.amount, p.reach);
   if (!firsts.length) { w.t = 0.15; return; }
   const m = muzzleWorld(w);
+  FX.hexRing(m.x, m.y, 1, 7, 0.14, '#ffffff', 1);
   for (const f of firsts) chainZap(m.x, m.y, f, p.chains, p.range, p.dmg, w.id, p.stun, WEAPONS.arc.color);
   w.t = p.cd; P.fire = 1; fired(w); AUDIO.sfx('zap');
 };
@@ -226,10 +245,10 @@ WB.stormdome = (w, dt, spd) => {
     const tg = densestPoint(0, 8);
     if (tg) {
       st.big = p.bigCd;
-      const x = tg.x, y = tg.y, R = 64 * p.area;
-      FX.lightning(x + rand(-30, 30), y - 420, x, y, '#ffffff', 4, 0.3, 26);
-      FX.lightning(x + rand(-30, 30), y - 420, x, y, '#e2d4ff', 2.5, 0.25, 30);
-      FX.explosion(x, y, R, '#c9a6ff', true); FX.addShake(5);
+      const x = tg.x, y = tg.y, R = 64 * p.area, sx = x + rand(-30, 30);
+      FX.lightning(sx, y - 420, x, y, '#ffffff', 1.8, 0.3, 24, { fk: 3 });
+      FX.lightning(sx, y - 420, x, y, '#c9a6ff', 1.1, 0.26, 34, { fk: 2 });
+      crispBurst(x, y, R, '#c9a6ff'); FX.addShake(5);
       AUDIO.sfx('boom', { big: true });
       eachEnemyIn(x, y, R, e => { hitEnemy(e, p.big * P.stats.might, { src: w.id, stun: 0.6, kb: 160 }); });
     } else st.big = 0.3;
@@ -237,9 +256,9 @@ WB.stormdome = (w, dt, spd) => {
   if (!cdReady(w, dt, spd)) return;
   const t = randomOnScreen();
   if (!t) { w.t = 0.2; return; }
-  FX.lightning(t.x + rand(-40, 40), t.y - 360, t.x, t.y, '#e2d4ff', 2, 0.18, 22);
-  chainZap(t.x, t.y, t, p.chains, p.range, p.dmg, w.id, p.stun, '#e2d4ff');
-  FX.light(t.x, t.y, 80, '#c9a6ff', 0.5);
+  chainZap(t.x + rand(-40, 40), t.y - 360, t, p.chains, p.range, p.dmg, w.id, p.stun, '#e2d4ff', { w: 1.7, life: 0.2, jag: 22, fk: 2 });
+  FX.ering(t.x, t.y, 3, 18, 0.22, '#e2d4ff', 1.2, true);
+  FX.light(t.x, t.y, 70, '#c9a6ff', 0.35);
   w.t = p.cd; fired(w, 0.7); AUDIO.sfx('zap');
 };
 
@@ -426,29 +445,64 @@ function cryoUpdate(w, dt, spd, isZero) {
 }
 WB.cryo = (w, dt, spd) => cryoUpdate(w, dt, spd, false);
 WB.zero = (w, dt, spd) => cryoUpdate(w, dt, spd, true);
+// криолуч: тонкое белое ядро в голубой оболочке, гаснет к концу; по лучу бегут поперечные импульсы инея и кувыркаются
+// ледяные кристаллы; у излучателя — вращающаяся снежинка, на цели — ледяной шестигранник. Включается и гаснет плавно
 function drawCryo(c, w) {
   const st = w.st, p = w.p;
   if (!(st.on > 0) || !st.beams) return;
-  const ox = st.mx !== undefined ? st.mx : P.x, oy = st.my !== undefined ? st.my : P.y, t = G.time, fl = 1 + Math.sin(t * 40) * 0.12;
+  const ox = st.mx !== undefined ? st.mx : P.x, oy = st.my !== undefined ? st.my : P.y, t = G.time;
+  const on = ease.outCubic(clamp((p.dur - st.on) / 0.14, 0, 1)), k = on * clamp(st.on / 0.18, 0, 1), sh = sheathCol('#8fe8ff');
   c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
   for (const b of st.beams) {
     if (!b.tgt) continue;
-    const ca = Math.cos(b.ang), sa = Math.sin(b.ang), L = p.range, x2 = ox + ca * L, y2 = oy + sa * L;
+    const ca = Math.cos(b.ang), sa = Math.sin(b.ang), L = p.range * on, x2 = ox + ca * L, y2 = oy + sa * L;
+    const g = c.createLinearGradient(ox, oy, x2, y2);
+    g.addColorStop(0, rgba(sh, 0.95)); g.addColorStop(0.55, rgba(sh, 0.7)); g.addColorStop(1, rgba(sh, 0));
+    const gc = c.createLinearGradient(ox, oy, x2, y2);
+    gc.addColorStop(0, 'rgba(240,253,255,1)'); gc.addColorStop(0.7, 'rgba(240,253,255,0.75)'); gc.addColorStop(1, 'rgba(240,253,255,0)');
     c.beginPath(); c.moveTo(ox, oy); c.lineTo(x2, y2);
-    c.strokeStyle = rgba('#5fd0ff', 0.12); c.lineWidth = p.width * 1.5 * fl; c.stroke();
-    c.strokeStyle = rgba('#8fe8ff', 0.55); c.lineWidth = p.width * 0.5 * fl; c.stroke();
-    c.strokeStyle = 'rgba(235,252,255,0.95)'; c.lineWidth = Math.max(1.2, p.width * 0.14); c.stroke();
-    c.globalAlpha = 0.7; c.drawImage(dotSprite('#8fe8ff'), ox - 8, oy - 8, 16, 16); c.globalAlpha = 1;
+    c.strokeStyle = g; c.lineWidth = Math.max(2.2, p.width * 0.24) * k * (1 + Math.sin(t * 38 + b.ang) * 0.08); c.stroke();
+    c.strokeStyle = gc; c.lineWidth = 1.1 * k; c.stroke();
+    // границы поля заморозки: две тонкие параллельные линии по ширине луча
+    const hw0 = p.width * 0.5 * k, L2 = L * 0.75;
+    c.globalAlpha = 0.28; c.strokeStyle = g; c.lineWidth = 0.8; c.beginPath();
+    c.moveTo(ox - sa * hw0, oy + ca * hw0); c.lineTo(ox - sa * hw0 + ca * L2, oy + ca * hw0 + sa * L2);
+    c.moveTo(ox + sa * hw0, oy - ca * hw0); c.lineTo(ox + sa * hw0 + ca * L2, oy - ca * hw0 + sa * L2);
+    c.stroke(); c.globalAlpha = 1;
+    // импульсы инея: короткие поперечные штрихи бегут от излучателя
+    c.strokeStyle = '#d8f7ff'; c.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const u = (t * 1.5 + i / 6) % 1, d = u * L, hw = (6 - u * 3) * k, px = ox + ca * d, py = oy + sa * d;
+      c.globalAlpha = (1 - u) * 0.75; c.beginPath(); c.moveTo(px - sa * hw, py + ca * hw); c.lineTo(px + sa * hw, py - ca * hw); c.stroke();
+    }
+    c.globalAlpha = 1;
+    // ледяной шестигранник на цели
+    if (b.tgt.alive && on >= 1) {
+      const tx = b.tgt.x, ty = bodyY(b.tgt), r = 7 + Math.sin(t * 9) * 0.8;
+      c.strokeStyle = rgba('#d8f7ff', 0.85 * k); c.lineWidth = 1.1; c.beginPath();
+      for (let j = 0; j <= 6; j++) { const a = t * 2 + j * TAU / 6, px = tx + Math.cos(a) * r, py = ty + Math.sin(a) * r; j ? c.lineTo(px, py) : c.moveTo(px, py); }
+      c.stroke();
+    }
   }
+  // снежинка у излучателя: шесть лучей с развилками
+  c.strokeStyle = rgba('#e8fbff', 0.9 * k); c.lineWidth = 1;
+  c.beginPath();
+  for (let j = 0; j < 6; j++) {
+    const a = t * 3 + j * TAU / 6, ca = Math.cos(a), sa = Math.sin(a), R = 6.5 * k, mx = ox + ca * R * 0.6, my = oy + sa * R * 0.6;
+    c.moveTo(ox, oy); c.lineTo(ox + ca * R, oy + sa * R);
+    c.moveTo(mx, my); c.lineTo(mx + Math.cos(a + 0.7) * R * 0.35, my + Math.sin(a + 0.7) * R * 0.35);
+    c.moveTo(mx, my); c.lineTo(mx + Math.cos(a - 0.7) * R * 0.35, my + Math.sin(a - 0.7) * R * 0.35);
+  }
+  c.stroke();
   c.restore();
   // ледяные кристаллы летят вдоль луча и кувыркаются
   const S = vfxSprites('shard', 16, (m, f) => { m.push(); m.t(0, 0, 3); m.rz(-f / 16 * TAU); m.poly(OCTA.v.map(v => [v[0] * 6, v[1] * 1.7, v[2] * 1.7]), OCTA.f, f % 2 ? 'l' : 'a'); m.pop(); }, vpal('#8fe8ff'));
   for (const b of st.beams) {
     if (!b.tgt) continue;
     const ca = Math.cos(b.ang), sa = Math.sin(b.ang);
-    for (let k = 0; k < 4; k++) {
-      const u = (t * 1.6 + k / 4) % 1, d = u * p.range, x = ox + ca * d - sa * Math.sin(u * 9 + k) * 4, y = oy + sa * d + ca * Math.sin(u * 9 + k) * 4;
-      vfxDraw(c, S, Math.floor(t * 18 + k * 5), x, y, 0.55, 1 - u * 0.7);
+    for (let j = 0; j < 3; j++) {
+      const u = (t * 1.1 + j / 3) % 1, d = u * p.range * on, x = ox + ca * d - sa * Math.sin(u * 9 + j) * 4, y = oy + sa * d + ca * Math.sin(u * 9 + j) * 4;
+      vfxDraw(c, S, Math.floor(t * 18 + j * 5), x, y, 0.75, (1 - u * 0.8) * k);
     }
   }
 }
@@ -597,12 +651,12 @@ WB.shock = (w, dt, spd) => {
   st.q = p.amount; st.qt = 0; w.t = p.cd;
 };
 function emitShockRing(src, R, dmg, kb, stun, col) {
-  spawnArea('ring', P.x, P.y, { r: 0, maxR: R, life: 0.36, dmg, kb, stun: stun || 0, src, hits: new Set(), col });
+  spawnArea('ring', P.x, P.y, { r: 0, maxR: R, life: 0.36, dmg, kb, stun: stun || 0, src, hits: new Set(), col, rot: rand(0, TAU) });
   AUDIO.sfx('thump');
   P.fire = 1; P.squash = 1;
   for (const w of P.weapons) if (baseOf(w) === 'shock') fired(w);
-  FX.light(P.x, P.y, R, col, 0.35);
-  FX.shards(P.x, P.y + 6, 8, col, 220);
+  FX.light(P.x, P.y, R * 0.8, col, 0.25);
+  FX.hexRing(P.x, P.y, 3, 18, 0.2, '#ffffff', 1.3);
 }
 WB.seismic = (w, dt, spd) => {
   const p = w.p, st = w.st;
@@ -613,10 +667,7 @@ WB.seismic = (w, dt, spd) => {
   const off = rand(0, TAU), L = p.radius * p.area * 1.1;
   for (let i = 0; i < p.fissures; i++) {
     const a = off + i * TAU / p.fissures;
-    const pts = [P.x, P.y + 8];
-    let x = P.x, y = P.y + 8;
-    for (let k = 1; k <= 6; k++) { x = P.x + Math.cos(a) * L * k / 6 + rand(-8, 8); y = P.y + 8 + Math.sin(a) * L * k / 6 + rand(-8, 8); pts.push(x, y); }
-    FX.arcs.push({ pts, life: 0.7, max: 0.7, col: '#ff8a3d', w: 3 });
+    FX.crack(P.x + Math.cos(a) * 8, P.y + 4 + Math.sin(a) * 8, P.x + Math.cos(a) * L, P.y + 4 + Math.sin(a) * L, '#ff8a3d', 1.1);
     lineEnemies(P.x, P.y + 8, a, L, 22, e => { hitEnemy(e, p.fdmg * P.stats.might, { src: w.id, stun: 0.5 }); });
   }
   FX.addShake(6);
@@ -1115,15 +1166,10 @@ const AK = {
         hitEnemy(e, a.dmg, { src: a.src, kb: a.kb, stun: a.stun });
       });
       if (a.src === 'shock' || a.src === 'seismic') ringDetonate(a);
+      // обломки плит пола подлетают на фронте волны
+      if (R > 12 && Math.random() < 0.55 * FX.quality) { const an = rand(0, TAU); FX.add({ k: 5, x: a.x + Math.cos(an) * R, y: a.y + Math.sin(an) * R, z: 0, vx: Math.cos(an) * 60, vy: Math.sin(an) * 60, vz: rand(150, 240), life: rand(0.45, 0.7), max: 0.7, size: rand(0.5, 0.8), rot: rand(0, 8), vr: rand(-12, 12), col: a.col, drag: 1.4 }); }
     },
-    draw(c, a) {
-      const q = 1 - a.life / a.max;
-      c.globalCompositeOperation = 'lighter';
-      c.strokeStyle = rgba(a.col, 0.9 * (1 - q)); c.lineWidth = 8 * (1 - q) + 2;
-      c.beginPath(); c.arc(a.x, a.y, Math.max(1, a.r), 0, TAU); c.stroke();
-      c.strokeStyle = rgba('#ffffff', 0.7 * (1 - q)); c.lineWidth = 2; c.stroke();
-      c.globalCompositeOperation = 'source-over';
-    },
+    draw(c, a) { drawShockWall(c, a); },
   },
   strike: {
     update(a, dt) {
