@@ -152,7 +152,9 @@ function buildBackground(S) {
     const eggs = new Path2D(); for (let i = 0; i < 7; i++) { const a = i * 0.9, d = 8 + i * 4; eggs.moveTo(Math.cos(a) * d + 6, Math.sin(a) * d); eggs.ellipse(Math.cos(a) * d, Math.sin(a) * d, 6, 8.5, a, 0, TAU); }
     D.push({ r: 45, s: [L(eggs, '#ffb43d', 1, null, 0.75)] });
   }
-  SPR.decoV = D;
+  // на полу остаются только круглые мотивы: остальное (кучи, рельсы, дома, дороги, прожилки) — шум
+  const keep = { rust: [0, 3], neon: [2, 3], hive: [0, 2] }[S.id] || null;
+  SPR.decoV = keep ? keep.map(i => D[i]).filter(Boolean) : D;
   SPR.deco = [];
 }
 

@@ -201,15 +201,40 @@ function drawSaber3D(c, x, y, rot, R, col, tr, ext, fl) {
 }
 function saberTrail(tr, x, y, rot) { tr.unshift({ x, y: y - SABER_Z * vfxCp(), r: rot, t: G.time }); if (tr.length > 3) tr.length = 3; return tr; }
 
+/* ---------- Импульс бластера: огранённый кристалл энергии (острый нос, длинный хвост, белое ядро по оси) ---------- */
+function boltMesh(m, f, n) {
+  m.push(); m.rz(-f / n * TAU);
+  const R = 1.8, v = [[5.4, 0, 0], [-8.6, 0, 0]];
+  for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.26; v.push([0.6, Math.cos(a) * R, Math.sin(a) * R]); }
+  const F = [];
+  for (let i = 0; i < 6; i++) { const j = (i + 1) % 6; F.push([0, 2 + i, 2 + j]); F.push([1, 2 + j, 2 + i]); }
+  m.poly(v, F, 'a');
+  const g = m.line(null, 4.4, 0, 0, -6.8, 0, 0, '#ffffff', 1.3, 0.95); g.auto = true;
+  m.pop();
+}
+function drawBolt3D(c, p) {
+  const col = p.col || '#46e3ff', S = vfxSprites('bolt' + col, 16, (m, f) => boltMesh(m, f, 16), vpal(col));
+  const a = Math.atan2(p.vy, p.vx), ca = Math.cos(a), sa = Math.sin(a);
+  // вылет из ствола: кристалл дорастает за 0,06 с
+  const k = p.r / 3.6 * (0.5 + 0.5 * Math.min(1, p.t / 0.06)), L = 8.6 * k;
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  // чёткий след без размытия: тонкая линия за хвостом
+  c.strokeStyle = rgba(col, 0.4); c.lineWidth = 1.3 * k;
+  c.beginPath(); c.moveTo(p.x - ca * L, p.y - sa * L); c.lineTo(p.x - ca * L * 2.4, p.y - sa * L * 2.4); c.stroke();
+  c.globalAlpha = 0.22; c.drawImage(dotSprite(col), p.x - 4 * k, p.y - 4 * k, 8 * k, 8 * k);
+  c.restore();
+  vfxDraw(c, S, yawFrame(a, 16), p.x, p.y, k);
+}
+
 /* ---------- Плазменная сфера аннигилятора: икосаэдр, вращается, вокруг — треск ---------- */
 function drawOrb3D(c, p) {
   const S = vfxSprites('orb', 8, (m, f) => { m.push(); m.rx(0.5); m.rz(f / 8 * TAU / 5); m.poly(ICO.v.map(v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l * 5, v[1] / l * 5, v[2] / l * 5]; }), ICO.f, f % 2 ? 'l' : 'a'); m.pop(); }, vpal(p.col || '#bff6ff'));
   const k = p.r / 5;
   c.save(); c.globalCompositeOperation = 'lighter';
-  c.globalAlpha = 0.75; c.drawImage(dotSprite(p.col), p.x - p.r * 2, p.y - p.r * 2, p.r * 4, p.r * 4);
+  c.globalAlpha = 0.35; c.drawImage(dotSprite(p.col), p.x - p.r * 1.5, p.y - p.r * 1.5, p.r * 3, p.r * 3);
   c.restore();
   vfxDraw(c, S, Math.floor(G.time * 14 + p.x * 0.1), p.x, p.y, k * 1.25);
-  if (Math.random() < 0.25) { const a = rand(0, TAU); FX.lightning(p.x, p.y, p.x + Math.cos(a) * p.r * 2.4, p.y + Math.sin(a) * p.r * 2.4, '#e0fbff', 0.8, 0.06, p.r * 0.6); }
+
 }
 
 /* ---------- Мина: диск с куполом, кольцом и тремя упорами; бомбочка кластера; ледяной осколок ---------- */

@@ -812,7 +812,10 @@ function buildModule3(m, w, pal, ps) {
   switch (id) {
     case 'blaster': {
       m.box(-2.4, -2.5, -2.2, 2.4, 3.6, 2.2, 'm');
-      const b = m.barrel(1.3, 1.1, 3.6, 12.5, 8, 'l'); muzzle(b.cap1, 12.6, 1.6);
+      const b = m.barrel(1.45, 1.2, 3.6, 12.5, 6, 'l'); muzzle(b.cap1, 12.6, 1.6);
+      m.barrel(1.95, 1.95, 7.2, 8.0, 6, 'd');
+      const cell = m.box(2.2, -1.4, -0.9, 3.1, 2.4, 0.9, 'a');
+      m.glow(cell[1], 3.15, 0.5, 0, 0.9 + f * 0.8, col, 0.5 + f * 0.5);
       if (w.evo) { m.box(-3.2, 2, 1.6, -2.6, 11, 2.2, 'a'); m.box(2.6, 2, 1.6, 3.2, 11, 2.2, 'a'); }
       tip = 13; break;
     }

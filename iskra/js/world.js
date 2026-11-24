@@ -180,24 +180,35 @@ const viewSp = view => Math.max(0.35, Math.sin(VIEW_PITCH[view] || 0.42));
 const viewCp = view => Math.cos(VIEW_PITCH[view] || 0.42);
 
 // пресс: четыре стойки, рама, гидроцилиндр и плита-молот; глубина растянута, чтобы основание совпадало с кругом удара
-function pressMesh(h, H, view) {
-  const m = new Mesh(); m.zc = 0;
-  const R = 36, top = 70;
+// пресс: задняя рама → плита-молот → гидрошток → передняя рама; слои рисуются по порядку,
+// поэтому шток не «протыкает» плиту при подъёме, как было при общей сортировке граней
+function pressMeshes(h, H, view) {
+  const R = 36, top = 70, ky = 1 / viewSp(view);
   let hz;
   if (h.ph === 0) hz = 4 + 46 * smooth01(h.u / H.t0);
   else if (h.ph === 1) hz = 50 + Math.sin(G.time * 70) * 1.2;
   else { const q = (h.u - H.t1) / 0.07; hz = q < 1 ? 50 - 46 * q : 4; }
-  m.push(); m.sc(1, 1 / viewSp(view), 1);
-  for (const sx of [-1, 1]) for (const sy of [-1, 1]) m.box(sx * R - 3.5, sy * R - 3.5, 0, sx * R + 3.5, sy * R + 3.5, top, 'd');
-  for (const sy of [-1, 1]) m.box(-R - 4.5, sy * R - 4, top, R + 4.5, sy * R + 4, top + 7, 'm');
-  m.box(-6, -R + 4, top + 1, 6, R - 4, top + 6, 'l');
-  m.cyl(4.5, 4.5, hz + 12, top + 1, 8, 'l');
-  const ram = m.box(-30, -30, hz, 30, 30, hz + 12, 'm');
-  // полосы опасности по передней кромке плиты
-  for (let k = 0; k < 4; k++) m.line(ram[2], -26 + k * 14, -30, hz + 2, -20 + k * 14, -30, hz + 10, H.col, 1.1, 0.75);
-  m.pop();
-  const g = m.glow(null, 0, 0, top + 11, h.ph === 1 ? 9 : 4, h.ph === 1 ? '#ff4d5e' : H.col, h.ph === 1 ? (Math.sin(G.time * 28) > 0 ? 1 : 0.25) : 0.55); g.auto = true;
-  return m;
+  const mk = fn => { const m = new Mesh(); m.zc = 0; m.push(); m.sc(1, ky, 1); fn(m); m.pop(); return m; };
+  const back = mk(m => {
+    for (const sx of [-1, 1]) m.box(sx * R - 3.5, R - 3.5, 0, sx * R + 3.5, R + 3.5, top, 'd');
+    m.box(-R - 4.5, R - 4, top, R + 4.5, R + 4, top + 7, 'm');
+  });
+  const ram = mk(m => {
+    const b = m.box(-30, -30, hz, 30, 30, hz + 12, 'm');
+    // полосы опасности по передней кромке плиты
+    for (let k = 0; k < 4; k++) m.line(b[2], -26 + k * 14, -30, hz + 2, -20 + k * 14, -30, hz + 10, H.col, 1.1, 0.75);
+  });
+  const rod = mk(m => {
+    const r = m.cyl(3.4, 3.4, hz + 15, top + 1, 8, 'l'); if (r.cap0) r.cap0.hid = true;
+    m.cyl(6.5, 5.6, hz + 12, hz + 15.5, 8, 'd');   // фланец на плите: шток выходит из втулки
+  });
+  const front = mk(m => {
+    for (const sx of [-1, 1]) m.box(sx * R - 3.5, -R - 3.5, 0, sx * R + 3.5, -R + 3.5, top, 'd');
+    m.box(-R - 4.5, -R - 4, top, R + 4.5, -R + 4, top + 7, 'm');
+    m.box(-6, -R + 4, top + 1, 6, R - 4, top + 6, 'l');
+  });
+  const g = front.glow(null, 0, 0, top + 11, h.ph === 1 ? 9 : 4, h.ph === 1 ? '#ff4d5e' : H.col, h.ph === 1 ? (Math.sin(G.time * 28) > 0 ? 1 : 0.25) : 0.55); g.auto = true;
+  return [back, ram, rod, front];
 }
 // пилон лазерного забора: шестигранная колонна, излучатель смотрит на пару
 function pylonMesh(h, H, s) {
@@ -259,7 +270,10 @@ function worldDrawables(vis) {
         if (Math.abs(x - G.cam.x) < VIEW.hw + 60 && Math.abs(y - G.cam.y) < VIEW.hh + 90) vis.push({ dz: (c, z, e0, f0) => drawMeshAt(c, pylonMesh(h, H, s), hazPal(H.col), x, y, z, e0, f0, view), y });
       }
     } else if (onScreen(h, 110)) {
-      vis.push({ dz: (c, z, e0, f0) => drawMeshAt(c, h.kind === 'press' ? pressMesh(h, H, view) : geyserMesh(h, H, view), hazPal(h.kind === 'press' ? '#c9a46a' : '#8fb83a'), h.x, h.y, z, e0, f0, view), y: h.y + (h.kind === 'press' ? 30 : 0) });
+      vis.push({ dz: (c, z, e0, f0) => {
+        if (h.kind === 'press') { for (const m of pressMeshes(h, H, view)) drawMeshAt(c, m, hazPal('#c9a46a'), h.x, h.y, z, e0, f0, view); }
+        else drawMeshAt(c, geyserMesh(h, H, view), hazPal('#8fb83a'), h.x, h.y, z, e0, f0, view);
+      }, y: h.y + (h.kind === 'press' ? 30 : 0) });
     }
   }
   const R = G.relay;

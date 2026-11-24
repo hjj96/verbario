@@ -69,7 +69,7 @@ function fireBolt(w, tgt) {
   droneVolley(tgt, p.dmg);
   P.fire = 1;
   AUDIO.sfx('shoot', { f: 920 });
-  FX.sparks(sx, sy, 2, '#bff6ff', 120, ang, 0.4, 0.15);
+  FX.mflash(sx, sy, ang, 4.2, WEAPONS.blaster.color);
 }
 WB.annihilator = (w, dt, spd) => {
   if (!cdReady(w, dt, spd)) return;
@@ -814,33 +814,26 @@ function missileBoom(p) {
 }
 const PK = {
   bolt: {
-    draw(c, p) {
-      const a = Math.atan2(p.vy, p.vx), ca = Math.cos(a), sa = Math.sin(a), L = p.r * 3.6;
-      c.lineCap = 'round';
-      c.beginPath(); c.moveTo(p.x - ca * L * 1.9, p.y - sa * L * 1.9); c.lineTo(p.x, p.y);
-      c.strokeStyle = rgba(p.col, 0.16); c.lineWidth = p.r * 1.2; c.stroke();
-      c.beginPath(); c.moveTo(p.x - ca * L, p.y - sa * L); c.lineTo(p.x, p.y);
-      c.strokeStyle = rgba(p.col, 0.35); c.lineWidth = p.r * 2.8; c.stroke();
-      c.strokeStyle = rgba(p.col, 1); c.lineWidth = p.r * 1.2; c.stroke();
-      c.beginPath(); c.moveTo(p.x - ca * L * 0.7, p.y - sa * L * 0.7); c.lineTo(p.x, p.y);
-      c.strokeStyle = '#ffffff'; c.lineWidth = p.r * 0.55; c.stroke();
-    },
+    // попадание: расходящийся шестиугольник и пара осколков — чётко, без пятна
+    hit(p, e) { hitEnemy(e, p.dmg, p); FX.hexRing(p.x, p.y, 2, 6 + p.r * 1.6, 0.16, p.col, 1.3); FX.shards(p.x, p.y, 2, p.col, 150); },
+    draw(c, p) { drawBolt3D(c, p); },
   },
   orb: {
     hit(p, e) {
       hitEnemy(e, p.dmg, p);
       p.nb = (p.nb || 0) + 1;
       if (p.nb % 2 === 1) {
-        FX.dot(e.x, e.y, 0, 0, 0.12, p.blast * 0.7, p.col, 0);
+        FX.hexRing(e.x, e.y, 4, p.blast, 0.22, p.col, 1.6); FX.dot(e.x, e.y, 0, 0, 0.08, p.blast * 0.35, '#ffffff', 0);
         eachEnemyIn(e.x, e.y, p.blast, n => { if (n !== e) hitEnemy(n, p.dmg * 0.5, { src: p.src, nocrit: true }); });
       }
     },
     draw(c, p) {
-      const a = Math.atan2(p.vy, p.vx);
-      c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-      c.strokeStyle = rgba(p.col, 0.2); c.lineWidth = p.r * 0.9;
-      c.beginPath(); c.moveTo(p.x - Math.cos(a) * p.r * 4, p.y - Math.sin(a) * p.r * 4); c.lineTo(p.x, p.y); c.stroke();
-      c.restore();
+      // чёткие линии скорости вместо мягкого хвоста
+      const a = Math.atan2(p.vy, p.vx), ca = Math.cos(a), sa = Math.sin(a);
+      c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.strokeStyle = rgba(p.col, 0.45); c.lineWidth = 1.2;
+      c.beginPath();
+      for (const o of [-0.55, 0, 0.55]) { const ox = -sa * p.r * o, oy = ca * p.r * o, L0 = p.r * (o ? 1.2 : 1.0), L1 = p.r * (o ? 3.2 : 4.4); c.moveTo(p.x + ox - ca * L0, p.y + oy - sa * L0); c.lineTo(p.x + ox - ca * L1, p.y + oy - sa * L1); }
+      c.stroke(); c.restore();
       drawOrb3D(c, p);
     },
   },

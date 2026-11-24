@@ -2,9 +2,9 @@
 /* ===== Визуальные эффекты: частицы, молнии, лучи, кольца, цифры урона ===== */
 
 const FX = {
-  parts: [], texts: [], arcs: [], beams: [], rings: [], slashes: [], ghosts: [], lights: [],
+  parts: [], texts: [], arcs: [], beams: [], rings: [], slashes: [], ghosts: [], lights: [], flashes: [],
   max: 1800, quality: 1, shake: 0, flashA: 0, flashCol: '#ffffff', dmgNumbers: true, impact: 0, speedT: 0, speedDir: 0,
-  clear() { this.parts.length = 0; this.texts.length = 0; this.arcs.length = 0; this.beams.length = 0; this.rings.length = 0; this.slashes.length = 0; this.ghosts.length = 0; this.lights.length = 0; this.shake = 0; this.flashA = 0; this.impact = 0; this.speedT = 0; },
+  clear() { this.parts.length = 0; this.texts.length = 0; this.arcs.length = 0; this.beams.length = 0; this.rings.length = 0; this.slashes.length = 0; this.ghosts.length = 0; this.lights.length = 0; this.flashes.length = 0; this.shake = 0; this.flashA = 0; this.impact = 0; this.speedT = 0; },
 
   add(p) {
     if (this.parts.length >= this.max * this.quality) return null;
@@ -71,6 +71,10 @@ const FX = {
     this.sparks(x, y, big ? 14 : 6, '#ffffff', r * 7, undefined, 0, 0.32);
     this.light(x, y, r * 3.2, col, big ? 0.7 : 0.45, big ? 0.45 : 0.3);
   },
+  // вспышка у дула: чёткая четырёхлучевая звезда — длинный луч по выстрелу, короткий поперёк
+  mflash(x, y, ang, size, col) { if (this.flashes.length < 40) this.flashes.push({ x, y, ang, size, col, life: 0.09, max: 0.09 }); },
+  // шестиугольник попадания: чёткая расходящаяся грань
+  hexRing(x, y, r0, r1, life, col, w) { if (this.rings.length < 160) this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 1.4, hex: true, rot: Math.random() * TAU }); },
   // кольцо по земле в перспективе (взрывы, удары)
   ering(x, y, r0, r1, life, col, w) { this.rings.push({ x, y, r0, r1, life, max: life, col, w: w || 2, ell: true }); },
   // рельсовый луч со спиралью и кольцами давления вдоль ствола
@@ -117,7 +121,7 @@ const FX = {
       else if (p.k === 6) { p.vz *= Math.exp(-2.2 * dt); p.z += p.vz * dt; }
     }
     const tick = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) removeAt(arr, i); } };
-    tick(this.arcs); tick(this.beams); tick(this.rings); tick(this.slashes); tick(this.ghosts); tick(this.lights);
+    tick(this.arcs); tick(this.beams); tick(this.rings); tick(this.slashes); tick(this.ghosts); tick(this.lights); tick(this.flashes);
     if (this.speedT > 0) this.speedT -= dt;
     const T = this.texts;
     for (let i = T.length - 1; i >= 0; i--) { const t = T[i]; t.life -= dt; t.y += t.vy * dt; t.vy *= Math.exp(-3 * dt); if (t.life <= 0) removeAt(T, i); }
@@ -223,8 +227,18 @@ const FX = {
       c.globalAlpha = (1 - q) * 0.9;
       c.strokeStyle = r.col; c.lineWidth = r.w * (1 - q * 0.6);
       c.beginPath();
-      if (r.ell) { const sp = vfxSp(); c.ellipse(r.x, r.y, Math.max(0.1, rad), Math.max(0.1, rad * sp), 0, 0, TAU); c.stroke(); c.globalAlpha *= 0.35; c.lineWidth *= 3.5; c.stroke(); }
+      if (r.hex) { for (let i = 0; i <= 6; i++) { const a = r.rot + i * TAU / 6 + q * 0.6, px = r.x + Math.cos(a) * rad, py = r.y + Math.sin(a) * rad; i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke(); }
+      else if (r.ell) { const sp = vfxSp(); c.ellipse(r.x, r.y, Math.max(0.1, rad), Math.max(0.1, rad * sp), 0, 0, TAU); c.stroke(); c.globalAlpha *= 0.35; c.lineWidth *= 3.5; c.stroke(); }
       else { c.arc(r.x, r.y, Math.max(0.1, rad), 0, TAU); c.stroke(); }
+    }
+    for (const f of this.flashes) {
+      const q = 1 - f.life / f.max, s = f.size * (q < 0.3 ? 0.55 + q / 0.3 * 0.45 : 1 - (q - 0.3) * 0.85);
+      c.save(); c.translate(f.x, f.y); c.rotate(f.ang); c.globalAlpha = 1 - q * 0.7;
+      c.fillStyle = rgba(f.col, 0.9);
+      c.beginPath(); c.moveTo(s * 2.6, 0); c.lineTo(0, s * 0.4); c.lineTo(-s * 0.55, 0); c.lineTo(0, -s * 0.4); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(0, s * 1.05); c.lineTo(s * 0.28, 0); c.lineTo(0, -s * 1.05); c.lineTo(-s * 0.28, 0); c.closePath(); c.fill();
+      c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(s * 1.4, 0); c.lineTo(0, s * 0.18); c.lineTo(-s * 0.3, 0); c.lineTo(0, -s * 0.18); c.closePath(); c.fill();
+      c.restore();
     }
     for (const b of this.beams) {
       const q = b.life / b.max;

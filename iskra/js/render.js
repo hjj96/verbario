@@ -83,7 +83,7 @@ function drawGround(c, x0, y0, x1, y1) {
   const D = 320, seed = SECTORS.indexOf(G.sector) * 97 + 11, V = SPR.decoV || [];
   if (V.length) {
     for (let cy = Math.floor((y0 - 160) / D); cy <= Math.floor((y1 + 160) / D); cy++) for (let cx = Math.floor((x0 - 160) / D); cx <= Math.floor((x1 + 160) / D); cx++) {
-      if (hash2(cx, cy, seed) > 0.5) continue;
+      if (hash2(cx, cy, seed) > 0.34) continue;
       const d = V[Math.floor(hash2(cx, cy, seed + 7) * V.length)];
       const ox = (hash2(cx, cy, seed + 3) - 0.5) * 140, oy = (hash2(cx, cy, seed + 5) - 0.5) * 140;
       const x = cx * D + D / 2 + ox, y = cy * D + D / 2 + oy;
@@ -432,9 +432,9 @@ function renderGame() {
   drawPlayer(c, z, e0, f0);
   c.setTransform(z, 0, 0, z, e0, f0);
   c.globalCompositeOperation = 'lighter';
-  for (const p of G.projs) if (p.kind === 'bolt' || p.kind === 'flame' || p.kind === 'grav') PK[p.kind].draw(c, p);
+  for (const p of G.projs) if (p.kind === 'flame' || p.kind === 'grav') PK[p.kind].draw(c, p);
   c.globalCompositeOperation = 'source-over';
-  for (const p of G.projs) if (p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather' || p.kind === 'glaive' || p.kind === 'orb' || p.kind === 'bomblet') PK[p.kind].draw(c, p);
+  for (const p of G.projs) if (p.kind === 'bolt' || p.kind === 'missile' || p.kind === 'saw' || p.kind === 'bigsaw' || p.kind === 'shard' || p.kind === 'feather' || p.kind === 'glaive' || p.kind === 'orb' || p.kind === 'bomblet') PK[p.kind].draw(c, p);
   for (const a of G.areas) if (a.kind === 'ring' || a.kind === 'strike') AK[a.kind].draw(c, a);
   drawEnemyBullets(c);
   drawWorldGlow(c);
