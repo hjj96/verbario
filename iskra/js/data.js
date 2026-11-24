@@ -355,6 +355,16 @@ const EVOS = {
 const EVO_RANK = 3; // какой ранг модуля нужен для эволюции
 
 /* ---------- Враги ---------- */
+// цветные варианты Роя: цвет рёбер машины — её поведение
+const VARIANTS = {
+  ice: { name: 'Ледяной', col: '#4fc3ff', d: 'Плюётся ледяными сгустками: попадание на 1,6 с замедляет робота.' },
+  acid: { name: 'Кислотный', col: '#7dff3a', d: 'Погибая, оставляет лужу кислоты — она жжёт робота.' },
+  shield: { name: 'Щитовой', col: '#ffd23f', d: 'Под энергощитом: сначала пробейте щит, потом корпус.' },
+  blink: { name: 'Фазовый', col: '#b56bff', d: 'Прыгает сквозь пространство и за два-три скачка оказывается рядом.' },
+  volatile: { name: 'Взрывной', col: '#ff8a1f', d: 'Через полсекунды после гибели взрывается — задевает и робота, и своих.' },
+};
+const VAR_TYPES = ['bug', 'tank', 'mini', 'charger', 'gunner', 'splitter', 'spitter'];
+const VAR_W = { rust: { volatile: 3, shield: 3, ice: 1.5, acid: 1, blink: 1 }, neon: { blink: 3, ice: 3, shield: 1.5, volatile: 1, acid: 1 }, hive: { acid: 3, volatile: 2.5, blink: 1.5, shield: 1, ice: 1 } };
 const ENEMIES = {
   bug: { name: 'Клещ', r: 9, hp: 6, spd: 72, dmg: 6, xp: 1, ai: 'chase', acc: '#ffd23f', d: 'Базовая единица Роя. Берёт числом.' },
   tank: { name: 'Броневик', r: 15, hp: 40, spd: 44, dmg: 11, xp: 4, ai: 'chase', armor: 0.3, kbRes: 0.6, acc: '#ff8a3d', d: 'Толстый панцирь гасит 30% урона.' },

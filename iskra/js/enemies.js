@@ -20,6 +20,7 @@ function spawnEnemy(tid, x, y, o) {
   };
   if (o && o.elite) { e.elite = true; e.r *= 1.4; e.scale = 1.4; e.hp *= 9; e.maxHp = e.hp; e.dmg *= 1.5; e.xp *= 1; }
   if (o && o.ai) e.ai = o.ai;
+  if (!T.prop) rollVariant(e, o);
   G.enemies.push(e);
   if (!T.prop) discover('enemies', tid);
   return e;
@@ -428,6 +429,8 @@ function updateEnemies(dt) {
     else if (e.ai.rush) AI.rush(e, dt);
     else (AI[e.T.ai] || AI.chase)(e, dt);
     if (e.affix) eliteTick(e, dt);
+    if (e.var && !frozen && !(s.freezeT > 0) && !(s.stunT > 0)) variantTick(e, dt);
+    if (e.shF > 0) e.shF -= dt;
     if (!e.alive) { removeAt(arr, i); continue; }
     let slow = 1;
     if (s.chillT > 0) slow = 1 - s.chill * (e.boss ? 0.5 : 1);
@@ -508,7 +511,12 @@ function updateEnemyBullets(dt) {
     if (G.freezeT > 0) { b.life -= dt * 2; } else { b.x += b.vx * dt; b.y += b.vy * dt; }
     if (b.accel) { b.vx *= 1 + b.accel * dt; b.vy *= 1 + b.accel * dt; }
     const rr = b.r + P.r - 4;
-    if (d2(b.x, b.y, P.x, P.y) < rr * rr) { hurtPlayer(b.dmg, null); FX.burst(b.x, b.y, 4, b.col, 100, 0.2, 4); removeAt(arr, i); continue; }
+    if (d2(b.x, b.y, P.x, P.y) < rr * rr) {
+      // ледяной сгусток: кроме урона, замедляет робота (если удар прошёл — не в рывке, не в неуязвимости)
+      if (b.frost && P.iframes <= 0 && !(P.dash.t > 0) && !P.od.active) { P.slowT = Math.max(P.slowT || 0, b.frost); FX.hexRing(P.x, P.y - upY(18), 4, 22, 0.3, '#bff0ff', 1.2); }
+      hurtPlayer(b.dmg, null); FX.burst(b.x, b.y, 4, b.col, 100, 0.2, 4); removeAt(arr, i); continue;
+    }
+    if (b.rot !== undefined) b.rot += dt * 7;
     if (b.life <= 0) removeAt(arr, i);
   }
 }

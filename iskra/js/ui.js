@@ -272,6 +272,10 @@ const UI = {
         body = '<div class="clist">' + ENEMY_CODEX.map(id => {
           const T = ENEMIES[id], known = SAVE.discovered.enemies[id];
           return `<div class="crow"><canvas width="104" height="104" data-enemy="${id}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm">${known ? esc(T.name) : '???'}</div><div class="ds">${known ? esc(T.d) : 'Ещё не встречен'}</div></div><div class="ds mono" style="font-size:11px">${known ? 'прочность ' + T.hp + ' · скорость ' + T.spd : ''}</div></div>`;
+        }).join('') + Object.keys(VARIANTS).map((v, k) => {
+          // цветные варианты: цвет рёбер — поведение
+          const V = VARIANTS[v], known = (SAVE.discovered.variants || {})[v], tid = VAR_TYPES[[1, 0, 1, 3, 4][k] || 0];
+          return `<div class="crow"><canvas width="104" height="104" data-enemy="${tid}~${v}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm" style="color:${known ? V.col : 'inherit'}">${known ? esc(V.name) + ' вариант' : '???'}</div><div class="ds">${known ? esc(V.d) : 'Цветной вариант машины Роя — ещё не встречен'}</div></div><div class="ds mono" style="font-size:11px">${known ? 'любые обычные машины · опыт ×1,6' : ''}</div></div>`;
         }).join('') + Object.keys(BOSSES).map(id => {
           const B = BOSSES[id], known = SAVE.discovered.enemies['boss_' + id];
           return `<div class="crow"><canvas width="104" height="104" data-boss="${id}" style="${known ? '' : 'filter:brightness(0) opacity(.5)'}"></canvas><div><div class="nm" style="color:${known ? B.color : 'inherit'}">${known ? esc(B.name) : '???'}</div><div class="ds">${known ? esc(B.title) + '. ' + esc(B.d) : 'Босс сектора'}</div></div><div class="ds mono" style="font-size:11px">${SECTORS.map(sc => { const b = bossSchedule(sc.id).find(x => x.id === id); return b ? sc.code + ' · ' + fmtTime(b.t) : ''; }).filter(Boolean).join('<br>')}</div></div>`;

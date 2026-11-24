@@ -255,6 +255,7 @@ function hitEnemy(e, dmg, o) {
   if (e.dmgRes) d *= 1 - e.dmgRes;
   if (e.armored) d *= 0.55;
   if ((e.boss || e.lt) && e.bossK !== undefined) { e.rawAcc = (e.rawAcc || 0) + d; d *= e.bossK; }
+  if (e.shp > 0) { d = variantShield(e, d); if (d <= 0) { if (e.flash < -0.14) e.flash = 0.05; return 0; } }
   const before = e.hp;
   e.hp -= d;
   if (o.src !== 'hazard' && o.src !== 'relay') G.dmgWin += Math.min(d, e.maxHp * 1.5);
@@ -364,6 +365,7 @@ function killEnemy(e, o) {
   }
   if (e.boss) { bossKilled(e); return; }
   if (T.ai === 'nest') { nestKilled(e); return; }
+  if (e.var) variantDeath(e);
   G.kills++;
   if (e.elite) {
     eliteWreck(e, false);
@@ -530,7 +532,8 @@ function updatePickups(dt) {
 function updatePlayer(dt) {
   const S = P.stats;
   const mv = INPUT.move();
-  let sp = S.speed * (P.od.active ? 1.2 : 1) * (G.webs && G.webs.length && inWeb(P.x, P.y) ? 0.5 : 1);
+  if (P.slowT > 0) { P.slowT -= dt; if (Math.random() < dt * 10) FX.sparks(P.x + rand(-12, 12), P.y - upY(rand(4, 30)), 1, '#bff0ff', 40, -Math.PI / 2, 0.6, 0.4); }
+  let sp = S.speed * (P.od.active ? 1.2 : 1) * (G.webs && G.webs.length && inWeb(P.x, P.y) ? 0.5 : 1) * (P.slowT > 0 ? 0.6 : 1);
   if (P.dash.t > 0) {
     P.dash.t -= dt;
     const ds = 640;

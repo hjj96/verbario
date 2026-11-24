@@ -295,13 +295,19 @@ function tickEnemySprites() {
   const id = SPR.ePend.shift();
   if (!SPR.enemies[id]) enemySprites(id);
 }
-function enemySprites(tid) {
+// ключ — тип машины или «тип~вариант»: вариант перекрашивает рёбра в свой цвет
+function enemySprites(key) {
   const view = enemyView();
-  if (SPR.eView !== view) { SPR.enemies = {}; SPR.eView = view; SPR.ePend = Object.keys(EM); }
-  return SPR.enemies[tid] || (SPR.enemies[tid] = buildTypeSprites(tid, SPR.eSP || SECTORS[0].pal, view));
+  if (SPR.eView !== view) { SPR.enemies = {}; SPR.eView = view; SPR.ePend = Object.keys(EM).concat(SPR.vKeys ? [...SPR.vKeys] : []); }
+  const S = SPR.enemies[key];
+  if (S) return S;
+  const i = key.indexOf('~'), SP = SPR.eSP || SECTORS[0].pal;
+  if (i < 0) return (SPR.enemies[key] = buildTypeSprites(key, SP, view));
+  const v = key.slice(i + 1);
+  return (SPR.enemies[key] = buildTypeSprites(key.slice(0, i), variantPalSP(SP, v), view, mixHex(VARIANTS[v].col, '#ffffff', 0.35)));
 }
-function buildTypeSprites(tid, SP, view) {
-  const T = ENEMIES[tid], D = EM[tid], r = T.r, pal = enemyPal(SP, T.acc, false), dim = eModelDim(tid);
+function buildTypeSprites(tid, SP, view, acc) {
+  const T = ENEMIES[tid], D = EM[tid], r = T.r, pal = enemyPal(SP, acc || T.acc, false), dim = eModelDim(tid);
   const phi = VIEW_PITCH[view], sp = Math.sin(phi), cp = Math.cos(phi), zc = dim.zc;
   const poses = D.poses || ['walk'], nF = D.frames;
   const psOf = (pose, f) => ({ ph: f / nF, mv: D.static ? 0 : 1, t: 0, pal, pose });
@@ -357,7 +363,7 @@ function iceOf(S, yi) {
 // высота «падения» при появлении: враги высаживаются сверху
 function dropOff(e) { return e.t < 0.4 ? -(1 - ease.inQuad(e.t / 0.4)) * 110 : 0; }
 function drawEnemySprite(c, e, z, e0, f0, t) {
-  const S = enemySprites(e.tid), Y = eYawIdx(e.T.prop ? Math.PI / 2 - 0.5 : e.ang);
+  const S = enemySprites(e.var ? e.tid + '~' + e.var : e.tid), Y = eYawIdx(e.T.prop ? Math.PI / 2 - 0.5 : e.ang);
   let pi = 0, fi = 0;
   if (e.tid === 'charger') pi = e.ai.s === 'wind' ? 1 : e.ai.s === 'dash' ? 2 : 0;
   else if (e.tid === 'nest') pi = e.ai.open > 0 ? 1 : 0;
@@ -452,9 +458,11 @@ function eliteWreck(e, onlyArmor) {
 }
 
 /* ===== Превью для справочника ===== */
-function drawEnemyPreview(cv, tid) {
+// tid может быть «тип~вариант» — тогда модель в цветах варианта
+function drawEnemyPreview(cv, key) {
+  const i = key.indexOf('~'), tid = i < 0 ? key : key.slice(0, i), v = i < 0 ? null : key.slice(i + 1);
   const c = cv.getContext('2d'), w = cv.width, h = cv.height, T = ENEMIES[tid], D = eModelDim(tid);
-  const pal = enemyPal(SECTORS[0].pal, T.acc, false);
+  const pal = v ? enemyPal(variantPalSP(SECTORS[0].pal, v), mixHex(VARIANTS[v].col, '#ffffff', 0.35), false) : enemyPal(SECTORS[0].pal, T.acc, false);
   const m = eModelMesh(tid, T.r, Math.PI / 2 - 0.6, { ph: 0.15, mv: 1, t: 1, pal, pose: 'walk' }, D.zc);
   const s = Math.min(w, h) / (Math.max(D.rad * 2.7, D.top * 1.5) + T.r * 0.6);
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);

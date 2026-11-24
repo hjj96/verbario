@@ -162,7 +162,7 @@ function drawEnemies(c, z, e0, f0) {
     else if (e.elite && live++ < 6) drawElite3D(c, e, z, e0, f0, t);
     else drawEnemySprite(c, e, z, e0, f0, t);
     if (e.boss || e.parent) continue;
-    if (e.t < 0.4 || e.tid === 'kami' || e.tid === 'charger' || e.tid === 'nest' || e.shieldT > 0 || e.st.stunT > 0 || e.st.markT > 0 || e.elite || e.tid === 'shielder' || e.tid === 'medic' || (e.tid === 'eater' && e.ate)) det.push(e);
+    if (e.t < 0.4 || e.tid === 'kami' || e.tid === 'charger' || e.tid === 'nest' || e.shp > 0 || e.shieldT > 0 || e.st.stunT > 0 || e.st.markT > 0 || e.elite || e.tid === 'shielder' || e.tid === 'medic' || (e.tid === 'eater' && e.ate)) det.push(e);
   }
   worldT(c);
   drawWrecks(c, z, e0, f0);
@@ -201,6 +201,7 @@ function drawEnemies(c, z, e0, f0) {
     }
     if (e.tid === 'eater' && e.ate) { const q = Math.min(1, e.ate / 40); glow(c, e.x, e.y, e.r * (0.6 + q * 0.6), '#b38bff', 0.5 + q * 0.5); }
     if (e.st.markT > 0) { c.strokeStyle = 'rgba(255,77,94,0.85)'; c.lineWidth = 1; c.beginPath(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + t * 2; c.moveTo(e.x + Math.cos(a) * (e.r + 3), e.y + Math.sin(a) * (e.r + 3)); c.lineTo(e.x + Math.cos(a) * (e.r + 9), e.y + Math.sin(a) * (e.r + 9)); } c.stroke(); }
+    if (e.shp > 0) { drawVariantShield(c, e); worldT(c); }
     if (e.tid === 'nest') {
       const w = 64, q = clamp(e.hp / e.maxHp, 0, 1), mat = e.ai.mature;
       uprightAt(c, e.x, e.y - eTop(e));
@@ -277,6 +278,14 @@ function drawEnemyBullets(c) {
       // лужа огня/кислоты на полу: мерцает и гаснет к концу жизни
       const q = clamp(b.life / 1.2, 0, 1), s = b.r * (1.6 + Math.sin(G.time * 20 + b.x) * 0.12);
       c.globalAlpha = 0.55 * q; c.drawImage(dotSprite(b.col), b.x - s, b.y - s * 0.55, s * 2, s * 1.1); c.globalAlpha = 1;
+      continue;
+    }
+    if (b.kind === 'frost') {
+      // ледяной сгусток: вращающийся кристалл-ромб с белым ядром
+      c.save(); c.translate(b.x, b.y); c.rotate(b.rot || 0);
+      c.fillStyle = rgba('#4fc3ff', 0.35); c.strokeStyle = '#bff0ff'; c.lineWidth = 1.2;
+      c.beginPath(); c.moveTo(0, -b.r * 1.5); c.lineTo(b.r, 0); c.lineTo(0, b.r * 1.5); c.lineTo(-b.r, 0); c.closePath(); c.fill(); c.stroke();
+      c.restore();
       continue;
     }
     const s = b.r * 2.6;

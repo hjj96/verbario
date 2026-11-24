@@ -1124,7 +1124,7 @@ const AK = {
       const q = Math.min(1, a.life / a.max * 4), g = Math.min(1, a.t * 5);
       c.globalAlpha = 0.75 * q;
       c.fillStyle = rgba('#7fbf1a', 0.55);
-      c.beginPath(); c.ellipse(a.x, a.y, a.r * g, a.r * 0.62 * g, 0, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(a.x, a.y, a.r * g, a.r * (RENDER.k < 1 ? 1 : 0.62) * g, 0, 0, TAU); c.fill();
       c.strokeStyle = rgba('#c6ff3d', 0.7); c.lineWidth = 1.5; c.stroke();
       for (let i = 0; i < 3; i++) { const bx = a.x + Math.sin(G.time * 2 + i * 2.1) * a.r * 0.5, by = a.y + Math.cos(G.time * 1.7 + i) * a.r * 0.25; c.beginPath(); c.arc(bx, by, 1.5 + ((G.time * 2 + i) % 1) * 2, 0, TAU); c.strokeStyle = rgba('#e6ff9a', 0.6); c.stroke(); }
       c.globalAlpha = 1;
